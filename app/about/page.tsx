@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getAllGames } from "@/lib/games";
 
 export const metadata: Metadata = {
   title: "制作代行について",
@@ -8,18 +9,21 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
+  const games = getAllGames();
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <h1 className="text-3xl font-bold">制作代行について</h1>
       <p className="mt-4 leading-relaxed text-slate-300">
-        Board Playground はオリジナル（または許可あり）のボードゲームをブラウザで公開・プレイする場です。Phase 2 として、アイデアのヒアリングからルール設計、Web化までを一貫して代行するサービスをココナラで提供します。受注・納品のやりとりはココナラ上で行い、このサイトは公開プレイと制作実績の置き場です。
+        Board Playground
+        はオリジナル（または許可あり）のボードゲームをブラウザで公開・プレイする場です。アイデアのヒアリングからルール設計、Web化までを一貫して代行するサービスをココナラで提供します。受注・納品のやりとりはココナラ上で行い、このサイトは公開プレイと制作実績の置き場です。
       </p>
 
       <section className="mt-10 space-y-3">
         <h2 className="text-xl font-semibold">できること</h2>
         <ul className="list-disc space-y-2 pl-5 text-slate-300">
           <li>人数・時間・勝利条件を明確にしたルール設計</li>
-          <li>例外・タイブレークまで書いた仕様（rules.md 形式）</li>
+          <li>例外・タイブレークまで書いた仕様書</li>
           <li>同画面交代プレイのブラウザ実装</li>
         </ul>
       </section>
@@ -48,7 +52,23 @@ export default function AboutPage() {
         <p className="leading-relaxed text-slate-300">
           サイト上のゲームは制作フローの実例です。遊んで雰囲気を確かめてからご相談ください。
         </p>
-        <Link href="/" className="inline-flex text-accent transition hover:text-accent-hover">
+        <ul className="space-y-2">
+          {games.map((game) => (
+            <li key={game.slug}>
+              <Link
+                href={`/games/${game.slug}`}
+                className="text-accent transition hover:text-accent-hover"
+              >
+                {game.title}
+              </Link>
+              <span className="text-sm text-slate-500">
+                {" "}
+                — {game.players}人 · 約{game.durationMinutes}分
+              </span>
+            </li>
+          ))}
+        </ul>
+        <Link href="/" className="inline-flex text-sm text-slate-400 transition hover:text-white">
           ゲーム一覧を見る
         </Link>
       </section>
