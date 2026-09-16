@@ -24,7 +24,13 @@ export default function HomePage() {
           <h2 className="text-xl font-semibold">ゲーム一覧</h2>
           <span className="text-sm text-slate-500">{games.length} 本</span>
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={
+            games.length === 1
+              ? "max-w-md"
+              : "grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          }
+        >
           {games.map((game) => (
             <GameCard key={game.slug} game={game} />
           ))}
