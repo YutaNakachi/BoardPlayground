@@ -24,3 +24,9 @@
 
 - ダークテーマ、accent は indigo 系（`tailwind.config.ts`）
 - モバイルでもプレイ可能なレイアウト
+
+## Agent の分け方
+
+- **サイト改善**（Cloud Agent 向け）: 一覧・ルールページ・ヘッダー/フッター、about、デプロイ関連、共通 UI。新ゲームは追加しない
+- **ゲーム追加**: 1ゲームにつき 1 Agent。`lib/games.ts` → `games/{slug}/rules.md` → `components/play/` → `lib/play-registry.ts`
+- ゲーム固有ルールまで一般化しない。同じ処理が3本目で必要になったら共通化してよい

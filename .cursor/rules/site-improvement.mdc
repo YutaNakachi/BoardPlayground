@@ -1,0 +1,23 @@
+---
+description: サイト横断の改善（一覧・レイアウト・about・デプロイ）。新ゲーム追加では使わない
+alwaysApply: false
+---
+
+# サイト改善 Agent
+
+対象: `app/`（`play` のゲームロジック以外）、`components/Header.tsx`、`components/Footer.tsx`、`components/GameCard.tsx`、`components/play/shared/`、`lib/game-engine/`、`docs/`
+
+## やる
+
+- トップ・ルール・about の導線とモバイル表示
+- メタデータ、OGP、フッター方針表記
+- 共通 UI / エンジンの小さな改善
+
+## やらない
+
+- 新しいゲームの企画・追加
+- 既存ゲームのルール変更（明らかなバグ修正は可）
+- 既存市販ゲームのルール再現
+
+公開 URL: https://board-playground.vercel.app
+`main` に入ると Vercel が自動デプロイする。
