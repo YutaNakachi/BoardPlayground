@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: `${SITE_NAME} — オリジナルボードゲームをブラウザで`,
+    default: `${SITE_NAME} — ボードゲームをブラウザで`,
     template: `%s — ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
