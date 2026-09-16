@@ -3,17 +3,35 @@ import type { GameMeta } from "@/lib/games";
 
 type Props = { game: GameMeta };
 
+function bannerHue(slug: string) {
+  const hues = [230, 265, 195, 28, 340];
+  let hash = 0;
+  for (const ch of slug) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return hues[hash % hues.length];
+}
+
 export function GameCard({ game }: Props) {
+  const hue = bannerHue(game.slug);
+  const initial = [...game.title][0] ?? "BP";
+
   return (
-    <article
-      className="group flex flex-col overflow-hidden rounded-2xl border border-surface-border bg-surface-raised transition hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5"
-    >
-      <div className="flex h-32 items-center justify-center bg-gradient-to-br from-accent/30 via-surface-raised to-surface-border">
-        <span className="text-4xl opacity-80" aria-hidden>🎲</span>
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-surface-border bg-surface-raised transition hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5">
+      <div
+        className="flex h-32 items-center justify-center"
+        style={{
+          background: `linear-gradient(135deg, hsl(${hue} 70% 48% / 0.45), #1a2332 62%, #2d3a4f)`,
+        }}
+      >
+        <span
+          className="text-4xl font-bold tracking-tight text-white/85"
+          aria-hidden
+        >
+          {initial}
+        </span>
       </div>
       <div className="flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
-          {game.tags.slice(0, 2).map((tag) => (
+          {game.tags.map((tag) => (
             <span
               key={tag}
               className="rounded-md bg-surface-border/50 px-2 py-0.5 text-xs text-slate-400"
@@ -22,7 +40,7 @@ export function GameCard({ game }: Props) {
             </span>
           ))}
         </div>
-        <h3 className="text-lg font-semibold group-hover:text-accent transition">
+        <h3 className="text-lg font-semibold transition group-hover:text-accent">
           {game.title}
         </h3>
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">

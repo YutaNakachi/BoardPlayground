@@ -7,15 +7,15 @@ export default function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <section className="mb-14 text-center">
-        <p className="mb-3 text-sm font-medium uppercase tracking-widest text-accent">
-          Play in your browser
+        <p className="mb-3 text-sm font-medium tracking-widest text-accent">
+          ブラウザですぐ遊べる
         </p>
         <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
           オリジナルボードゲームの
           <span className="block text-accent">遊び場</span>
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
-          自作ルールをブラウザで体験。ルールを読んで、すぐプレイ。
+          同じ画面で交代して遊べます。ルールを読んで、すぐプレイ。
         </p>
       </section>
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllGames, getGameBySlug } from "@/lib/games";
@@ -6,6 +7,16 @@ type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
   return getAllGames().map((game) => ({ slug: game.slug }));
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const game = getGameBySlug(slug);
+  if (!game) return { title: "ゲームが見つかりません" };
+  return {
+    title: game.title,
+    description: game.description,
+  };
 }
 
 export default async function GameDetailPage({ params }: Props) {
