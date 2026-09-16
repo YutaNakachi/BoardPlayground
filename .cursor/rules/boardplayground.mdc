@@ -1,0 +1,20 @@
+---
+description: Board Playground — オリジナルボードゲーム Web サイト
+globs:
+alwaysApply: true
+---
+
+# Board Playground
+
+オリジナルボードゲームをブラウザで遊ぶサイト。
+
+## 応答
+
+- 日本語、手順重視
+- 既存ゲームの無許可ルール再現は行わない
+
+## 参照
+
+- 方針: `AGENTS.md`
+- ゲーム一覧: `lib/games.ts`
+- ルール: `games/*/rules.md`
