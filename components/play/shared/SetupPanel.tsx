@@ -9,6 +9,7 @@ type Props = {
   onPlayerCount: (n: number) => void;
   onStart: () => void;
   extra?: ReactNode;
+  playerOptions?: number[];
 };
 
 export function SetupPanel({
@@ -18,26 +19,33 @@ export function SetupPanel({
   onPlayerCount,
   onStart,
   extra,
+  playerOptions = [2, 3, 4],
 }: Props) {
   return (
     <div className="rounded-2xl border border-surface-border bg-surface-raised p-6 text-center sm:p-8">
       <h2 className="text-xl font-semibold">{title}</h2>
       <p className="mt-2 text-sm text-slate-400">{description}</p>
       <div className="mt-6 flex justify-center gap-2">
-        {[2, 3, 4].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onPlayerCount(n)}
-            className={`min-h-11 min-w-14 rounded-lg px-4 py-2 text-sm font-medium transition ${
-              playerCount === n
-                ? "bg-accent text-white"
-                : "bg-surface-border text-slate-300 hover:bg-surface-border/80"
-            }`}
-          >
-            {n}人
-          </button>
-        ))}
+        {playerOptions.length === 1 ? (
+          <p className="rounded-lg bg-accent/15 px-4 py-2 text-sm font-medium text-accent">
+            {playerOptions[0]}人対戦
+          </p>
+        ) : (
+          playerOptions.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onPlayerCount(n)}
+              className={`min-h-11 min-w-14 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                playerCount === n
+                  ? "bg-accent text-white"
+                  : "bg-surface-border text-slate-300 hover:bg-surface-border/80"
+              }`}
+            >
+              {n}人
+            </button>
+          ))
+        )}
       </div>
       {extra}
       <button

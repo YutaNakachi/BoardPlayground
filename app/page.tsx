@@ -11,8 +11,8 @@ export default function HomePage() {
           ブラウザですぐ遊べる
         </p>
         <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-          オリジナルボードゲームの
-          <span className="block text-accent">遊び場</span>
+          同じ盤面で対戦する
+          <span className="block text-accent">ボードゲームの遊び場</span>
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
           お互いが同じ盤面を見て対戦できます。ルールを読んで、すぐプレイ。
