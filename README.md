@@ -29,6 +29,11 @@ npm run dev
 
 ブラウザで http://localhost:3000 を開く。
 
+## 公開
+
+- GitHub: https://github.com/YutaNakachi/BoardPlayground
+- Vercel: [このリポジトリをインポート](https://vercel.com/new/clone?repository-url=https://github.com/YutaNakachi/BoardPlayground)（Framework Preset は Next.js が自動検出。環境変数は不要）
+
 ## ゲーム
 
 - **スター・トレード** (`/play/star-trade`) — 2〜4人、セットコレクション
