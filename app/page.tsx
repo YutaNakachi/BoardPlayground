@@ -15,7 +15,7 @@ export default function HomePage() {
           <span className="block text-accent">遊び場</span>
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
-          同じ画面で交代して遊べます。ルールを読んで、すぐプレイ。
+          お互いが同じ盤面を見て対戦できます。ルールを読んで、すぐプレイ。
         </p>
       </section>
 

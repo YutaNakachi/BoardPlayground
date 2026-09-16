@@ -50,7 +50,7 @@ export default function AboutPage() {
       <section className="mt-10 space-y-3">
         <h2 className="text-xl font-semibold">公開ゲーム</h2>
         <p className="leading-relaxed text-slate-300">
-          サイト上のゲームは制作フローの実例です。遊んで雰囲気を確かめてからご相談ください。
+          サイト上のゲームは制作フローの実例です。いま掲載しているのは、お互いが同じ盤面を見て対戦するゲームです。遊んで雰囲気を確かめてからご相談ください。
         </p>
         <ul className="space-y-2">
           {games.map((game) => (
