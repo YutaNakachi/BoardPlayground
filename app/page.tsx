@@ -15,7 +15,7 @@ export default function HomePage() {
           <span className="block text-accent">遊び場</span>
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
-          同じ画面で交代して遊べます。ルールを読んで、すぐプレイ。
+          お互いが同じ盤面を見て対戦できます。ルールを読んで、すぐプレイ。
         </p>
       </section>
 
@@ -24,7 +24,13 @@ export default function HomePage() {
           <h2 className="text-xl font-semibold">ゲーム一覧</h2>
           <span className="text-sm text-slate-500">{games.length} 本</span>
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={
+            games.length === 1
+              ? "max-w-md"
+              : "grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          }
+        >
           {games.map((game) => (
             <GameCard key={game.slug} game={game} />
           ))}

@@ -7,6 +7,8 @@ export type GameMeta = {
   tags: string[];
   rulesSummary: string[];
   status: "playable" | "coming-soon";
+  /** サイト掲載。同じ盤面を見て対戦するゲームだけ true。手札秘匿などは false。 */
+  listed: boolean;
 };
 
 const games: GameMeta[] = [
@@ -25,6 +27,7 @@ const games: GameMeta[] = [
       "同点は共同勝利。同画面で交代プレイし、手番のあいだは他プレイヤーの手札を見ない。",
     ],
     status: "playable",
+    listed: false,
   },
   {
     slug: "nebula-link",
@@ -41,6 +44,7 @@ const games: GameMeta[] = [
       "最高点のプレイヤーの勝ち。同点は共同勝利。",
     ],
     status: "playable",
+    listed: true,
   },
   {
     slug: "chrono-split",
@@ -56,13 +60,14 @@ const games: GameMeta[] = [
       "全員のタイムラインが埋まったら終了。最高点のプレイヤーの勝ち。同点は共同勝利。",
     ],
     status: "playable",
+    listed: false,
   },
 ];
 
 export function getAllGames(): GameMeta[] {
-  return games;
+  return games.filter((game) => game.listed);
 }
 
 export function getGameBySlug(slug: string): GameMeta | undefined {
-  return games.find((g) => g.slug === slug);
+  return getAllGames().find((g) => g.slug === slug);
 }
