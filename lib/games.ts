@@ -218,6 +218,305 @@ const games: GameMeta[] = [
     status: "playable",
     listed: true,
   },
+  {
+    slug: "hex",
+    title: "ヘックス",
+    description:
+      "六角形のマスに石を置き、向かい側の辺をつなぐ2人用の抽象ゲーム。",
+    origin: "classic",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 15,
+    complexity: "hard",
+    cpu: false,
+    team: false,
+    tags: ["盤", "そろえる"],
+    rulesSummary: [
+      "11×11の六角マスに交互に1石ずつ置く。",
+      "プレイヤー1は上辺と下辺、プレイヤー2は左辺と右辺をつなげば勝ち。",
+      "石は縦・斜めの6方向で連結する。",
+      "先につなげたプレイヤーの勝ち。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "fox-hounds",
+    title: "ウサギと猟犬",
+    description:
+      "1匹のウサギと4匹の猟犬が8×8で対峙する追いかけっこ。ウサギは上段へ、猟犬は下段へ。",
+    origin: "classic",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 8,
+    complexity: "easy",
+    cpu: false,
+    team: false,
+    tags: ["盤", "駒取り"],
+    rulesSummary: [
+      "ウサギ1匹（下段中央）と猟犬4匹（上段）から開始。ウサギが先手。",
+      "ウサギは斜め・縦横に1マス、猟犬は斜め前に1マス進める。",
+      "ウサギが最上段に到達すればウサギの勝ち。",
+      "ウサギが動けなくなるか、猟犬が動けなくなれば猟犬側の勝ち。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "dominoes",
+    title: "ドミノ",
+    description:
+      "0〜6のドミノ28枚を端の数字を合わせて並べ、手札を先に出し切る2人用ゲーム。",
+    origin: "classic",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 10,
+    complexity: "easy",
+    cpu: false,
+    team: false,
+    tags: ["カード"],
+    rulesSummary: [
+      "各14枚の手札。先手は合法な1枚を場に出す。",
+      "以降は場の両端の数字と一致する牌を1枚出す。出せなければ1枚引く。",
+      "ダブルは縦に置く。",
+      "手札を先に出し切ったプレイヤーの勝ち。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "chinese-checkers",
+    title: "チャイニーズチェッカー",
+    description:
+      "星形の六角盤で駒を跳躍し、向かい側の三角エリアへすべて移動させる2〜4人用ゲーム。",
+    origin: "classic",
+    players: "2〜4",
+    playersMin: 2,
+    playersMax: 4,
+    durationMinutes: 12,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["盤"],
+    rulesSummary: [
+      "人数に応じて三角エリアに駒を配置。交互に1駒動かす。",
+      "隣接マスへ1マス、または跳ね越えで連続跳躍できる。",
+      "自分の駒をすべて向かい側のゴール三角へ移動させたプレイヤーが勝ち。",
+      "同画面で交代プレイ。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "ludo",
+    title: "ルード",
+    description:
+      "サイコロでコマを進め、4つすべてをゴールさせる2〜4人用のレースゲーム。",
+    origin: "classic",
+    players: "2〜4",
+    playersMin: 2,
+    playersMax: 4,
+    durationMinutes: 15,
+    complexity: "easy",
+    cpu: false,
+    team: false,
+    tags: ["盤"],
+    rulesSummary: [
+      "共有トラックを回り、各プレイヤー4コマを持つ。",
+      "サイコロを振り、出目に応じてコマを出す・進める。",
+      "相手のコマと重なると相手をスタートへ戻す。",
+      "4コマすべてをゴールしたプレイヤーが勝ち。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "backgammon",
+    title: "バックギャモン",
+    description:
+      "2つのサイコロで駒を進め、自陣に集めてベアオフする2人用ゲームの簡略版。",
+    origin: "classic",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 15,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["盤"],
+    rulesSummary: [
+      "各15枚を標準配置。交互にサイコロを振り駒を動かす。",
+      "出目の合計または個別の目で進める。ブロックされたマスには入れない。",
+      "全駒が自陣に入ったらベアオフ（盤外へ取り除く）。",
+      "先に15枚すべてをベアオフしたプレイヤーの勝ち。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "chess",
+    title: "チェス",
+    description:
+      "8×8の盤で駒を動かし、相手のキングをチェックメイトする2人用ゲーム。",
+    origin: "classic",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 30,
+    complexity: "hard",
+    cpu: false,
+    team: false,
+    tags: ["盤", "駒取り"],
+    rulesSummary: [
+      "標準配置。プレイヤー1（白）から開始。",
+      "各駒の動きに従い1手。自分のキングをチェックにさらす手は不可。",
+      "キャスリング・ポーン昇格（クイーン）・アンパッサンに対応。",
+      "チェックメイトで勝ち。ステイルメイトは引き分け。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "shogi",
+    title: "将棋",
+    description:
+      "9×9の盤で駒を動かし、持ち駒を打ち込んで相手の玉を詰める2人用ゲーム。",
+    origin: "classic",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 45,
+    complexity: "hard",
+    cpu: false,
+    team: false,
+    tags: ["盤", "駒取り"],
+    rulesSummary: [
+      "標準配置。先手（プレイヤー1）から開始。",
+      "駒を動かすか、持ち駒を空マスに打つ。敵陣入りは自動成り。",
+      "王手をかけたまま合法手がなくなれば詰み。",
+      "打ち歩詰め・千日手などの競技ルールは採用しない。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "mini-shogi",
+    title: "5五将棋",
+    description:
+      "5×5の小さな盤で遊ぶ将棋バリアント。持ち駒の打ち込みと成りが特徴。",
+    origin: "classic",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 15,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["盤", "駒取り"],
+    rulesSummary: [
+      "5×5盤に王・金・銀・角・飛・歩を配置。先手から開始。",
+      "将棋と同様に駒を動かすか持ち駒を打つ。敵陣入りは自動成り。",
+      "王手をかけたまま合法手がなくなれば詰み。",
+      "打ち歩詰め・千日手は採用しない。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "klondike",
+    title: "クロンダイク",
+    description:
+      "7列のタブローと組札で遊ぶ、1人用のクラシック・ソリティア。",
+    origin: "classic",
+    players: "1",
+    playersMin: 1,
+    playersMax: 1,
+    durationMinutes: 10,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["カード"],
+    rulesSummary: [
+      "タブロー7列・組札4つ・山札（1枚ドロー）の標準構成。",
+      "表向きのカードをタブロー間または組札へ移動できる。",
+      "タブローは交互色で降順、組札はスートごとにAから昇順。",
+      "4つの組札をすべて完成させれば勝ち。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "spider",
+    title: "スパイダー",
+    description:
+      "10列のタブローでK→Aの13枚列を8組完成させる1人用ソリティア（1スート簡略版）。",
+    origin: "classic",
+    players: "1",
+    playersMin: 1,
+    playersMax: 1,
+    durationMinutes: 15,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["カード", "そろえる"],
+    rulesSummary: [
+      "10列に54枚を配る。空列にはキングのみ置ける。",
+      "降順に並んだ連続カードをまとめて移動できる。",
+      "同一スートのK→Aの13枚列が完成すると取り除ける。",
+      "8組すべて完成すれば勝ち。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "mahjong-solitaire",
+    title: "麻雀ソリティア",
+    description:
+      "レイヤー状に積まれた牌から同種のペアを取り除く1人用パズル。",
+    origin: "classic",
+    players: "1",
+    playersMin: 1,
+    playersMax: 1,
+    durationMinutes: 8,
+    complexity: "easy",
+    cpu: false,
+    team: false,
+    tags: ["カード"],
+    rulesSummary: [
+      "36枚（18ペア）をレイヤー配置。左右どちらかが自由な牌だけ選択可能。",
+      "同じ種類の牌を2枚選んで取り除く。",
+      "取り除けないときは配置をシャッフルして続行できる。",
+      "盤上の牌をすべて取り除けば勝ち。",
+    ],
+    status: "playable",
+    listed: true,
+  },
+  {
+    slug: "slide-puzzle",
+    title: "スライドパズル",
+    description:
+      "4×4の盤で1〜15のタイルを順に並べる1人用パズル。",
+    origin: "classic",
+    players: "1",
+    playersMin: 1,
+    playersMax: 1,
+    durationMinutes: 5,
+    complexity: "easy",
+    cpu: false,
+    team: false,
+    tags: ["盤", "そろえる"],
+    rulesSummary: [
+      "1〜15のタイルと空きマス1つの4×4盤。",
+      "空きマスに隣接するタイルをタップしてスライドする。",
+      "左上から1, 2, 3 … 15の順に並べ、空きマスを右下にすれば完成。",
+      "手数制限なし。完成でクリア。",
+    ],
+    status: "playable",
+    listed: true,
+  },
 ];
 
 export function getAllGames(): GameMeta[] {
@@ -248,13 +547,14 @@ export function getCatalogComplexities(
   return COMPLEXITY_ORDER.filter((complexity) => used.has(complexity));
 }
 
-export type PlayerBucket = "two" | "threePlus";
+export type PlayerBucket = "solo" | "two" | "threePlus";
 export type DurationBucket = "short" | "medium" | "long";
 
-const PLAYER_BUCKET_ORDER: PlayerBucket[] = ["two", "threePlus"];
+const PLAYER_BUCKET_ORDER: PlayerBucket[] = ["solo", "two", "threePlus"];
 const DURATION_BUCKET_ORDER: DurationBucket[] = ["short", "medium", "long"];
 
 export const PLAYER_BUCKET_LABEL: Record<PlayerBucket, string> = {
+  solo: "1人",
   two: "2人",
   threePlus: "3人以上",
 };
@@ -270,6 +570,8 @@ export function matchesPlayerBucket(
   bucket: PlayerBucket
 ): boolean {
   switch (bucket) {
+    case "solo":
+      return game.playersMin === 1 && game.playersMax === 1;
     case "two":
       return game.playersMin <= 2 && game.playersMax >= 2;
     case "threePlus":

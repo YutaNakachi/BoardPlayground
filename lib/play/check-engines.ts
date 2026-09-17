@@ -1,5 +1,10 @@
 import { applyCheckersMove, checkersMoves, initialCheckersBoard } from "./checkers";
+import { chessMoves, initialChessState } from "./chess";
+import { emptyHexBoard, HEX_SIZE, hexWinner } from "./hex";
+import { foxHoundsMoves, foxHoundsWinner, initialFoxHounds } from "./fox-hounds";
+import { initialKlondike } from "./klondike";
 import { gomokuWinner } from "./gomoku";
+import { isSlideSolved, shuffledSlide } from "./slide-puzzle";
 import { initialMancala, sowMancala } from "./mancala";
 import {
   clickMorris,
@@ -75,6 +80,22 @@ export function runPlayEngineChecks() {
   morris = clickMorris(morris, 3);
   assert(morrisCount(morris.board, 1) === 1, "morris removed opponent");
   assert(!morris.removing && morris.current === 1, "morris turn passes after remove");
+
+  const hex = emptyHexBoard();
+  for (let r = 0; r < HEX_SIZE; r++) hex[r * HEX_SIZE] = 0;
+  assert(hexWinner(hex) === 0, "hex top-bottom win");
+  const fox = initialFoxHounds();
+  assert(foxHoundsMoves(fox, 0).length > 0, "fox opening moves");
+  assert(foxHoundsWinner(fox, 0) === null, "fox-hounds no early winner");
+
+  const chess = initialChessState();
+  assert(chessMoves(chess).length === 20, `chess opening ${chessMoves(chess).length}`);
+
+  const klondike = initialKlondike();
+  assert(klondike.tableau.length === 7, "klondike tableau");
+
+  const slide = shuffledSlide();
+  assert(!isSlideSolved(slide), "slide puzzle starts unsolved");
 }
 
 if (typeof process !== "undefined" && process.argv[1]?.includes("check-engines")) {
