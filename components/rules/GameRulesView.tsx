@@ -10,56 +10,91 @@ type Props = {
   variant?: "page" | "overlay";
 };
 
-const SCROLL_OFFSET = 120;
-const BOTTOM_THRESHOLD = 48;
+const HEADING_OFFSET = 0;
 
 export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
   const sectionIds = rules.sections.map((section) => section.id);
   const [activeId, setActiveId] = useState(sectionIds[0] ?? "");
   const [mobileTocOpen, setMobileTocOpen] = useState(false);
   const contentScrollRef = useRef<HTMLDivElement>(null);
+  const contentInnerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToSection = useCallback((sectionId: string) => {
+    const scrollRoot = contentScrollRef.current;
+    const section = document.getElementById(`rule-${sectionId}`);
+    if (!scrollRoot || !section) return;
+
+    const rootTop = scrollRoot.getBoundingClientRect().top;
+    const sectionTop = section.getBoundingClientRect().top;
+    const nextScrollTop =
+      scrollRoot.scrollTop + (sectionTop - rootTop) - HEADING_OFFSET;
+
+    scrollRoot.scrollTo({ top: nextScrollTop, behavior: "smooth" });
+    setActiveId(sectionId);
+  }, []);
+
+  const updateBottomPadding = useCallback(() => {
+    const scrollRoot = contentScrollRef.current;
+    const contentInner = contentInnerRef.current;
+    if (!scrollRoot || !contentInner || sectionIds.length === 0) return;
+
+    const lastSection = document.getElementById(
+      `rule-${sectionIds[sectionIds.length - 1]}`
+    );
+    if (!lastSection) return;
+
+    contentInner.style.paddingBottom = "0px";
+
+    const lastTop = lastSection.offsetTop;
+    const maxScrollForLastHeading = lastTop - HEADING_OFFSET;
+    const currentMaxScroll = contentInner.scrollHeight - scrollRoot.clientHeight;
+    const extraPadding = Math.max(0, maxScrollForLastHeading - currentMaxScroll);
+
+    contentInner.style.paddingBottom = `${extraPadding}px`;
+  }, [sectionIds]);
 
   const updateActiveSection = useCallback(() => {
-    if (sectionIds.length === 0) return;
+    const scrollRoot = contentScrollRef.current;
+    if (!scrollRoot || sectionIds.length === 0) return;
 
+    const rootTop = scrollRoot.getBoundingClientRect().top;
     let nextActive = sectionIds[0];
 
     for (const id of sectionIds) {
       const element = document.getElementById(`rule-${id}`);
       if (!element) continue;
-      if (element.getBoundingClientRect().top <= SCROLL_OFFSET) {
+      const relativeTop = element.getBoundingClientRect().top - rootTop;
+      if (relativeTop <= HEADING_OFFSET + 1) {
         nextActive = id;
       }
     }
 
-    const scrollRoot = variant === "overlay" ? contentScrollRef.current : null;
-    const atBottom = scrollRoot
-      ? scrollRoot.scrollTop + scrollRoot.clientHeight >=
-        scrollRoot.scrollHeight - BOTTOM_THRESHOLD
-      : window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - BOTTOM_THRESHOLD;
-
-    if (atBottom) {
-      nextActive = sectionIds[sectionIds.length - 1];
-    }
-
     setActiveId(nextActive);
-  }, [sectionIds, variant]);
+  }, [sectionIds]);
 
   useEffect(() => {
+    updateBottomPadding();
     updateActiveSection();
 
-    const scrollRoot =
-      variant === "overlay" ? contentScrollRef.current : window;
+    const scrollRoot = contentScrollRef.current;
+    const contentInner = contentInnerRef.current;
+    if (!scrollRoot) return;
 
-    scrollRoot?.addEventListener("scroll", updateActiveSection, { passive: true });
-    window.addEventListener("resize", updateActiveSection);
+    const onScroll = () => updateActiveSection();
+    scrollRoot.addEventListener("scroll", onScroll, { passive: true });
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateBottomPadding();
+      updateActiveSection();
+    });
+    resizeObserver.observe(scrollRoot);
+    if (contentInner) resizeObserver.observe(contentInner);
 
     return () => {
-      scrollRoot?.removeEventListener("scroll", updateActiveSection);
-      window.removeEventListener("resize", updateActiveSection);
+      scrollRoot.removeEventListener("scroll", onScroll);
+      resizeObserver.disconnect();
     };
-  }, [updateActiveSection, variant]);
+  }, [updateActiveSection, updateBottomPadding, rules.sections]);
 
   const toc = (
     <nav aria-label="ルール目次">
@@ -71,13 +106,13 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
           const isActive = activeId === section.id;
           return (
             <li key={section.id}>
-              <a
-                href={`#rule-${section.id}`}
+              <button
+                type="button"
                 onClick={() => {
-                  setActiveId(section.id);
+                  scrollToSection(section.id);
                   setMobileTocOpen(false);
                 }}
-                className={`block rounded-lg px-3 py-2 text-sm transition ${
+                className={`block w-full rounded-lg px-3 py-2 text-left text-sm transition ${
                   section.level === 3 ? "pl-6" : ""
                 } ${
                   isActive
@@ -86,7 +121,7 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
                 }`}
               >
                 {section.title}
-              </a>
+              </button>
             </li>
           );
         })}
@@ -95,13 +130,9 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
   );
 
   const content = (
-    <div className="space-y-10">
+    <div ref={contentInnerRef} className="space-y-10">
       {rules.sections.map((section) => (
-        <section
-          key={section.id}
-          id={`rule-${section.id}`}
-          className="scroll-mt-24"
-        >
+        <section key={section.id} id={`rule-${section.id}`}>
           {section.level === 2 ? (
             <h2 className="mb-4 text-xl font-semibold text-white">{section.title}</h2>
           ) : (
@@ -110,6 +141,28 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
           <RulesMarkdown content={section.content} />
         </section>
       ))}
+    </div>
+  );
+
+  const scrollAreaClass =
+    variant === "overlay"
+      ? "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
+      : "max-h-[min(70vh,calc(100vh-10rem))] overflow-y-auto lg:max-h-[min(75vh,calc(100vh-12rem))]";
+
+  const layout = (
+    <div className="flex min-h-0 flex-1 gap-0 overflow-hidden sm:gap-0">
+      <aside
+        className={`hidden shrink-0 overflow-y-auto border-surface-border p-4 sm:block ${
+          variant === "overlay"
+            ? "w-56 border-r lg:w-64"
+            : "w-52 border-r lg:w-56"
+        }`}
+      >
+        {toc}
+      </aside>
+      <div ref={contentScrollRef} className={`min-w-0 flex-1 ${scrollAreaClass}`}>
+        {content}
+      </div>
     </div>
   );
 
@@ -142,17 +195,7 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
           {mobileTocOpen ? <div className="py-3">{toc}</div> : null}
         </div>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="hidden w-56 shrink-0 overflow-y-auto border-r border-surface-border p-4 sm:block lg:w-64">
-            {toc}
-          </aside>
-          <div
-            ref={contentScrollRef}
-            className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
-          >
-            {content}
-          </div>
-        </div>
+        {layout}
       </div>
     );
   }
@@ -172,12 +215,7 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
         {mobileTocOpen ? <div className="pt-3">{toc}</div> : null}
       </div>
 
-      <div className="flex gap-8 lg:gap-12">
-        <aside className="hidden w-52 shrink-0 lg:block">
-          <div className="sticky top-20">{toc}</div>
-        </aside>
-        <div className="min-w-0 flex-1">{content}</div>
-      </div>
+      {layout}
     </div>
   );
 }
