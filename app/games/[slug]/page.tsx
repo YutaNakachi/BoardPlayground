@@ -59,14 +59,14 @@ export default async function GameDetailPage({ params }: Props) {
         </p>
       </header>
 
-      <section className="mb-10 rounded-2xl border border-surface-border bg-surface-raised p-6 sm:p-8">
+      <section className="mb-10 rounded-2xl border border-white/10 bg-surface-raised p-6 sm:p-8">
         <GameRulesView rules={rules} variant="page" />
       </section>
 
       {game.status === "playable" ? (
         <Link
           href={`/play/${game.slug}`}
-          className="btn-play inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-6 py-4 text-lg font-bold text-white shadow-lg shadow-accent/25 sm:w-auto"
+          className="btn-play inline-flex min-h-11 w-full items-center justify-center px-8 py-3 text-base sm:w-auto"
         >
           遊ぶ！
         </Link>

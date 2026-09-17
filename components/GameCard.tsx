@@ -11,10 +11,10 @@ export function GameCard({ game }: Props) {
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-3xl border border-surface-border bg-surface-raised transition hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10">
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface-raised transition duration-300 hover:border-white/20 hover:bg-[#323234]">
       <Link
         href={playHref}
-        className="absolute inset-0 z-0 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="absolute inset-0 z-0 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         aria-label={playable ? `${game.title}を遊ぶ` : `${game.title}の詳細`}
       />
 
@@ -31,7 +31,7 @@ export function GameCard({ game }: Props) {
             </span>
           ))}
         </div>
-        <h4 className="text-lg font-semibold transition group-hover:text-accent">
+        <h4 className="text-lg font-semibold tracking-tight text-white/95">
           {game.title}
         </h4>
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
@@ -43,7 +43,7 @@ export function GameCard({ game }: Props) {
         <div className="mt-4">
           <Link
             href={`/games/${game.slug}`}
-            className="pointer-events-auto inline-flex min-h-10 items-center rounded-lg border border-surface-border px-4 text-sm transition hover:bg-surface-border"
+            className="pointer-events-auto inline-flex min-h-9 items-center rounded-full border border-white/15 px-4 text-sm text-slate-300 transition hover:border-white/25 hover:text-white"
           >
             ルール
           </Link>

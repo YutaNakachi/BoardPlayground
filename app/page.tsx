@@ -7,14 +7,14 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
-      <section className="mb-14 text-center">
-        <h1 className="text-balance text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+      <section className="mb-16 text-center sm:mb-20">
+        <h1 className="text-balance text-5xl font-semibold tracking-tight text-[#f5f5f7] sm:text-6xl">
           {SITE_NAME}
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold text-slate-200 sm:text-xl">
+        <p className="mx-auto mt-5 max-w-2xl text-xl font-medium tracking-tight text-[#a1a1a6] sm:text-2xl">
           {SITE_TAGLINE}
         </p>
-        <p className="mx-auto mt-2 max-w-2xl text-base text-slate-400 sm:text-lg">
+        <p className="mx-auto mt-3 max-w-2xl text-base text-[#86868b] sm:text-lg">
           {SITE_TAGLINE_SUB}
         </p>
       </section>
