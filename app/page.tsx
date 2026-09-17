@@ -1,5 +1,6 @@
 import { GameCatalog } from "@/components/GameCatalog";
-import { SITE_NAME, SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
+import { SiteBrand } from "@/components/SiteBrand";
+import { SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
 import { getAllGames } from "@/lib/games";
 
 export default function HomePage() {
@@ -16,12 +17,8 @@ export default function HomePage() {
           className="pointer-events-none absolute -bottom-10 -left-6 h-28 w-28 rounded-full bg-accent-warm/15 blur-3xl"
           aria-hidden
         />
-        <h1 className="font-display text-balance text-5xl font-extrabold tracking-tight sm:text-6xl">
-          <span className="bg-gradient-to-r from-accent via-pink-300 to-accent-warm bg-clip-text text-transparent">
-            {SITE_NAME}
-          </span>
-        </h1>
-        <p className="mt-4 text-xl font-bold text-white sm:text-2xl">{SITE_TAGLINE}</p>
+        <SiteBrand variant="hero" />
+        <p className="mt-6 text-xl font-bold text-white sm:text-2xl">{SITE_TAGLINE}</p>
         <p className="mx-auto mt-3 max-w-lg text-base text-slate-400 sm:text-lg">
           {SITE_TAGLINE_SUB}
         </p>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 import { countSidebarFilters } from "@/lib/games";
-import { SITE_NAME } from "@/lib/site";
+import { SiteBrand } from "@/components/SiteBrand";
 
 function MenuIcon() {
   return (
@@ -56,9 +56,7 @@ export function Header() {
           >
             ボ
           </span>
-          <span className="truncate font-display text-base font-extrabold tracking-tight sm:text-lg">
-            {SITE_NAME}
-          </span>
+          <SiteBrand variant="header" />
         </Link>
       </div>
     </header>

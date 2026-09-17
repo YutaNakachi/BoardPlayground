@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { SITE_NAME, SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
+import { SITE_NAME, SITE_NAME_EN, SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -46,6 +46,9 @@ export default function OpenGraphImage() {
           }}
         >
           {SITE_NAME}
+        </div>
+        <div style={{ marginTop: 12, fontSize: 28, fontWeight: 600, color: "#94a3b8", letterSpacing: "0.04em" }}>
+          {SITE_NAME_EN}
         </div>
         <div style={{ marginTop: 20, fontSize: 30, color: "#e2e8f0", lineHeight: 1.5 }}>
           {SITE_TAGLINE}
