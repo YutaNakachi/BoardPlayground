@@ -15,6 +15,9 @@ export type GameRulesDocument = {
   sections: GameRulesSection[];
 };
 
+/** 公開ルール画面には出さない見出し（rules.md には残してよい） */
+const HIDDEN_RULE_SECTION_TITLES = new Set(["実装"]);
+
 function slugifyHeading(title: string, index: number): string {
   const base = title
     .trim()
@@ -53,6 +56,10 @@ export function parseGameRulesMarkdown(
     if (h2 || h3) {
       flushSection();
       const sectionTitle = (h2 ?? h3)![1].trim();
+      if (HIDDEN_RULE_SECTION_TITLES.has(sectionTitle)) {
+        current = null;
+        continue;
+      }
       const id = slugifyHeading(sectionTitle, sections.length);
       current = {
         id,
