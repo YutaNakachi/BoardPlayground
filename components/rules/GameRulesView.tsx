@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { GameRulesDocument } from "@/lib/game-rules";
 import { RulesMarkdown } from "@/components/rules/RulesMarkdown";
 
@@ -10,79 +16,81 @@ type Props = {
   variant?: "page" | "overlay";
 };
 
-function getScrollTopToAlignSection(
-  scrollRoot: HTMLElement,
-  section: HTMLElement
-): number {
-  const rootTop = scrollRoot.getBoundingClientRect().top;
-  const sectionTop = section.getBoundingClientRect().top;
-  return scrollRoot.scrollTop + (sectionTop - rootTop);
-}
-
 export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
   const sectionIds = rules.sections.map((section) => section.id);
   const [activeId, setActiveId] = useState(sectionIds[0] ?? "");
   const [mobileTocOpen, setMobileTocOpen] = useState(false);
-  const [spacerHeight, setSpacerHeight] = useState(0);
-  const contentScrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const sectionsRef = useRef<HTMLDivElement>(null);
-  const isScrollingToSectionRef = useRef(false);
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef(new Map<string, HTMLElement>());
 
-  const scrollToSection = useCallback((sectionId: string) => {
-    const scrollRoot = contentScrollRef.current;
-    const section = document.getElementById(`rule-${sectionId}`);
-    if (!scrollRoot || !section) return;
-
-    isScrollingToSectionRef.current = true;
-    const nextScrollTop = getScrollTopToAlignSection(scrollRoot, section);
-    scrollRoot.scrollTo({ top: nextScrollTop, behavior: "smooth" });
-    setActiveId(sectionId);
-
-    window.setTimeout(() => {
-      isScrollingToSectionRef.current = false;
-    }, 400);
-  }, []);
-
-  const measureSpacer = useCallback(() => {
-    const scrollRoot = contentScrollRef.current;
-    const sectionsRoot = sectionsRef.current;
+  const updateEndSpacer = useCallback(() => {
+    const scrollEl = scrollRef.current;
+    const sectionsEl = sectionsRef.current;
+    const spacerEl = spacerRef.current;
     const lastId = sectionIds[sectionIds.length - 1];
-    const lastSection = lastId ? document.getElementById(`rule-${lastId}`) : null;
-    if (!scrollRoot || !sectionsRoot || !lastSection) return;
+    const lastEl = lastId ? sectionRefs.current.get(lastId) : null;
+    if (!scrollEl || !sectionsEl || !spacerEl || !lastEl || scrollEl.clientHeight === 0) {
+      return;
+    }
 
-    const savedScrollTop = scrollRoot.scrollTop;
-    const styles = getComputedStyle(scrollRoot);
-    const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
-    const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0;
-
-    const targetMaxScroll = paddingTop + lastSection.offsetTop;
-    const contentHeightWithoutSpacer =
-      paddingTop + sectionsRoot.offsetHeight + paddingBottom;
-    const maxScrollWithoutSpacer = contentHeightWithoutSpacer - scrollRoot.clientHeight;
+    const style = getComputedStyle(scrollEl);
+    const paddingTop = Number.parseFloat(style.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
+    const targetMaxScroll = paddingTop + lastEl.offsetTop;
+    const maxScrollWithoutSpacer =
+      paddingTop + sectionsEl.offsetHeight + paddingBottom - scrollEl.clientHeight;
     const nextSpacer = Math.max(0, Math.ceil(targetMaxScroll - maxScrollWithoutSpacer));
 
-    setSpacerHeight((previous) => (previous === nextSpacer ? previous : nextSpacer));
-
-    requestAnimationFrame(() => {
-      const maxScroll = scrollRoot.scrollHeight - scrollRoot.clientHeight;
-      scrollRoot.scrollTop = Math.min(savedScrollTop, maxScroll);
-    });
+    spacerEl.style.height = `${nextSpacer}px`;
   }, [sectionIds]);
 
+  useLayoutEffect(() => {
+    updateEndSpacer();
+    const frame = requestAnimationFrame(updateEndSpacer);
+    return () => cancelAnimationFrame(frame);
+  }, [updateEndSpacer, rules]);
+
+  useEffect(() => {
+    let timeout: number | undefined;
+    const onResize = () => {
+      if (timeout !== undefined) window.clearTimeout(timeout);
+      timeout = window.setTimeout(updateEndSpacer, 150);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.clearTimeout(timeout);
+    };
+  }, [updateEndSpacer]);
+
+  const scrollToSection = useCallback((sectionId: string) => {
+    const scrollEl = scrollRef.current;
+    const sectionEl = sectionRefs.current.get(sectionId);
+    if (!scrollEl || !sectionEl) return;
+
+    const nextScrollTop =
+      scrollEl.scrollTop +
+      sectionEl.getBoundingClientRect().top -
+      scrollEl.getBoundingClientRect().top;
+
+    scrollEl.scrollTop = nextScrollTop;
+    setActiveId(sectionId);
+    setMobileTocOpen(false);
+  }, []);
+
   const updateActiveSection = useCallback(() => {
-    if (isScrollingToSectionRef.current) return;
+    const scrollEl = scrollRef.current;
+    if (!scrollEl || sectionIds.length === 0) return;
 
-    const scrollRoot = contentScrollRef.current;
-    if (!scrollRoot || sectionIds.length === 0) return;
-
-    const rootTop = scrollRoot.getBoundingClientRect().top;
+    const rootTop = scrollEl.getBoundingClientRect().top;
     let nextActive = sectionIds[0];
 
     for (const id of sectionIds) {
-      const element = document.getElementById(`rule-${id}`);
+      const element = sectionRefs.current.get(id);
       if (!element) continue;
-      const relativeTop = element.getBoundingClientRect().top - rootTop;
-      if (relativeTop <= 1) {
+      if (element.getBoundingClientRect().top - rootTop <= 2) {
         nextActive = id;
       }
     }
@@ -90,34 +98,25 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
     setActiveId((previous) => (previous === nextActive ? previous : nextActive));
   }, [sectionIds]);
 
-  useLayoutEffect(() => {
-    measureSpacer();
-  }, [measureSpacer, rules.sections]);
-
   useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
     updateActiveSection();
+    scrollEl.addEventListener("scroll", updateActiveSection, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", updateActiveSection);
+  }, [updateActiveSection, rules]);
 
-    const scrollRoot = contentScrollRef.current;
-    if (!scrollRoot) return;
-
-    const onScroll = () => updateActiveSection();
-    scrollRoot.addEventListener("scroll", onScroll, { passive: true });
-
-    const onResize = () => measureSpacer();
-    window.addEventListener("resize", onResize);
-
-    const resizeObserver = new ResizeObserver(() => {
-      measureSpacer();
-    });
-    resizeObserver.observe(scrollRoot);
-    if (sectionsRef.current) resizeObserver.observe(sectionsRef.current);
-
-    return () => {
-      scrollRoot.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
-      resizeObserver.disconnect();
-    };
-  }, [measureSpacer, updateActiveSection, rules.sections]);
+  const registerSectionRef = useCallback(
+    (sectionId: string, element: HTMLElement | null) => {
+      if (element) {
+        sectionRefs.current.set(sectionId, element);
+      } else {
+        sectionRefs.current.delete(sectionId);
+      }
+    },
+    []
+  );
 
   const toc = (
     <nav aria-label="ルール目次">
@@ -131,11 +130,8 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
             <li key={section.id}>
               <button
                 type="button"
-                onClick={() => {
-                  scrollToSection(section.id);
-                  setMobileTocOpen(false);
-                }}
-                className={`block w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                onClick={() => scrollToSection(section.id)}
+                className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
                   section.level === 3 ? "pl-6" : ""
                 } ${
                   isActive
@@ -168,10 +164,13 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
       >
         {toc}
       </aside>
-      <div ref={contentScrollRef} className={`min-w-0 flex-1 ${scrollAreaClass}`}>
+      <div ref={scrollRef} className={`min-w-0 flex-1 ${scrollAreaClass}`}>
         <div ref={sectionsRef} className="space-y-10">
           {rules.sections.map((section) => (
-            <section key={section.id} id={`rule-${section.id}`}>
+            <section
+              key={section.id}
+              ref={(element) => registerSectionRef(section.id, element)}
+            >
               {section.level === 2 ? (
                 <h2 className="mb-4 text-xl font-semibold text-white">{section.title}</h2>
               ) : (
@@ -181,7 +180,7 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
             </section>
           ))}
         </div>
-        <div aria-hidden style={{ height: spacerHeight }} />
+        <div ref={spacerRef} aria-hidden />
       </div>
     </div>
   );
