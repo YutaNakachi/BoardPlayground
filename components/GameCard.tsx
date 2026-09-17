@@ -1,8 +1,6 @@
 import Link from "next/link";
-import {
-  COMPLEXITY_LABEL,
-  type GameMeta,
-} from "@/lib/games";
+import { GameMetaChips } from "@/components/GameMetaChips";
+import type { GameMeta } from "@/lib/games";
 
 type Props = { game: GameMeta };
 
@@ -50,12 +48,9 @@ export function GameCard({ game }: Props) {
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
           {game.description}
         </p>
-        <p className="mt-3 text-xs text-slate-500">
-          {COMPLEXITY_LABEL[game.complexity]} · {game.players}人 · 約
-          {game.durationMinutes}分
-          {game.cpu ? " · CPUあり" : ""}
-          {game.team ? " · チーム可" : ""}
-        </p>
+        <div className="mt-3">
+          <GameMetaChips game={game} />
+        </div>
         <div className="mt-4 flex gap-2">
           <Link
             href={`/games/${game.slug}`}

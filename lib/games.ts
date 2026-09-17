@@ -228,7 +228,82 @@ export function getGameBySlug(slug: string): GameMeta | undefined {
   return getAllGames().find((g) => g.slug === slug);
 }
 
+const ORIGIN_ORDER: GameOrigin[] = ["original", "classic"];
+const COMPLEXITY_ORDER: GameComplexity[] = ["easy", "normal", "hard"];
+
 export function getCatalogTags(list: GameMeta[] = getAllGames()): GameTag[] {
   const used = new Set(list.flatMap((game) => game.tags));
   return GAME_TAGS.filter((tag) => used.has(tag));
+}
+
+export function getCatalogOrigins(list: GameMeta[] = getAllGames()): GameOrigin[] {
+  const used = new Set(list.map((game) => game.origin));
+  return ORIGIN_ORDER.filter((origin) => used.has(origin));
+}
+
+export function getCatalogComplexities(
+  list: GameMeta[] = getAllGames()
+): GameComplexity[] {
+  const used = new Set(list.map((game) => game.complexity));
+  return COMPLEXITY_ORDER.filter((complexity) => used.has(complexity));
+}
+
+export function getCatalogPlayerLabels(list: GameMeta[] = getAllGames()): string[] {
+  const byLabel = new Map<string, number>();
+  for (const game of list) {
+    if (!byLabel.has(game.players)) {
+      byLabel.set(game.players, game.playersMin);
+    }
+  }
+  return [...byLabel.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(([label]) => label);
+}
+
+export function getCatalogDurations(list: GameMeta[] = getAllGames()): number[] {
+  const used = new Set(list.map((game) => game.durationMinutes));
+  return [...used].sort((a, b) => a - b);
+}
+
+export function catalogHasCpu(list: GameMeta[] = getAllGames()): boolean {
+  return list.some((game) => game.cpu);
+}
+
+export function catalogHasTeam(list: GameMeta[] = getAllGames()): boolean {
+  return list.some((game) => game.team);
+}
+
+export type CatalogFilters = {
+  origins: GameOrigin[];
+  complexities: GameComplexity[];
+  players: string[];
+  durations: number[];
+  cpu: boolean;
+  team: boolean;
+  tags: GameTag[];
+};
+
+export function matchesCatalogFilters(game: GameMeta, filters: CatalogFilters): boolean {
+  if (filters.origins.length > 0 && !filters.origins.includes(game.origin)) {
+    return false;
+  }
+  if (
+    filters.complexities.length > 0 &&
+    !filters.complexities.includes(game.complexity)
+  ) {
+    return false;
+  }
+  if (filters.players.length > 0 && !filters.players.includes(game.players)) {
+    return false;
+  }
+  if (
+    filters.durations.length > 0 &&
+    !filters.durations.includes(game.durationMinutes)
+  ) {
+    return false;
+  }
+  if (filters.cpu && !game.cpu) return false;
+  if (filters.team && !game.team) return false;
+  if (!filters.tags.every((tag) => game.tags.includes(tag))) return false;
+  return true;
 }
