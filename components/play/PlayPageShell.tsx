@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { GameMeta } from "@/lib/games";
 
 type Props = {
@@ -11,6 +11,15 @@ type Props = {
 
 export function PlayPageShell({ game, children }: Props) {
   const [rulesOpen, setRulesOpen] = useState(false);
+
+  useEffect(() => {
+    if (!rulesOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setRulesOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [rulesOpen]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
