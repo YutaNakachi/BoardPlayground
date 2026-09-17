@@ -39,7 +39,7 @@ export default function OpenGraphImage() {
             marginTop: 36,
             fontSize: 72,
             fontWeight: 800,
-            color: "#d4849a",
+            color: "#f4f0f8",
           }}
         >
           {SITE_NAME}

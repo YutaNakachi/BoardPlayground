@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Zen_Maru_Gothic } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { CatalogSidebarProvider } from "@/components/CatalogSidebarContext";
 import { Footer } from "@/components/Footer";
@@ -8,10 +8,9 @@ import { SiteSidebar } from "@/components/SiteSidebar";
 import { getAllGames } from "@/lib/games";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
-const zenMaru = Zen_Maru_Gothic({
-  weight: ["400", "500", "700", "900"],
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  variable: "--font-sans",
 });
 
 const geistMono = Geist_Mono({
@@ -47,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${zenMaru.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <CatalogSidebarProvider games={games}>
           <a
