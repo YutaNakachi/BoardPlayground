@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllGames, getGameBySlug } from "@/lib/games";
+import {
+  COMPLEXITY_LABEL,
+  ORIGIN_LABEL,
+  getAllGames,
+  getGameBySlug,
+} from "@/lib/games";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -35,6 +40,9 @@ export default async function GameDetailPage({ params }: Props) {
 
       <header className="mb-10">
         <div className="mb-4 flex flex-wrap gap-2">
+          <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent ring-1 ring-accent/30">
+            {ORIGIN_LABEL[game.origin]}
+          </span>
           {game.tags.map((tag) => (
             <span
               key={tag}
@@ -46,7 +54,10 @@ export default async function GameDetailPage({ params }: Props) {
         </div>
         <h1 className="text-3xl font-bold sm:text-4xl">{game.title}</h1>
         <p className="mt-2 text-slate-400">
-          {game.players}人 · 約{game.durationMinutes}分
+          {COMPLEXITY_LABEL[game.complexity]} · {game.players}人 · 約
+          {game.durationMinutes}分
+          {game.cpu ? " · CPUあり" : ""}
+          {game.team ? " · チーム可" : ""}
         </p>
         <p className="mt-4 text-lg leading-relaxed text-slate-300">
           {game.description}

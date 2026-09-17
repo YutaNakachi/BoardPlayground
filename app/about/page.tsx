@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllGames } from "@/lib/games";
+import {
+  ORIGIN_LABEL,
+  getAllGames,
+  type GameOrigin,
+} from "@/lib/games";
 
 export const metadata: Metadata = {
   title: "制作代行について",
@@ -50,24 +54,35 @@ export default function AboutPage() {
       <section className="mt-10 space-y-3">
         <h2 className="text-xl font-semibold">公開ゲーム</h2>
         <p className="leading-relaxed text-slate-300">
-          サイト上のゲームは制作フローの実例です。いま掲載しているのは、お互いが同じ盤面を見て対戦するゲームです。遊んで雰囲気を確かめてからご相談ください。
+          サイト上のゲームは制作フローの実例と、同じ盤面で対戦できるクラシックです。遊んで雰囲気を確かめてからご相談ください。
         </p>
-        <ul className="space-y-2">
-          {games.map((game) => (
-            <li key={game.slug}>
-              <Link
-                href={`/games/${game.slug}`}
-                className="text-accent transition hover:text-accent-hover"
-              >
-                {game.title}
-              </Link>
-              <span className="text-sm text-slate-500">
-                {" "}
-                — {game.players}人 · 約{game.durationMinutes}分
-              </span>
-            </li>
-          ))}
-        </ul>
+        {(["original", "classic"] as GameOrigin[]).map((origin) => {
+          const group = games.filter((game) => game.origin === origin);
+          if (group.length === 0) return null;
+          return (
+            <div key={origin} className="space-y-2">
+              <h3 className="text-sm font-medium text-slate-400">
+                {ORIGIN_LABEL[origin]}
+              </h3>
+              <ul className="space-y-2">
+                {group.map((game) => (
+                  <li key={game.slug}>
+                    <Link
+                      href={`/games/${game.slug}`}
+                      className="text-accent transition hover:text-accent-hover"
+                    >
+                      {game.title}
+                    </Link>
+                    <span className="text-sm text-slate-500">
+                      {" "}
+                      — {game.players}人 · 約{game.durationMinutes}分
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
         <Link href="/" className="inline-flex text-sm text-slate-400 transition hover:text-white">
           ゲーム一覧を見る
         </Link>

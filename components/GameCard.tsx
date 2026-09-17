@@ -1,17 +1,21 @@
 import Link from "next/link";
-import type { GameMeta } from "@/lib/games";
+import {
+  COMPLEXITY_LABEL,
+  type GameMeta,
+} from "@/lib/games";
 
 type Props = { game: GameMeta };
 
-function bannerHue(slug: string) {
-  const hues = [230, 265, 195, 28, 340];
+function bannerHue(game: GameMeta) {
+  const hues =
+    game.origin === "original" ? [230, 250, 265] : [28, 195, 175, 340, 210];
   let hash = 0;
-  for (const ch of slug) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  for (const ch of game.slug) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   return hues[hash % hues.length];
 }
 
 export function GameCard({ game }: Props) {
-  const hue = bannerHue(game.slug);
+  const hue = bannerHue(game);
   const initial = [...game.title][0] ?? "BP";
 
   return (
@@ -47,7 +51,10 @@ export function GameCard({ game }: Props) {
           {game.description}
         </p>
         <p className="mt-3 text-xs text-slate-500">
-          {game.players}人 · 約{game.durationMinutes}分
+          {COMPLEXITY_LABEL[game.complexity]} · {game.players}人 · 約
+          {game.durationMinutes}分
+          {game.cpu ? " · CPUあり" : ""}
+          {game.team ? " · チーム可" : ""}
         </p>
         <div className="mt-4 flex gap-2">
           <Link
