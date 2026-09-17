@@ -167,7 +167,6 @@ export function StarTradeGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
-        title="スター・トレード"
         description="同じ画面で交代プレイ。手番のあいだは他プレイヤーの手札を見ません。"
         playerCount={playerCount}
         onPlayerCount={setPlayerCount}

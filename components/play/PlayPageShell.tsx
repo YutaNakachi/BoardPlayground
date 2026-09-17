@@ -17,27 +17,27 @@ export function PlayPageShell({ game, rules, children }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
+      <header className="mb-8">
+        <div className="flex items-center justify-between gap-4">
           <Link
             href="/"
-            className="text-sm text-slate-400 transition hover:text-white"
+            className="text-sm text-[#86868b] transition hover:text-white"
           >
             ← ゲーム一覧
           </Link>
-          <h1 className="mt-2 text-2xl font-bold">{game.title}</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setRulesOpen(true)}
-            className="min-h-9 rounded-full border border-white/15 bg-white/5 px-4 text-sm font-medium text-[#e8e8ed] transition hover:border-white/25 hover:bg-white/10"
+            className="text-sm font-medium text-[#2997ff] transition hover:underline"
           >
-            ルール
+            ルールを見る
           </button>
-          <span className="badge-muted">ローカルプレイ</span>
         </div>
-      </div>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-[#f5f5f7] sm:text-4xl">
+          {game.title}
+        </h1>
+        <p className="mt-1.5 text-sm text-[#86868b]">ローカルプレイ</p>
+      </header>
 
       {children}
 

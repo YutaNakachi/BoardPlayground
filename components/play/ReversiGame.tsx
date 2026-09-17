@@ -68,7 +68,6 @@ export function ReversiGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
-        title="リバーシ"
         description="挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。"
         playerCount={2}
         playerOptions={[2]}

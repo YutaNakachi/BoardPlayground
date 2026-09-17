@@ -59,7 +59,6 @@ export function MancalaGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
-        title="マンカラ・カラハ"
         description="自分の穴の種を反時計回りにまきます。最後が倉ならもう一度、空き穴なら向かいを取れます。"
         playerCount={2}
         playerOptions={[2]}
