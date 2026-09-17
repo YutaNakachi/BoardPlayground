@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { GameRulesDocument } from "@/lib/game-rules";
 import { RulesMarkdown } from "@/components/rules/RulesMarkdown";
 
@@ -10,50 +10,68 @@ type Props = {
   variant?: "page" | "overlay";
 };
 
-const HEADING_OFFSET = 0;
+function getScrollTopToAlignSection(
+  scrollRoot: HTMLElement,
+  section: HTMLElement
+): number {
+  const rootTop = scrollRoot.getBoundingClientRect().top;
+  const sectionTop = section.getBoundingClientRect().top;
+  return scrollRoot.scrollTop + (sectionTop - rootTop);
+}
 
 export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
   const sectionIds = rules.sections.map((section) => section.id);
   const [activeId, setActiveId] = useState(sectionIds[0] ?? "");
   const [mobileTocOpen, setMobileTocOpen] = useState(false);
+  const [spacerHeight, setSpacerHeight] = useState(0);
   const contentScrollRef = useRef<HTMLDivElement>(null);
-  const contentInnerRef = useRef<HTMLDivElement>(null);
+  const sectionsRef = useRef<HTMLDivElement>(null);
+  const isScrollingToSectionRef = useRef(false);
 
   const scrollToSection = useCallback((sectionId: string) => {
     const scrollRoot = contentScrollRef.current;
     const section = document.getElementById(`rule-${sectionId}`);
     if (!scrollRoot || !section) return;
 
-    const rootTop = scrollRoot.getBoundingClientRect().top;
-    const sectionTop = section.getBoundingClientRect().top;
-    const nextScrollTop =
-      scrollRoot.scrollTop + (sectionTop - rootTop) - HEADING_OFFSET;
-
+    isScrollingToSectionRef.current = true;
+    const nextScrollTop = getScrollTopToAlignSection(scrollRoot, section);
     scrollRoot.scrollTo({ top: nextScrollTop, behavior: "smooth" });
     setActiveId(sectionId);
+
+    window.setTimeout(() => {
+      isScrollingToSectionRef.current = false;
+    }, 400);
   }, []);
 
-  const updateBottomPadding = useCallback(() => {
+  const measureSpacer = useCallback(() => {
     const scrollRoot = contentScrollRef.current;
-    const contentInner = contentInnerRef.current;
-    if (!scrollRoot || !contentInner || sectionIds.length === 0) return;
+    const sectionsRoot = sectionsRef.current;
+    const lastId = sectionIds[sectionIds.length - 1];
+    const lastSection = lastId ? document.getElementById(`rule-${lastId}`) : null;
+    if (!scrollRoot || !sectionsRoot || !lastSection) return;
 
-    const lastSection = document.getElementById(
-      `rule-${sectionIds[sectionIds.length - 1]}`
-    );
-    if (!lastSection) return;
+    const savedScrollTop = scrollRoot.scrollTop;
+    const styles = getComputedStyle(scrollRoot);
+    const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0;
 
-    contentInner.style.paddingBottom = "0px";
+    const targetMaxScroll = paddingTop + lastSection.offsetTop;
+    const contentHeightWithoutSpacer =
+      paddingTop + sectionsRoot.offsetHeight + paddingBottom;
+    const maxScrollWithoutSpacer = contentHeightWithoutSpacer - scrollRoot.clientHeight;
+    const nextSpacer = Math.max(0, Math.ceil(targetMaxScroll - maxScrollWithoutSpacer));
 
-    const lastTop = lastSection.offsetTop;
-    const maxScrollForLastHeading = lastTop - HEADING_OFFSET;
-    const currentMaxScroll = contentInner.scrollHeight - scrollRoot.clientHeight;
-    const extraPadding = Math.max(0, maxScrollForLastHeading - currentMaxScroll);
+    setSpacerHeight((previous) => (previous === nextSpacer ? previous : nextSpacer));
 
-    contentInner.style.paddingBottom = `${extraPadding}px`;
+    requestAnimationFrame(() => {
+      const maxScroll = scrollRoot.scrollHeight - scrollRoot.clientHeight;
+      scrollRoot.scrollTop = Math.min(savedScrollTop, maxScroll);
+    });
   }, [sectionIds]);
 
   const updateActiveSection = useCallback(() => {
+    if (isScrollingToSectionRef.current) return;
+
     const scrollRoot = contentScrollRef.current;
     if (!scrollRoot || sectionIds.length === 0) return;
 
@@ -64,37 +82,42 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
       const element = document.getElementById(`rule-${id}`);
       if (!element) continue;
       const relativeTop = element.getBoundingClientRect().top - rootTop;
-      if (relativeTop <= HEADING_OFFSET + 1) {
+      if (relativeTop <= 1) {
         nextActive = id;
       }
     }
 
-    setActiveId(nextActive);
+    setActiveId((previous) => (previous === nextActive ? previous : nextActive));
   }, [sectionIds]);
 
+  useLayoutEffect(() => {
+    measureSpacer();
+  }, [measureSpacer, rules.sections]);
+
   useEffect(() => {
-    updateBottomPadding();
     updateActiveSection();
 
     const scrollRoot = contentScrollRef.current;
-    const contentInner = contentInnerRef.current;
     if (!scrollRoot) return;
 
     const onScroll = () => updateActiveSection();
     scrollRoot.addEventListener("scroll", onScroll, { passive: true });
 
+    const onResize = () => measureSpacer();
+    window.addEventListener("resize", onResize);
+
     const resizeObserver = new ResizeObserver(() => {
-      updateBottomPadding();
-      updateActiveSection();
+      measureSpacer();
     });
     resizeObserver.observe(scrollRoot);
-    if (contentInner) resizeObserver.observe(contentInner);
+    if (sectionsRef.current) resizeObserver.observe(sectionsRef.current);
 
     return () => {
       scrollRoot.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
       resizeObserver.disconnect();
     };
-  }, [updateActiveSection, updateBottomPadding, rules.sections]);
+  }, [measureSpacer, updateActiveSection, rules.sections]);
 
   const toc = (
     <nav aria-label="ルール目次">
@@ -129,28 +152,13 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
     </nav>
   );
 
-  const content = (
-    <div ref={contentInnerRef} className="space-y-10">
-      {rules.sections.map((section) => (
-        <section key={section.id} id={`rule-${section.id}`}>
-          {section.level === 2 ? (
-            <h2 className="mb-4 text-xl font-semibold text-white">{section.title}</h2>
-          ) : (
-            <h3 className="mb-3 text-lg font-semibold text-slate-100">{section.title}</h3>
-          )}
-          <RulesMarkdown content={section.content} />
-        </section>
-      ))}
-    </div>
-  );
-
   const scrollAreaClass =
     variant === "overlay"
-      ? "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
-      : "max-h-[min(70vh,calc(100vh-10rem))] overflow-y-auto lg:max-h-[min(75vh,calc(100vh-12rem))]";
+      ? "min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6"
+      : "max-h-[min(70vh,calc(100vh-10rem))] overflow-y-auto overscroll-contain p-4 sm:p-6 lg:max-h-[min(75vh,calc(100vh-12rem))]";
 
   const layout = (
-    <div className="flex min-h-0 flex-1 gap-0 overflow-hidden sm:gap-0">
+    <div className="flex min-h-0 flex-1 overflow-hidden">
       <aside
         className={`hidden shrink-0 overflow-y-auto border-surface-border p-4 sm:block ${
           variant === "overlay"
@@ -161,7 +169,19 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
         {toc}
       </aside>
       <div ref={contentScrollRef} className={`min-w-0 flex-1 ${scrollAreaClass}`}>
-        {content}
+        <div ref={sectionsRef} className="space-y-10">
+          {rules.sections.map((section) => (
+            <section key={section.id} id={`rule-${section.id}`}>
+              {section.level === 2 ? (
+                <h2 className="mb-4 text-xl font-semibold text-white">{section.title}</h2>
+              ) : (
+                <h3 className="mb-3 text-lg font-semibold text-slate-100">{section.title}</h3>
+              )}
+              <RulesMarkdown content={section.content} />
+            </section>
+          ))}
+        </div>
+        <div aria-hidden style={{ height: spacerHeight }} />
       </div>
     </div>
   );
