@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameRulesDocument } from "@/lib/game-rules";
 import { RulesMarkdown } from "@/components/rules/RulesMarkdown";
 
@@ -10,32 +10,56 @@ type Props = {
   variant?: "page" | "overlay";
 };
 
+const SCROLL_OFFSET = 120;
+const BOTTOM_THRESHOLD = 48;
+
 export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
-  const [activeId, setActiveId] = useState(rules.sections[0]?.id ?? "");
+  const sectionIds = rules.sections.map((section) => section.id);
+  const [activeId, setActiveId] = useState(sectionIds[0] ?? "");
   const [mobileTocOpen, setMobileTocOpen] = useState(false);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  const updateActiveSection = useCallback(() => {
+    if (sectionIds.length === 0) return;
+
+    let nextActive = sectionIds[0];
+
+    for (const id of sectionIds) {
+      const element = document.getElementById(`rule-${id}`);
+      if (!element) continue;
+      if (element.getBoundingClientRect().top <= SCROLL_OFFSET) {
+        nextActive = id;
+      }
+    }
+
+    const scrollRoot = variant === "overlay" ? contentScrollRef.current : null;
+    const atBottom = scrollRoot
+      ? scrollRoot.scrollTop + scrollRoot.clientHeight >=
+        scrollRoot.scrollHeight - BOTTOM_THRESHOLD
+      : window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - BOTTOM_THRESHOLD;
+
+    if (atBottom) {
+      nextActive = sectionIds[sectionIds.length - 1];
+    }
+
+    setActiveId(nextActive);
+  }, [sectionIds, variant]);
 
   useEffect(() => {
-    const sectionElements = rules.sections
-      .map((section) => document.getElementById(`rule-${section.id}`))
-      .filter((element): element is HTMLElement => element !== null);
+    updateActiveSection();
 
-    if (sectionElements.length === 0) return;
+    const scrollRoot =
+      variant === "overlay" ? contentScrollRef.current : window;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]?.target.id) {
-          setActiveId(visible[0].target.id.replace(/^rule-/, ""));
-        }
-      },
-      { rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.25, 0.5, 1] }
-    );
+    scrollRoot?.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
 
-    sectionElements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, [rules.sections]);
+    return () => {
+      scrollRoot?.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+    };
+  }, [updateActiveSection, variant]);
 
   const toc = (
     <nav aria-label="ルール目次">
@@ -49,7 +73,10 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
             <li key={section.id}>
               <a
                 href={`#rule-${section.id}`}
-                onClick={() => setMobileTocOpen(false)}
+                onClick={() => {
+                  setActiveId(section.id);
+                  setMobileTocOpen(false);
+                }}
                 className={`block rounded-lg px-3 py-2 text-sm transition ${
                   section.level === 3 ? "pl-6" : ""
                 } ${
@@ -119,7 +146,12 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
           <aside className="hidden w-56 shrink-0 overflow-y-auto border-r border-surface-border p-4 sm:block lg:w-64">
             {toc}
           </aside>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{content}</div>
+          <div
+            ref={contentScrollRef}
+            className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
+          >
+            {content}
+          </div>
         </div>
       </div>
     );
