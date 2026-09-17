@@ -128,7 +128,7 @@ const games: GameMeta[] = [
   },
   {
     slug: "mancala",
-    title: "マンカラ",
+    title: "マンカラ・カラハ",
     description:
       "穴に入った種を反時計回りにまき、倉へ集める2人用の種まきゲーム。",
     origin: "classic",
