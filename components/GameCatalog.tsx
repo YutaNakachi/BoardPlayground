@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { GameCard } from "@/components/GameCard";
 import {
   ORIGIN_LABEL,
@@ -33,11 +33,8 @@ function GameGrid({ games }: { games: GameMeta[] }) {
 export function GameCatalog({ games }: Props) {
   const [selected, setSelected] = useState<GameTag[]>([]);
   const chips = getCatalogTags(games);
-
-  const filtered = useMemo(
-    () =>
-      games.filter((game) => selected.every((tag) => game.tags.includes(tag))),
-    [games, selected]
+  const filtered = games.filter((game) =>
+    selected.every((tag) => game.tags.includes(tag))
   );
 
   function toggle(tag: GameTag) {
