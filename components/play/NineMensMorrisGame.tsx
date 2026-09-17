@@ -50,6 +50,7 @@ export function NineMensMorrisGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
+        title="ナイン・メンズ・モリス"
         description="各9個の駒を点に置き、隣へ動かして3つ並べます。並べたら相手の駒を1つ外します。"
         playerCount={2}
         playerOptions={[2]}

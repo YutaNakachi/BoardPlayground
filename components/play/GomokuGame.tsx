@@ -68,6 +68,7 @@ export function GomokuGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
+        title="五目並べ"
         description="13×13のマスに交互に置き、縦・横・斜めのいずれかで5つ並べると勝ちです。禁じ手はありません。"
         playerCount={2}
         playerOptions={[2]}

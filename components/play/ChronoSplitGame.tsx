@@ -138,6 +138,7 @@ export function ChronoSplitGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
+        title="クロノ・スプリット"
         description="場のカードを1枚選び、自分のタイムラインの空枠へ置きます。"
         playerCount={playerCount}
         onPlayerCount={setPlayerCount}

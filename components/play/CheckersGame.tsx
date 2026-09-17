@@ -107,6 +107,7 @@ export function CheckersGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
+        title="チェッカー"
         description="暗いマスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
         playerCount={2}
         playerOptions={[2]}

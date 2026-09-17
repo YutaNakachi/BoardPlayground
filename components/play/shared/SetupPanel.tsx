@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 type Props = {
+  title: string;
   description: string;
   playerCount: number;
   onPlayerCount: (n: number) => void;
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function SetupPanel({
+  title,
   description,
   playerCount,
   onPlayerCount,
@@ -21,10 +23,13 @@ export function SetupPanel({
 }: Props) {
   return (
     <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-      <p className="text-sm leading-relaxed text-[#a1a1a6]">{description}</p>
+      <h2 className="text-xl font-semibold">{title}</h2>
+      <p className="mt-2 text-sm text-[#a1a1a6]">{description}</p>
       <div className="mt-6 flex justify-center gap-2">
         {playerOptions.length === 1 ? (
-          <p className="text-sm text-[#86868b]">{playerOptions[0]}人対戦</p>
+          <p className="badge-muted px-4 py-2 text-sm">
+            {playerOptions[0]}人対戦
+          </p>
         ) : (
           playerOptions.map((n) => (
             <button

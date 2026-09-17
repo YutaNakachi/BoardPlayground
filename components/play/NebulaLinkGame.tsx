@@ -117,6 +117,7 @@ export function NebulaLinkGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
+        title="ネビュラ・リンク"
         description="中央の星核には置けません。空マスをタップしてノードを置きます。"
         playerCount={playerCount}
         onPlayerCount={setPlayerCount}
