@@ -30,7 +30,7 @@ export type GameMeta = {
   tags: GameTag[];
   rulesSummary: string[];
   status: "playable" | "coming-soon";
-  /** サイト掲載。同じ盤面を見て対戦するゲームだけ true。手札秘匿などは false。 */
+  /** サイト掲載。ブラウザ実装済みで公開するゲームだけ true。 */
   listed: boolean;
 };
 

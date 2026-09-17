@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -27,17 +28,17 @@ export default function OpenGraphImage() {
             background: "#6366f1",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 28,
+            fontSize: 32,
             fontWeight: 700,
           }}
         >
-          BP
+          ボ
         </div>
         <div style={{ marginTop: 36, fontSize: 56, fontWeight: 700 }}>
-          Board Playground
+          {SITE_NAME}
         </div>
         <div style={{ marginTop: 16, fontSize: 28, color: "#94a3b8" }}>
-          Original board games in the browser
+          {SITE_TAGLINE}
         </div>
       </div>
     ),

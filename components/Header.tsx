@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 import { countSidebarFilters } from "@/lib/games";
+import { SITE_NAME } from "@/lib/site";
 
 const links = [
   { href: "/", label: "ゲーム一覧" },
@@ -70,9 +71,9 @@ export function Header() {
           className="flex min-w-0 flex-1 items-center gap-2 font-semibold tracking-tight sm:flex-none"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white">
-            BP
+            ボ
           </span>
-          <span className="truncate text-sm sm:text-base">Board Playground</span>
+          <span className="truncate text-sm sm:text-base">{SITE_NAME}</span>
         </Link>
 
         <nav
