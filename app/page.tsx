@@ -1,5 +1,5 @@
 import { GameCatalog } from "@/components/GameCatalog";
-import { SITE_HERO_SUB, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
+import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import { getAllGames } from "@/lib/games";
 
 export default function HomePage() {
@@ -21,9 +21,8 @@ export default function HomePage() {
             {SITE_NAME}
           </span>
         </h1>
-        <p className="mt-4 text-xl font-bold text-white sm:text-2xl">{SITE_TAGLINE}</p>
-        <p className="mx-auto mt-3 max-w-lg text-base text-slate-400 sm:text-lg">
-          {SITE_HERO_SUB}
+        <p className="mx-auto mt-4 max-w-lg text-xl font-bold text-white sm:text-2xl">
+          {SITE_TAGLINE}
         </p>
       </section>
 
