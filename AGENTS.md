@@ -1,4 +1,4 @@
-# Board Playground — Agent 方針
+# ボドパッ！ — Agent 方針
 
 オリジナルボードゲームの Web 公開・プレイ用リポジトリ。
 

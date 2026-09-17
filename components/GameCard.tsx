@@ -7,7 +7,7 @@ type Props = { game: GameMeta };
 
 export function GameCard({ game }: Props) {
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-surface-border bg-surface-raised transition hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5">
+    <article className="group flex flex-col overflow-hidden rounded-3xl border border-surface-border bg-surface-raised transition hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10">
       <GameCardArt game={game} />
       <div className="flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
@@ -42,9 +42,9 @@ export function GameCard({ game }: Props) {
           {game.status === "playable" ? (
             <Link
               href={`/play/${game.slug}`}
-              className="flex min-h-11 flex-1 items-center justify-center rounded-lg bg-accent py-2 text-center text-sm font-medium text-white transition hover:bg-accent-hover"
+              className="btn-play flex min-h-11 flex-1 items-center justify-center rounded-xl py-2 text-center text-sm font-bold text-white shadow-md shadow-accent/20 transition"
             >
-              プレイ
+              遊ぶ！
             </Link>
           ) : (
             <span className="flex min-h-11 flex-1 items-center justify-center rounded-lg bg-surface-border py-2 text-center text-sm text-slate-500">

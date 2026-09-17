@@ -1,21 +1,23 @@
 import { GameCatalog } from "@/components/GameCatalog";
+import { SITE_NAME, SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
 import { getAllGames } from "@/lib/games";
 
 export default function HomePage() {
   const games = getAllGames();
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <section className="mb-14 text-center">
-        <p className="mb-3 text-sm font-medium tracking-widest text-accent">
-          ブラウザですぐ遊べる
-        </p>
-        <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
-          同じ盤面で対戦する
-          <span className="block text-accent">ボードゲームの遊び場</span>
+        <h1 className="font-display text-balance text-5xl font-extrabold tracking-tight sm:text-6xl">
+          <span className="bg-gradient-to-r from-accent via-pink-300 to-accent-warm bg-clip-text text-transparent">
+            {SITE_NAME}
+          </span>
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
-          お互いが同じ盤面を見て対戦できます。ルールを読んで、すぐプレイ。
+        <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold text-slate-200 sm:text-xl">
+          {SITE_TAGLINE}
+        </p>
+        <p className="mx-auto mt-2 max-w-2xl text-base text-slate-400 sm:text-lg">
+          {SITE_TAGLINE_SUB}
         </p>
       </section>
 

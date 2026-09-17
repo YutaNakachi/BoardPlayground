@@ -9,14 +9,15 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          DEFAULT: "#0f1419",
-          raised: "#1a2332",
-          border: "#2d3a4f",
+          DEFAULT: "#12101a",
+          raised: "#1c1826",
+          border: "#3d3550",
         },
         accent: {
-          DEFAULT: "#6366f1",
-          hover: "#818cf8",
-          muted: "#4f46e5",
+          DEFAULT: "#ff5c8a",
+          hover: "#ff7aa3",
+          muted: "#e84a76",
+          warm: "#ffb347",
         },
       },
       fontFamily: {

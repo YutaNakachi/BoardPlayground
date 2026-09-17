@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, M_PLUS_Rounded_1c } from "next/font/google";
 import "./globals.css";
 import { CatalogSidebarProvider } from "@/components/CatalogSidebarContext";
 import { Footer } from "@/components/Footer";
@@ -18,9 +18,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const display = M_PLUS_Rounded_1c({
+  weight: ["700", "800"],
+  subsets: ["latin"],
+  variable: "--font-display",
+});
+
 export const metadata: Metadata = {
   title: {
-    default: `${SITE_NAME} — ボードゲームをブラウザで`,
+    default: `${SITE_NAME} — ブラウザで遊べるボードゲーム（無料）`,
     template: `%s — ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -33,7 +39,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0e14",
+  themeColor: "#12101a",
 };
 
 export default function RootLayout({
@@ -46,7 +52,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${display.variable} font-sans antialiased`}
       >
         <CatalogSidebarProvider games={games}>
           <a

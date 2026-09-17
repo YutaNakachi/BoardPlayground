@@ -1,10 +1,10 @@
 ---
-description: Board Playground — オリジナルボードゲーム Web サイト
+description: ボドパッ！ — オリジナルボードゲーム Web サイト
 globs:
 alwaysApply: true
 ---
 
-# Board Playground
+# ボドパッ！
 
 オリジナルボードゲームをブラウザで遊ぶサイト。
 
