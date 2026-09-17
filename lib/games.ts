@@ -248,21 +248,63 @@ export function getCatalogComplexities(
   return COMPLEXITY_ORDER.filter((complexity) => used.has(complexity));
 }
 
-export function getCatalogPlayerLabels(list: GameMeta[] = getAllGames()): string[] {
-  const byLabel = new Map<string, number>();
-  for (const game of list) {
-    if (!byLabel.has(game.players)) {
-      byLabel.set(game.players, game.playersMin);
-    }
+export type PlayerBucket = "two" | "threePlus";
+export type DurationBucket = "short" | "medium" | "long";
+
+const PLAYER_BUCKET_ORDER: PlayerBucket[] = ["two", "threePlus"];
+const DURATION_BUCKET_ORDER: DurationBucket[] = ["short", "medium", "long"];
+
+export const PLAYER_BUCKET_LABEL: Record<PlayerBucket, string> = {
+  two: "2人",
+  threePlus: "3人以上",
+};
+
+export const DURATION_BUCKET_LABEL: Record<DurationBucket, string> = {
+  short: "短い（〜5分）",
+  medium: "ふつう（〜10分）",
+  long: "やや長め（11分〜）",
+};
+
+export function matchesPlayerBucket(
+  game: GameMeta,
+  bucket: PlayerBucket
+): boolean {
+  switch (bucket) {
+    case "two":
+      return game.playersMin <= 2 && game.playersMax >= 2;
+    case "threePlus":
+      return game.playersMax >= 3;
   }
-  return [...byLabel.entries()]
-    .sort((a, b) => a[1] - b[1])
-    .map(([label]) => label);
 }
 
-export function getCatalogDurations(list: GameMeta[] = getAllGames()): number[] {
-  const used = new Set(list.map((game) => game.durationMinutes));
-  return [...used].sort((a, b) => a - b);
+export function matchesDurationBucket(
+  game: GameMeta,
+  bucket: DurationBucket
+): boolean {
+  switch (bucket) {
+    case "short":
+      return game.durationMinutes <= 5;
+    case "medium":
+      return game.durationMinutes >= 6 && game.durationMinutes <= 10;
+    case "long":
+      return game.durationMinutes >= 11;
+  }
+}
+
+export function getCatalogPlayerBuckets(
+  list: GameMeta[] = getAllGames()
+): PlayerBucket[] {
+  return PLAYER_BUCKET_ORDER.filter((bucket) =>
+    list.some((game) => matchesPlayerBucket(game, bucket))
+  );
+}
+
+export function getCatalogDurationBuckets(
+  list: GameMeta[] = getAllGames()
+): DurationBucket[] {
+  return DURATION_BUCKET_ORDER.filter((bucket) =>
+    list.some((game) => matchesDurationBucket(game, bucket))
+  );
 }
 
 export function catalogHasCpu(list: GameMeta[] = getAllGames()): boolean {
@@ -276,12 +318,34 @@ export function catalogHasTeam(list: GameMeta[] = getAllGames()): boolean {
 export type CatalogFilters = {
   origins: GameOrigin[];
   complexities: GameComplexity[];
-  players: string[];
-  durations: number[];
+  playerBuckets: PlayerBucket[];
+  durationBuckets: DurationBucket[];
   cpu: boolean;
   team: boolean;
   tags: GameTag[];
 };
+
+export const EMPTY_CATALOG_FILTERS: CatalogFilters = {
+  origins: [],
+  complexities: [],
+  playerBuckets: [],
+  durationBuckets: [],
+  cpu: false,
+  team: false,
+  tags: [],
+};
+
+export function countCatalogFilters(filters: CatalogFilters): number {
+  return (
+    filters.origins.length +
+    filters.complexities.length +
+    filters.playerBuckets.length +
+    filters.durationBuckets.length +
+    (filters.cpu ? 1 : 0) +
+    (filters.team ? 1 : 0) +
+    filters.tags.length
+  );
+}
 
 export function matchesCatalogFilters(game: GameMeta, filters: CatalogFilters): boolean {
   if (filters.origins.length > 0 && !filters.origins.includes(game.origin)) {
@@ -293,12 +357,15 @@ export function matchesCatalogFilters(game: GameMeta, filters: CatalogFilters): 
   ) {
     return false;
   }
-  if (filters.players.length > 0 && !filters.players.includes(game.players)) {
+  if (
+    filters.playerBuckets.length > 0 &&
+    !filters.playerBuckets.some((bucket) => matchesPlayerBucket(game, bucket))
+  ) {
     return false;
   }
   if (
-    filters.durations.length > 0 &&
-    !filters.durations.includes(game.durationMinutes)
+    filters.durationBuckets.length > 0 &&
+    !filters.durationBuckets.some((bucket) => matchesDurationBucket(game, bucket))
   ) {
     return false;
   }
