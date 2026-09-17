@@ -35,7 +35,7 @@ export function PlayPageShell({ game, rules, children }: Props) {
           >
             ルール
           </button>
-          <span className="badge-muted">ローカルプレイ</span>
+          <span className="badge-local">ローカルプレイ</span>
         </div>
       </div>
 
