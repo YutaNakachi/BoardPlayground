@@ -44,9 +44,9 @@ export function GameCard({ game }: Props) {
             </span>
           ))}
         </div>
-        <h3 className="text-lg font-semibold transition group-hover:text-accent">
+        <h4 className="text-lg font-semibold transition group-hover:text-accent">
           {game.title}
-        </h3>
+        </h4>
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
           {game.description}
         </p>
