@@ -26,7 +26,6 @@ type Props = {
   games: GameMeta[];
   filters: CatalogFilters;
   onChange: (filters: CatalogFilters) => void;
-  onClose?: () => void;
 };
 
 function FilterGroup({
@@ -44,7 +43,7 @@ function FilterGroup({
   );
 }
 
-export function CatalogFilterPanel({ games, filters, onChange, onClose }: Props) {
+export function CatalogFilterPanel({ games, filters, onChange }: Props) {
   const origins = getCatalogOrigins(games);
   const complexities = getCatalogComplexities(games);
   const playerBuckets = getCatalogPlayerBuckets(games);
@@ -99,21 +98,9 @@ export function CatalogFilterPanel({ games, filters, onChange, onClose }: Props)
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold">絞り込み</h3>
-        {onClose ? (
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-9 rounded-lg px-2 text-sm text-slate-400 transition hover:text-white"
-            aria-label="絞り込みを閉じる"
-          >
-            閉じる
-          </button>
-        ) : null}
-      </div>
+      <h3 className="mb-4 text-sm font-semibold">絞り込み</h3>
 
-      <div className="space-y-5 overflow-y-auto" role="group" aria-label="条件で絞る">
+      <div className="space-y-5" role="group" aria-label="条件で絞る">
         {origins.length > 0 ? (
           <FilterGroup label="系統">
             {origins.map((origin) => (
