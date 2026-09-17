@@ -5,5 +5,5 @@ export const SITE_NAME = "ボドパッ！";
 export const SITE_NAME_ROMAN = "Bodopa";
 export const SITE_DESCRIPTION =
   "オリジナルルールのゲーム多数、ボードゲームの遊び場。登録なし・インストールなしでパッ！と遊べる。";
-export const SITE_TAGLINE = "オリジナルゲームも多数！ボードーゲームの遊び場！";
+export const SITE_TAGLINE = "オリジナルゲーム多数！ボードゲームの遊び場！";
 export const SITE_TAGLINE_SUB = "登録なし・インストールなし・完全無料で遊び放題！";
