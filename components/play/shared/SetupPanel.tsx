@@ -22,12 +22,12 @@ export function SetupPanel({
   playerOptions = [2, 3, 4],
 }: Props) {
   return (
-    <div className="rounded-2xl border border-surface-border bg-surface-raised p-6 text-center sm:p-8">
+    <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
       <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-2 text-sm text-slate-400">{description}</p>
+      <p className="mt-2 text-sm text-[#a1a1a6]">{description}</p>
       <div className="mt-6 flex justify-center gap-2">
         {playerOptions.length === 1 ? (
-          <p className="rounded-lg bg-accent/15 px-4 py-2 text-sm font-medium text-accent">
+          <p className="badge-muted px-4 py-2 text-sm">
             {playerOptions[0]}人対戦
           </p>
         ) : (
@@ -36,10 +36,10 @@ export function SetupPanel({
               key={n}
               type="button"
               onClick={() => onPlayerCount(n)}
-              className={`min-h-11 min-w-14 rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`min-h-11 min-w-14 rounded-full px-4 py-2 text-sm font-medium transition ${
                 playerCount === n
-                  ? "bg-accent text-white"
-                  : "bg-surface-border text-slate-300 hover:bg-surface-border/80"
+                  ? "bg-[#f5f5f7] text-[#1d1d1f]"
+                  : "bg-white/10 text-[#c7c7cc] ring-1 ring-white/10 hover:bg-white/15"
               }`}
             >
               {n}人
@@ -48,11 +48,7 @@ export function SetupPanel({
         )}
       </div>
       {extra}
-      <button
-        type="button"
-        onClick={onStart}
-        className="mt-8 min-h-12 rounded-xl bg-accent px-8 py-3 font-semibold text-white transition hover:bg-accent-hover"
-      >
+      <button type="button" onClick={onStart} className="btn-game mt-8">
         ゲーム開始
       </button>
     </div>

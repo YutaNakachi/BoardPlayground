@@ -31,13 +31,11 @@ export function PlayPageShell({ game, rules, children }: Props) {
           <button
             type="button"
             onClick={() => setRulesOpen(true)}
-            className="min-h-9 rounded-full border border-surface-border bg-surface-raised px-4 text-sm font-medium text-slate-200 transition hover:border-accent/40 hover:text-white"
+            className="min-h-9 rounded-full border border-white/15 bg-white/5 px-4 text-sm font-medium text-[#e8e8ed] transition hover:border-white/25 hover:bg-white/10"
           >
             ルール
           </button>
-          <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent">
-            ローカルプレイ
-          </span>
+          <span className="badge-muted">ローカルプレイ</span>
         </div>
       </div>
 

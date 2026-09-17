@@ -14,7 +14,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid #e09aad;
+  outline: 2px solid #f5f5f7;
   outline-offset: 2px;
 }
 
@@ -24,6 +24,14 @@ body {
   }
 
   .btn-play {
-    @apply rounded-full bg-accent font-semibold text-white transition hover:bg-accent-hover;
+    @apply rounded-full bg-[#f5f5f7] font-semibold text-[#1d1d1f] transition hover:bg-white;
+  }
+
+  .btn-game {
+    @apply min-h-12 rounded-full bg-[#f5f5f7] px-8 py-3 font-semibold text-[#1d1d1f] transition hover:bg-white;
+  }
+
+  .badge-muted {
+    @apply rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-[#c7c7cc] ring-1 ring-white/15;
   }
 }

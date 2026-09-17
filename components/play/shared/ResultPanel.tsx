@@ -18,7 +18,7 @@ export function ResultPanel({ winners, details, onReplay }: Props) {
       <button
         type="button"
         onClick={onReplay}
-        className="mt-8 min-h-12 rounded-xl bg-accent px-8 py-3 font-semibold text-white transition hover:bg-accent-hover"
+        className="btn-game mt-8"
       >
         もう一度
       </button>

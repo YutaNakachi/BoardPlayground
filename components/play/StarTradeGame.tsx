@@ -219,7 +219,7 @@ export function StarTradeGame() {
         <button
           type="button"
           onClick={nextRound}
-          className="mt-8 min-h-12 rounded-xl bg-accent px-8 py-3 font-semibold text-white transition hover:bg-accent-hover"
+          className="btn-game mt-8"
         >
           ラウンド {round + 1} を開始
         </button>
