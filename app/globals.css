@@ -27,15 +27,6 @@ body {
     text-wrap: balance;
   }
 
-  .hero-glow {
-    background-image: linear-gradient(
-      135deg,
-      rgba(255, 92, 138, 0.12) 0%,
-      rgba(255, 179, 71, 0.08) 50%,
-      rgba(129, 140, 248, 0.06) 100%
-    );
-  }
-
   .btn-play {
     background-image: linear-gradient(135deg, #ff5c8a 0%, #ff8a5c 100%);
   }
