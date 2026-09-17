@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
-import { DiceIcon } from "@/components/DiceIcon";
 import { countSidebarFilters } from "@/lib/games";
 import { SITE_NAME } from "@/lib/site";
 
@@ -52,7 +51,11 @@ export function Header() {
         </button>
 
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
-          <DiceIcon size={28} className="shrink-0 sm:h-8 sm:w-8" />
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-warm text-xs font-extrabold text-white sm:h-8 sm:w-8 sm:text-sm"
+          >
+            ボ
+          </span>
           <span className="truncate text-base font-semibold tracking-tight text-white/95 sm:text-[17px]">
             {SITE_NAME}
           </span>
