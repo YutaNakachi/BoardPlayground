@@ -13,12 +13,10 @@ import {
   getCatalogDurationBuckets,
   getCatalogOrigins,
   getCatalogPlayerBuckets,
-  getCatalogTags,
   type CatalogFilters,
   type DurationBucket,
   type GameMeta,
   type GameOrigin,
-  type GameTag,
   type PlayerBucket,
 } from "@/lib/games";
 
@@ -48,7 +46,6 @@ export function CatalogFilterPanel({ games, filters, onChange }: Props) {
   const complexities = getCatalogComplexities(games);
   const playerBuckets = getCatalogPlayerBuckets(games);
   const durationBuckets = getCatalogDurationBuckets(games);
-  const tags = getCatalogTags(games);
   const hasCpu = catalogHasCpu(games);
   const hasTeam = catalogHasTeam(games);
 
@@ -85,14 +82,6 @@ export function CatalogFilterPanel({ games, filters, onChange }: Props) {
       durationBuckets: filters.durationBuckets.includes(bucket)
         ? filters.durationBuckets.filter((item) => item !== bucket)
         : [...filters.durationBuckets, bucket],
-    });
-  }
-
-  function toggleTag(tag: GameTag) {
-    patch({
-      tags: filters.tags.includes(tag)
-        ? filters.tags.filter((item) => item !== tag)
-        : [...filters.tags, tag],
     });
   }
 
@@ -175,20 +164,6 @@ export function CatalogFilterPanel({ games, filters, onChange }: Props) {
                 layout="stack"
               />
             ) : null}
-          </FilterGroup>
-        ) : null}
-
-        {tags.length > 0 ? (
-          <FilterGroup label="タグ">
-            {tags.map((tag) => (
-              <FilterChip
-                key={tag}
-                label={tag}
-                active={filters.tags.includes(tag)}
-                onClick={() => toggleTag(tag)}
-                layout="stack"
-              />
-            ))}
           </FilterGroup>
         ) : null}
       </div>

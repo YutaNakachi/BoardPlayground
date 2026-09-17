@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
-import { countCatalogFilters } from "@/lib/games";
+import { countSidebarFilters } from "@/lib/games";
 
 const links = [
   { href: "/", label: "ゲーム一覧" },
@@ -44,7 +44,7 @@ function MenuIcon() {
 export function Header() {
   const pathname = usePathname();
   const { open, toggleSidebar, filters } = useCatalogSidebar();
-  const filterCount = pathname === "/" ? countCatalogFilters(filters) : 0;
+  const filterCount = pathname === "/" ? countSidebarFilters(filters) : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b border-surface-border bg-surface/80 backdrop-blur-md">

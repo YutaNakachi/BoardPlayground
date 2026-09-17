@@ -335,16 +335,19 @@ export const EMPTY_CATALOG_FILTERS: CatalogFilters = {
   tags: [],
 };
 
-export function countCatalogFilters(filters: CatalogFilters): number {
+export function countSidebarFilters(filters: CatalogFilters): number {
   return (
     filters.origins.length +
     filters.complexities.length +
     filters.playerBuckets.length +
     filters.durationBuckets.length +
     (filters.cpu ? 1 : 0) +
-    (filters.team ? 1 : 0) +
-    filters.tags.length
+    (filters.team ? 1 : 0)
   );
+}
+
+export function countCatalogFilters(filters: CatalogFilters): number {
+  return countSidebarFilters(filters) + filters.tags.length;
 }
 
 export function matchesCatalogFilters(game: GameMeta, filters: CatalogFilters): boolean {
