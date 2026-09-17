@@ -152,6 +152,7 @@ export function NebulaLinkGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
+        playerIndex={currentPlayer}
         playerLabel={`プレイヤー ${currentPlayer + 1}`}
         stats={`残り ${remaining.reduce((a, b) => a + b, 0)} 個`}
       />

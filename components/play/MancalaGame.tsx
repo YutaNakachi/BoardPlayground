@@ -87,6 +87,7 @@ export function MancalaGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
+        playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
         stats={`倉 1: ${pits[6]} · 倉 2: ${pits[13]}`}
       />

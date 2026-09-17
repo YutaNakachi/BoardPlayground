@@ -134,6 +134,7 @@ export function CheckersGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
+        playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
         stats={`P1 ${checkersPieceCount(board, 0)} · P2 ${checkersPieceCount(board, 1)}`}
         action={mustCapture ? "ジャンプ必須" : undefined}

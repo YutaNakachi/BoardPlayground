@@ -96,6 +96,7 @@ export function ReversiGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
+        playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "黒" : "白"}）`}
         stats={`黒 ${counts[0]} · 白 ${counts[1]}`}
       />

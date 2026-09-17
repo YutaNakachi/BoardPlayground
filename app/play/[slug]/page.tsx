@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PlayPageShell } from "@/components/play/PlayPageShell";
+import { loadGameRules } from "@/lib/game-rules";
 import { getAllGames, getGameBySlug } from "@/lib/games";
 import { playComponents } from "@/lib/play-registry";
 
@@ -26,9 +27,11 @@ export default async function PlayPage({ params }: Props) {
   if (!game) notFound();
 
   const Play = playComponents[slug];
+  const rules = loadGameRules(slug, game);
+  if (!rules) notFound();
 
   return (
-    <PlayPageShell game={game}>
+    <PlayPageShell game={game} rules={rules}>
       {Play ? (
         <Play />
       ) : (

@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GameMetaChips } from "@/components/GameMetaChips";
-import { ORIGIN_LABEL, getAllGames, getGameBySlug } from "@/lib/games";
+import { OriginChip } from "@/components/OriginChip";
+import { GameRulesView } from "@/components/rules/GameRulesView";
+import { loadGameRules } from "@/lib/game-rules";
+import { getAllGames, getGameBySlug } from "@/lib/games";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -25,8 +28,11 @@ export default async function GameDetailPage({ params }: Props) {
   const game = getGameBySlug(slug);
   if (!game) notFound();
 
+  const rules = loadGameRules(slug, game);
+  if (!rules) notFound();
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
       <Link
         href="/"
         className="mb-8 inline-flex text-sm text-slate-400 transition hover:text-white"
@@ -36,9 +42,7 @@ export default async function GameDetailPage({ params }: Props) {
 
       <header className="mb-10">
         <div className="mb-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent ring-1 ring-accent/30">
-            {ORIGIN_LABEL[game.origin]}
-          </span>
+          <OriginChip origin={game.origin} className="rounded-full px-3 py-1" />
           <GameMetaChips game={game} className="contents" />
           {game.tags.map((tag) => (
             <span
@@ -56,12 +60,7 @@ export default async function GameDetailPage({ params }: Props) {
       </header>
 
       <section className="mb-10 rounded-2xl border border-surface-border bg-surface-raised p-6 sm:p-8">
-        <h2 className="mb-4 text-lg font-semibold">ルール概要</h2>
-        <div className="space-y-4 text-slate-300 leading-relaxed">
-          {game.rulesSummary.map((paragraph, i) => (
-            <p key={i}>{paragraph}</p>
-          ))}
-        </div>
+        <GameRulesView rules={rules} variant="page" />
       </section>
 
       {game.status === "playable" ? (

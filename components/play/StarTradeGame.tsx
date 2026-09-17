@@ -6,6 +6,7 @@ import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { shuffle, winnerIndices } from "@/lib/game-engine";
+import { getPlayerTurnStyle } from "@/lib/player-colors";
 
 type Suit = "star" | "moon" | "sun" | "comet";
 
@@ -229,6 +230,7 @@ export function StarTradeGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
+        playerIndex={currentPlayer}
         playerLabel={`プレイヤー ${currentPlayer + 1}`}
         stats={`ラウンド ${round} / 3 · 山札 ${deck.length} 枚`}
         action={turnStep === "draw" ? "山札から引く" : "手札を1枚出す"}
@@ -236,18 +238,21 @@ export function StarTradeGame() {
 
       {hands.map((hand, playerIndex) => {
         const isCurrent = currentPlayer === playerIndex;
+        const playerStyle = getPlayerTurnStyle(playerIndex);
         const preview = scoreCards([...hand, ...markets[playerIndex]]);
         return (
           <section
             key={playerIndex}
             className={`rounded-2xl border p-4 transition ${
               isCurrent
-                ? "border-accent/60 bg-accent/5 ring-1 ring-accent/30"
+                ? `${playerStyle.sectionBorder} ${playerStyle.sectionBg} ring-1 ${playerStyle.sectionRing}`
                 : "border-surface-border bg-surface-raised"
             }`}
           >
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="font-semibold">プレイヤー {playerIndex + 1}</h3>
+              <h3 className={`font-semibold ${isCurrent ? playerStyle.label : ""}`}>
+                プレイヤー {playerIndex + 1}
+              </h3>
               <span className="text-sm text-slate-500">
                 累計 {scores[playerIndex]} 点
                 {isCurrent ? ` · 見込み ${preview.total} 点` : ""}

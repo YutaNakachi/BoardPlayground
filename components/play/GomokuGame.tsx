@@ -97,6 +97,7 @@ export function GomokuGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
+        playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "黒" : "白"}）`}
         stats={`黒 ${stones.black} · 白 ${stones.white}`}
       />

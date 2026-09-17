@@ -1,19 +1,27 @@
 import Link from "next/link";
 import { GameCardArt } from "@/components/game-art/GameCardArt";
 import { GameMetaChips } from "@/components/GameMetaChips";
-import { ORIGIN_LABEL, type GameMeta } from "@/lib/games";
+import { OriginChip } from "@/components/OriginChip";
+import type { GameMeta } from "@/lib/games";
 
 type Props = { game: GameMeta };
 
 export function GameCard({ game }: Props) {
+  const playable = game.status === "playable";
+  const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-3xl border border-surface-border bg-surface-raised transition hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10">
+    <article className="group relative flex flex-col overflow-hidden rounded-3xl border border-surface-border bg-surface-raised transition hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10">
+      <Link
+        href={playHref}
+        className="absolute inset-0 z-0 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        aria-label={playable ? `${game.title}を遊ぶ` : `${game.title}の詳細`}
+      />
+
       <GameCardArt game={game} />
-      <div className="flex flex-1 flex-col p-5">
+      <div className="pointer-events-none relative z-10 flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
-          <span className="rounded-md bg-accent/15 px-2 py-0.5 text-xs text-accent">
-            {ORIGIN_LABEL[game.origin]}
-          </span>
+          <OriginChip origin={game.origin} />
           {game.tags.map((tag) => (
             <span
               key={tag}
@@ -32,25 +40,13 @@ export function GameCard({ game }: Props) {
         <div className="mt-3">
           <GameMetaChips game={game} />
         </div>
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4">
           <Link
             href={`/games/${game.slug}`}
-            className="flex min-h-11 flex-1 items-center justify-center rounded-lg border border-surface-border py-2 text-center text-sm transition hover:bg-surface-border"
+            className="pointer-events-auto inline-flex min-h-10 items-center rounded-lg border border-surface-border px-4 text-sm transition hover:bg-surface-border"
           >
             ルール
           </Link>
-          {game.status === "playable" ? (
-            <Link
-              href={`/play/${game.slug}`}
-              className="btn-play flex min-h-11 flex-1 items-center justify-center rounded-xl py-2 text-center text-sm font-bold text-white shadow-md shadow-accent/20 transition"
-            >
-              遊ぶ！
-            </Link>
-          ) : (
-            <span className="flex min-h-11 flex-1 items-center justify-center rounded-lg bg-surface-border py-2 text-center text-sm text-slate-500">
-              準備中
-            </span>
-          )}
         </div>
       </div>
     </article>

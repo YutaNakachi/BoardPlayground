@@ -87,6 +87,7 @@ export function NineMensMorrisGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
+        playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
         stats={`手持ち P1 ${state.toPlace[0]} · P2 ${state.toPlace[1]} ／ 盤上 P1 ${morrisCount(state.board, 0)} · P2 ${morrisCount(state.board, 1)}`}
         action={right}
