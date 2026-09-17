@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { GameMetaChips } from "@/components/GameMetaChips";
-import type { GameMeta } from "@/lib/games";
+import { ORIGIN_LABEL, type GameMeta } from "@/lib/games";
 
 type Props = { game: GameMeta };
 
@@ -33,6 +33,9 @@ export function GameCard({ game }: Props) {
       </div>
       <div className="flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
+          <span className="rounded-md bg-accent/15 px-2 py-0.5 text-xs text-accent">
+            {ORIGIN_LABEL[game.origin]}
+          </span>
           {game.tags.map((tag) => (
             <span
               key={tag}
