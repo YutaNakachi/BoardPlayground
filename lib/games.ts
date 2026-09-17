@@ -1,4 +1,4 @@
-export const GAME_TAGS = ["盤", "カード", "駒取り", "そろえる", "配る"] as const;
+export const GAME_TAGS = ["盤", "カード", "駒取り", "そろえる", "集める"] as const;
 export type GameTag = (typeof GAME_TAGS)[number];
 
 export type GameOrigin = "original" | "classic";
@@ -139,7 +139,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["盤", "配る"],
+    tags: ["盤", "集める"],
     rulesSummary: [
       "各6つの穴に種4個。自分の穴を選んで種をまき、自分の倉には入れ、相手の倉は飛ばす。",
       "最後の種が倉に入ったら追加手番。自分の空き穴に入ったら、向かいの種も倉へ取る。",
