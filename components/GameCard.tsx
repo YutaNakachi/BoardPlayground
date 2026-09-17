@@ -1,17 +1,19 @@
 import Link from "next/link";
+import { GameMetaChips } from "@/components/GameMetaChips";
 import type { GameMeta } from "@/lib/games";
 
 type Props = { game: GameMeta };
 
-function bannerHue(slug: string) {
-  const hues = [230, 265, 195, 28, 340];
+function bannerHue(game: GameMeta) {
+  const hues =
+    game.origin === "original" ? [230, 250, 265] : [28, 195, 175, 340, 210];
   let hash = 0;
-  for (const ch of slug) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  for (const ch of game.slug) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   return hues[hash % hues.length];
 }
 
 export function GameCard({ game }: Props) {
-  const hue = bannerHue(game.slug);
+  const hue = bannerHue(game);
   const initial = [...game.title][0] ?? "BP";
 
   return (
@@ -40,15 +42,15 @@ export function GameCard({ game }: Props) {
             </span>
           ))}
         </div>
-        <h3 className="text-lg font-semibold transition group-hover:text-accent">
+        <h4 className="text-lg font-semibold transition group-hover:text-accent">
           {game.title}
-        </h3>
+        </h4>
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
           {game.description}
         </p>
-        <p className="mt-3 text-xs text-slate-500">
-          {game.players}人 · 約{game.durationMinutes}分
-        </p>
+        <div className="mt-3">
+          <GameMetaChips game={game} />
+        </div>
         <div className="mt-4 flex gap-2">
           <Link
             href={`/games/${game.slug}`}
