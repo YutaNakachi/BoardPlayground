@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { GameMetaChips } from "@/components/GameMetaChips";
 import { OriginChip } from "@/components/OriginChip";
 import { GameRulesView } from "@/components/rules/GameRulesView";
+import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
 import { loadGameRules } from "@/lib/game-rules";
 import { getAllGames, getGameBySlug } from "@/lib/games";
 
@@ -45,10 +46,7 @@ export default async function GameDetailPage({ params }: Props) {
           <OriginChip origin={game.origin} className="rounded-full px-3 py-1" />
           <GameMetaChips game={game} className="contents" />
           {game.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-surface-raised px-3 py-1 text-xs text-slate-300 ring-1 ring-surface-border"
-            >
+            <span key={tag} className={`${TAG_CHIP_CLASS} rounded-full px-3 py-1`}>
               {tag}
             </span>
           ))}

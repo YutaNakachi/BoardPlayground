@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GameCardArt } from "@/components/game-art/GameCardArt";
 import { GameMetaChips } from "@/components/GameMetaChips";
 import { OriginChip } from "@/components/OriginChip";
+import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
 import type { GameMeta } from "@/lib/games";
 
 type Props = { game: GameMeta };
@@ -23,10 +24,7 @@ export function GameCard({ game }: Props) {
         <div className="mb-2 flex flex-wrap gap-1.5">
           <OriginChip origin={game.origin} />
           {game.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-md bg-surface-border/50 px-2 py-0.5 text-xs text-slate-400"
-            >
+            <span key={tag} className={TAG_CHIP_CLASS}>
               {tag}
             </span>
           ))}

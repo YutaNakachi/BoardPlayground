@@ -3,6 +3,7 @@ type Props = {
   size?: number;
 };
 
+/** 6の目 — 小さいサイズでも「五」に見えないよう配置 */
 export function DiceIcon({ className, size = 32 }: Props) {
   return (
     <svg
@@ -15,11 +16,21 @@ export function DiceIcon({ className, size = 32 }: Props) {
       aria-hidden
     >
       <rect x="3" y="3" width="26" height="26" rx="6" fill="#f5f5f7" />
-      <circle cx="10.5" cy="10.5" r="2.25" fill="#1d1d1f" />
-      <circle cx="21.5" cy="10.5" r="2.25" fill="#1d1d1f" />
-      <circle cx="16" cy="16" r="2.25" fill="#1d1d1f" />
-      <circle cx="10.5" cy="21.5" r="2.25" fill="#1d1d1f" />
-      <circle cx="21.5" cy="21.5" r="2.25" fill="#1d1d1f" />
+      <rect
+        x="3.75"
+        y="3.75"
+        width="24.5"
+        height="24.5"
+        rx="5.25"
+        stroke="#d1d1d6"
+        strokeWidth="0.75"
+      />
+      <circle cx="10" cy="10" r="2" fill="#1d1d1f" />
+      <circle cx="22" cy="10" r="2" fill="#1d1d1f" />
+      <circle cx="10" cy="16" r="2" fill="#1d1d1f" />
+      <circle cx="22" cy="16" r="2" fill="#1d1d1f" />
+      <circle cx="10" cy="22" r="2" fill="#1d1d1f" />
+      <circle cx="22" cy="22" r="2" fill="#1d1d1f" />
     </svg>
   );
 }

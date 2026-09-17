@@ -1,4 +1,5 @@
 import { OriginChip } from "@/components/OriginChip";
+import { META_CHIP_CLASS } from "@/lib/chip-styles";
 import { COMPLEXITY_LABEL, type GameMeta } from "@/lib/games";
 
 type Props = {
@@ -6,9 +7,6 @@ type Props = {
   includeOrigin?: boolean;
   className?: string;
 };
-
-const chipClass =
-  "rounded-md bg-surface-border/50 px-2 py-0.5 text-xs text-slate-400";
 
 export function GameMetaChips({
   game,
@@ -18,11 +16,11 @@ export function GameMetaChips({
   return (
     <div className={className}>
       {includeOrigin ? <OriginChip origin={game.origin} /> : null}
-      <span className={chipClass}>{COMPLEXITY_LABEL[game.complexity]}</span>
-      <span className={chipClass}>{game.players}人</span>
-      <span className={chipClass}>約{game.durationMinutes}分</span>
-      {game.cpu ? <span className={chipClass}>CPUあり</span> : null}
-      {game.team ? <span className={chipClass}>チーム可</span> : null}
+      <span className={META_CHIP_CLASS}>{COMPLEXITY_LABEL[game.complexity]}</span>
+      <span className={META_CHIP_CLASS}>{game.players}人</span>
+      <span className={META_CHIP_CLASS}>約{game.durationMinutes}分</span>
+      {game.cpu ? <span className={META_CHIP_CLASS}>CPUあり</span> : null}
+      {game.team ? <span className={META_CHIP_CLASS}>チーム可</span> : null}
     </div>
   );
 }

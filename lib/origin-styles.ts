@@ -2,7 +2,7 @@ import type { GameOrigin } from "@/lib/games";
 
 export const ORIGIN_CHIP_CLASS: Record<GameOrigin, string> = {
   original:
-    "bg-accent/15 text-accent ring-1 ring-accent/30",
+    "bg-accent/25 text-[#f5d0dc] ring-1 ring-accent/40",
   classic:
-    "bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/30",
+    "bg-teal-900/50 text-teal-200 ring-1 ring-teal-500/35",
 };

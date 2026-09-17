@@ -10,8 +10,8 @@ const dot = (left: number, top: number) => (
       position: "absolute",
       left,
       top,
-      width: 14,
-      height: 14,
+      width: 12,
+      height: 12,
       borderRadius: 999,
       background: "#1d1d1f",
     }}
@@ -43,11 +43,12 @@ export default function OpenGraphImage() {
             background: "#f5f5f7",
           }}
         >
-          {dot(18, 18)}
-          {dot(48, 18)}
-          {dot(33, 33)}
-          {dot(18, 48)}
-          {dot(48, 48)}
+          {dot(16, 14)}
+          {dot(52, 14)}
+          {dot(16, 34)}
+          {dot(52, 34)}
+          {dot(16, 54)}
+          {dot(52, 54)}
         </div>
         <div
           style={{
