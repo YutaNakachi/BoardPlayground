@@ -229,10 +229,9 @@ export function StarTradeGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        left={`ラウンド ${round} / 3 · 山札 ${deck.length} 枚`}
-        right={`プレイヤー ${currentPlayer + 1} · ${
-          turnStep === "draw" ? "山札から引く" : "手札を1枚出す"
-        }`}
+        playerLabel={`プレイヤー ${currentPlayer + 1}`}
+        stats={`ラウンド ${round} / 3 · 山札 ${deck.length} 枚`}
+        action={turnStep === "draw" ? "山札から引く" : "手札を1枚出す"}
       />
 
       {hands.map((hand, playerIndex) => {
@@ -298,9 +297,6 @@ export function StarTradeGame() {
         );
       })}
 
-      <p className="text-center text-xs text-slate-500">
-        手順: 山札から引く → 手札から1枚を公開エリアに出す → 次のプレイヤーへ端末を渡す
-      </p>
     </div>
   );
 }

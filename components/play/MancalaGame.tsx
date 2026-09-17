@@ -87,8 +87,8 @@ export function MancalaGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        left={`倉 1: ${pits[6]} · 倉 2: ${pits[13]}`}
-        right={`プレイヤー ${current + 1} の番`}
+        playerLabel={`プレイヤー ${current + 1}`}
+        stats={`倉 1: ${pits[6]} · 倉 2: ${pits[13]}`}
       />
       {notice ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
 
@@ -116,9 +116,6 @@ export function MancalaGame() {
         ))}
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        下段がプレイヤー1、上段がプレイヤー2。種はまきながら自分の倉には入り、相手の倉は飛ばします。
-      </p>
     </div>
   );
 }

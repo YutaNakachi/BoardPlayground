@@ -168,10 +168,9 @@ export function ChronoSplitGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        left={`山札 ${deck.length} 枚`}
-        right={`プレイヤー ${currentPlayer + 1} · ${
-          selectedId ? "空枠を選ぶ" : "場のカードを選ぶ"
-        }`}
+        playerLabel={`プレイヤー ${currentPlayer + 1}`}
+        stats={`山札 ${deck.length} 枚`}
+        action={selectedId ? "空枠を選ぶ" : "場のカードを選ぶ"}
       />
 
       <section>
@@ -240,9 +239,6 @@ export function ChronoSplitGame() {
         </section>
       ))}
 
-      <p className="text-center text-xs text-slate-500">
-        手順: 場のカードを選ぶ → 自分の空枠をタップ
-      </p>
     </div>
   );
 }

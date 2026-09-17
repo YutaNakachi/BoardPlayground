@@ -6,22 +6,6 @@ import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 import { countSidebarFilters } from "@/lib/games";
 import { SITE_NAME } from "@/lib/site";
 
-const links = [
-  { href: "/", label: "ゲーム一覧" },
-  { href: "/about", label: "制作代行" },
-] as const;
-
-function isActive(pathname: string, href: string) {
-  if (href === "/") {
-    return (
-      pathname === "/" ||
-      pathname.startsWith("/games/") ||
-      pathname.startsWith("/play/")
-    );
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
 function MenuIcon() {
   return (
     <svg
@@ -66,10 +50,7 @@ export function Header() {
           ) : null}
         </button>
 
-        <Link
-          href="/"
-          className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none"
-        >
+        <Link href="/" className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-warm text-sm font-extrabold text-white shadow-md shadow-accent/25"
           >
@@ -79,27 +60,6 @@ export function Header() {
             {SITE_NAME}
           </span>
         </Link>
-
-        <nav
-          aria-label="メイン"
-          className="hidden items-center gap-4 text-sm sm:ml-auto sm:flex sm:gap-6"
-        >
-          {links.map(({ href, label }) => {
-            const active = isActive(pathname, href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={`transition ${
-                  active ? "font-semibold text-white" : "text-slate-400 hover:text-white"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
     </header>
   );

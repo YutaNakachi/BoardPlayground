@@ -96,8 +96,8 @@ export function ReversiGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        left={`黒 ${counts[0]} · 白 ${counts[1]}`}
-        right={`プレイヤー ${current + 1}（${current === 0 ? "黒" : "白"}）`}
+        playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "黒" : "白"}）`}
+        stats={`黒 ${counts[0]} · 白 ${counts[1]}`}
       />
       {passNotice ? (
         <p className="text-center text-sm text-amber-200">{passNotice}</p>
@@ -141,9 +141,6 @@ export function ReversiGame() {
         })}
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        点のついたマスに置きます。8方向のいずれかで相手を挟める場所だけが合法手です。
-      </p>
     </div>
   );
 }

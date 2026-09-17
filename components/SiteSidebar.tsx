@@ -6,26 +6,11 @@ import { useEffect } from "react";
 import { CatalogFilterPanel } from "@/components/CatalogFilterPanel";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 
-const navLinks = [
-  { href: "/", label: "ゲーム一覧" },
-  { href: "/about", label: "制作代行" },
-] as const;
-
-function isActive(pathname: string, href: string) {
-  if (href === "/") {
-    return (
-      pathname === "/" ||
-      pathname.startsWith("/games/") ||
-      pathname.startsWith("/play/")
-    );
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
 export function SiteSidebar() {
   const pathname = usePathname();
   const { open, closeSidebar, filters, setFilters, games } = useCatalogSidebar();
   const showFilters = pathname === "/";
+  const showHomeLink = pathname !== "/";
 
   useEffect(() => {
     closeSidebar();
@@ -68,7 +53,7 @@ export function SiteSidebar() {
         }`}
       >
         <div className="flex items-center justify-between border-b border-surface-border px-4 py-3">
-          <p className="text-sm font-semibold">メニュー</p>
+          <p className="text-sm font-semibold">{showFilters ? "絞り込み" : "メニュー"}</p>
           <button
             type="button"
             onClick={closeSidebar}
@@ -80,26 +65,17 @@ export function SiteSidebar() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          <nav aria-label="メイン" className="mb-6 space-y-1">
-            {navLinks.map(({ href, label }) => {
-              const active = isActive(pathname, href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={closeSidebar}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex min-h-10 items-center rounded-lg px-3 text-sm transition ${
-                    active
-                      ? "bg-accent/15 font-medium text-accent"
-                      : "text-slate-300 hover:bg-surface-raised hover:text-white"
-                  }`}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
+          {showHomeLink ? (
+            <nav aria-label="メイン" className="mb-6">
+              <Link
+                href="/"
+                onClick={closeSidebar}
+                className="flex min-h-10 items-center rounded-lg px-3 text-sm text-slate-300 transition hover:bg-surface-raised hover:text-white"
+              >
+                ゲーム一覧
+              </Link>
+            </nav>
+          ) : null}
 
           {showFilters ? (
             <CatalogFilterPanel

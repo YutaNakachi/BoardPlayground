@@ -1,4 +1,6 @@
 export const SITE_URL = "https://board-playground.vercel.app";
+/** 制作代行ページを公開する場合は true にする */
+export const SHOW_ABOUT_PAGE = false;
 export const SITE_NAME = "ボドパッ！";
 export const SITE_NAME_ROMAN = "Bodopa";
 export const SITE_DESCRIPTION =
