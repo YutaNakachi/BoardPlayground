@@ -8,7 +8,7 @@ export default function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <section className="mb-14 text-center">
-        <h1 className="font-display text-balance text-5xl font-extrabold tracking-tight text-accent sm:text-6xl">
+        <h1 className="text-balance text-5xl font-black tracking-tight text-accent sm:text-6xl">
           {SITE_NAME}
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold text-slate-200 sm:text-xl">

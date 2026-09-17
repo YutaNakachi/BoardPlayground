@@ -25,7 +25,7 @@ export default function OpenGraphImage() {
             width: 80,
             height: 80,
             borderRadius: 20,
-            background: "linear-gradient(135deg, #ff5c8a 0%, #ffb347 100%)",
+            background: "linear-gradient(135deg, #d4849a 0%, #ddb08a 100%)",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 36,
@@ -39,9 +39,7 @@ export default function OpenGraphImage() {
             marginTop: 36,
             fontSize: 72,
             fontWeight: 800,
-            background: "linear-gradient(90deg, #ff5c8a, #ffc14d)",
-            backgroundClip: "text",
-            color: "transparent",
+            color: "#d4849a",
           }}
         >
           {SITE_NAME}
