@@ -52,7 +52,7 @@ export function Header() {
 
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
           <span
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-warm text-xs font-extrabold text-white sm:h-8 sm:w-8 sm:text-sm"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-[#2c2c2e] text-xs font-bold text-[#f5f5f7] sm:h-8 sm:w-8 sm:text-sm"
           >
             ボ
           </span>
