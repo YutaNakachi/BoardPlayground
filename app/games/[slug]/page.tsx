@@ -67,9 +67,9 @@ export default async function GameDetailPage({ params }: Props) {
       {game.status === "playable" ? (
         <Link
           href={`/play/${game.slug}`}
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-accent px-6 py-4 text-lg font-semibold text-white transition hover:bg-accent-hover sm:w-auto"
+          className="btn-play inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-6 py-4 text-lg font-bold text-white shadow-lg shadow-accent/25 sm:w-auto"
         >
-          このゲームを遊ぶ
+          遊ぶ！
         </Link>
       ) : (
         <p className="text-slate-400">プレイ実装は準備中です。</p>
