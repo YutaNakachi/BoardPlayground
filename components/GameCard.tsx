@@ -12,7 +12,7 @@ export function GameCard({ game }: Props) {
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface-raised transition duration-300 hover:border-white/20 hover:bg-[#323234]">
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-surface-border bg-surface-raised transition duration-300 hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10">
       <Link
         href={playHref}
         className="absolute inset-0 z-0 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"

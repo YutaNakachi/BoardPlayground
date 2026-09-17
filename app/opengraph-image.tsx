@@ -4,20 +4,6 @@ import { SITE_NAME, SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const dot = (left: number, top: number) => (
-  <div
-    style={{
-      position: "absolute",
-      left,
-      top,
-      width: 12,
-      height: 12,
-      borderRadius: 999,
-      background: "#1d1d1f",
-    }}
-  />
-);
-
 export default function OpenGraphImage() {
   return new ImageResponse(
     (
@@ -29,41 +15,42 @@ export default function OpenGraphImage() {
           flexDirection: "column",
           justifyContent: "center",
           padding: 80,
-          background: "#000000",
-          color: "#f5f5f7",
+          background: "linear-gradient(145deg, #1c1826 0%, #12101a 45%, #0e0c14 100%)",
+          color: "#f4f0f8",
         }}
       >
         <div
           style={{
             display: "flex",
-            position: "relative",
             width: 80,
             height: 80,
-            borderRadius: 18,
-            background: "#f5f5f7",
+            borderRadius: 20,
+            background: "linear-gradient(135deg, #ff5c8a 0%, #ffb347 100%)",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 36,
+            fontWeight: 800,
+            color: "#ffffff",
           }}
         >
-          {dot(16, 14)}
-          {dot(52, 14)}
-          {dot(16, 34)}
-          {dot(52, 34)}
-          {dot(16, 54)}
-          {dot(52, 54)}
+          ボ
         </div>
         <div
           style={{
             marginTop: 36,
             fontSize: 72,
-            fontWeight: 600,
-            letterSpacing: "-0.02em",
+            fontWeight: 800,
+            background: "linear-gradient(90deg, #ff5c8a, #ffc14d)",
+            backgroundClip: "text",
+            color: "transparent",
           }}
         >
           {SITE_NAME}
         </div>
-        <div style={{ marginTop: 20, fontSize: 30, color: "#a1a1a6", lineHeight: 1.5 }}>
+        <div style={{ marginTop: 20, fontSize: 30, color: "#e2e8f0", lineHeight: 1.5 }}>
           {SITE_TAGLINE}
         </div>
-        <div style={{ marginTop: 12, fontSize: 26, color: "#86868b", lineHeight: 1.5 }}>
+        <div style={{ marginTop: 12, fontSize: 26, color: "#94a3b8", lineHeight: 1.5 }}>
           {SITE_TAGLINE_SUB}
         </div>
       </div>
