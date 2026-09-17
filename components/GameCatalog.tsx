@@ -4,34 +4,14 @@ import { FilterChip } from "@/components/FilterChip";
 import { GameCard } from "@/components/GameCard";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 import {
-  ORIGIN_LABEL,
   countCatalogFilters,
   getCatalogTags,
   matchesCatalogFilters,
   type GameMeta,
-  type GameOrigin,
   type GameTag,
 } from "@/lib/games";
 
 type Props = { games: GameMeta[] };
-
-const ORIGIN_ORDER: GameOrigin[] = ["original", "classic"];
-
-function GameGrid({ games }: { games: GameMeta[] }) {
-  return (
-    <div
-      className={
-        games.length === 1
-          ? "max-w-md"
-          : "grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-      }
-    >
-      {games.map((game) => (
-        <GameCard key={game.slug} game={game} />
-      ))}
-    </div>
-  );
-}
 
 export function GameCatalog({ games }: Props) {
   const { filters, setFilters, clearFilters } = useCatalogSidebar();
@@ -88,19 +68,10 @@ export function GameCatalog({ games }: Props) {
           該当するゲームはありません。タグやメニューの条件を変えてください。
         </p>
       ) : (
-        <div className="space-y-12">
-          {ORIGIN_ORDER.map((origin) => {
-            const group = filtered.filter((game) => game.origin === origin);
-            if (group.length === 0) return null;
-            return (
-              <section key={origin}>
-                <h3 className="mb-5 text-lg font-semibold">
-                  {ORIGIN_LABEL[origin]}
-                </h3>
-                <GameGrid games={group} />
-              </section>
-            );
-          })}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((game) => (
+            <GameCard key={game.slug} game={game} />
+          ))}
         </div>
       )}
     </section>

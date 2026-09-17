@@ -1,38 +1,19 @@
 import Link from "next/link";
+import { GameCardArt } from "@/components/game-art/GameCardArt";
 import { GameMetaChips } from "@/components/GameMetaChips";
-import type { GameMeta } from "@/lib/games";
+import { ORIGIN_LABEL, type GameMeta } from "@/lib/games";
 
 type Props = { game: GameMeta };
 
-function bannerHue(game: GameMeta) {
-  const hues =
-    game.origin === "original" ? [230, 250, 265] : [28, 195, 175, 340, 210];
-  let hash = 0;
-  for (const ch of game.slug) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return hues[hash % hues.length];
-}
-
 export function GameCard({ game }: Props) {
-  const hue = bannerHue(game);
-  const initial = [...game.title][0] ?? "BP";
-
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-surface-border bg-surface-raised transition hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5">
-      <div
-        className="flex h-32 items-center justify-center"
-        style={{
-          background: `linear-gradient(135deg, hsl(${hue} 70% 48% / 0.45), #1a2332 62%, #2d3a4f)`,
-        }}
-      >
-        <span
-          className="text-4xl font-bold tracking-tight text-white/85"
-          aria-hidden
-        >
-          {initial}
-        </span>
-      </div>
+      <GameCardArt game={game} />
       <div className="flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
+          <span className="rounded-md bg-accent/15 px-2 py-0.5 text-xs text-accent">
+            {ORIGIN_LABEL[game.origin]}
+          </span>
           {game.tags.map((tag) => (
             <span
               key={tag}
