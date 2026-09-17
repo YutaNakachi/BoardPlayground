@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   ORIGIN_LABEL,
   getAllGames,
   type GameOrigin,
 } from "@/lib/games";
-import { SITE_NAME } from "@/lib/site";
+import { SHOW_ABOUT_PAGE, SITE_NAME } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "制作代行について",
@@ -14,6 +15,10 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
+  if (!SHOW_ABOUT_PAGE) {
+    notFound();
+  }
+
   const games = getAllGames();
 
   return (

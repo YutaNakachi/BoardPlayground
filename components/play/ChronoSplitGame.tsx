@@ -5,6 +5,7 @@ import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { shuffle, winnerIndices } from "@/lib/game-engine";
+import { getPlayerTurnStyle } from "@/lib/player-colors";
 
 type Era = "past" | "present" | "future";
 
@@ -168,10 +169,10 @@ export function ChronoSplitGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        left={`山札 ${deck.length} 枚`}
-        right={`プレイヤー ${currentPlayer + 1} · ${
-          selectedId ? "空枠を選ぶ" : "場のカードを選ぶ"
-        }`}
+        playerIndex={currentPlayer}
+        playerLabel={`プレイヤー ${currentPlayer + 1}`}
+        stats={`山札 ${deck.length} 枚`}
+        action={selectedId ? "空枠を選ぶ" : "場のカードを選ぶ"}
       />
 
       <section>
@@ -193,17 +194,22 @@ export function ChronoSplitGame() {
         </div>
       </section>
 
-      {timelines.map((line, playerIndex) => (
+      {timelines.map((line, playerIndex) => {
+        const isCurrent = currentPlayer === playerIndex;
+        const playerStyle = getPlayerTurnStyle(playerIndex);
+        return (
         <section
           key={playerIndex}
           className={`rounded-2xl border p-4 ${
-            currentPlayer === playerIndex
-              ? "border-accent/60 bg-accent/5 ring-1 ring-accent/30"
+            isCurrent
+              ? `${playerStyle.sectionBorder} ${playerStyle.sectionBg} ring-1 ${playerStyle.sectionRing}`
               : "border-surface-border bg-surface-raised"
           }`}
         >
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-semibold">プレイヤー {playerIndex + 1}</h3>
+            <h3 className={`font-semibold ${isCurrent ? playerStyle.label : ""}`}>
+              プレイヤー {playerIndex + 1}
+            </h3>
             <span className="text-sm text-slate-500">
               見込み {scoreTimeline(line).total} 点
             </span>
@@ -238,11 +244,9 @@ export function ChronoSplitGame() {
             })}
           </div>
         </section>
-      ))}
+        );
+      })}
 
-      <p className="text-center text-xs text-slate-500">
-        手順: 場のカードを選ぶ → 自分の空枠をタップ
-      </p>
     </div>
   );
 }

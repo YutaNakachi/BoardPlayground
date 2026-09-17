@@ -97,8 +97,9 @@ export function GomokuGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        left={`黒 ${stones.black} · 白 ${stones.white}`}
-        right={`プレイヤー ${current + 1}（${current === 0 ? "黒" : "白"}）`}
+        playerIndex={current}
+        playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "黒" : "白"}）`}
+        stats={`黒 ${stones.black} · 白 ${stones.white}`}
       />
 
       <div className="-mx-4 overflow-x-auto px-4">
@@ -131,9 +132,6 @@ export function GomokuGame() {
         </div>
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        空マスをタップして石を置きます。6つ以上並んでも勝ちです。
-      </p>
     </div>
   );
 }

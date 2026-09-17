@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GameMetaChips } from "@/components/GameMetaChips";
-import { ORIGIN_LABEL, getAllGames, getGameBySlug } from "@/lib/games";
+import { OriginChip } from "@/components/OriginChip";
+import { GameRulesView } from "@/components/rules/GameRulesView";
+import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
+import { loadGameRules } from "@/lib/game-rules";
+import { getAllGames, getGameBySlug } from "@/lib/games";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -25,8 +29,11 @@ export default async function GameDetailPage({ params }: Props) {
   const game = getGameBySlug(slug);
   if (!game) notFound();
 
+  const rules = loadGameRules(slug, game);
+  if (!rules) notFound();
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
       <Link
         href="/"
         className="mb-8 inline-flex text-sm text-slate-400 transition hover:text-white"
@@ -36,15 +43,10 @@ export default async function GameDetailPage({ params }: Props) {
 
       <header className="mb-10">
         <div className="mb-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent ring-1 ring-accent/30">
-            {ORIGIN_LABEL[game.origin]}
-          </span>
+          <OriginChip origin={game.origin} className="rounded-full px-3 py-1" />
           <GameMetaChips game={game} className="contents" />
           {game.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-surface-raised px-3 py-1 text-xs text-slate-300 ring-1 ring-surface-border"
-            >
+            <span key={tag} className={`${TAG_CHIP_CLASS} rounded-full px-3 py-1`}>
               {tag}
             </span>
           ))}
@@ -55,19 +57,14 @@ export default async function GameDetailPage({ params }: Props) {
         </p>
       </header>
 
-      <section className="mb-10 rounded-2xl border border-surface-border bg-surface-raised p-6 sm:p-8">
-        <h2 className="mb-4 text-lg font-semibold">ルール概要</h2>
-        <div className="space-y-4 text-slate-300 leading-relaxed">
-          {game.rulesSummary.map((paragraph, i) => (
-            <p key={i}>{paragraph}</p>
-          ))}
-        </div>
+      <section className="mb-10 rounded-2xl border border-white/10 bg-surface-raised p-6 sm:p-8">
+        <GameRulesView rules={rules} variant="page" />
       </section>
 
       {game.status === "playable" ? (
         <Link
           href={`/play/${game.slug}`}
-          className="btn-play inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-6 py-4 text-lg font-bold text-white shadow-lg shadow-accent/25 sm:w-auto"
+          className="btn-play inline-flex min-h-11 w-full items-center justify-center px-8 py-3 text-base sm:w-auto"
         >
           遊ぶ！
         </Link>

@@ -134,8 +134,10 @@ export function CheckersGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        left={`P1 ${checkersPieceCount(board, 0)} · P2 ${checkersPieceCount(board, 1)}`}
-        right={`プレイヤー ${current + 1}${mustCapture ? " · ジャンプ必須" : ""}`}
+        playerIndex={current}
+        playerLabel={`プレイヤー ${current + 1}`}
+        stats={`P1 ${checkersPieceCount(board, 0)} · P2 ${checkersPieceCount(board, 1)}`}
+        action={mustCapture ? "ジャンプ必須" : undefined}
       />
       {notice ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
 
@@ -182,9 +184,6 @@ export function CheckersGame() {
         })}
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        自分の駒を選んでから移動先をタップ。一番奥の段に着くとキングになり、前後どちらにも進めます。
-      </p>
     </div>
   );
 }

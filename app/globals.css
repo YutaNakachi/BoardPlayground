@@ -3,22 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --background: #0e0c14;
-  --foreground: #f4f0f8;
+  --background: #000000;
+  --foreground: #f5f5f7;
 }
 
 body {
   color: var(--foreground);
   background-color: var(--background);
-  background-image:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(255, 92, 138, 0.14), transparent),
-    radial-gradient(ellipse 55% 45% at 100% 0%, rgba(255, 179, 71, 0.09), transparent),
-    radial-gradient(ellipse 40% 35% at 0% 100%, rgba(129, 140, 248, 0.06), transparent);
   min-height: 100vh;
 }
 
 :focus-visible {
-  outline: 2px solid #ff7aa3;
+  outline: 2px solid #f5f5f7;
   outline-offset: 2px;
 }
 
@@ -28,10 +24,18 @@ body {
   }
 
   .btn-play {
-    background-image: linear-gradient(135deg, #ff5c8a 0%, #ff8a5c 100%);
+    @apply rounded-full bg-[#f5f5f7] font-semibold text-[#1d1d1f] transition hover:bg-white;
   }
 
-  .btn-play:hover {
-    background-image: linear-gradient(135deg, #ff7aa3 0%, #ff9f70 100%);
+  .btn-game {
+    @apply min-h-12 rounded-full bg-[#f5f5f7] px-8 py-3 font-semibold text-[#1d1d1f] transition hover:bg-white;
+  }
+
+  .badge-muted {
+    @apply rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-[#c7c7cc] ring-1 ring-white/15;
+  }
+
+  .badge-local {
+    @apply rounded-full bg-violet-500/20 px-3 py-1 text-xs font-medium text-violet-200 ring-1 ring-violet-400/35;
   }
 }

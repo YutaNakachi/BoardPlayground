@@ -87,8 +87,10 @@ export function NineMensMorrisGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        left={`手持ち P1 ${state.toPlace[0]} · P2 ${state.toPlace[1]} ／ 盤上 P1 ${morrisCount(state.board, 0)} · P2 ${morrisCount(state.board, 1)}`}
-        right={`プレイヤー ${state.current + 1} · ${right}`}
+        playerIndex={state.current}
+        playerLabel={`プレイヤー ${state.current + 1}`}
+        stats={`手持ち P1 ${state.toPlace[0]} · P2 ${state.toPlace[1]} ／ 盤上 P1 ${morrisCount(state.board, 0)} · P2 ${morrisCount(state.board, 1)}`}
+        action={right}
       />
       {state.notice ? (
         <p className="text-center text-sm text-amber-200">{state.notice}</p>
@@ -149,16 +151,6 @@ export function NineMensMorrisGame() {
         })}
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        {placing
-          ? "空いている点をタップして駒を置きます。"
-          : flying
-            ? "駒が3個なので、選んだ駒は空点ならどこへでも飛べます。"
-            : "自分の駒を選んでから、線でつながった空点へ動かします。"}
-        {!morrisCanMove(state, state.current) && !state.removing
-          ? " 動ける手がありません。"
-          : ""}
-      </p>
     </div>
   );
 }
