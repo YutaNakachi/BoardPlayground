@@ -9,15 +9,15 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          DEFAULT: "#1d1d1f",
-          raised: "#2c2c2e",
-          border: "rgba(255, 255, 255, 0.12)",
+          DEFAULT: "#12101a",
+          raised: "#1c1826",
+          border: "#3d3550",
         },
         accent: {
-          DEFAULT: "#d4849a",
-          hover: "#e09aad",
-          muted: "#c07288",
-          warm: "#ddb08a",
+          DEFAULT: "#ff5c8a",
+          hover: "#ff7aa3",
+          muted: "#e84a76",
+          warm: "#ffb347",
         },
       },
       fontFamily: {
@@ -31,16 +31,7 @@ const config: Config = {
           "Meiryo",
           "sans-serif",
         ],
-        display: [
-          "var(--font-geist-sans)",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Hiragino Sans",
-          "Hiragino Kaku Gothic ProN",
-          "Yu Gothic UI",
-          "Meiryo",
-          "sans-serif",
-        ],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
       },
     },
   },
