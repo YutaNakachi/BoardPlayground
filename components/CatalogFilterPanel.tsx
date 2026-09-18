@@ -87,8 +87,6 @@ export function CatalogFilterPanel({ games, filters, onChange }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      <h3 className="mb-4 text-sm font-semibold">絞り込み</h3>
-
       <div className="space-y-5" role="group" aria-label="条件で絞る">
         {origins.length > 0 ? (
           <FilterGroup label="系統">
