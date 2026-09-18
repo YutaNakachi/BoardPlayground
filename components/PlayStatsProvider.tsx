@@ -29,15 +29,29 @@ const PlayStatsContext = createContext<PlayStatsContextValue>({
   backendLoading: true,
 });
 
-export function PlayStatsProvider({ children }: { children: React.ReactNode }) {
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [statsEnabled, setStatsEnabled] = useState(false);
-  const [onlineEnabled, setOnlineEnabled] = useState(false);
-  const [backendLoading, setBackendLoading] = useState(true);
+type Props = {
+  children: React.ReactNode;
+  initialCounts?: Record<string, number>;
+  initialStatsEnabled?: boolean;
+  initialOnlineEnabled?: boolean;
+};
+
+export function PlayStatsProvider({
+  children,
+  initialCounts = {},
+  initialStatsEnabled = false,
+  initialOnlineEnabled = false,
+}: Props) {
+  const [counts, setCounts] = useState<Record<string, number>>(initialCounts);
+  const [statsEnabled, setStatsEnabled] = useState(initialStatsEnabled);
+  const [onlineEnabled, setOnlineEnabled] = useState(initialOnlineEnabled);
+  const [backendLoading, setBackendLoading] = useState(
+    !initialStatsEnabled && !initialOnlineEnabled
+  );
 
   const loadCounts = useCallback(async () => {
     try {
-      const res = await fetch("/api/stats/games");
+      const res = await fetch("/api/stats/games", { cache: "no-store" });
       const data = await res.json();
       setCounts(data.counts ?? {});
       if (typeof data.enabled === "boolean") {
@@ -51,7 +65,7 @@ export function PlayStatsProvider({ children }: { children: React.ReactNode }) {
   const loadBackend = useCallback(async () => {
     setBackendLoading(true);
     try {
-      const res = await fetch("/api/status");
+      const res = await fetch("/api/status", { cache: "no-store" });
       const data = (await res.json()) as BackendHealth;
       setStatsEnabled(data.stats);
       setOnlineEnabled(data.online);

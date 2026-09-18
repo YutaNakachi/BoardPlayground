@@ -9,11 +9,16 @@ import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
 import type { GameMeta } from "@/lib/games";
 import { isOnlineGame } from "@/lib/online/types";
 
-type Props = { game: GameMeta };
+type Props = {
+  game: GameMeta;
+  initialPlayCount?: number;
+};
 
-export function GameCard({ game }: Props) {
+export function GameCard({ game, initialPlayCount }: Props) {
   const { getCount, statsEnabled, onlineEnabled } = usePlayStats();
-  const playCount = getCount(game.slug);
+  const clientCount = getCount(game.slug);
+  const playCount = clientCount ?? initialPlayCount;
+  const showPlayCount = statsEnabled || initialPlayCount != null;
   const playable = game.status === "playable";
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
 
@@ -41,7 +46,7 @@ export function GameCard({ game }: Props) {
           <GameMetaChips
             game={game}
             playCount={playCount}
-            showPlayCount={statsEnabled}
+            showPlayCount={showPlayCount}
             showOnlineChip={onlineEnabled && isOnlineGame(game.slug)}
           />
         </div>

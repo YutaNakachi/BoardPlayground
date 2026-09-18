@@ -5,11 +5,10 @@ import { usePlayStats } from "@/components/PlayStatsProvider";
 import type { PlayMode } from "@/lib/online/types";
 
 export function useRecordPlay(slug: string) {
-  const { refresh, statsEnabled } = usePlayStats();
+  const { refresh } = usePlayStats();
 
   const record = useCallback(
     (mode: PlayMode = "local") => {
-      if (!statsEnabled) return;
       void fetch("/api/stats/play", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -21,7 +20,7 @@ export function useRecordPlay(slug: string) {
         })
         .catch(() => {});
     },
-    [slug, refresh, statsEnabled]
+    [slug, refresh]
   );
 
   return record;

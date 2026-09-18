@@ -1,11 +1,13 @@
 import { GameCatalog } from "@/components/GameCatalog";
 import { PageContainer } from "@/components/PageContainer";
 import { SiteBrand } from "@/components/SiteBrand";
+import { fetchGameCounts } from "@/lib/stats/game-counts";
 import { SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
 import { getAllGames } from "@/lib/games";
 
-export default function HomePage() {
+export default async function HomePage() {
   const games = getAllGames();
+  const { counts: initialPlayCounts } = await fetchGameCounts();
 
   return (
     <PageContainer>
@@ -25,7 +27,7 @@ export default function HomePage() {
         </p>
       </section>
 
-      <GameCatalog games={games} />
+      <GameCatalog games={games} initialPlayCounts={initialPlayCounts} />
     </PageContainer>
   );
 }
