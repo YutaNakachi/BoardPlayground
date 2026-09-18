@@ -4,8 +4,9 @@ export const SHOW_ABOUT_PAGE = false;
 export const SITE_NAME = "ボドパッ！";
 export const SITE_NAME_EN = "Board Game Park";
 export const SITE_DESCRIPTION =
-  "オリジナルルールのゲーム多数、ボードゲームの遊び場。登録なし・インストールなしでパッ！と遊べる。";
-export const SITE_TAGLINE = "オリジナルゲーム多数！ボードゲームの遊び場！";
+  "オリジナルルールのゲーム多数、テーブルゲームの遊び場。登録なし・インストールなしでパッ！と遊べる。";
+export const SITE_TAGLINE = "オリジナルゲームも多数！テーブルゲームの遊び場！";
+export const SITE_NAME_EN_HERO = "~ Board Game Park ~";
 export const SITE_TAGLINE_SUB = "登録なし・インストールなし・完全無料で遊び放題！";
 export const CATALOG_HEADING = "今日は何で遊ぶ？";
 export const BACK_TO_HOME_LABEL = "← ゲーム一覧";
