@@ -32,7 +32,25 @@ npm run dev
 ## 公開
 
 - GitHub: https://github.com/YutaNakachi/BoardPlayground
-- Vercel: [このリポジトリをインポート](https://vercel.com/new/clone?repository-url=https://github.com/YutaNakachi/BoardPlayground)（Framework Preset は Next.js が自動検出。環境変数は不要）
+- Vercel: [このリポジトリをインポート](https://vercel.com/new/clone?repository-url=https://github.com/YutaNakachi/BoardPlayground)（Framework Preset は Next.js が自動検出）
+
+### 環境変数（Supabase・オンライン対戦・統計）
+
+`.env.example` をコピーして `.env.local` を作成し、Supabase の値を設定します。
+
+| 変数 | 用途 |
+|------|------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase プロジェクト URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | クライアント（Realtime）用 |
+| `SUPABASE_SERVICE_ROLE_KEY` | API Route（統計・部屋）用 |
+
+未設定の場合はローカルプレイのみ動作し、プレイ回数・ランキング・オンライン対戦は無効化されます。
+
+### Supabase セットアップ
+
+1. [Supabase](https://supabase.com/) でプロジェクトを作成
+2. SQL Editor で `supabase/migrations/001_stats.sql` と `002_rooms.sql` を実行
+3. Vercel の Environment Variables に上記3つを追加
 
 ## ゲーム
 
@@ -45,7 +63,9 @@ npm run dev
 - **チェッカー** (`/play/checkers`) — クラシック、2人、約10分
 - **ナイン・メンズ・モリス** (`/play/nine-mens-morris`) — クラシック、2人、約12分
 
-同画面交代プレイ。
+同画面交代プレイ。リバーシ・三目並べ・五目並べ・チェッカーはオンライン対戦（部屋コード＋合言葉）にも対応。
+
+プレイ回数はゲーム開始時にカウントされ、[/ranking](/ranking) でランキングを確認できます。
 
 ## ゲームを増やす
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import {
@@ -12,15 +13,17 @@ import {
 type Phase = "idle" | "playing" | "game-over";
 
 export function SlidePuzzleGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("idle");
   const [board, setBoard] = useState<number[]>(shuffledSlide());
   const [moves, setMoves] = useState(0);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setBoard(shuffledSlide());
     setMoves(0);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const tap = useCallback(
     (index: number) => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SUIT_SYMBOL } from "@/lib/play/cards";
@@ -16,17 +17,19 @@ import {
 type Phase = "idle" | "playing" | "game-over";
 
 export function SpiderGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("idle");
   const [state, setState] = useState<SpiderState>(initialSpider);
   const [fromCol, setFromCol] = useState<number | null>(null);
   const [fromIndex, setFromIndex] = useState<number | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialSpider());
     setFromCol(null);
     setFromIndex(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const validTargets = useMemo(() => {
     if (fromCol == null || fromIndex == null) return [];

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -26,15 +27,17 @@ function DominoTileView({ high, low }: { high: number; low: number }) {
 }
 
 export function DominoesGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<DominoesState>(initialDominoes);
   const [notice, setNotice] = useState<string | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialDominoes());
     setNotice(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const plays = useMemo(
     () => (phase === "playing" ? dominoPlays(state, state.current) : []),

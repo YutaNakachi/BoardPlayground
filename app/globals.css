@@ -61,4 +61,8 @@ body {
   .badge-local {
     @apply rounded-full bg-violet-500/20 px-3 py-1 text-xs font-medium text-violet-200 ring-1 ring-violet-400/35;
   }
+
+  .badge-online {
+    @apply rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-200 ring-1 ring-emerald-400/35;
+  }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import {
@@ -34,15 +35,17 @@ function CardFace({ card, small }: { card: PlayingCard; small?: boolean }) {
 }
 
 export function KlondikeGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("idle");
   const [state, setState] = useState<KlondikeState>(initialKlondike);
   const [selected, setSelected] = useState<Selection>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialKlondike());
     setSelected(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const tryMove = useCallback(
     (target: KlondikeTarget) => {

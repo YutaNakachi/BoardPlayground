@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -20,13 +21,15 @@ import {
 type Phase = "setup" | "playing";
 
 export function NineMensMorrisGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<MorrisState>(initialMorrisState);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialMorrisState());
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const dests = useMemo(() => {
     if (state.selected == null || state.removing) return [];

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -66,6 +67,7 @@ function scorePlayer(board: (number | null)[], player: number) {
 }
 
 export function NebulaLinkGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [playerCount, setPlayerCount] = useState(2);
   const [phase, setPhase] = useState<Phase>("setup");
   const [currentPlayer, setCurrentPlayer] = useState(0);
@@ -73,13 +75,14 @@ export function NebulaLinkGame() {
   const [remaining, setRemaining] = useState<number[]>([]);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     const cells = Array(SIZE * SIZE).fill(null);
     cells[CORE] = -1;
     setBoard(cells);
     setRemaining(Array.from({ length: playerCount }, () => tokensFor(playerCount)));
     setCurrentPlayer(0);
     setPhase("playing");
-  }, [playerCount]);
+  }, [recordLocalPlay, playerCount]);
 
   const place = useCallback(
     (index: number) => {

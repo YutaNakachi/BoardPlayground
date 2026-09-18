@@ -4,6 +4,7 @@ import "./globals.css";
 import { CatalogSidebarProvider } from "@/components/CatalogSidebarContext";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { PlayStatsProvider } from "@/components/PlayStatsProvider";
 import { SiteSidebar } from "@/components/SiteSidebar";
 import { getAllGames } from "@/lib/games";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_NAME_EN, SITE_URL } from "@/lib/site";
@@ -55,6 +56,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${display.variable} font-sans antialiased`}
       >
         <CatalogSidebarProvider games={games}>
+          <PlayStatsProvider>
           <a
             href="#main-content"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
@@ -69,6 +71,7 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
+          </PlayStatsProvider>
         </CatalogSidebarProvider>
       </body>
     </html>

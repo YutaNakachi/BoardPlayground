@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -19,16 +20,18 @@ type Phase = "setup" | "playing" | "game-over";
 const PLAYER_COLORS = ["bg-indigo-500", "bg-rose-400", "bg-emerald-400", "bg-amber-400"];
 
 export function ChineseCheckersGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [playerCount, setPlayerCount] = useState(2);
   const [state, setState] = useState<ChineseCheckersState>(initialChineseCheckers(2));
   const [selected, setSelected] = useState<string | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialChineseCheckers(playerCount));
     setSelected(null);
     setPhase("playing");
-  }, [playerCount]);
+  }, [recordLocalPlay, playerCount]);
 
   const destinations = useMemo(() => {
     if (!selected || phase !== "playing") return [];

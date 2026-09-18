@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -21,6 +22,7 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 export function ShogiGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<ShogiState>(initialShogiState);
   const [selected, setSelected] = useState<number | null>(null);
@@ -28,12 +30,13 @@ export function ShogiGame() {
   const [winner, setWinner] = useState<number | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialShogiState());
     setSelected(null);
     setDropPiece(null);
     setWinner(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const moves = useMemo(
     () => (phase === "playing" ? shogiMoves(state) : []),

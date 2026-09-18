@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { HandoffGate } from "@/components/play/shared/HandoffGate";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -65,6 +66,7 @@ function dealRound(playerCount: number) {
 }
 
 export function StarTradeGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [playerCount, setPlayerCount] = useState(2);
   const [phase, setPhase] = useState<Phase>("setup");
   const [turnStep, setTurnStep] = useState<TurnStep>("draw");
@@ -92,8 +94,9 @@ export function StarTradeGame() {
   );
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     beginRound(1, playerCount, Array(playerCount).fill(0));
-  }, [beginRound, playerCount]);
+  }, [recordLocalPlay, beginRound, playerCount]);
 
   const finishRound = useCallback(
     (nextHands: Card[][], nextMarkets: Card[][]) => {

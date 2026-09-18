@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { PlayPageProvider, usePlayPage } from "@/components/play/PlayPageContext";
 import { GameRulesOverlay } from "@/components/rules/GameRulesOverlay";
 import type { GameRulesDocument } from "@/lib/game-rules";
 import type { GameMeta } from "@/lib/games";
@@ -12,8 +13,9 @@ type Props = {
   children: React.ReactNode;
 };
 
-export function PlayPageShell({ game, rules, children }: Props) {
+function PlayPageShellInner({ game, rules, children }: Props) {
   const [rulesOpen, setRulesOpen] = useState(false);
+  const { playMode } = usePlayPage();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -35,7 +37,13 @@ export function PlayPageShell({ game, rules, children }: Props) {
           >
             ルール
           </button>
-          <span className="badge-local">ローカルプレイ</span>
+          {playMode.mode === "online" ? (
+            <span className="badge-online">
+              オンライン · {playMode.roomCode ?? "接続中"}
+            </span>
+          ) : (
+            <span className="badge-local">ローカルプレイ</span>
+          )}
         </div>
       </div>
 
@@ -47,5 +55,15 @@ export function PlayPageShell({ game, rules, children }: Props) {
         onClose={() => setRulesOpen(false)}
       />
     </div>
+  );
+}
+
+export function PlayPageShell({ game, rules, children }: Props) {
+  return (
+    <PlayPageProvider gameSlug={game.slug}>
+      <PlayPageShellInner game={game} rules={rules}>
+        {children}
+      </PlayPageShellInner>
+    </PlayPageProvider>
   );
 }
