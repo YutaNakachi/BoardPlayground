@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { BackToHomeLink } from "@/components/BackToHomeLink";
+import { PageContainer } from "@/components/PageContainer";
 import { RankingList } from "@/components/RankingList";
 import { fetchRanking, parseRankingPeriod } from "@/lib/stats/ranking-data";
 import type { RankingPeriod } from "@/lib/stats/jst-date";
@@ -18,10 +20,8 @@ export default async function RankingPage({ searchParams }: Props) {
   const ranking = await fetchRanking(period);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <Link href="/" className="text-sm text-slate-400 transition hover:text-white">
-        ← ゲーム一覧
-      </Link>
+    <PageContainer>
+      <BackToHomeLink />
       <h1 className="mt-4 text-2xl font-bold">プレイ回数ランキング</h1>
       <p className="mt-2 text-sm text-slate-400">
         ゲーム開始時にカウントされます（JST 基準）
@@ -48,6 +48,6 @@ export default async function RankingPage({ searchParams }: Props) {
       <div className="mt-8">
         <RankingList ranking={ranking} />
       </div>
-    </div>
+    </PageContainer>
   );
 }

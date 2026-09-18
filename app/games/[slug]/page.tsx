@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackToHomeLink } from "@/components/BackToHomeLink";
 import { GameMetaChips } from "@/components/GameMetaChips";
+import { PageContainer } from "@/components/PageContainer";
 import { OriginChip } from "@/components/OriginChip";
 import { GameRulesView } from "@/components/rules/GameRulesView";
 import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
@@ -33,13 +35,8 @@ export default async function GameDetailPage({ params }: Props) {
   if (!rules) notFound();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-      <Link
-        href="/"
-        className="mb-8 inline-flex text-sm text-slate-400 transition hover:text-white"
-      >
-        ← 一覧に戻る
-      </Link>
+    <PageContainer>
+      <BackToHomeLink className="mb-8 inline-flex text-sm text-slate-400 transition hover:text-white" />
 
       <header className="mb-10">
         <div className="mb-4 flex flex-wrap gap-2">
@@ -71,6 +68,6 @@ export default async function GameDetailPage({ params }: Props) {
       ) : (
         <p className="text-slate-400">プレイ実装は準備中です。</p>
       )}
-    </div>
+    </PageContainer>
   );
 }

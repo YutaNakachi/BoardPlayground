@@ -1,4 +1,4 @@
-import { SITE_NAME, SITE_NAME_EN } from "@/lib/site";
+import { SITE_NAME, SITE_NAME_EN, SITE_NAME_EN_HERO } from "@/lib/site";
 
 type Props = {
   variant: "hero" | "header" | "footer";
@@ -13,8 +13,8 @@ export function SiteBrand({ variant }: Props) {
             {SITE_NAME}
           </span>
         </h1>
-        <p className="text-base font-medium tracking-wide text-slate-400 sm:text-lg">
-          {SITE_NAME_EN}
+        <p className="text-lg font-medium tracking-wide text-slate-400 sm:text-xl">
+          {SITE_NAME_EN_HERO}
         </p>
       </div>
     );

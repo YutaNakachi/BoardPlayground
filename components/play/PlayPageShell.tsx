@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { BackToHomeLink } from "@/components/BackToHomeLink";
+import { PageContainer } from "@/components/PageContainer";
 import { PlayPageProvider, usePlayPage } from "@/components/play/PlayPageContext";
 import { GameRulesOverlay } from "@/components/rules/GameRulesOverlay";
 import type { GameRulesDocument } from "@/lib/game-rules";
@@ -18,15 +19,10 @@ function PlayPageShellInner({ game, rules, children }: Props) {
   const { playMode } = usePlayPage();
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <PageContainer padding="compact">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link
-            href="/"
-            className="text-sm text-slate-400 transition hover:text-white"
-          >
-            ← ゲーム一覧
-          </Link>
+          <BackToHomeLink />
           <h1 className="mt-2 text-2xl font-bold">{game.title}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -54,7 +50,7 @@ function PlayPageShellInner({ game, rules, children }: Props) {
         open={rulesOpen}
         onClose={() => setRulesOpen(false)}
       />
-    </div>
+    </PageContainer>
   );
 }
 
