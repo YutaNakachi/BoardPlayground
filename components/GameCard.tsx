@@ -19,12 +19,13 @@ export function GameCard({ game, initialPlayCount }: Props) {
   const { getCount, statsEnabled, onlineEnabled } = usePlayStats();
   const clientCount = getCount(game.slug);
   const playCount = clientCount ?? initialPlayCount ?? 0;
-  const showPlayCount = (statsEnabled || initialPlayCount != null) && playCount > 0;
+  const statsVisible = statsEnabled || initialPlayCount != null;
+  const showPlayCount = statsVisible && playCount > 0;
   const playable = game.status === "playable";
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-surface-border bg-surface-raised transition duration-300 hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-surface-border bg-surface-raised transition duration-300 hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10">
       <div className="pointer-events-none">
         <GameCardArt game={game} />
       </div>
@@ -56,8 +57,20 @@ export function GameCard({ game, initialPlayCount }: Props) {
             game={game}
             showOnlineChip={onlineEnabled && isOnlineGame(game.slug)}
           />
-          {showPlayCount ? (
-            <PlayCountIndicator count={playCount} className="mt-2.5" />
+          {statsVisible ? (
+            <div className="mt-2.5 flex h-5 items-center">
+              {showPlayCount ? (
+                <PlayCountIndicator count={playCount} />
+              ) : (
+                <span
+                  className="invisible inline-flex items-center gap-1 text-sm tabular-nums"
+                  aria-hidden
+                >
+                  <span className="inline-block h-4 w-4" />
+                  <span>0</span>
+                </span>
+              )}
+            </div>
           ) : null}
         </div>
       </div>
