@@ -10,10 +10,14 @@ import {
   type GameMeta,
   type GameTag,
 } from "@/lib/games";
+import { CATALOG_HEADING } from "@/lib/site";
 
-type Props = { games: GameMeta[] };
+type Props = {
+  games: GameMeta[];
+  initialPlayCounts?: Record<string, number>;
+};
 
-export function GameCatalog({ games }: Props) {
+export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
   const { filters, setFilters, clearFilters } = useCatalogSidebar();
   const tags = getCatalogTags(games);
   const activeCount = countCatalogFilters(filters);
@@ -30,20 +34,25 @@ export function GameCatalog({ games }: Props) {
 
   return (
     <section>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-xl font-semibold">ゲーム一覧</h2>
-          {activeCount > 0 ? (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-sm text-slate-500 transition hover:text-white"
-            >
-              条件をクリア（{activeCount}）
-            </button>
-          ) : null}
-        </div>
-        <span className="text-sm text-slate-500">{filtered.length} 本</span>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <h2 className="text-xl font-semibold">{CATALOG_HEADING}</h2>
+        <span
+          className="inline-flex min-w-9 items-center justify-center rounded-md bg-white/10 px-2.5 py-1 ring-1 ring-white/10"
+          aria-label={`${filtered.length}件のゲーム`}
+        >
+          <span className="text-base font-bold tabular-nums text-accent">
+            {filtered.length}
+          </span>
+        </span>
+        {activeCount > 0 ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-sm text-slate-500 transition hover:text-white"
+          >
+            条件をクリア（{activeCount}）
+          </button>
+        ) : null}
       </div>
 
       {tags.length > 0 ? (
@@ -70,7 +79,11 @@ export function GameCatalog({ games }: Props) {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((game) => (
-            <GameCard key={game.slug} game={game} />
+            <GameCard
+              key={game.slug}
+              game={game}
+              initialPlayCount={initialPlayCounts[game.slug]}
+            />
           ))}
         </div>
       )}

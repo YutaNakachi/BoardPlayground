@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -72,6 +73,7 @@ function scoreTimeline(line: (Fragment | null)[]) {
 }
 
 export function ChronoSplitGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [playerCount, setPlayerCount] = useState(2);
   const [phase, setPhase] = useState<Phase>("setup");
   const [currentPlayer, setCurrentPlayer] = useState(0);
@@ -81,6 +83,7 @@ export function ChronoSplitGame() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     const d = createDeck();
     const startOffer = [d.pop()!, d.pop()!, d.pop()!];
     setDeck(d);
@@ -91,7 +94,7 @@ export function ChronoSplitGame() {
     setCurrentPlayer(0);
     setSelectedId(null);
     setPhase("playing");
-  }, [playerCount]);
+  }, [recordLocalPlay, playerCount]);
 
   const takeToSlot = useCallback(
     (slotIndex: number) => {

@@ -1,7 +1,74 @@
 type Block =
   | { type: "paragraph"; text: string }
-  | { type: "list"; items: string[] }
+  | { type: "list"; ordered: boolean; items: string[] }
   | { type: "table"; rows: string[][] };
+
+function isUnorderedListLine(line: string): boolean {
+  return /^-\s/.test(line.trim());
+}
+
+function isOrderedListLine(line: string): boolean {
+  return /^\d+\.\s/.test(line.trim());
+}
+
+function parseTableBlock(lines: string[]): Block | null {
+  if (!lines.every((line) => line.trim().startsWith("|"))) {
+    return null;
+  }
+
+  const rows = lines
+    .filter((line) => !/^\|\s*[-:]+/.test(line.trim()))
+    .map((line) =>
+      line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim())
+    );
+
+  return rows.length > 0 ? { type: "table", rows } : null;
+}
+
+function parseLinesIntoBlocks(lines: string[]): Block[] {
+  const blocks: Block[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (isUnorderedListLine(line)) {
+      const items: string[] = [];
+      while (index < lines.length && isUnorderedListLine(lines[index])) {
+        items.push(lines[index].trim().replace(/^-\s+/, ""));
+        index += 1;
+      }
+      blocks.push({ type: "list", ordered: false, items });
+      continue;
+    }
+
+    if (isOrderedListLine(line)) {
+      const items: string[] = [];
+      while (index < lines.length && isOrderedListLine(lines[index])) {
+        items.push(lines[index].trim().replace(/^\d+\.\s+/, ""));
+        index += 1;
+      }
+      blocks.push({ type: "list", ordered: true, items });
+      continue;
+    }
+
+    const paragraphLines: string[] = [];
+    while (
+      index < lines.length &&
+      !isUnorderedListLine(lines[index]) &&
+      !isOrderedListLine(lines[index])
+    ) {
+      paragraphLines.push(lines[index].trim());
+      index += 1;
+    }
+    blocks.push({ type: "paragraph", text: paragraphLines.join(" ") });
+  }
+
+  return blocks;
+}
 
 function parseBlocks(content: string): Block[] {
   const blocks: Block[] = [];
@@ -12,30 +79,13 @@ function parseBlocks(content: string): Block[] {
     if (!trimmed) continue;
 
     const lines = trimmed.split("\n");
-    if (lines.every((line) => line.trim().startsWith("|"))) {
-      const rows = lines
-        .filter((line) => !/^\|\s*[-:]+/.test(line.trim()))
-        .map((line) =>
-          line
-            .split("|")
-            .slice(1, -1)
-            .map((cell) => cell.trim())
-        );
-      if (rows.length > 0) {
-        blocks.push({ type: "table", rows });
-        continue;
-      }
-    }
-
-    if (lines.every((line) => line.trim().startsWith("- "))) {
-      blocks.push({
-        type: "list",
-        items: lines.map((line) => line.trim().slice(2)),
-      });
+    const table = parseTableBlock(lines);
+    if (table) {
+      blocks.push(table);
       continue;
     }
 
-    blocks.push({ type: "paragraph", text: trimmed.replace(/\n/g, " ") });
+    blocks.push(...parseLinesIntoBlocks(lines));
   }
 
   return blocks;
@@ -61,12 +111,16 @@ export function RulesMarkdown({ content, className = "" }: Props) {
         }
 
         if (block.type === "list") {
+          const ListTag = block.ordered ? "ol" : "ul";
+          const listClass = block.ordered
+            ? "list-decimal space-y-2 pl-5"
+            : "list-disc space-y-2 pl-5";
           return (
-            <ul key={index} className="list-disc space-y-1 pl-5">
-              {block.items.map((item) => (
-                <li key={item}>{item}</li>
+            <ListTag key={index} className={listClass}>
+              {block.items.map((item, itemIndex) => (
+                <li key={`${index}-${itemIndex}`}>{item}</li>
               ))}
-            </ul>
+            </ListTag>
           );
         }
 

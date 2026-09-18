@@ -322,6 +322,450 @@ function MorrisPreview() {
   );
 }
 
+function HexPreview() {
+  const stones: Record<string, 0 | 1> = {
+    "2,5": 0,
+    "3,4": 1,
+    "3,5": 0,
+    "4,5": 1,
+    "4,6": 0,
+    "5,5": 1,
+  };
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="12" fill="#1e1b4b" />
+      {Object.entries(stones).map(([key, player]) => {
+        const [row, col] = key.split(",").map(Number);
+        const x = 20 + col * 8 + (row % 2) * 4;
+        const y = 18 + row * 7;
+        return (
+          <circle
+            key={key}
+            cx={x}
+            cy={y}
+            r="4"
+            fill={player === 0 ? "#fb7185" : "#38bdf8"}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function FoxHoundsPreview() {
+  const board = Array(64).fill(null) as (0 | 1 | null)[];
+  board[63] = 0;
+  [1, 3, 5, 7].forEach((col) => {
+    board[col] = 1;
+  });
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#422006" />
+      {board.map((cell, index) => {
+        const row = Math.floor(index / 8);
+        const col = index % 8;
+        const x = 8 + col * 13;
+        const y = 8 + row * 13;
+        return (
+          <rect
+            key={index}
+            x={x}
+            y={y}
+            width="12"
+            height="12"
+            fill={(row + col) % 2 === 0 ? "#78350f" : "#92400e"}
+            rx="1"
+          />
+        );
+      })}
+      <circle cx={8 + 7 * 13 + 6} cy={8 + 7 * 13 + 6} r="4.5" fill="#f97316" />
+      {[1, 3, 5, 7].map((col) => (
+        <circle key={col} cx={8 + col * 13 + 6} cy={8 + 6} r="4" fill="#64748b" />
+      ))}
+    </svg>
+  );
+}
+
+function DominoPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="12" fill="#0f172a" />
+      <rect x="28" y="40" width="28" height="40" rx="4" fill="#f8fafc" stroke="#cbd5e1" />
+      <rect x="64" y="40" width="28" height="40" rx="4" fill="#f8fafc" stroke="#cbd5e1" />
+      <circle cx="42" cy="52" r="3" fill="#1e293b" />
+      <circle cx="42" cy="68" r="3" fill="#1e293b" />
+      <circle cx="78" cy="60" r="3" fill="#1e293b" />
+    </svg>
+  );
+}
+
+function ChineseCheckersPreview() {
+  const dots = [
+    [60, 20],
+    [45, 35],
+    [60, 35],
+    [75, 35],
+    [30, 50],
+    [45, 50],
+    [60, 50],
+    [75, 50],
+    [90, 50],
+    [60, 65],
+    [45, 80],
+    [60, 80],
+    [75, 80],
+    [60, 95],
+  ];
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="12" fill="#312e81" />
+      {dots.map(([cx, cy], index) => (
+        <circle
+          key={index}
+          cx={cx}
+          cy={cy}
+          r={index % 3 === 0 ? 5 : 4}
+          fill={index % 3 === 0 ? "#a5b4fc" : "#6366f1"}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function LudoPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="12" fill="#0f172a" />
+      <circle cx="60" cy="60" r="38" fill="none" stroke="#475569" strokeWidth="8" />
+      {[
+        [60, 22],
+        [98, 60],
+        [60, 98],
+        [22, 60],
+      ].map(([cx, cy], index) => (
+        <circle
+          key={index}
+          cx={cx}
+          cy={cy}
+          r="6"
+          fill={["#6366f1", "#fb7185", "#34d399", "#fbbf24"][index]}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function BackgammonPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#7c2d12" />
+      <polygon points="10,60 30,20 30,100" fill="#451a03" />
+      <polygon points="110,60 90,20 90,100" fill="#451a03" />
+      {[0, 1, 2].map((i) => (
+        <circle key={i} cx={20 + i * 8} cy={45} r="4" fill="#f8fafc" />
+      ))}
+      {[0, 1, 2].map((i) => (
+        <circle key={i} cx={100 - i * 8} cy={75} r="4" fill="#1e293b" />
+      ))}
+    </svg>
+  );
+}
+
+function ChessPreview() {
+  const pieces: Record<string, string> = {
+    "0,4": "♚",
+    "1,3": "♟",
+    "6,3": "♙",
+    "7,4": "♔",
+  };
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#14532d" />
+      {Array.from({ length: 64 }, (_, index) => {
+        const row = Math.floor(index / 8);
+        const col = index % 8;
+        const x = 12 + col * 12;
+        const y = 12 + row * 12;
+        const key = `${row},${col}`;
+        return (
+          <g key={index}>
+            <rect
+              x={x}
+              y={y}
+              width="11"
+              height="11"
+              fill={(row + col) % 2 === 0 ? "#166534" : "#15803d"}
+            />
+            {pieces[key] ? (
+              <text x={x + 5.5} y={y + 9} textAnchor="middle" fontSize="8" fill="#f8fafc">
+                {pieces[key]}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function ShogiPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#d97706" />
+      {Array.from({ length: 81 }, (_, index) => {
+        const row = Math.floor(index / 9);
+        const col = index % 9;
+        const x = 8 + col * 11.5;
+        const y = 8 + row * 11.5;
+        return (
+          <rect
+            key={index}
+            x={x}
+            y={y}
+            width="11"
+            height="11"
+            fill="#fbbf24"
+            stroke="#b45309"
+            strokeWidth="0.4"
+          />
+        );
+      })}
+      <text x="60" y="68" textAnchor="middle" fontSize="14" fill="#7c2d12">玉</text>
+    </svg>
+  );
+}
+
+function MiniShogiPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#92400e" />
+      {Array.from({ length: 25 }, (_, index) => {
+        const row = Math.floor(index / 5);
+        const col = index % 5;
+        const x = 22 + col * 15;
+        const y = 22 + row * 15;
+        return (
+          <rect
+            key={index}
+            x={x}
+            y={y}
+            width="14"
+            height="14"
+            fill="#fde68a"
+            stroke="#b45309"
+            strokeWidth="0.5"
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function KlondikePreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="12" fill="#1e3a5f" />
+      {[0, 1, 2, 3].map((col) => (
+        <rect
+          key={col}
+          x={16 + col * 22}
+          y={50}
+          width="18"
+          height="26"
+          rx="3"
+          fill={col === 0 ? "#f8fafc" : "#334155"}
+          stroke="#94a3b8"
+        />
+      ))}
+      <rect x="82" y="20" width="18" height="26" rx="3" fill="#f8fafc" stroke="#94a3b8" />
+    </svg>
+  );
+}
+
+function SpiderPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="12" fill="#134e4a" />
+      {Array.from({ length: 8 }, (_, col) => (
+        <g key={col}>
+          {[0, 1, 2].map((row) => (
+            <rect
+              key={row}
+              x={10 + col * 13}
+              y={30 + row * 10}
+              width="11"
+              height="16"
+              rx="2"
+              fill={row === 2 ? "#f8fafc" : "#334155"}
+              stroke="#5eead4"
+              strokeWidth="0.5"
+            />
+          ))}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function MahjongPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="12" fill="#0f172a" />
+      {[
+        [30, 40],
+        [50, 35],
+        [70, 40],
+        [40, 60],
+        [60, 65],
+      ].map(([x, y], index) => (
+        <rect
+          key={index}
+          x={x}
+          y={y}
+          width="18"
+          height="24"
+          rx="3"
+          fill="#f8fafc"
+          stroke="#94a3b8"
+          transform={`rotate(${index % 2 === 0 ? -8 : 8} ${x + 9} ${y + 12})`}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function SlidePuzzlePreview() {
+  const tiles = [1, 2, 3, 4, 5, 6, 7, 8, null, 9, 10, 11, 12, 13, 14, 15];
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="12" fill="#1e293b" />
+      {tiles.map((tile, index) => {
+        const row = Math.floor(index / 4);
+        const col = index % 4;
+        const x = 24 + col * 18;
+        const y = 24 + row * 18;
+        if (tile === null) {
+          return (
+            <rect
+              key={index}
+              x={x}
+              y={y}
+              width="16"
+              height="16"
+              rx="3"
+              fill="#0f172a"
+              stroke="#475569"
+              strokeDasharray="2 2"
+            />
+          );
+        }
+        return (
+          <g key={index}>
+            <rect x={x} y={y} width="16" height="16" rx="3" fill="#6366f1" />
+            <text x={x + 8} y={y + 11} textAnchor="middle" fontSize="7" fill="#fff">
+              {tile}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function TttPreview() {
+  const marks = ["×", "", "○", "", "×", "○", "", "×", ""];
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#1e293b" />
+      {marks.map((mark, index) => {
+        const row = Math.floor(index / 3);
+        const col = index % 3;
+        const x = 20 + col * 30;
+        const y = 28 + row * 30;
+        return (
+          <text
+            key={index}
+            x={x}
+            y={y}
+            textAnchor="middle"
+            fontSize="18"
+            fill="#f8fafc"
+            fontWeight="700"
+          >
+            {mark}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+function GravityFourPreview() {
+  const cols = [0, 1, 2, 1, 0, 1, 2];
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#312e81" />
+      {cols.map((col, row) => {
+        const x = 18 + col * 14;
+        const y = 88 - row * 14;
+        return (
+          <circle
+            key={row}
+            cx={x}
+            cy={y}
+            r="5"
+            fill={row % 2 === 0 ? "#fb7185" : "#fcd34d"}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function DotsBoxesPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#0f172a" />
+      {[0, 1, 2].map((row) =>
+        [0, 1, 2].map((col) => (
+          <circle
+            key={`${row}-${col}`}
+            cx={24 + col * 36}
+            cy={24 + row * 36}
+            r="4"
+            fill="#94a3b8"
+          />
+        ))
+      )}
+      <line x1="24" y1="24" x2="60" y2="24" stroke="#e2e8f0" strokeWidth="3" />
+      <line x1="60" y1="24" x2="60" y2="60" stroke="#e2e8f0" strokeWidth="3" />
+      <text x="42" y="48" textAnchor="middle" fontSize="14" fill="#d4849a" fontWeight="700">
+        1
+      </text>
+    </svg>
+  );
+}
+
+function NimPreview() {
+  const heaps = [3, 5, 2];
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#1e293b" />
+      {heaps.map((count, heap) =>
+        Array.from({ length: count }, (_, i) => (
+          <circle
+            key={`${heap}-${i}`}
+            cx={24 + heap * 36}
+            cy={88 - i * 12}
+            r="5"
+            fill="#cbd5e1"
+          />
+        ))
+      )}
+    </svg>
+  );
+}
+
 const PREVIEWS: Record<string, () => ReactNode> = {
   "nebula-link": NebulaPreview,
   reversi: ReversiPreview,
@@ -329,6 +773,23 @@ const PREVIEWS: Record<string, () => ReactNode> = {
   gomoku: GomokuPreview,
   checkers: CheckersPreview,
   "nine-mens-morris": MorrisPreview,
+  "tic-tac-toe": TttPreview,
+  "gravity-four": GravityFourPreview,
+  "dots-and-boxes": DotsBoxesPreview,
+  nim: NimPreview,
+  hex: HexPreview,
+  "fox-hounds": FoxHoundsPreview,
+  dominoes: DominoPreview,
+  "chinese-checkers": ChineseCheckersPreview,
+  ludo: LudoPreview,
+  backgammon: BackgammonPreview,
+  chess: ChessPreview,
+  shogi: ShogiPreview,
+  "mini-shogi": MiniShogiPreview,
+  klondike: KlondikePreview,
+  spider: SpiderPreview,
+  "mahjong-solitaire": MahjongPreview,
+  "slide-puzzle": SlidePuzzlePreview,
 };
 
 function bannerGradient(game: GameMeta): string {

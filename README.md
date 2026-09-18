@@ -32,7 +32,32 @@ npm run dev
 ## 公開
 
 - GitHub: https://github.com/YutaNakachi/BoardPlayground
-- Vercel: [このリポジトリをインポート](https://vercel.com/new/clone?repository-url=https://github.com/YutaNakachi/BoardPlayground)（Framework Preset は Next.js が自動検出。環境変数は不要）
+- Vercel: [このリポジトリをインポート](https://vercel.com/new/clone?repository-url=https://github.com/YutaNakachi/BoardPlayground)（Framework Preset は Next.js が自動検出）
+
+### 環境変数（Supabase・オンライン対戦・統計）
+
+`.env.example` をコピーして `.env.local` を作成し、Supabase の値を設定します。
+
+| 変数 | 用途 |
+|------|------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase プロジェクト URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | クライアント（Realtime）用 |
+| `SUPABASE_SERVICE_ROLE_KEY` | API Route（統計・部屋）用 |
+
+未設定の場合はローカルプレイのみ動作し、プレイ回数・ランキング・オンライン対戦は無効化されます。
+
+### Supabase セットアップ
+
+1. [Supabase](https://supabase.com/) でプロジェクトを作成
+2. SQL Editor で以下を **順番に** 実行
+   - `supabase/migrations/001_stats.sql`
+   - `supabase/migrations/002_rooms.sql`
+   - `supabase/migrations/003_increment_rpc.sql`
+3. Vercel の **Settings → Environment Variables** に上記3つの変数を追加（Production / Preview / Development すべて）
+4. **Redeploy** して反映（環境変数追加後は再デプロイが必要）
+5. 動作確認: `https://<your-domain>/api/status` が `{ "stats": true, "online": true }` を返すこと
+
+未設定のときはローカルプレイのみ利用でき、オンラインタブとプレイ回数は非表示になります。
 
 ## ゲーム
 
@@ -45,7 +70,9 @@ npm run dev
 - **チェッカー** (`/play/checkers`) — クラシック、2人、約10分
 - **ナイン・メンズ・モリス** (`/play/nine-mens-morris`) — クラシック、2人、約12分
 
-同画面交代プレイ。
+同画面交代プレイ。リバーシ・三目並べ・五目並べ・チェッカーはオンライン対戦（部屋コード）にも対応。
+
+プレイ回数はゲーム開始時にカウントされ、[/ranking](/ranking) でランキングを確認できます。
 
 ## ゲームを増やす
 

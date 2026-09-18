@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import type { CheckersState } from "@/lib/online/moves";
+import type { PlayMode } from "@/lib/online/types";
 import {
   applyCheckersMove,
   checkersMoves,
@@ -15,10 +20,14 @@ import {
   type Player,
 } from "@/lib/play/checkers";
 
-type Phase = "setup" | "playing" | "game-over";
+type LocalPhase = "setup" | "playing" | "game-over";
 
 export function CheckersGame() {
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("checkers");
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [board, setBoard] = useState<Board>(initialCheckersBoard);
   const [current, setCurrent] = useState<Player>(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -26,25 +35,63 @@ export function CheckersGame() {
   const [winner, setWinner] = useState<Player | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const startGame = useCallback(() => {
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (mode === "local") {
+      setPlayMode({ mode: "local" });
+    }
+  }, [online.room?.code, online.phase, mode, setPlayMode]);
+
+  const startLocal = useCallback(() => {
+    recordLocalPlay();
     setBoard(initialCheckersBoard());
     setCurrent(0);
     setSelected(null);
     setLockFrom(null);
     setWinner(null);
     setNotice(null);
-    setPhase("playing");
-  }, []);
+    setLocalPhase("playing");
+  }, [recordLocalPlay]);
+
+  const isOnline =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as CheckersState | null;
+
+  const activeBoard = isOnline && onlineState ? onlineState.board : board;
+  const activeCurrent = isOnline && onlineState ? onlineState.current : current;
+  const activeLockFrom = isOnline && onlineState ? onlineState.lockFrom : lockFrom;
+  const activeWinner = isOnline && onlineState ? onlineState.winner : winner;
+  const activeNotice = isOnline && onlineState ? onlineState.notice : notice;
+  const activePhase =
+    isOnline && onlineState
+      ? onlineState.phase
+      : localPhase === "game-over"
+        ? "game-over"
+        : localPhase === "playing"
+          ? "playing"
+          : "setup";
+
+  const [localSelected, setLocalSelected] = useState<number | null>(null);
+  const activeSelected = isOnline
+    ? onlineState?.lockFrom ?? selected
+    : localSelected;
 
   const moves = useMemo(
-    () => (phase === "playing" ? checkersMoves(board, current, lockFrom) : []),
-    [phase, board, current, lockFrom]
+    () =>
+      activePhase === "playing"
+        ? checkersMoves(activeBoard, activeCurrent, activeLockFrom)
+        : [],
+    [activePhase, activeBoard, activeCurrent, activeLockFrom]
   );
 
   const destinations = useMemo(() => {
-    if (selected == null) return [];
-    return moves.filter((m) => m.from === selected);
-  }, [moves, selected]);
+    if (activeSelected == null) return [];
+    return moves.filter((m) => m.from === activeSelected);
+  }, [moves, activeSelected]);
 
   const mustCapture = moves.some((m) => m.capture != null);
 
@@ -55,7 +102,7 @@ export function CheckersGame() {
         checkersMoves(nextBoard, nextPlayer).length === 0
       ) {
         setWinner(nextPlayer === 0 ? 1 : 0);
-        setPhase("game-over");
+        setLocalPhase("game-over");
         return true;
       }
       return false;
@@ -63,19 +110,19 @@ export function CheckersGame() {
     []
   );
 
-  const apply = useCallback(
+  const applyLocal = useCallback(
     (move: CheckersMove) => {
       const { board: nextBoard, continueFrom } = applyCheckersMove(board, move);
       setBoard(nextBoard);
       if (continueFrom != null) {
         setLockFrom(continueFrom);
-        setSelected(continueFrom);
+        setLocalSelected(continueFrom);
         setNotice("同じ駒でジャンプを続けてください");
         return;
       }
       const nextPlayer: Player = current === 0 ? 1 : 0;
       setLockFrom(null);
-      setSelected(null);
+      setLocalSelected(null);
       setNotice(null);
       if (!finishIfNeeded(nextBoard, nextPlayer)) {
         setCurrent(nextPlayer);
@@ -86,42 +133,101 @@ export function CheckersGame() {
 
   const onSquare = useCallback(
     (index: number) => {
-      if (phase !== "playing") return;
+      if (activePhase !== "playing") return;
+      if (isOnline && !online.isMyTurn) return;
+
       const dest = destinations.find((m) => m.to === index);
       if (dest) {
-        apply(dest);
+        if (isOnline) {
+          void online.handleMove({ type: "checkers", move: dest });
+          setSelected(null);
+        } else {
+          applyLocal(dest);
+        }
         return;
       }
-      if (lockFrom != null) return;
-      const piece = board[index];
-      if (!piece || piece.player !== current) {
-        setSelected(null);
+      if (activeLockFrom != null) return;
+      const piece = activeBoard[index];
+      if (!piece || piece.player !== activeCurrent) {
+        if (isOnline) setSelected(null);
+        else setLocalSelected(null);
         return;
       }
       if (!moves.some((m) => m.from === index)) return;
-      setSelected(index);
+      if (isOnline) setSelected(index);
+      else setLocalSelected(index);
     },
-    [phase, destinations, apply, lockFrom, board, current, moves]
+    [
+      activePhase,
+      isOnline,
+      online,
+      destinations,
+      activeLockFrom,
+      activeBoard,
+      activeCurrent,
+      moves,
+      applyLocal,
+    ]
   );
 
-  if (phase === "setup") {
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setSelected(null);
+    setPlayMode({ mode: "local" });
+  }, [online, setPlayMode]);
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
-        title="チェッカー"
-        description="暗いマスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
+      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
+        <h2 className="text-xl font-semibold">チェッカー</h2>
+        <p className="mt-2 text-sm text-[#a1a1a6]">
+          暗いマスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。
+        </p>
+        <div className="mt-6">
+          <OnlineSetupPanel
+            mode={mode}
+            onModeChange={setMode}
+            onlineSupported={onlineEnabled}
+            onCreateRoom={online.handleCreate}
+            onJoinRoom={online.handleJoin}
+            onStartLocal={startLocal}
+            loading={online.loading}
+            error={online.error}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (online.phase === "waiting" && online.room) {
+    return (
+      <OnlineSetupPanel
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          isHost: online.isHost,
+          onStart: online.handleStart,
+          canStart: online.players.length >= 2,
+        }}
       />
     );
   }
 
-  if (phase === "game-over" && winner !== null) {
+  if (activePhase === "game-over" && activeWinner !== null) {
     return (
       <ResultPanel
-        winners={[winner]}
-        onReplay={() => setPhase("setup")}
+        winners={[activeWinner]}
+        onReplay={reset}
         details={
           <p className="text-slate-400">
             相手の駒がなくなったか、相手が動ける手がありませんでした。
@@ -134,18 +240,26 @@ export function CheckersGame() {
   return (
     <div className="space-y-6">
       <TurnBanner
-        playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}`}
-        stats={`P1 ${checkersPieceCount(board, 0)} · P2 ${checkersPieceCount(board, 1)}`}
-        action={mustCapture ? "ジャンプ必須" : undefined}
+        playerIndex={activeCurrent}
+        playerLabel={`プレイヤー ${activeCurrent + 1}`}
+        stats={`P1 ${checkersPieceCount(activeBoard, 0)} · P2 ${checkersPieceCount(activeBoard, 1)}`}
+        action={
+          isOnline && !online.isMyTurn
+            ? "相手の手番です"
+            : mustCapture
+              ? "ジャンプ必須"
+              : undefined
+        }
       />
-      {notice ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
+      {activeNotice ? (
+        <p className="text-center text-sm text-amber-200">{activeNotice}</p>
+      ) : null}
 
       <div className="mx-auto grid max-w-md grid-cols-8 overflow-hidden rounded-xl border border-surface-border">
-        {board.map((piece, index) => {
+        {activeBoard.map((piece, index) => {
           const dark = isDarkSquare(index);
           const isDest = destinations.some((m) => m.to === index);
-          const isFrom = selected === index;
+          const isFrom = activeSelected === index;
           return (
             <button
               key={index}
@@ -183,7 +297,6 @@ export function CheckersGame() {
           );
         })}
       </div>
-
     </div>
   );
 }

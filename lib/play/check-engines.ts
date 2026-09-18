@@ -1,6 +1,20 @@
 import { applyCheckersMove, checkersMoves, initialCheckersBoard } from "./checkers";
+import { chessMoves, initialChessState } from "./chess";
+import { drawDotsBoxesEdge, initialDotsBoxes } from "./dots-and-boxes";
+import {
+  dropGravityFour,
+  emptyGravityFourBoard,
+  gravityFourWinner,
+  type Board as GravityBoard,
+} from "./gravity-four";
+import { emptyHexBoard, HEX_SIZE, hexWinner } from "./hex";
+import { foxHoundsMoves, foxHoundsWinner, initialFoxHounds } from "./fox-hounds";
+import { initialKlondike } from "./klondike";
 import { gomokuWinner } from "./gomoku";
+import { isSlideSolved, shuffledSlide } from "./slide-puzzle";
 import { initialMancala, sowMancala } from "./mancala";
+import { initialNim, nimOver, takeNim } from "./nim";
+import { emptyTttBoard, tttWinner } from "./tic-tac-toe";
 import {
   clickMorris,
   initialMorrisState,
@@ -75,6 +89,51 @@ export function runPlayEngineChecks() {
   morris = clickMorris(morris, 3);
   assert(morrisCount(morris.board, 1) === 1, "morris removed opponent");
   assert(!morris.removing && morris.current === 1, "morris turn passes after remove");
+
+  const ttt = emptyTttBoard();
+  ttt[0] = 0;
+  ttt[1] = 0;
+  ttt[2] = 0;
+  assert(tttWinner(ttt) === 0, "ttt row win");
+
+  let gf: GravityBoard = emptyGravityFourBoard();
+  for (let i = 0; i < 4; i++) {
+    const next = dropGravityFour(gf, 0, 0);
+    assert(next !== null, "gravity-four drop");
+    gf = next!;
+  }
+  assert(gravityFourWinner(gf) === 0, "gravity-four vertical win");
+
+  let db = initialDotsBoxes();
+  db = drawDotsBoxesEdge(db, { kind: "h", row: 0, col: 0 })!;
+  db = drawDotsBoxesEdge(db, { kind: "h", row: 0, col: 1 })!;
+  db = drawDotsBoxesEdge(db, { kind: "v", row: 0, col: 0 })!;
+  db = drawDotsBoxesEdge(db, { kind: "v", row: 0, col: 1 })!;
+  const boxed = drawDotsBoxesEdge(db, { kind: "h", row: 1, col: 0 })!;
+  assert(boxed !== null && boxed.scores[0] === 1, "dots-and-boxes capture");
+
+  let nim = initialNim();
+  nim = takeNim(nim, 0, 3)!;
+  nim = takeNim(nim, 1, 5)!;
+  nim = takeNim(nim, 2, 6)!;
+  nim = takeNim(nim, 2, 1)!;
+  assert(nimOver(nim), "nim ends");
+
+  const hex = emptyHexBoard();
+  for (let r = 0; r < HEX_SIZE; r++) hex[r * HEX_SIZE] = 0;
+  assert(hexWinner(hex) === 0, "hex top-bottom win");
+  const fox = initialFoxHounds();
+  assert(foxHoundsMoves(fox, 0).length > 0, "fox opening moves");
+  assert(foxHoundsWinner(fox, 0) === null, "fox-hounds no early winner");
+
+  const chess = initialChessState();
+  assert(chessMoves(chess).length === 20, `chess opening ${chessMoves(chess).length}`);
+
+  const klondike = initialKlondike();
+  assert(klondike.tableau.length === 7, "klondike tableau");
+
+  const slide = shuffledSlide();
+  assert(!isSlideSolved(slide), "slide puzzle starts unsolved");
 }
 
 if (typeof process !== "undefined" && process.argv[1]?.includes("check-engines")) {

@@ -1,5 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="9" fill="#2c2c2e"/>
-  <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="8.25" stroke="#ffffff" stroke-opacity="0.12"/>
-  <text x="16" y="22" text-anchor="middle" fill="#f5f5f7" font-size="14" font-family="system-ui,sans-serif" font-weight="700">ボ</text>
+  <defs>
+    <linearGradient id="g" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff5c8a"/>
+      <stop offset="1" stop-color="#ffb347"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="9" fill="url(#g)"/>
+  <text x="16" y="22" text-anchor="middle" fill="#ffffff" font-size="14" font-family="system-ui,sans-serif" font-weight="800">ボ</text>
 </svg>
