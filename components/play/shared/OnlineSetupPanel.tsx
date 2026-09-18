@@ -7,8 +7,8 @@ type Props = {
   mode: PlayMode;
   onModeChange: (mode: PlayMode) => void;
   onlineSupported: boolean;
-  onCreateRoom: (passphrase: string, displayName: string) => void;
-  onJoinRoom: (code: string, passphrase: string, displayName: string) => void;
+  onCreateRoom: (displayName: string) => void;
+  onJoinRoom: (code: string, displayName: string) => void;
   onStartLocal: () => void;
   loading?: boolean;
   error?: string | null;
@@ -33,10 +33,8 @@ export function OnlineSetupPanel({
   error,
   waiting,
 }: Props) {
-  const [passphrase, setPassphrase] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [joinPassphrase, setJoinPassphrase] = useState("");
   const [joinName, setJoinName] = useState("");
   const [action, setAction] = useState<"create" | "join">("create");
 
@@ -145,11 +143,11 @@ export function OnlineSetupPanel({
               className="mx-auto max-w-sm space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                onCreateRoom(passphrase, displayName);
+                onCreateRoom(displayName);
               }}
             >
               <label className="block text-left text-sm">
-                <span className="text-slate-400">表示名</span>
+                <span className="text-slate-400">プレイヤー名</span>
                 <input
                   type="text"
                   value={displayName}
@@ -158,17 +156,6 @@ export function OnlineSetupPanel({
                   required
                   className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white"
                   placeholder="プレイヤー1"
-                />
-              </label>
-              <label className="block text-left text-sm">
-                <span className="text-slate-400">合言葉（4文字以上）</span>
-                <input
-                  type="password"
-                  value={passphrase}
-                  onChange={(e) => setPassphrase(e.target.value)}
-                  minLength={4}
-                  required
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white"
                 />
               </label>
               <button type="submit" disabled={loading} className="btn-game w-full">
@@ -180,7 +167,7 @@ export function OnlineSetupPanel({
               className="mx-auto max-w-sm space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                onJoinRoom(joinCode, joinPassphrase, joinName);
+                onJoinRoom(joinCode, joinName);
               }}
             >
               <label className="block text-left text-sm">
@@ -196,22 +183,12 @@ export function OnlineSetupPanel({
                 />
               </label>
               <label className="block text-left text-sm">
-                <span className="text-slate-400">表示名</span>
+                <span className="text-slate-400">プレイヤー名</span>
                 <input
                   type="text"
                   value={joinName}
                   onChange={(e) => setJoinName(e.target.value)}
                   maxLength={20}
-                  required
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white"
-                />
-              </label>
-              <label className="block text-left text-sm">
-                <span className="text-slate-400">合言葉</span>
-                <input
-                  type="password"
-                  value={joinPassphrase}
-                  onChange={(e) => setJoinPassphrase(e.target.value)}
                   required
                   className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white"
                 />

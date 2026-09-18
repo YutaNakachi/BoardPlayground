@@ -21,14 +21,13 @@ type JoinRoomResponse = {
 
 export async function createRoom(
   gameSlug: string,
-  passphrase: string,
   displayName: string
 ): Promise<CreateRoomResponse> {
   const playerId = getOrCreatePlayerId();
   const res = await fetch("/api/rooms/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ gameSlug, passphrase, displayName, playerId }),
+    body: JSON.stringify({ gameSlug, displayName, playerId }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -39,14 +38,13 @@ export async function createRoom(
 
 export async function joinRoom(
   code: string,
-  passphrase: string,
   displayName: string
 ): Promise<JoinRoomResponse> {
   const playerId = getOrCreatePlayerId();
   const res = await fetch("/api/rooms/join", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, passphrase, displayName, playerId }),
+    body: JSON.stringify({ code, displayName, playerId }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

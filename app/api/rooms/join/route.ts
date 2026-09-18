@@ -1,4 +1,3 @@
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
@@ -10,7 +9,6 @@ export async function POST(request: Request) {
 
   let body: {
     code?: string;
-    passphrase?: string;
     displayName?: string;
     playerId?: string;
   };
@@ -20,8 +18,8 @@ export async function POST(request: Request) {
     return apiError(API_ERROR.INVALID_JSON, 400);
   }
 
-  const { code, passphrase, displayName, playerId } = body;
-  if (!code || !passphrase || !displayName || !playerId) {
+  const { code, displayName, playerId } = body;
+  if (!code || !displayName || !playerId) {
     return apiError(API_ERROR.MISSING_FIELDS, 400);
   }
 
@@ -29,7 +27,7 @@ export async function POST(request: Request) {
 
   const { data: room } = await db
     .from("rooms")
-    .select("id, code, game_slug, status, passphrase_hash, host_player_id, expires_at")
+    .select("id, code, game_slug, status, host_player_id, expires_at")
     .eq("code", normalizedCode)
     .maybeSingle();
 
@@ -39,11 +37,6 @@ export async function POST(request: Request) {
 
   if (new Date(room.expires_at) < new Date()) {
     return NextResponse.json({ error: "部屋の有効期限が切れています" }, { status: 410 });
-  }
-
-  const valid = await bcrypt.compare(passphrase, room.passphrase_hash);
-  if (!valid) {
-    return NextResponse.json({ error: "合言葉が正しくありません" }, { status: 403 });
   }
 
   const { data: existingPlayers } = await db

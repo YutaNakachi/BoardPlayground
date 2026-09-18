@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { GameState, MovePayload } from "@/lib/online/moves";
+import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
 import {
   createRoom,
@@ -10,7 +10,7 @@ import {
   sendRoomMove,
   startRoomGame,
 } from "@/lib/online/room-client";
-import type { RoomInfo, RoomPlayer } from "@/lib/online/types";
+import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type OnlinePhase = "idle" | "waiting" | "playing" | "finished";
@@ -26,6 +26,12 @@ export function useOnlineRoom(gameSlug: string) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const versionRef = useRef(0);
+  const pendingMoveRef = useRef(false);
+
+  useEffect(() => {
+    versionRef.current = version;
+  }, [version]);
 
   const refreshRoom = useCallback(async (roomId: string) => {
     const data = await fetchRoom(roomId);
@@ -62,6 +68,7 @@ export function useOnlineRoom(gameSlug: string) {
             filter: `room_id=eq.${roomId}`,
           },
           (payload) => {
+            if (pendingMoveRef.current) return;
             const row = payload.new as {
               state: GameState;
               version: number;
@@ -113,11 +120,11 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const handleCreate = useCallback(
-    async (passphrase: string, displayName: string) => {
+    async (displayName: string) => {
       setLoading(true);
       setError(null);
       try {
-        const result = await createRoom(gameSlug, passphrase, displayName);
+        const result = await createRoom(gameSlug, displayName);
         const data = await fetchRoom(result.roomId);
         setupRoom(result.roomId, result.playerId, result.seatIndex, data.room);
       } catch (e) {
@@ -130,11 +137,11 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const handleJoin = useCallback(
-    async (code: string, passphrase: string, displayName: string) => {
+    async (code: string, displayName: string) => {
       setLoading(true);
       setError(null);
       try {
-        const result = await joinRoom(code, passphrase, displayName);
+        const result = await joinRoom(code, displayName);
         const data = await fetchRoom(result.roomId);
         setupRoom(result.roomId, result.playerId, result.seatIndex, data.room);
       } catch (e) {
@@ -162,27 +169,54 @@ export function useOnlineRoom(gameSlug: string) {
   }, [room, myPlayerId, refreshRoom]);
 
   const handleMove = useCallback(
-    async (move: MovePayload) => {
-      if (!room) return;
-      setError(null);
-      try {
-        const result = await sendRoomMove(room.id, myPlayerId, move, version);
-        setGameState(result.state as GameState);
-        setVersion(result.version);
-        setCurrentPlayer(result.currentPlayer);
-        if ((result.state as GameState).phase === "game-over") {
-          setPhase("finished");
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "手の送信に失敗しました");
-        await refreshRoom(room.id);
+    (move: MovePayload) => {
+      if (!room || gameState === null || mySeat < 0) return;
+      if (currentPlayer !== mySeat) return;
+
+      const slug = gameSlug as OnlineGameSlug;
+      const result = applyMove(slug, gameState, mySeat, move);
+      if ("error" in result) return;
+
+      const prevState = gameState;
+      const prevVersion = versionRef.current;
+      const prevCurrentPlayer = currentPlayer;
+      const prevPhase = phase;
+
+      pendingMoveRef.current = true;
+      setGameState(result.state);
+      setCurrentPlayer(result.currentPlayer);
+      setVersion(prevVersion + 1);
+      if (result.state.phase === "game-over") {
+        setPhase("finished");
       }
+
+      void sendRoomMove(room.id, myPlayerId, move, prevVersion)
+        .then((serverResult) => {
+          setGameState(serverResult.state as GameState);
+          setVersion(serverResult.version);
+          setCurrentPlayer(serverResult.currentPlayer);
+          if ((serverResult.state as GameState).phase === "game-over") {
+            setPhase("finished");
+          }
+        })
+        .catch((e) => {
+          setGameState(prevState);
+          setVersion(prevVersion);
+          setCurrentPlayer(prevCurrentPlayer);
+          setPhase(prevPhase);
+          setError(e instanceof Error ? e.message : "手の送信に失敗しました");
+          void refreshRoom(room.id);
+        })
+        .finally(() => {
+          pendingMoveRef.current = false;
+        });
     },
-    [room, myPlayerId, version, refreshRoom]
+    [room, gameState, mySeat, currentPlayer, phase, gameSlug, myPlayerId, refreshRoom]
   );
 
   const reset = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
+    pendingMoveRef.current = false;
     setPhase("idle");
     setRoom(null);
     setGameState(null);
