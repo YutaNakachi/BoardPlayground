@@ -31,15 +31,18 @@ export function GameCard({ game, initialPlayCount }: Props) {
         <GameCardArt game={game} />
       </div>
 
-      <div className="pointer-events-none absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
-        {showOnline ? <OnlineBadge /> : null}
-        <Link
-          href={`/games/${game.slug}`}
-          className="pointer-events-auto inline-flex min-h-8 items-center rounded-full border border-white/20 bg-black/45 px-3 text-xs text-slate-200 backdrop-blur-sm transition hover:border-white/35 hover:bg-black/60 hover:text-white"
-        >
-          ルール
-        </Link>
-      </div>
+      {showOnline ? (
+        <div className="pointer-events-none absolute left-3 top-3 z-20">
+          <OnlineBadge />
+        </div>
+      ) : null}
+
+      <Link
+        href={`/games/${game.slug}`}
+        className="pointer-events-auto absolute right-3 top-3 z-20 inline-flex min-h-8 items-center rounded-full border border-white/20 bg-black/45 px-3 text-xs text-slate-200 backdrop-blur-sm transition hover:border-white/35 hover:bg-black/60 hover:text-white"
+      >
+        ルール
+      </Link>
 
       <div className="pointer-events-none relative z-10 flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
@@ -56,10 +59,10 @@ export function GameCard({ game, initialPlayCount }: Props) {
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
           {game.description}
         </p>
-        <div className="mt-auto space-y-2.5 pt-3">
-          <GameMetaIndicators game={game} />
+        <div className="mt-auto flex items-center justify-between gap-3 pt-3">
+          <GameMetaIndicators game={game} className="min-w-0 flex flex-wrap items-center gap-x-4 gap-y-1" />
           {statsVisible ? (
-            <div className="flex h-5 items-center">
+            <div className="flex h-5 shrink-0 items-center">
               {showPlayCount ? (
                 <PlayCountIndicator count={playCount} />
               ) : (
