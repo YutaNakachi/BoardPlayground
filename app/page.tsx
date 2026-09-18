@@ -1,4 +1,5 @@
 import { GameCatalog } from "@/components/GameCatalog";
+import { PageContainer } from "@/components/PageContainer";
 import { SiteBrand } from "@/components/SiteBrand";
 import { SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
 import { getAllGames } from "@/lib/games";
@@ -7,7 +8,7 @@ export default function HomePage() {
   const games = getAllGames();
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+    <PageContainer>
       <section className="relative mb-12 overflow-hidden rounded-3xl border border-surface-border hero-glow px-6 py-12 text-center sm:mb-14 sm:px-10 sm:py-14">
         <div
           className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-accent/20 blur-3xl"
@@ -25,6 +26,6 @@ export default function HomePage() {
       </section>
 
       <GameCatalog games={games} />
-    </div>
+    </PageContainer>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageContainer } from "@/components/PageContainer";
 import {
   ORIGIN_LABEL,
   getAllGames,
@@ -22,7 +23,7 @@ export default function AboutPage() {
   const games = getAllGames();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <PageContainer>
       <h1 className="text-3xl font-bold">制作代行について</h1>
       <p className="mt-4 leading-relaxed text-slate-300">
         {SITE_NAME}
@@ -93,6 +94,6 @@ export default function AboutPage() {
           ゲーム一覧を見る
         </Link>
       </section>
-    </div>
+    </PageContainer>
   );
 }
