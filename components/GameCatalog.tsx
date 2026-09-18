@@ -12,9 +12,12 @@ import {
 } from "@/lib/games";
 import { CATALOG_HEADING } from "@/lib/site";
 
-type Props = { games: GameMeta[] };
+type Props = {
+  games: GameMeta[];
+  initialPlayCounts?: Record<string, number>;
+};
 
-export function GameCatalog({ games }: Props) {
+export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
   const { filters, setFilters, clearFilters } = useCatalogSidebar();
   const tags = getCatalogTags(games);
   const activeCount = countCatalogFilters(filters);
@@ -76,7 +79,11 @@ export function GameCatalog({ games }: Props) {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((game) => (
-            <GameCard key={game.slug} game={game} />
+            <GameCard
+              key={game.slug}
+              game={game}
+              initialPlayCount={initialPlayCounts[game.slug]}
+            />
           ))}
         </div>
       )}
