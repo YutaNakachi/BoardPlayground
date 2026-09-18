@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { GameCardArt } from "@/components/game-art/GameCardArt";
-import { GameMetaChips } from "@/components/GameMetaChips";
+import { GameMetaIndicators, OnlineBadge } from "@/components/GameMetaIndicators";
 import { OriginChip } from "@/components/OriginChip";
 import { PlayCountIndicator } from "@/components/PlayCountIndicator";
 import { usePlayStats } from "@/components/PlayStatsProvider";
@@ -21,6 +21,7 @@ export function GameCard({ game, initialPlayCount }: Props) {
   const playCount = clientCount ?? initialPlayCount ?? 0;
   const statsVisible = statsEnabled || initialPlayCount != null;
   const showPlayCount = statsVisible && playCount > 0;
+  const showOnline = onlineEnabled && isOnlineGame(game.slug);
   const playable = game.status === "playable";
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
 
@@ -30,12 +31,15 @@ export function GameCard({ game, initialPlayCount }: Props) {
         <GameCardArt game={game} />
       </div>
 
-      <Link
-        href={`/games/${game.slug}`}
-        className="pointer-events-auto absolute right-3 top-3 z-20 inline-flex min-h-8 items-center rounded-full border border-white/20 bg-black/45 px-3 text-xs text-slate-200 backdrop-blur-sm transition hover:border-white/35 hover:bg-black/60 hover:text-white"
-      >
-        ルール
-      </Link>
+      <div className="pointer-events-none absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
+        {showOnline ? <OnlineBadge /> : null}
+        <Link
+          href={`/games/${game.slug}`}
+          className="pointer-events-auto inline-flex min-h-8 items-center rounded-full border border-white/20 bg-black/45 px-3 text-xs text-slate-200 backdrop-blur-sm transition hover:border-white/35 hover:bg-black/60 hover:text-white"
+        >
+          ルール
+        </Link>
+      </div>
 
       <div className="pointer-events-none relative z-10 flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
@@ -46,19 +50,16 @@ export function GameCard({ game, initialPlayCount }: Props) {
             </span>
           ))}
         </div>
-        <h4 className="text-lg font-semibold tracking-tight text-white/95">
+        <h4 className="pr-16 text-lg font-semibold tracking-tight text-white/95">
           {game.title}
         </h4>
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
           {game.description}
         </p>
-        <div className="mt-auto pt-3">
-          <GameMetaChips
-            game={game}
-            showOnlineChip={onlineEnabled && isOnlineGame(game.slug)}
-          />
+        <div className="mt-auto space-y-2.5 pt-3">
+          <GameMetaIndicators game={game} />
           {statsVisible ? (
-            <div className="mt-2.5 flex h-5 items-center">
+            <div className="flex h-5 items-center">
               {showPlayCount ? (
                 <PlayCountIndicator count={playCount} />
               ) : (
