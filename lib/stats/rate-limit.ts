@@ -24,13 +24,17 @@ export async function checkPlayRateLimit(
     if (elapsed < COOLDOWN_MS) return false;
   }
 
-  await db.from("play_rate_limit").upsert({
-    ip_hash: ipHash,
-    game_slug: gameSlug,
-    recorded_at: new Date().toISOString(),
-  });
+  const { error } = await db.from("play_rate_limit").upsert(
+    {
+      ip_hash: ipHash,
+      game_slug: gameSlug,
+      recorded_at: new Date().toISOString(),
+    },
+    { onConflict: "ip_hash,game_slug" }
+  );
 
-  // Clean old entries occasionally
+  if (error) return true;
+
   const cutoff = new Date(Date.now() - 60_000).toISOString();
   await db.from("play_rate_limit").delete().lt("recorded_at", cutoff);
 

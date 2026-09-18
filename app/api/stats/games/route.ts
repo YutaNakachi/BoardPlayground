@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { checkBackendHealth } from "@/lib/supabase/health";
 
 export const revalidate = 60;
 
 export async function GET() {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ counts: {} });
+  const health = await checkBackendHealth();
+  if (!health.stats) {
+    return NextResponse.json({ counts: {}, enabled: false });
   }
 
   const db = getSupabaseAdmin();
   if (!db) {
-    return NextResponse.json({ counts: {} });
+    return NextResponse.json({ counts: {}, enabled: false });
   }
 
   const { data, error } = await db
@@ -19,7 +20,8 @@ export async function GET() {
     .select("game_slug, play_count");
 
   if (error) {
-    return NextResponse.json({ counts: {} });
+    console.error("[stats/games]", error.message);
+    return NextResponse.json({ counts: {}, enabled: false });
   }
 
   const counts: Record<string, number> = {};
@@ -28,7 +30,7 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { counts },
+    { counts, enabled: true },
     { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } }
   );
 }

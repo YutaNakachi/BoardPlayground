@@ -4,6 +4,7 @@ import { PageContainer } from "@/components/PageContainer";
 import { RankingList } from "@/components/RankingList";
 import { fetchRanking, parseRankingPeriod } from "@/lib/stats/ranking-data";
 import type { RankingPeriod } from "@/lib/stats/jst-date";
+import { checkBackendHealth } from "@/lib/supabase/health";
 
 const PERIODS: { key: RankingPeriod; label: string }[] = [
   { key: "day", label: "日間" },
@@ -17,7 +18,8 @@ type Props = { searchParams: Promise<{ period?: string }> };
 export default async function RankingPage({ searchParams }: Props) {
   const { period: periodParam } = await searchParams;
   const period = parseRankingPeriod(periodParam);
-  const ranking = await fetchRanking(period);
+  const health = await checkBackendHealth();
+  const ranking = health.stats ? await fetchRanking(period) : [];
 
   return (
     <PageContainer>
@@ -46,7 +48,13 @@ export default async function RankingPage({ searchParams }: Props) {
       </div>
 
       <div className="mt-8">
-        <RankingList ranking={ranking} />
+        {!health.stats ? (
+          <p className="text-slate-400">
+            ランキングは現在利用できません。Supabase の環境変数とマイグレーションの設定を確認してください。
+          </p>
+        ) : (
+          <RankingList ranking={ranking} />
+        )}
       </div>
     </PageContainer>
   );

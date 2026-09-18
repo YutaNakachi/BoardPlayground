@@ -7,11 +7,12 @@ import { OriginChip } from "@/components/OriginChip";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
 import type { GameMeta } from "@/lib/games";
+import { isOnlineGame } from "@/lib/online/types";
 
 type Props = { game: GameMeta };
 
 export function GameCard({ game }: Props) {
-  const { getCount } = usePlayStats();
+  const { getCount, statsEnabled, onlineEnabled } = usePlayStats();
   const playCount = getCount(game.slug);
   const playable = game.status === "playable";
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
@@ -37,7 +38,12 @@ export function GameCard({ game }: Props) {
           {game.description}
         </p>
         <div className="mt-3">
-          <GameMetaChips game={game} playCount={playCount} />
+          <GameMetaChips
+            game={game}
+            playCount={playCount}
+            showPlayCount={statsEnabled}
+            showOnlineChip={onlineEnabled && isOnlineGame(game.slug)}
+          />
         </div>
         <div className="relative z-20 mt-4">
           <Link

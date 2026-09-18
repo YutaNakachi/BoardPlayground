@@ -5,6 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { GomokuState } from "@/lib/online/moves";
 import type { PlayMode } from "@/lib/online/types";
@@ -21,6 +22,7 @@ type LocalPhase = "setup" | "playing" | "game-over";
 
 export function GomokuGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
   const online = useOnlineRoom("gomoku");
   const [mode, setMode] = useState<PlayMode>("local");
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
@@ -123,7 +125,7 @@ export function GomokuGame() {
           <OnlineSetupPanel
             mode={mode}
             onModeChange={setMode}
-            onlineSupported
+            onlineSupported={onlineEnabled}
             onCreateRoom={online.handleCreate}
             onJoinRoom={online.handleJoin}
             onStartLocal={startLocal}
@@ -140,7 +142,7 @@ export function GomokuGame() {
       <OnlineSetupPanel
         mode="online"
         onModeChange={() => {}}
-        onlineSupported
+        onlineSupported={onlineEnabled}
         onCreateRoom={() => {}}
         onJoinRoom={() => {}}
         onStartLocal={() => {}}
