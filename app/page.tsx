@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { GameCatalog } from "@/components/GameCatalog";
 import { SiteBrand } from "@/components/SiteBrand";
 import { SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
@@ -23,12 +22,6 @@ export default function HomePage() {
         <p className="mx-auto mt-3 max-w-lg text-base text-slate-400 sm:text-lg">
           {SITE_TAGLINE_SUB}
         </p>
-        <Link
-          href="/ranking"
-          className="mt-6 inline-flex min-h-10 items-center rounded-full border border-white/15 bg-white/5 px-5 text-sm text-slate-300 transition hover:border-accent/40 hover:text-white"
-        >
-          プレイ回数ランキング
-        </Link>
       </section>
 
       <GameCatalog games={games} />

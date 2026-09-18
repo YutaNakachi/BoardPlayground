@@ -65,8 +65,8 @@ export function SiteSidebar() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          <nav aria-label="メイン" className="mb-6 space-y-1">
-            {showHomeLink ? (
+          {showHomeLink ? (
+            <nav aria-label="メイン" className="mb-6">
               <Link
                 href="/"
                 onClick={closeSidebar}
@@ -74,15 +74,8 @@ export function SiteSidebar() {
               >
                 ゲーム一覧
               </Link>
-            ) : null}
-            <Link
-              href="/ranking"
-              onClick={closeSidebar}
-              className="flex min-h-10 items-center rounded-lg px-3 text-sm text-slate-300 transition hover:bg-surface-raised hover:text-white"
-            >
-              プレイ回数ランキング
-            </Link>
-          </nav>
+            </nav>
+          ) : null}
 
           {showFilters ? (
             <CatalogFilterPanel

@@ -58,6 +58,19 @@ export function Header() {
           </span>
           <SiteBrand variant="header" />
         </Link>
+
+        <Link
+          href="/ranking"
+          aria-current={pathname === "/ranking" ? "page" : undefined}
+          className={`ml-auto inline-flex min-h-9 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition sm:min-h-10 ${
+            pathname === "/ranking"
+              ? "border-accent/50 bg-accent/20 text-white"
+              : "border-white/15 bg-white/5 text-slate-300 hover:border-white/25 hover:text-white"
+          }`}
+          aria-label="プレイ回数ランキング"
+        >
+          ランキング
+        </Link>
       </div>
     </header>
   );
