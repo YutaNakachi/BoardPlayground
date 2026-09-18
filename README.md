@@ -49,8 +49,15 @@ npm run dev
 ### Supabase セットアップ
 
 1. [Supabase](https://supabase.com/) でプロジェクトを作成
-2. SQL Editor で `supabase/migrations/001_stats.sql` と `002_rooms.sql` を実行
-3. Vercel の Environment Variables に上記3つを追加
+2. SQL Editor で以下を **順番に** 実行
+   - `supabase/migrations/001_stats.sql`
+   - `supabase/migrations/002_rooms.sql`
+   - `supabase/migrations/003_increment_rpc.sql`
+3. Vercel の **Settings → Environment Variables** に上記3つの変数を追加（Production / Preview / Development すべて）
+4. **Redeploy** して反映（環境変数追加後は再デプロイが必要）
+5. 動作確認: `https://<your-domain>/api/status` が `{ "stats": true, "online": true }` を返すこと
+
+未設定のときはローカルプレイのみ利用でき、オンラインタブとプレイ回数は非表示になります。
 
 ## ゲーム
 

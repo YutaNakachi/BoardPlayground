@@ -1,35 +1,40 @@
 import { NextResponse } from "next/server";
+import { API_ERROR, apiError } from "@/lib/api/errors";
 import { getGameBySlug } from "@/lib/games";
 import { incrementPlayCount } from "@/lib/stats/record-play";
 import { checkPlayRateLimit, hashIp } from "@/lib/stats/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { checkBackendHealth } from "@/lib/supabase/health";
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ ok: true, skipped: true });
+  const health = await checkBackendHealth();
+  if (!health.stats) {
+    return NextResponse.json(
+      { ok: false, skipped: true, reason: health.reason ?? "not_configured" },
+      { status: health.configured ? 503 : 200 }
+    );
   }
 
   const db = getSupabaseAdmin();
   if (!db) {
-    return NextResponse.json({ ok: true, skipped: true });
+    return apiError(API_ERROR.STATS_NOT_CONFIGURED, 503);
   }
 
   let body: { slug?: string; mode?: string };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return apiError(API_ERROR.INVALID_JSON, 400);
   }
 
   const slug = body.slug;
   if (!slug || typeof slug !== "string") {
-    return NextResponse.json({ error: "slug is required" }, { status: 400 });
+    return apiError("slug is required", 400);
   }
 
   const game = getGameBySlug(slug);
   if (!game || game.status !== "playable") {
-    return NextResponse.json({ error: "Unknown game" }, { status: 404 });
+    return apiError(API_ERROR.UNKNOWN_GAME, 404);
   }
 
   const forwarded = request.headers.get("x-forwarded-for");
@@ -41,6 +46,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, throttled: true });
   }
 
-  await incrementPlayCount(db, slug);
+  const result = await incrementPlayCount(db, slug);
+  if (!result.ok) {
+    console.error("[stats/play]", result.message);
+    return apiError(API_ERROR.DB_UNAVAILABLE, 503);
+  }
+
   return NextResponse.json({ ok: true });
 }

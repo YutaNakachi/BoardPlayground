@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
+import { requireOnlineBackend } from "@/lib/api/require-online";
 import { applyMove, type MovePayload } from "@/lib/online/moves";
 import { isOnlineGame } from "@/lib/online/types";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Params) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Online play is not configured" }, { status: 503 });
-  }
-
-  const db = getSupabaseAdmin();
-  if (!db) {
-    return NextResponse.json({ error: "Online play is not configured" }, { status: 503 });
-  }
+  const backend = await requireOnlineBackend();
+  if (backend instanceof Response) return backend;
+  const { db } = backend;
 
   const { id } = await params;
 

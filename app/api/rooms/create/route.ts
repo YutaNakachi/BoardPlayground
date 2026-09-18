@@ -1,20 +1,15 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { API_ERROR, apiError } from "@/lib/api/errors";
+import { requireOnlineBackend } from "@/lib/api/require-online";
 import { getGameBySlug } from "@/lib/games";
 import { generateRoomCode } from "@/lib/online/room-code";
 import { isOnlineGame } from "@/lib/online/types";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Online play is not configured" }, { status: 503 });
-  }
-
-  const db = getSupabaseAdmin();
-  if (!db) {
-    return NextResponse.json({ error: "Online play is not configured" }, { status: 503 });
-  }
+  const backend = await requireOnlineBackend();
+  if (backend instanceof Response) return backend;
+  const { db } = backend;
 
   let body: {
     gameSlug?: string;
@@ -25,12 +20,12 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return apiError(API_ERROR.INVALID_JSON, 400);
   }
 
   const { gameSlug, passphrase, displayName, playerId } = body;
   if (!gameSlug || !passphrase || !displayName || !playerId) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return apiError(API_ERROR.MISSING_FIELDS, 400);
   }
 
   if (!isOnlineGame(gameSlug)) {
@@ -74,7 +69,8 @@ export async function POST(request: Request) {
     .single();
 
   if (roomError || !room) {
-    return NextResponse.json({ error: "Failed to create room" }, { status: 500 });
+    console.error("[rooms/create]", roomError?.message);
+    return apiError(API_ERROR.CREATE_ROOM_FAILED, 500);
   }
 
   const { error: playerError } = await db.from("room_players").insert({
@@ -86,7 +82,7 @@ export async function POST(request: Request) {
 
   if (playerError) {
     await db.from("rooms").delete().eq("id", room.id);
-    return NextResponse.json({ error: "Failed to join room" }, { status: 500 });
+    return apiError(API_ERROR.JOIN_ROOM_FAILED, 500);
   }
 
   return NextResponse.json({

@@ -1,17 +1,12 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { API_ERROR, apiError } from "@/lib/api/errors";
+import { requireOnlineBackend } from "@/lib/api/require-online";
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Online play is not configured" }, { status: 503 });
-  }
-
-  const db = getSupabaseAdmin();
-  if (!db) {
-    return NextResponse.json({ error: "Online play is not configured" }, { status: 503 });
-  }
+  const backend = await requireOnlineBackend();
+  if (backend instanceof Response) return backend;
+  const { db } = backend;
 
   let body: {
     code?: string;
@@ -22,12 +17,12 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return apiError(API_ERROR.INVALID_JSON, 400);
   }
 
   const { code, passphrase, displayName, playerId } = body;
   if (!code || !passphrase || !displayName || !playerId) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return apiError(API_ERROR.MISSING_FIELDS, 400);
   }
 
   const normalizedCode = code.trim().toUpperCase();

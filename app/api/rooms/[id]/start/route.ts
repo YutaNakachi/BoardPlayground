@@ -1,21 +1,16 @@
 import { NextResponse } from "next/server";
+import { API_ERROR, apiError } from "@/lib/api/errors";
+import { requireOnlineBackend } from "@/lib/api/require-online";
 import { createInitialState } from "@/lib/online/moves";
 import { isOnlineGame } from "@/lib/online/types";
 import { incrementPlayCount } from "@/lib/stats/record-play";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, { params }: Params) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Online play is not configured" }, { status: 503 });
-  }
-
-  const db = getSupabaseAdmin();
-  if (!db) {
-    return NextResponse.json({ error: "Online play is not configured" }, { status: 503 });
-  }
+  const backend = await requireOnlineBackend();
+  if (backend instanceof Response) return backend;
+  const { db } = backend;
 
   const { id } = await params;
 
@@ -76,7 +71,10 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   await db.from("rooms").update({ status: "playing" }).eq("id", id);
-  await incrementPlayCount(db, room.game_slug);
+  const countResult = await incrementPlayCount(db, room.game_slug);
+  if (!countResult.ok) {
+    console.error("[rooms/start] stats", countResult.message);
+  }
 
   return NextResponse.json({ ok: true });
 }
