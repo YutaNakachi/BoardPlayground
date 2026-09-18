@@ -4,9 +4,9 @@ import { fetchRanking, parseRankingPeriod } from "@/lib/stats/ranking-data";
 import type { RankingPeriod } from "@/lib/stats/jst-date";
 
 const PERIODS: { key: RankingPeriod; label: string }[] = [
-  { key: "day", label: "今日" },
-  { key: "week", label: "7日間" },
-  { key: "month", label: "30日間" },
+  { key: "day", label: "日間" },
+  { key: "week", label: "週間" },
+  { key: "month", label: "月間" },
   { key: "all", label: "全期間" },
 ];
 
@@ -34,7 +34,7 @@ export default async function RankingPage({ searchParams }: Props) {
             href={`/ranking?period=${p.key}`}
             role="tab"
             aria-selected={period === p.key}
-            className={`min-h-9 rounded-full px-4 text-sm font-medium transition ${
+            className={`inline-flex min-h-9 items-center justify-center rounded-full px-4 text-sm font-medium leading-none transition ${
               period === p.key
                 ? "bg-accent text-white"
                 : "bg-white/10 text-slate-300 ring-1 ring-white/10 hover:bg-white/15"
