@@ -4,6 +4,7 @@ import Link from "next/link";
 import { GameCardArt } from "@/components/game-art/GameCardArt";
 import { GameMetaChips } from "@/components/GameMetaChips";
 import { OriginChip } from "@/components/OriginChip";
+import { PlayCountIndicator } from "@/components/PlayCountIndicator";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
 import type { GameMeta } from "@/lib/games";
@@ -17,8 +18,8 @@ type Props = {
 export function GameCard({ game, initialPlayCount }: Props) {
   const { getCount, statsEnabled, onlineEnabled } = usePlayStats();
   const clientCount = getCount(game.slug);
-  const playCount = clientCount ?? initialPlayCount;
-  const showPlayCount = statsEnabled || initialPlayCount != null;
+  const playCount = clientCount ?? initialPlayCount ?? 0;
+  const showPlayCount = (statsEnabled || initialPlayCount != null) && playCount > 0;
   const playable = game.status === "playable";
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
 
@@ -27,6 +28,14 @@ export function GameCard({ game, initialPlayCount }: Props) {
       <div className="pointer-events-none">
         <GameCardArt game={game} />
       </div>
+
+      <Link
+        href={`/games/${game.slug}`}
+        className="pointer-events-auto absolute right-3 top-3 z-20 inline-flex min-h-8 items-center rounded-full border border-white/20 bg-black/45 px-3 text-xs text-slate-200 backdrop-blur-sm transition hover:border-white/35 hover:bg-black/60 hover:text-white"
+      >
+        ルール
+      </Link>
+
       <div className="pointer-events-none relative z-10 flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
           <OriginChip origin={game.origin} />
@@ -45,20 +54,18 @@ export function GameCard({ game, initialPlayCount }: Props) {
         <div className="mt-3">
           <GameMetaChips
             game={game}
-            playCount={playCount}
-            showPlayCount={showPlayCount}
             showOnlineChip={onlineEnabled && isOnlineGame(game.slug)}
           />
         </div>
-        <div className="relative z-20 mt-4">
-          <Link
-            href={`/games/${game.slug}`}
-            className="pointer-events-auto inline-flex min-h-9 items-center rounded-full border border-white/15 px-4 text-sm text-slate-300 transition hover:border-white/25 hover:text-white"
-          >
-            ルール
-          </Link>
-        </div>
       </div>
+
+      {showPlayCount ? (
+        <PlayCountIndicator
+          count={playCount}
+          className="pointer-events-none absolute bottom-4 left-5 z-20"
+        />
+      ) : null}
+
       <Link
         href={playHref}
         className="absolute inset-0 z-[1] rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"

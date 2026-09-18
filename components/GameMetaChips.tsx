@@ -1,24 +1,19 @@
 import { OriginChip } from "@/components/OriginChip";
 import { META_CHIP_CLASS, ONLINE_CHIP_CLASS } from "@/lib/chip-styles";
-import { formatPlayCount } from "@/lib/format-play-count";
 import { COMPLEXITY_LABEL, type GameMeta } from "@/lib/games";
 
 type Props = {
   game: GameMeta;
   includeOrigin?: boolean;
   className?: string;
-  playCount?: number;
   showOnlineChip?: boolean;
-  showPlayCount?: boolean;
 };
 
 export function GameMetaChips({
   game,
   includeOrigin = false,
   className = "flex flex-wrap gap-1.5",
-  playCount,
   showOnlineChip = false,
-  showPlayCount = true,
 }: Props) {
   return (
     <div className={className}>
@@ -26,9 +21,6 @@ export function GameMetaChips({
       <span className={META_CHIP_CLASS}>{COMPLEXITY_LABEL[game.complexity]}</span>
       <span className={META_CHIP_CLASS}>{game.players}人</span>
       <span className={META_CHIP_CLASS}>約{game.durationMinutes}分</span>
-      {showPlayCount && playCount != null && playCount > 0 ? (
-        <span className={META_CHIP_CLASS}>{formatPlayCount(playCount)}回プレイ</span>
-      ) : null}
       {showOnlineChip ? (
         <span className={ONLINE_CHIP_CLASS}>オンライン可</span>
       ) : null}
