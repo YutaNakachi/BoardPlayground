@@ -118,11 +118,8 @@ export function GameMetaIndicators({
 export function OnlineBadge({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-medium text-emerald-200 backdrop-blur-sm ${className}`}
+      className={`inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-medium text-emerald-200 backdrop-blur-sm ${className}`}
     >
-      <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5 shrink-0" aria-hidden>
-        <path d="M12 3C7.5 3 3.7 5.6 2 9.2c3.5-2.8 8.3-2.8 11.8 0 .5-.9 1.2-1.7 2-2.3C14.2 4.8 13.1 3 12 3zm0 4c-2.8 0-5.3 1.2-7.1 3.1 2.2 1.8 5.3 1.8 7.4 0 1.2-1 2.8-1.6 4.4-1.5-.9-1.2-2-2.2-3.3-2.9C14.8 6.4 13.4 6 12 6zm0 4c-1.5 0-2.9.5-4 1.4 1.3 1.1 3.2 1.1 4.5 0 .7-.6 1.6-.9 2.5-.9-.6-.7-1.3-1.3-2.1-1.7-.8-.4-1.6-.5-2.4-.5z" />
-      </svg>
       オンライン可
     </span>
   );
