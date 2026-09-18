@@ -51,20 +51,16 @@ export function GameCard({ game, initialPlayCount }: Props) {
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
           {game.description}
         </p>
-        <div className="mt-3">
+        <div className="mt-auto pt-3">
           <GameMetaChips
             game={game}
             showOnlineChip={onlineEnabled && isOnlineGame(game.slug)}
           />
+          {showPlayCount ? (
+            <PlayCountIndicator count={playCount} className="mt-2.5" />
+          ) : null}
         </div>
       </div>
-
-      {showPlayCount ? (
-        <PlayCountIndicator
-          count={playCount}
-          className="pointer-events-none absolute bottom-4 left-5 z-20"
-        />
-      ) : null}
 
       <Link
         href={playHref}
