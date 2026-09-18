@@ -672,6 +672,100 @@ function SlidePuzzlePreview() {
   );
 }
 
+function TttPreview() {
+  const marks = ["×", "", "○", "", "×", "○", "", "×", ""];
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#1e293b" />
+      {marks.map((mark, index) => {
+        const row = Math.floor(index / 3);
+        const col = index % 3;
+        const x = 20 + col * 30;
+        const y = 28 + row * 30;
+        return (
+          <text
+            key={index}
+            x={x}
+            y={y}
+            textAnchor="middle"
+            fontSize="18"
+            fill="#f8fafc"
+            fontWeight="700"
+          >
+            {mark}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+function GravityFourPreview() {
+  const cols = [0, 1, 2, 1, 0, 1, 2];
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#312e81" />
+      {cols.map((col, row) => {
+        const x = 18 + col * 14;
+        const y = 88 - row * 14;
+        return (
+          <circle
+            key={row}
+            cx={x}
+            cy={y}
+            r="5"
+            fill={row % 2 === 0 ? "#fb7185" : "#fcd34d"}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function DotsBoxesPreview() {
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#0f172a" />
+      {[0, 1, 2].map((row) =>
+        [0, 1, 2].map((col) => (
+          <circle
+            key={`${row}-${col}`}
+            cx={24 + col * 36}
+            cy={24 + row * 36}
+            r="4"
+            fill="#94a3b8"
+          />
+        ))
+      )}
+      <line x1="24" y1="24" x2="60" y2="24" stroke="#e2e8f0" strokeWidth="3" />
+      <line x1="60" y1="24" x2="60" y2="60" stroke="#e2e8f0" strokeWidth="3" />
+      <text x="42" y="48" textAnchor="middle" fontSize="14" fill="#d4849a" fontWeight="700">
+        1
+      </text>
+    </svg>
+  );
+}
+
+function NimPreview() {
+  const heaps = [3, 5, 2];
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
+      <rect width="120" height="120" rx="10" fill="#1e293b" />
+      {heaps.map((count, heap) =>
+        Array.from({ length: count }, (_, i) => (
+          <circle
+            key={`${heap}-${i}`}
+            cx={24 + heap * 36}
+            cy={88 - i * 12}
+            r="5"
+            fill="#cbd5e1"
+          />
+        ))
+      )}
+    </svg>
+  );
+}
+
 const PREVIEWS: Record<string, () => ReactNode> = {
   "nebula-link": NebulaPreview,
   reversi: ReversiPreview,
@@ -679,6 +773,10 @@ const PREVIEWS: Record<string, () => ReactNode> = {
   gomoku: GomokuPreview,
   checkers: CheckersPreview,
   "nine-mens-morris": MorrisPreview,
+  "tic-tac-toe": TttPreview,
+  "gravity-four": GravityFourPreview,
+  "dots-and-boxes": DotsBoxesPreview,
+  nim: NimPreview,
   hex: HexPreview,
   "fox-hounds": FoxHoundsPreview,
   dominoes: DominoPreview,
