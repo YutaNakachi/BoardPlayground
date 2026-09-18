@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -17,6 +18,7 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 export function FoxHoundsGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [board, setBoard] = useState<Board>(initialFoxHounds);
   const [current, setCurrent] = useState<Player>(0);
@@ -24,12 +26,13 @@ export function FoxHoundsGame() {
   const [winner, setWinner] = useState<Player | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setBoard(initialFoxHounds());
     setCurrent(0);
     setSelected(null);
     setWinner(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const moves = useMemo(
     () => (phase === "playing" ? foxHoundsMoves(board, current) : []),

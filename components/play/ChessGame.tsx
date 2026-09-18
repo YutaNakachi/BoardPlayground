@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -19,17 +20,19 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 export function ChessGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<ChessState>(initialChessState);
   const [selected, setSelected] = useState<number | null>(null);
   const [result, setResult] = useState<{ winners: number[]; message: string } | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialChessState());
     setSelected(null);
     setResult(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const moves = useMemo(
     () => (phase === "playing" ? chessMoves(state) : []),

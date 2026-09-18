@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import {
@@ -15,15 +16,17 @@ import {
 type Phase = "idle" | "playing" | "game-over";
 
 export function MahjongSolitaireGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("idle");
   const [state, setState] = useState<MahjongState>(initialMahjongSolitaire);
   const [selected, setSelected] = useState<string | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialMahjongSolitaire());
     setSelected(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const removed = useMemo(() => new Set(state.removed), [state.removed]);
   const freeIds = useMemo(

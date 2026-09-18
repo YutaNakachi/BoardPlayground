@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -18,17 +19,19 @@ const P1_PITS = [0, 1, 2, 3, 4, 5];
 const P2_PITS = [12, 11, 10, 9, 8, 7];
 
 export function MancalaGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [pits, setPits] = useState<number[]>(initialMancala);
   const [current, setCurrent] = useState<Player>(0);
   const [notice, setNotice] = useState<string | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setPits(initialMancala());
     setCurrent(0);
     setNotice(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const playPit = useCallback(
     (index: number) => {

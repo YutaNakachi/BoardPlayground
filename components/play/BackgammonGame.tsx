@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -18,15 +19,17 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 export function BackgammonGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<BackgammonState>(initialBackgammon);
   const [selected, setSelected] = useState<number | "bar" | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialBackgammon());
     setSelected(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const moves = useMemo(
     () => (phase === "playing" ? backgammonMoves(state) : []),

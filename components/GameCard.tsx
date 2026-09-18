@@ -1,13 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { GameCardArt } from "@/components/game-art/GameCardArt";
 import { GameMetaChips } from "@/components/GameMetaChips";
 import { OriginChip } from "@/components/OriginChip";
+import { usePlayStats } from "@/components/PlayStatsProvider";
 import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
 import type { GameMeta } from "@/lib/games";
 
 type Props = { game: GameMeta };
 
 export function GameCard({ game }: Props) {
+  const { getCount } = usePlayStats();
+  const playCount = getCount(game.slug);
   const playable = game.status === "playable";
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
 
@@ -36,7 +41,7 @@ export function GameCard({ game }: Props) {
           {game.description}
         </p>
         <div className="mt-3">
-          <GameMetaChips game={game} />
+          <GameMetaChips game={game} playCount={playCount} />
         </div>
         <div className="mt-4">
           <Link

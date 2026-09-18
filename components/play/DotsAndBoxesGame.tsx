@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -35,13 +36,15 @@ function edgeKey(edge: Edge): string {
 }
 
 export function DotsAndBoxesGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<DotsBoxesState>(initialDotsBoxes);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialDotsBoxes());
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const draw = useCallback(
     (edge: Edge) => {

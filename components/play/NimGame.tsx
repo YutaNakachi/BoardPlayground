@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { useCallback, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -15,6 +16,7 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 export function NimGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [heaps, setHeaps] = useState<number[]>(initialNim);
   const [current, setCurrent] = useState<Player>(0);
@@ -22,12 +24,13 @@ export function NimGame() {
   const [winner, setWinner] = useState<Player | null>(null);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setHeaps(initialNim());
     setCurrent(0);
     setSelectedHeap(null);
     setWinner(null);
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const take = useCallback(
     (heapIndex: number, count: number) => {
