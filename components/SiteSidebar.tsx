@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { CatalogFilterPanel } from "@/components/CatalogFilterPanel";
@@ -8,9 +7,8 @@ import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 
 export function SiteSidebar() {
   const pathname = usePathname();
+  const isHome = pathname === "/";
   const { open, closeSidebar, filters, setFilters, games } = useCatalogSidebar();
-  const showFilters = pathname === "/";
-  const showHomeLink = pathname !== "/";
 
   useEffect(() => {
     closeSidebar();
@@ -32,11 +30,13 @@ export function SiteSidebar() {
     };
   }, [open]);
 
+  if (!isHome) return null;
+
   return (
     <>
       <button
         type="button"
-        aria-label="メニューを閉じる"
+        aria-label="絞り込みメニューを閉じる"
         aria-hidden={!open}
         tabIndex={open ? 0 : -1}
         onClick={closeSidebar}
@@ -53,37 +53,23 @@ export function SiteSidebar() {
         }`}
       >
         <div className="flex items-center justify-between border-b border-surface-border px-4 py-3">
-          <p className="text-sm font-semibold">{showFilters ? "絞り込み" : "メニュー"}</p>
+          <p className="text-sm font-semibold">絞り込み</p>
           <button
             type="button"
             onClick={closeSidebar}
             className="min-h-9 rounded-lg px-2 text-sm text-slate-400 transition hover:text-white"
-            aria-label="メニューを閉じる"
+            aria-label="絞り込みメニューを閉じる"
           >
             閉じる
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {showHomeLink ? (
-            <nav aria-label="メイン" className="mb-6">
-              <Link
-                href="/"
-                onClick={closeSidebar}
-                className="flex min-h-10 items-center rounded-lg px-3 text-sm text-slate-300 transition hover:bg-surface-raised hover:text-white"
-              >
-                ゲーム一覧
-              </Link>
-            </nav>
-          ) : null}
-
-          {showFilters ? (
-            <CatalogFilterPanel
-              games={games}
-              filters={filters}
-              onChange={setFilters}
-            />
-          ) : null}
+          <CatalogFilterPanel
+            games={games}
+            filters={filters}
+            onChange={setFilters}
+          />
         </div>
       </aside>
     </>

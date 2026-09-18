@@ -28,29 +28,35 @@ function MenuIcon() {
 
 export function Header() {
   const pathname = usePathname();
+  const isHome = pathname === "/";
   const { open, toggleSidebar, filters } = useCatalogSidebar();
-  const filterCount = pathname === "/" ? countSidebarFilters(filters) : 0;
+  const filterCount = isHome ? countSidebarFilters(filters) : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b border-surface-border bg-surface/85 backdrop-blur-md">
       <div className="mx-auto flex h-12 max-w-6xl items-center gap-3 px-4 sm:h-14 sm:px-6">
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          aria-expanded={open}
-          aria-controls="site-sidebar"
-          className="relative inline-flex min-h-9 min-w-9 items-center justify-center rounded-xl text-slate-300 transition hover:bg-surface-raised hover:text-white sm:min-h-10 sm:min-w-10"
-          aria-label="メニューを開く"
-        >
-          <MenuIcon />
-          {filterCount > 0 ? (
-            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium text-white">
-              {filterCount}
-            </span>
-          ) : null}
-        </button>
+        {isHome ? (
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-expanded={open}
+            aria-controls="site-sidebar"
+            className="relative inline-flex min-h-9 min-w-9 items-center justify-center rounded-xl text-slate-300 transition hover:bg-surface-raised hover:text-white sm:min-h-10 sm:min-w-10"
+            aria-label="絞り込みメニューを開く"
+          >
+            <MenuIcon />
+            {filterCount > 0 ? (
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium text-white">
+                {filterCount}
+              </span>
+            ) : null}
+          </button>
+        ) : null}
 
-        <Link href="/" className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
+        <Link
+          href="/"
+          className={`flex min-w-0 items-center gap-2.5 ${isHome ? "flex-1 sm:flex-none" : ""}`}
+        >
           <span
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-warm text-sm font-extrabold text-white shadow-md shadow-accent/25 sm:h-9 sm:w-9"
           >
