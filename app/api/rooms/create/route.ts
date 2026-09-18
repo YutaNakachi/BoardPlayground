@@ -1,8 +1,8 @@
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
 import { getGameBySlug } from "@/lib/games";
+import { ROOM_PASSPHRASE_PLACEHOLDER } from "@/lib/online/room-auth";
 import { generateRoomCode } from "@/lib/online/room-code";
 import { isOnlineGame } from "@/lib/online/types";
 
@@ -13,7 +13,6 @@ export async function POST(request: Request) {
 
   let body: {
     gameSlug?: string;
-    passphrase?: string;
     displayName?: string;
     playerId?: string;
   };
@@ -23,8 +22,8 @@ export async function POST(request: Request) {
     return apiError(API_ERROR.INVALID_JSON, 400);
   }
 
-  const { gameSlug, passphrase, displayName, playerId } = body;
-  if (!gameSlug || !passphrase || !displayName || !playerId) {
+  const { gameSlug, displayName, playerId } = body;
+  if (!gameSlug || !displayName || !playerId) {
     return apiError(API_ERROR.MISSING_FIELDS, 400);
   }
 
@@ -37,11 +36,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown game" }, { status: 404 });
   }
 
-  if (passphrase.length < 4) {
-    return NextResponse.json({ error: "Passphrase must be at least 4 characters" }, { status: 400 });
-  }
-
-  const passphraseHash = await bcrypt.hash(passphrase, 10);
   let code = generateRoomCode();
   let attempts = 0;
 
@@ -61,7 +55,7 @@ export async function POST(request: Request) {
     .insert({
       code,
       game_slug: gameSlug,
-      passphrase_hash: passphraseHash,
+      passphrase_hash: ROOM_PASSPHRASE_PLACEHOLDER,
       status: "waiting",
       host_player_id: playerId,
     })
