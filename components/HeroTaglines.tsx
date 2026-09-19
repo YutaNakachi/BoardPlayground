@@ -5,9 +5,7 @@ export function HeroTaglines() {
     <>
       <p className="mt-6 text-xl font-bold text-white sm:text-2xl">
         <span className="sm:hidden">
-          ボードゲームを、
-          <br />
-          もっと気軽に、
+          ボードゲームを、もっと気軽に、
           <br />
           もっと楽しく。
         </span>
@@ -17,9 +15,7 @@ export function HeroTaglines() {
         <span className="sm:hidden">
           オリジナルゲームも多数！
           <br />
-          登録不要・インストール不要
-          <br />
-          ですぐ遊べる！
+          登録不要・インストール不要ですぐ遊べる！
         </span>
         <span className="hidden sm:inline">{SITE_TAGLINE_SUB}</span>
       </p>
