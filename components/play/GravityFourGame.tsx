@@ -72,7 +72,7 @@ export function GravityFourGame() {
     return (
       <SetupPanel
         title="重力四目"
-        description="7列×6段の盤に、列を選んで石を落とします。縦・横・斜めで4つ並べた方が勝ちです。"
+        description="7列×6段の盤に、列を選んで石を落とします。縦・横・斜めで4つ以上並べた方が勝ちです。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -153,7 +153,7 @@ export function GravityFourGame() {
             <p className="text-slate-400">
               {winner === "draw"
                 ? "盤が埋まり、4つ並びはありませんでした。"
-                : `プレイヤー ${Number(winner) + 1} が4つ並べました。`}
+                : `プレイヤー ${Number(winner) + 1} が4つ以上並べました。`}
             </p>
           }
         />

@@ -8,6 +8,7 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
   applyFoxHoundsMove,
   FH_SIZE,
+  foxHoundsHoundDestinations,
   foxHoundsMoves,
   foxHoundsWinner,
   initialFoxHounds,
@@ -41,29 +42,14 @@ export function FoxHoundsGame() {
 
   const destinations = useMemo(() => {
     if (selected === null) return [];
-    const fromMoves = moves.filter((m) => {
-      if (current === 0) return board[m] === null && selected === board.indexOf(0);
-      return false;
-    });
     if (current === 0 && selected === board.indexOf(0)) {
       return foxHoundsMoves(board, 0);
     }
     if (current === 1 && board[selected] === 1) {
-      const row = Math.floor(selected / FH_SIZE);
-      const col = selected % FH_SIZE;
-      const dests: number[] = [];
-      if (row > 0) {
-        for (const dc of [-1, 1]) {
-          const nc = col + dc;
-          if (nc < 0 || nc >= FH_SIZE) continue;
-          const ni = (row - 1) * FH_SIZE + nc;
-          if (board[ni] === null) dests.push(ni);
-        }
-      }
-      return dests;
+      return foxHoundsHoundDestinations(board, selected);
     }
-    return fromMoves;
-  }, [selected, board, current, moves]);
+    return [];
+  }, [selected, board, current]);
 
   const onCell = useCallback(
     (index: number) => {
@@ -96,7 +82,7 @@ export function FoxHoundsGame() {
     return (
       <SetupPanel
         title="ウサギと猟犬"
-        description="プレイヤー1はウサギ、プレイヤー2は猟犬4匹。ウサギは上の段へ、猟犬は囲めば勝ちです。"
+        description="プレイヤー1はウサギ、プレイヤー2は猟犬4匹。ウサギは最上段へ到達すれば勝ち、猟犬は囲めば勝ちです。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -149,7 +135,9 @@ export function FoxHoundsGame() {
           onReplay={() => setPhase("setup")}
           details={
             <p className="text-slate-400">
-              {winner === 0 ? "ウサギが上の段に到達しました。" : "猟犬がウサギを囲みました。"}
+              {winner === 0
+                ? "ウサギが最上段に着いたか、猟犬が動けなくなりました。"
+                : "猟犬がウサギを囲みました。"}
             </p>
           }
         />

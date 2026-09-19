@@ -1,7 +1,24 @@
+import type { ReactNode } from "react";
+
 type Block =
   | { type: "paragraph"; text: string }
   | { type: "list"; ordered: boolean; items: string[] }
   | { type: "table"; rows: string[][] };
+
+function renderInline(text: string): ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    const bold = part.match(/^\*\*([^*]+)\*\*$/);
+    if (bold) {
+      return (
+        <strong key={index} className="font-semibold text-slate-200">
+          {bold[1]}
+        </strong>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+}
 
 function isUnorderedListLine(line: string): boolean {
   return /^-\s/.test(line.trim());
@@ -107,7 +124,7 @@ export function RulesMarkdown({ content, className = "" }: Props) {
     <div className={`space-y-4 text-slate-300 leading-relaxed ${className}`}>
       {blocks.map((block, index) => {
         if (block.type === "paragraph") {
-          return <p key={index}>{block.text}</p>;
+          return <p key={index}>{renderInline(block.text)}</p>;
         }
 
         if (block.type === "list") {
@@ -118,7 +135,7 @@ export function RulesMarkdown({ content, className = "" }: Props) {
           return (
             <ListTag key={index} className={listClass}>
               {block.items.map((item, itemIndex) => (
-                <li key={`${index}-${itemIndex}`}>{item}</li>
+                <li key={`${index}-${itemIndex}`}>{renderInline(item)}</li>
               ))}
             </ListTag>
           );
@@ -135,7 +152,7 @@ export function RulesMarkdown({ content, className = "" }: Props) {
                       key={cell}
                       className="border border-surface-border bg-surface px-3 py-2 text-left font-semibold text-slate-200"
                     >
-                      {cell}
+                      {renderInline(cell)}
                     </th>
                   ))}
                 </tr>
@@ -148,7 +165,7 @@ export function RulesMarkdown({ content, className = "" }: Props) {
                         key={cellIndex}
                         className="border border-surface-border px-3 py-2 align-top"
                       >
-                        {cell}
+                        {renderInline(cell)}
                       </td>
                     ))}
                   </tr>

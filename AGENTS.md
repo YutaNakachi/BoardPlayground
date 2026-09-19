@@ -28,18 +28,29 @@
 
 ## Agent の分け方
 
+初回プロンプトのコピペ用: `docs/agent-prompts.md`
+
 - **サイト改善**（Cloud Agent 向け）: 一覧・ルールページ・ヘッダー/フッター、about、デプロイ関連、共通 UI。新ゲームは追加しない
 - **ゲーム追加**: 1ゲームにつき 1 Agent。`lib/games.ts` → `games/{slug}/rules.md` → `components/play/` → `lib/play-registry.ts`
-- **ゲームテスト**: ゲーム変更の前後で起動（常設ではない）。`rules.md` と実装の整合、境界ケース、`lib/play/*.ts` のテスト追加。サイト改善 PR には触れない
+- **ゲームロジック検証**: ゲーム変更の前後で起動（常設ではない）。`rules.md` と実装の一致、境界ケース、`lib/play/*.ts` のテスト。サイト改善 PR には触れない
+- **文章・文言検証**: サイト横断の日本語・説明の正確さ（常設ではない）。ルール文・一覧説明・UI 文言のわかりやすさと表記統一。ゲームロジックの実装変更はしない
 - **CPU 対戦**: 1ゲームにつき 1 Agent（常設ではない）。`lib/play/{slug}/` にロジックがある前提で `ai.ts` を追加し、`lib/games.ts` の `cpu: true` を更新。手札非公開ゲームはオンライン部屋対応後
 - ゲーム固有ルールまで一般化しない。同じ処理が3本目で必要になったら共通化してよい
 
-### ゲームテスト Agent
+### ゲームロジック検証 Agent
 
-- **担当**: `games/*/rules.md`、`lib/play/`、`components/play/{Name}Game.tsx`、`lib/play/check-engines.ts`
-- **やる**: 勝利条件・手番交代・パス・同点など `rules.md` に書いた例外の確認、ロジックのユニットテスト、変更ゲームの手動テスト手順を PR に記載
-- **やらない**: 新ゲーム企画、サイト一覧・共通 UI、CPU 実装
-- ロジックがコンポーネント内だけにあるゲームは、テスト可能なら先に `lib/play/` へ抽出する
+- **担当**: `games/*/rules.md`（仕様の読み取り）、`lib/play/`、`components/play/{Name}Game.tsx`、`lib/play/check-engines.ts`、`lib/online/moves.ts`
+- **やる**: 勝利条件・手番交代・パス・同点など仕様どおり動くかの確認、非法手の拒否、ロジックのユニットテスト、変更ゲームの手動テスト手順を PR に記載
+- **やらない**: 新ゲーム企画、文章の推敲・表記統一、サイト一覧・共通 UI、CPU 実装
+- ロジックがコンポーネント内だけにあるゲームは、検証可能なら先に `lib/play/` へ抽出する
+- ルール Cursor ルール: `.cursor/rules/game-logic-verification.mdc`
+
+### 文章・文言検証 Agent
+
+- **担当**: `games/*/rules.md`（文章）、`lib/games.ts`（`title` / `description` / `rulesSummary`）、`app/` のページ文、`components/` の表示文言、`app/layout.tsx` のメタデータ
+- **やる**: 日本語の正確さ（誤字・文法・用語）、説明のわかりやすさ、同一概念の表記統一、`rules.md` と一覧・プレイ画面の説明が矛盾しないかの確認
+- **やらない**: ルール仕様の変更（実装と食い違う記述の**指摘**はする。直すのはゲーム追加 or ロジック検証と連携）、レイアウト変更、新ゲーム追加、ロジック修正
+- ルール Cursor ルール: `.cursor/rules/copy-verification.mdc`
 
 ### CPU 対戦 Agent
 
@@ -51,5 +62,8 @@
 ### 推奨フロー
 
 1. ゲーム追加 Agent → ルール・実装・PR
-2. ゲームテスト Agent → 境界ケース確認・テスト追加
-3. CPU 対戦 Agent → 必要なゲームだけ別 PR
+2. ゲームロジック検証 Agent → 境界ケース確認・テスト追加
+3. 文章・文言検証 Agent → ルール文・一覧・UI 文言の推敲（ゲーム PR に含めても、別 PR でも可）
+4. CPU 対戦 Agent → 必要なゲームだけ別 PR
+
+サイト改善 PR のマージ前に、必要なら文章・文言検証 Agent を回す。

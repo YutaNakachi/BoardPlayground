@@ -187,7 +187,7 @@ export function BackgammonGame() {
           variant="inline"
           winners={winners}
           onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">15枚すべてをベアオフしました。</p>}
+          details={<p className="text-slate-400">15個すべてをベアオフしました。</p>}
         />
       )}
     </div>

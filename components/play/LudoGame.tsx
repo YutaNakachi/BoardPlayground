@@ -54,7 +54,7 @@ export function LudoGame() {
     return (
       <SetupPanel
         title="ルード"
-        description="サイコロを振り、6が出たらコマを出す。相手を取り返し、4つすべてをゴールへ。"
+        description="サイコロを振り、6が出たらコマを出す。相手をスタートへ戻し、4つすべてをゴールへ。"
         playerCount={playerCount}
         playerOptions={[2, 3, 4]}
         onPlayerCount={setPlayerCount}
@@ -82,7 +82,49 @@ export function LudoGame() {
       />
       )}
 
-      <div className="mx-auto max-w-md">
+      <div className="mx-auto max-w-md space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: state.players }, (_, player) => {
+            const yardTokens = state.tokens.filter(
+              (t) => t.player === player && t.position === -1
+            );
+            if (yardTokens.length === 0) return null;
+            return (
+              <div
+                key={`yard-${player}`}
+                className="rounded-lg border border-surface-border bg-surface-raised p-2"
+              >
+                <p className="mb-2 text-center text-[10px] text-slate-500">
+                  P{player + 1} スタート
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {yardTokens.map((t) => {
+                    const tokenIndex = state.tokens.indexOf(t);
+                    const canMove = moves.some((m) => m.tokenIndex === tokenIndex);
+                    const style = getPlayerTurnStyle(t.player);
+                    return (
+                      <button
+                        key={`yard-${t.player}-${t.index}`}
+                        type="button"
+                        onClick={() => onToken(tokenIndex)}
+                        disabled={!canMove}
+                        className={`flex h-10 items-center justify-center rounded-md bg-white/5 ${
+                          canMove ? "ring-2 ring-lime-300" : ""
+                        }`}
+                        aria-label={`P${t.player + 1} コマ ${t.index + 1}`}
+                      >
+                        <span
+                          className={`h-5 w-5 rounded-full ${PLAYER_COLORS[t.player]} ${style.dotShadow}`}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         <div
           className="grid gap-0.5 rounded-xl border border-surface-border bg-surface-raised p-2"
           style={{ gridTemplateColumns: `repeat(${LUDO_TRACK}, minmax(0, 1fr))` }}
