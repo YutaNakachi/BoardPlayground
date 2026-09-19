@@ -123,30 +123,26 @@ export function GomokuGame() {
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-        <h2 className="text-xl font-semibold">五目並べ</h2>
-        <p className="mt-2 text-sm text-[#a1a1a6]">
-          13×13のマスに交互に置き、縦・横・斜めのいずれかで5つ並べると勝ちです。禁じ手はありません。
-        </p>
-        <div className="mt-6">
-          <OnlineSetupPanel
-            mode={mode}
-            onModeChange={setMode}
-            onlineSupported={onlineEnabled}
-            onCreateRoom={online.handleCreate}
-            onJoinRoom={online.handleJoin}
-            onStartLocal={startLocal}
-            loading={online.loading}
-            error={online.error}
-          />
-        </div>
-      </div>
+      <OnlineSetupPanel
+        title="五目並べ"
+        description="13×13のマスに交互に置き、縦・横・斜めのいずれかで5つ並べると勝ちです。禁じ手はありません。"
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+      />
     );
   }
 
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
+        title="五目並べ"
+        description="13×13のマスに交互に置き、縦・横・斜めのいずれかで5つ並べると勝ちです。禁じ手はありません。"
         mode="online"
         onModeChange={() => {}}
         onlineSupported={onlineEnabled}

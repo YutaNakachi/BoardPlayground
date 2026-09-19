@@ -113,30 +113,26 @@ export function TicTacToeGame() {
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-        <h2 className="text-xl font-semibold">三目並べ</h2>
-        <p className="mt-2 text-sm text-[#a1a1a6]">
-          3×3のマスに交互に置き、縦・横・斜めで3つ並べた方が勝ちです。
-        </p>
-        <div className="mt-6">
-          <OnlineSetupPanel
-            mode={mode}
-            onModeChange={setMode}
-            onlineSupported={onlineEnabled}
-            onCreateRoom={online.handleCreate}
-            onJoinRoom={online.handleJoin}
-            onStartLocal={startLocal}
-            loading={online.loading}
-            error={online.error}
-          />
-        </div>
-      </div>
+      <OnlineSetupPanel
+        title="三目並べ"
+        description="3×3のマスに交互に置き、縦・横・斜めで3つ並べた方が勝ちです。"
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+      />
     );
   }
 
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
+        title="三目並べ"
+        description="3×3のマスに交互に置き、縦・横・斜めで3つ並べた方が勝ちです。"
         mode="online"
         onModeChange={() => {}}
         onlineSupported={onlineEnabled}
