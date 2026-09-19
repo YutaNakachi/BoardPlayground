@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { RankingPeriod } from "@/lib/stats/jst-date";
-import { fetchRanking, parseRankingPeriod } from "@/lib/stats/ranking-data";
-
-export const dynamic = "force-dynamic";
+import {
+  fetchRankingCached,
+  parseRankingPeriod,
+} from "@/lib/stats/ranking-data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,9 +13,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid period" }, { status: 400 });
   }
 
-  const ranking = await fetchRanking(period as RankingPeriod);
+  const ranking = await fetchRankingCached(period as RankingPeriod);
   return NextResponse.json(
     { period, ranking },
-    { headers: { "Cache-Control": "no-store" } }
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    }
   );
 }
