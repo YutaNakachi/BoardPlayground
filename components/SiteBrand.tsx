@@ -47,13 +47,13 @@ export function SiteBrand({ variant }: Props) {
   return (
     <div className="flex flex-col items-center gap-2">
       <Image
-        src={BRAND_ASSETS.wordmarkDark}
+        src={BRAND_ASSETS.wordmarkLight}
         alt={SITE_NAME}
         width={1015}
         height={218}
         className="h-5 w-auto max-w-[10rem] opacity-90"
       />
-      <p className="text-slate-600">{SITE_NAME_EN}</p>
+      <p className="text-slate-500">{SITE_NAME_EN}</p>
     </div>
   );
 }
