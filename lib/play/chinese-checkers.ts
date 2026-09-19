@@ -38,7 +38,6 @@ const NEIGHBORS: [number, number][] = [
 function goalRows(player: number, players: number): number[] {
   if (players === 2) return player === 0 ? [12, 13, 14, 15, 16] : [0, 1, 2, 3, 4];
   if (players === 3) {
-    const starts = [[0, 1, 2, 3, 4], [6, 7, 8], [12, 13, 14, 15, 16]];
     const goals = [[12, 13, 14, 15, 16], [9, 10, 11], [0, 1, 2, 3, 4]];
     return goals[player];
   }
@@ -54,7 +53,7 @@ function goalRows(player: number, players: number): number[] {
 function startRows(player: number, players: number): number[] {
   if (players === 2) return player === 0 ? [0, 1, 2, 3, 4] : [12, 13, 14, 15, 16];
   if (players === 3) {
-    const starts = [[0, 1, 2, 3, 4], [6, 7, 8], [12, 13, 14, 15, 16]];
+    const starts = [[0, 1, 2, 3, 4], [5, 6, 7], [12, 13, 14, 15, 16]];
     return starts[player];
   }
   const starts = [
@@ -68,6 +67,15 @@ function startRows(player: number, players: number): number[] {
 
 function coordsInRows(rows: number[]): HexCoord[] {
   return COORDS.filter((c) => rows.includes(c.r));
+}
+
+export function chineseCheckersAreaSize(player: number, players: number, area: "start" | "goal"): number {
+  const rows = area === "start" ? startRows(player, players) : goalRows(player, players);
+  return coordsInRows(rows).length;
+}
+
+export function chineseCheckersPieceCount(state: ChineseCheckersState, player: number): number {
+  return Array.from(state.board.values()).filter((p) => p?.player === player).length;
 }
 
 export function initialChineseCheckers(players: number): ChineseCheckersState {
