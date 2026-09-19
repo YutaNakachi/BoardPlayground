@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import {
   clickMorris,
   initialMorrisState,
@@ -131,13 +132,11 @@ export function NineMensMorrisGame() {
             >
               <span
                 className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
-                  owner === 0
-                    ? "bg-indigo-500"
-                    : owner === 1
-                      ? "bg-rose-500"
-                      : isDest
-                        ? "bg-lime-300/80"
-                        : "bg-surface-raised ring-1 ring-surface-border"
+                  owner === null
+                    ? isDest
+                      ? "bg-lime-300/80"
+                      : "bg-surface-raised ring-1 ring-surface-border"
+                    : playerPieceClasses(owner)
                 }`}
               />
             </button>

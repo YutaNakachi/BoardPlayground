@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { getPlayerFill } from "@/lib/player-colors";
 import {
   DB_BOX_COLS,
   DB_BOX_ROWS,
@@ -137,7 +138,7 @@ export function DotsAndBoxesGame() {
                 dominantBaseline="central"
                 fontSize="7"
                 fontWeight="700"
-                fill={owner === 0 ? "#d4849a" : "#38bdf8"}
+                fill={getPlayerFill(owner)}
               >
                 {owner + 1}
               </text>

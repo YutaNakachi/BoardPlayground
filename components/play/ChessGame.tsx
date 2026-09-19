@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
+import { getPlayerTurnStyle, playerPieceClasses } from "@/lib/player-colors";
 import {
   applyChessMove,
   chessMoves,
@@ -132,7 +132,6 @@ export function ChessGame() {
           const isDest = destinations.some((m) => m.to === index);
           const isFrom = selected === index;
           const dark = (Math.floor(index / 8) + (index % 8)) % 2 === 1;
-          const pieceStyle = piece ? getPlayerTurnStyle(piece.player) : null;
           return (
             <button
               key={index}
@@ -153,9 +152,7 @@ export function ChessGame() {
             >
               {piece ? (
                 <span
-                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-xs font-bold sm:text-sm ${
-                    pieceStyle?.bg ?? ""
-                  } ${pieceStyle?.label ?? ""} ring-1 ${pieceStyle?.sectionBorder ?? ""}`}
+                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-xs font-bold sm:text-sm ${piece ? playerPieceClasses(piece.player) : ""}`}
                 >
                   {chessPieceLabel(piece)}
                 </span>

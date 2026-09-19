@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import {
   applyFoxHoundsMove,
   FH_SIZE,
@@ -117,9 +118,19 @@ export function FoxHoundsGame() {
               } ${isDest ? "ring-2 ring-lime-300" : ""}`}
             >
               {cell === 0 ? (
-                <span className="text-xl" aria-hidden>🐇</span>
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xl ${playerPieceClasses(0)}`}
+                  aria-hidden
+                >
+                  🐇
+                </span>
               ) : cell === 1 ? (
-                <span className="text-lg" aria-hidden>🐕</span>
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-lg ${playerPieceClasses(1)}`}
+                  aria-hidden
+                >
+                  🐕
+                </span>
               ) : isDest ? (
                 <span className="h-2 w-2 rounded-full bg-lime-300" />
               ) : null}
