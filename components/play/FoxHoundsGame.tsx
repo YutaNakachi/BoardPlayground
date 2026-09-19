@@ -41,29 +41,21 @@ export function FoxHoundsGame() {
 
   const destinations = useMemo(() => {
     if (selected === null) return [];
-    const fromMoves = moves.filter((m) => {
-      if (current === 0) return board[m] === null && selected === board.indexOf(0);
-      return false;
-    });
     if (current === 0 && selected === board.indexOf(0)) {
       return foxHoundsMoves(board, 0);
     }
     if (current === 1 && board[selected] === 1) {
+      const all = foxHoundsMoves(board, 1);
       const row = Math.floor(selected / FH_SIZE);
       const col = selected % FH_SIZE;
-      const dests: number[] = [];
-      if (row > 0) {
-        for (const dc of [-1, 1]) {
-          const nc = col + dc;
-          if (nc < 0 || nc >= FH_SIZE) continue;
-          const ni = (row - 1) * FH_SIZE + nc;
-          if (board[ni] === null) dests.push(ni);
-        }
-      }
-      return dests;
+      return all.filter((to) => {
+        const tr = Math.floor(to / FH_SIZE);
+        const tc = to % FH_SIZE;
+        return tr === row + 1 && Math.abs(tc - col) === 1;
+      });
     }
-    return fromMoves;
-  }, [selected, board, current, moves]);
+    return [];
+  }, [selected, board, current]);
 
   const onCell = useCallback(
     (index: number) => {
@@ -105,26 +97,17 @@ export function FoxHoundsGame() {
     );
   }
 
-  if (phase === "game-over" && winner !== null) {
-    return (
-      <ResultPanel
-        winners={[winner]}
-        onReplay={() => setPhase("setup")}
-        details={
-          <p className="text-slate-400">
-            {winner === 0 ? "ウサギが上の段に到達しました。" : "猟犬がウサギを囲みました。"}
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winner !== null;
+  const winners = isGameOver ? [winner!] : null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "ウサギ" : "猟犬"}）`}
       />
+      )}
 
       <div className="mx-auto grid max-w-md grid-cols-8 gap-0.5">
         {board.map((cell, index) => {
@@ -150,6 +133,19 @@ export function FoxHoundsGame() {
           );
         })}
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {winner === 0 ? "ウサギが上の段に到達しました。" : "猟犬がウサギを囲みました。"}
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

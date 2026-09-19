@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { GameRulesDocument } from "@/lib/game-rules";
 import { RulesMarkdown } from "@/components/rules/RulesMarkdown";
+import { getSiteHeaderScrollOffset } from "@/lib/site-header";
 
 type Props = {
   rules: GameRulesDocument;
@@ -70,12 +71,14 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
     const sectionEl = sectionRefs.current.get(sectionId);
     if (!scrollEl || !sectionEl) return;
 
+    const offset = getSiteHeaderScrollOffset(scrollEl);
     const nextScrollTop =
       scrollEl.scrollTop +
       sectionEl.getBoundingClientRect().top -
-      scrollEl.getBoundingClientRect().top;
+      scrollEl.getBoundingClientRect().top -
+      offset;
 
-    scrollEl.scrollTop = nextScrollTop;
+    scrollEl.scrollTop = Math.max(0, nextScrollTop);
     setActiveId(sectionId);
     setMobileTocOpen(false);
   }, []);
@@ -170,11 +173,16 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
             <section
               key={section.id}
               ref={(element) => registerSectionRef(section.id, element)}
+              className="scroll-mt-20"
             >
               {section.level === 2 ? (
-                <h2 className="mb-4 text-xl font-semibold text-white">{section.title}</h2>
+                <h2 className="mb-4 scroll-mt-20 text-xl font-semibold text-white">
+                  {section.title}
+                </h2>
               ) : (
-                <h3 className="mb-3 text-lg font-semibold text-slate-100">{section.title}</h3>
+                <h3 className="mb-3 scroll-mt-20 text-lg font-semibold text-slate-100">
+                  {section.title}
+                </h3>
               )}
               <RulesMarkdown content={section.content} />
             </section>

@@ -8,6 +8,11 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { CheckersState } from "@/lib/online/moves";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  getSeatDisplayName,
+} from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import {
   applyCheckersMove,
@@ -32,6 +37,7 @@ export function CheckersGame() {
   const [current, setCurrent] = useState<Player>(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [lockFrom, setLockFrom] = useState<number | null>(null);
+  const [localSelected, setLocalSelected] = useState<number | null>(null);
   const [winner, setWinner] = useState<Player | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -51,6 +57,7 @@ export function CheckersGame() {
     setBoard(initialCheckersBoard());
     setCurrent(0);
     setSelected(null);
+    setLocalSelected(null);
     setLockFrom(null);
     setWinner(null);
     setNotice(null);
@@ -75,10 +82,9 @@ export function CheckersGame() {
           ? "playing"
           : "setup";
 
-  const [localSelected, setLocalSelected] = useState<number | null>(null);
   const activeSelected = isOnline
     ? onlineState?.lockFrom ?? selected
-    : localSelected;
+    : lockFrom ?? localSelected;
 
   const moves = useMemo(
     () =>
@@ -88,10 +94,12 @@ export function CheckersGame() {
     [activePhase, activeBoard, activeCurrent, activeLockFrom]
   );
 
+  const jumpFrom = activeLockFrom ?? activeSelected;
+
   const destinations = useMemo(() => {
-    if (activeSelected == null) return [];
-    return moves.filter((m) => m.from === activeSelected);
-  }, [moves, activeSelected]);
+    if (jumpFrom == null) return [];
+    return moves.filter((m) => m.from === jumpFrom);
+  }, [moves, jumpFrom]);
 
   const mustCapture = moves.some((m) => m.capture != null);
 
@@ -170,11 +178,17 @@ export function CheckersGame() {
     ]
   );
 
+  const roomPlayers = isOnline ? online.players : [];
+
   const reset = useCallback(() => {
     online.reset();
     setLocalPhase("setup");
     setMode("local");
     setSelected(null);
+    setLocalSelected(null);
+    setLockFrom(null);
+    setNotice(null);
+    setWinner(null);
     setPlayMode({ mode: "local" });
   }, [online, setPlayMode]);
 
@@ -223,34 +237,31 @@ export function CheckersGame() {
     );
   }
 
-  if (activePhase === "game-over" && activeWinner !== null) {
-    return (
-      <ResultPanel
-        winners={[activeWinner]}
-        onReplay={reset}
-        details={
-          <p className="text-slate-400">
-            相手の駒がなくなったか、相手が動ける手がありませんでした。
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = activePhase === "game-over" && activeWinner !== null;
+  const winners = isGameOver ? [activeWinner] : null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={`プレイヤー ${activeCurrent + 1}`}
-        stats={`P1 ${checkersPieceCount(activeBoard, 0)} · P2 ${checkersPieceCount(activeBoard, 1)}`}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+        stats={
+          isOnline
+            ? `${getSeatDisplayName(roomPlayers, 0)} ${checkersPieceCount(activeBoard, 0)} · ${getSeatDisplayName(roomPlayers, 1)} ${checkersPieceCount(activeBoard, 1)}`
+            : `P1 ${checkersPieceCount(activeBoard, 0)} · P2 ${checkersPieceCount(activeBoard, 1)}`
+        }
         action={
           isOnline && !online.isMyTurn
             ? "相手の手番です"
-            : mustCapture
-              ? "ジャンプ必須"
-              : undefined
+            : activeLockFrom != null
+              ? "ジャンプ継続"
+              : mustCapture
+                ? "ジャンプ必須"
+                : undefined
         }
       />
+      )}
       {activeNotice ? (
         <p className="text-center text-sm text-amber-200">{activeNotice}</p>
       ) : null}
@@ -259,7 +270,7 @@ export function CheckersGame() {
         {activeBoard.map((piece, index) => {
           const dark = isDarkSquare(index);
           const isDest = destinations.some((m) => m.to === index);
-          const isFrom = activeSelected === index;
+          const isFrom = jumpFrom === index;
           return (
             <button
               key={index}
@@ -272,7 +283,7 @@ export function CheckersGame() {
               }`}
               aria-label={
                 piece
-                  ? `プレイヤー ${piece.player + 1}${piece.king ? " キング" : ""}`
+                  ? `${getSeatDisplayName(roomPlayers, piece.player)}${piece.king ? " キング" : ""}`
                   : isDest
                     ? "移動先"
                     : dark
@@ -297,6 +308,24 @@ export function CheckersGame() {
           );
         })}
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline
+              ? formatWinnersWithNames(roomPlayers, winners)
+              : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              相手の駒がなくなったか、相手が動ける手がありませんでした。
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

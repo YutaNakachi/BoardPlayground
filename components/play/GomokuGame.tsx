@@ -8,6 +8,11 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { GomokuState } from "@/lib/online/moves";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  getSeatDisplayName,
+} from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import {
   emptyGomokuBoard,
@@ -107,6 +112,8 @@ export function GomokuGame() {
     return { black, white };
   }, [activeBoard]);
 
+  const roomPlayers = isOnline ? online.players : [];
+
   const reset = useCallback(() => {
     online.reset();
     setLocalPhase("setup");
@@ -159,32 +166,23 @@ export function GomokuGame() {
     );
   }
 
-  if (activePhase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        onReplay={reset}
-        details={
-          <p className="text-slate-400">
-            {activeWinner === "draw"
-              ? "盤が埋まり、5つ並びはありませんでした。"
-              : `プレイヤー ${Number(activeWinner) + 1} が5つ並べました。`}
-          </p>
-        }
-      />
-    );
-  }
-
-  const canInteract = isOnline ? online.isMyTurn : true;
+  const isGameOver = activePhase === "game-over" && winners !== null;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={`プレイヤー ${activeCurrent + 1}（${activeCurrent === 0 ? "黒" : "白"}）`}
+        playerLabel={formatSeatLabel(
+          roomPlayers,
+          activeCurrent,
+          activeCurrent === 0 ? "黒" : "白"
+        )}
         stats={`黒 ${stones.black} · 白 ${stones.white}`}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
+      )}
 
       <div className="-mx-4 overflow-x-auto px-4">
         <div
@@ -215,6 +213,24 @@ export function GomokuGame() {
           ))}
         </div>
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              {activeWinner === "draw"
+                ? "盤が埋まり、5つ並びはありませんでした。"
+                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が5つ並べました。`}
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

@@ -72,29 +72,18 @@ export function MancalaGame() {
     );
   }
 
-  if (phase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        onReplay={() => setPhase("setup")}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            <li>プレイヤー 1 の倉: {pits[6]} 個</li>
-            <li>プレイヤー 2 の倉: {pits[13]} 個</li>
-          </ul>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winners !== null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
         stats={`倉 1: ${pits[6]} · 倉 2: ${pits[13]}`}
       />
-      {notice ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
+      )}
+      {notice && !isGameOver ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
 
       <div className="mx-auto grid max-w-xl grid-cols-8 gap-1.5 sm:gap-2">
         <Store count={pits[13]} label="P2 倉" active={current === 1} />
@@ -120,6 +109,19 @@ export function MancalaGame() {
         ))}
       </div>
 
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              <li>プレイヤー 1 の倉: {pits[6]} 個</li>
+              <li>プレイヤー 2 の倉: {pits[13]} 個</li>
+            </ul>
+          }
+        />
+      )}
     </div>
   );
 }

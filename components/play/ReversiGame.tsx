@@ -9,6 +9,11 @@ import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import { winnerIndices } from "@/lib/game-engine";
 import type { ReversiState } from "@/lib/online/moves";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  localizePlayerNotice,
+} from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import {
   initialReversiBoard,
@@ -114,6 +119,9 @@ export function ReversiGame() {
     return winnerIndices(counts);
   }, [activePhase, counts]);
 
+  const roomPlayers = isOnline ? online.players : [];
+  const displayPassNotice = localizePlayerNotice(activePassNotice, roomPlayers);
+
   const reset = useCallback(() => {
     online.reset();
     setLocalPhase("setup");
@@ -166,33 +174,25 @@ export function ReversiGame() {
     );
   }
 
-  if (activePhase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        onReplay={reset}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            <li>プレイヤー 1（黒）: {counts[0]} 個</li>
-            <li>プレイヤー 2（白）: {counts[1]} 個</li>
-          </ul>
-        }
-      />
-    );
-  }
-
-  const canInteract = isOnline ? online.isMyTurn : true;
+  const isGameOver = activePhase === "game-over" && winners !== null;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={`プレイヤー ${activeCurrent + 1}（${activeCurrent === 0 ? "黒" : "白"}）`}
+        playerLabel={formatSeatLabel(
+          roomPlayers,
+          activeCurrent,
+          activeCurrent === 0 ? "黒" : "白"
+        )}
         stats={`黒 ${counts[0]} · 白 ${counts[1]}`}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
-      {activePassNotice ? (
-        <p className="text-center text-sm text-amber-200">{activePassNotice}</p>
+      )}
+      {displayPassNotice ? (
+        <p className="text-center text-sm text-amber-200">{displayPassNotice}</p>
       ) : null}
 
       <div className="mx-auto grid max-w-md grid-cols-8 gap-0.5 rounded-xl bg-emerald-950 p-1.5 sm:p-2">
@@ -234,6 +234,27 @@ export function ReversiGame() {
           );
         })}
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              <li>
+                {formatSeatLabel(roomPlayers, 0, "黒")}: {counts[0]} 個
+              </li>
+              <li>
+                {formatSeatLabel(roomPlayers, 1, "白")}: {counts[1]} 個
+              </li>
+            </ul>
+          }
+        />
+      )}
     </div>
   );
 }

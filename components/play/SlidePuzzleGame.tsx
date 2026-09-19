@@ -51,15 +51,7 @@ export function SlidePuzzleGame() {
     );
   }
 
-  if (phase === "game-over") {
-    return (
-      <ResultPanel
-        winners={[0]}
-        onReplay={() => setPhase("idle")}
-        details={<p className="text-slate-400">{moves} 手で完成しました。</p>}
-      />
-    );
-  }
+  const isGameOver = phase === "game-over";
 
   return (
     <div className="space-y-6">
@@ -84,6 +76,15 @@ export function SlidePuzzleGame() {
           </button>
         ))}
       </div>
+
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          winners={[0]}
+          onReplay={() => setPhase("idle")}
+          details={<p className="text-slate-400">{moves} 手で完成しました。</p>}
+        />
+      )}
     </div>
   );
 }

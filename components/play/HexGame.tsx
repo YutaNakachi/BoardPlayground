@@ -61,22 +61,11 @@ export function HexGame() {
     );
   }
 
-  if (phase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        onReplay={() => setPhase("setup")}
-        details={
-          <p className="text-slate-400">
-            プレイヤー {winner! + 1} が両端をつなぎました。
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winners !== null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
@@ -86,6 +75,7 @@ export function HexGame() {
             : "左右の辺をつなぐ（スカイ）"
         }
       />
+      )}
 
       <div className="-mx-4 overflow-x-auto px-4">
         <div
@@ -100,7 +90,7 @@ export function HexGame() {
               <button
                 key={index}
                 type="button"
-                disabled={cell !== null}
+                disabled={cell !== null || isGameOver}
                 onClick={() => place(index)}
                 className={`flex aspect-[1.15] min-h-7 items-center justify-center ${offset}`}
                 aria-label={cell === null ? "空マス" : `プレイヤー ${cell + 1}`}
@@ -122,6 +112,19 @@ export function HexGame() {
       <p className="text-center text-xs text-slate-500">
         プレイヤー1（ローズ）は上と下、プレイヤー2（スカイ）は左と右をつなぎます。
       </p>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              プレイヤー {winner! + 1} が両端をつなぎました。
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

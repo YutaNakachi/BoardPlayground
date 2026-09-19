@@ -1,4 +1,10 @@
-import { applyCheckersMove, checkersMoves, initialCheckersBoard } from "./checkers";
+import {
+  applyCheckersMove,
+  checkersIndex,
+  checkersMoves,
+  initialCheckersBoard,
+  type Board,
+} from "./checkers";
 import { chessMoves, initialChessState } from "./chess";
 import { drawDotsBoxesEdge, initialDotsBoxes } from "./dots-and-boxes";
 import {
@@ -10,6 +16,7 @@ import {
 import { emptyHexBoard, HEX_SIZE, hexWinner } from "./hex";
 import { foxHoundsMoves, foxHoundsWinner, initialFoxHounds } from "./fox-hounds";
 import { initialKlondike } from "./klondike";
+import { initialMahjongSolitaire } from "./mahjong-solitaire";
 import { gomokuWinner } from "./gomoku";
 import { isSlideSolved, shuffledSlide } from "./slide-puzzle";
 import { initialMancala, sowMancala } from "./mancala";
@@ -78,6 +85,34 @@ export function runPlayEngineChecks() {
   assert(applied.board[jumped.to]?.player === 0, "checkers jumper lands");
   assert(applied.board[35] === null, "checkers captured removed");
 
+  const chainBoard = Array(64).fill(null) as Board;
+  const place = (row: number, col: number, player: 0 | 1, king = false) => {
+    chainBoard[checkersIndex(row, col)] = { player, king };
+  };
+  place(5, 2, 0);
+  place(4, 1, 1);
+  place(2, 1, 1);
+  const firstJump = checkersMoves(chainBoard, 0).find((m) => m.capture === checkersIndex(4, 1));
+  assert(firstJump != null, "checkers chain first jump exists");
+  const afterFirst = applyCheckersMove(chainBoard, firstJump!);
+  assert(afterFirst.continueFrom === firstJump!.to, "checkers chain continues");
+  const secondJump = checkersMoves(afterFirst.board, 0, afterFirst.continueFrom);
+  assert(
+    secondJump.some((m) => m.capture === checkersIndex(2, 1)),
+    "checkers chain second jump offered"
+  );
+  const afterSecond = applyCheckersMove(afterFirst.board, secondJump[0]);
+  assert(afterSecond.continueFrom === null, "checkers chain ends after second jump");
+
+  const kingStop = Array(64).fill(null) as Board;
+  kingStop[checkersIndex(2, 2)] = { player: 0, king: false };
+  kingStop[checkersIndex(1, 1)] = { player: 1, king: false };
+  const kingJump = checkersMoves(kingStop, 0)[0];
+  assert(kingJump != null, "checkers king promotion jump exists");
+  const kinged = applyCheckersMove(kingStop, kingJump);
+  assert(kinged.board[kingJump.to]?.king === true, "checkers promotes on jump");
+  assert(kinged.continueFrom === null, "checkers promotion ends jump chain");
+
   let morris = initialMorrisState();
   morris = clickMorris(morris, 0);
   morris = clickMorris(morris, 3);
@@ -125,6 +160,47 @@ export function runPlayEngineChecks() {
   const fox = initialFoxHounds();
   assert(foxHoundsMoves(fox, 0).length > 0, "fox opening moves");
   assert(foxHoundsWinner(fox, 0) === null, "fox-hounds no early winner");
+  const rabbitStart = fox.indexOf(0);
+  assert(
+    rabbitStart === 7 * 8 + 3,
+    `fox-hounds rabbit starts bottom center ${rabbitStart}`
+  );
+  assert(foxHoundsMoves(fox, 1).length > 0, "fox-hounds hounds can move from opening");
+  const afterRabbit = fox.slice();
+  const rabbitMove = foxHoundsMoves(afterRabbit, 0)[0];
+  afterRabbit[rabbitStart] = null;
+  afterRabbit[rabbitMove] = 0;
+  assert(
+    foxHoundsWinner(afterRabbit, 1) === null,
+    "fox-hounds no false rabbit win after one move"
+  );
+
+  const reportedBoard = initialCheckersBoard();
+  let rb = applyCheckersMove(reportedBoard, {
+    from: checkersIndex(5, 0),
+    to: checkersIndex(4, 1),
+  }).board;
+  rb = applyCheckersMove(rb, {
+    from: checkersIndex(2, 3),
+    to: checkersIndex(3, 2),
+  }).board;
+  const reportedCap = checkersMoves(rb, 0).find(
+    (m) => m.from === checkersIndex(4, 1) && m.capture === checkersIndex(3, 2)
+  );
+  assert(reportedCap != null, "checkers reported first capture exists");
+  const reportedApplied = applyCheckersMove(rb, reportedCap!);
+  assert(
+    reportedApplied.continueFrom === null,
+    "checkers reported chain blocked by occupied landing square"
+  );
+  assert(
+    reportedApplied.board[checkersIndex(0, 5)] != null,
+    "checkers reported landing square occupied"
+  );
+
+  const mj = initialMahjongSolitaire();
+  assert(mj.tiles.length === 36, `mahjong solitaire has 36 tiles ${mj.tiles.length}`);
+  assert(mj.tiles.every((t) => t.type != null), "mahjong solitaire all tiles typed");
 
   const chess = initialChessState();
   assert(chessMoves(chess).length === 20, `chess opening ${chessMoves(chess).length}`);

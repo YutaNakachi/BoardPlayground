@@ -86,8 +86,7 @@ export function CatalogFilterPanel({ games, filters, onChange }: Props) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="space-y-5" role="group" aria-label="条件で絞る">
+    <div className="space-y-5" role="group" aria-label="条件で絞る">
         {origins.length > 0 ? (
           <FilterGroup label="系統">
             {origins.map((origin) => (
@@ -164,7 +163,6 @@ export function CatalogFilterPanel({ games, filters, onChange }: Props) {
             ) : null}
           </FilterGroup>
         ) : null}
-      </div>
     </div>
   );
 }

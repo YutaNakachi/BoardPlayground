@@ -150,33 +150,18 @@ export function ChronoSplitGame() {
     );
   }
 
-  if (phase === "game-over" && winner) {
-    return (
-      <ResultPanel
-        winners={winner}
-        onReplay={() => setPhase("setup")}
-        details={
-          <ul className="space-y-2 text-left text-sm text-slate-400">
-            {breakdown.map((b, i) => (
-              <li key={i}>
-                プレイヤー {i + 1}: {b.total} 点（本体 {b.base} / 共鳴 {b.adjacent} /
-                時代 {b.eraBonus} / 増加 {b.increaseBonus}）
-              </li>
-            ))}
-          </ul>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winner !== null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={currentPlayer}
         playerLabel={`プレイヤー ${currentPlayer + 1}`}
         stats={`山札 ${deck.length} 枚`}
         action={selectedId ? "空枠を選ぶ" : "場のカードを選ぶ"}
       />
+      )}
 
       <section>
         <p className="mb-2 text-xs text-slate-500">場（最大3枚）</p>
@@ -220,7 +205,10 @@ export function ChronoSplitGame() {
           <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
             {line.map((card, slot) => {
               const canPlace =
-                currentPlayer === playerIndex && selectedId !== null && card === null;
+                !isGameOver &&
+                currentPlayer === playerIndex &&
+                selectedId !== null &&
+                card === null;
               return (
                 <button
                   key={slot}
@@ -250,6 +238,23 @@ export function ChronoSplitGame() {
         );
       })}
 
+      {isGameOver && winner && (
+        <ResultPanel
+          variant="inline"
+          winners={winner}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-2 text-left text-sm text-slate-400">
+              {breakdown.map((b, i) => (
+                <li key={i}>
+                  プレイヤー {i + 1}: {b.total} 点（本体 {b.base} / 共鳴 {b.adjacent} /
+                  時代 {b.eraBonus} / 増加 {b.increaseBonus}）
+                </li>
+              ))}
+            </ul>
+          }
+        />
+      )}
     </div>
   );
 }

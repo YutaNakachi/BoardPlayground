@@ -62,24 +62,14 @@ export function NimGame() {
     );
   }
 
-  if (phase === "game-over" && winner !== null) {
-    return (
-      <ResultPanel
-        winners={[winner]}
-        onReplay={() => setPhase("setup")}
-        details={
-          <p className="text-slate-400">
-            最後の石を取ったプレイヤー {winner + 1} の勝ちです。
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winner !== null;
+  const winners = isGameOver ? [winner!] : null;
 
   const selectedCount = selectedHeap === null ? 0 : heaps[selectedHeap];
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
@@ -89,13 +79,14 @@ export function NimGame() {
             : `${selectedHeap + 1}番の山から何個取る？`
         }
       />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         {heaps.map((count, index) => (
           <button
             key={index}
             type="button"
-            disabled={count === 0}
+            disabled={count === 0 || isGameOver}
             onClick={() => setSelectedHeap(index)}
             className={`rounded-2xl border p-4 text-left transition ${
               selectedHeap === index
@@ -136,6 +127,19 @@ export function NimGame() {
       <p className="text-center text-xs text-slate-500">
         初期配置は {NIM_HEAPS.join("・")} 個の3山です。
       </p>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              最後の石を取ったプレイヤー {winner! + 1} の勝ちです。
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

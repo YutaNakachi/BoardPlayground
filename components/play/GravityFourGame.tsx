@@ -81,29 +81,17 @@ export function GravityFourGame() {
     );
   }
 
-  if (phase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        onReplay={() => setPhase("setup")}
-        details={
-          <p className="text-slate-400">
-            {winner === "draw"
-              ? "盤が埋まり、4つ並びはありませんでした。"
-              : `プレイヤー ${Number(winner) + 1} が4つ並べました。`}
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winners !== null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
         action="列をタップして石を落とす"
       />
+      )}
 
       <div className="mx-auto max-w-md">
         <div className="mb-2 grid grid-cols-7 gap-1">
@@ -155,6 +143,21 @@ export function GravityFourGame() {
           )}
         </div>
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {winner === "draw"
+                ? "盤が埋まり、4つ並びはありませんでした。"
+                : `プレイヤー ${Number(winner) + 1} が4つ並べました。`}
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

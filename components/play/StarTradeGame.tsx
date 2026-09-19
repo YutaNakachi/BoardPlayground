@@ -190,23 +190,7 @@ export function StarTradeGame() {
     );
   }
 
-  if (phase === "game-over" && winner) {
-    return (
-      <ResultPanel
-        winners={winner}
-        onReplay={() => setPhase("setup")}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            {scores.map((s, i) => (
-              <li key={i}>
-                プレイヤー {i + 1}: {s} 点
-              </li>
-            ))}
-          </ul>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winner !== null;
 
   if (phase === "round-end") {
     return (
@@ -232,12 +216,14 @@ export function StarTradeGame() {
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={currentPlayer}
         playerLabel={`プレイヤー ${currentPlayer + 1}`}
         stats={`ラウンド ${round} / 3 · 山札 ${deck.length} 枚`}
         action={turnStep === "draw" ? "山札から引く" : "手札を1枚出す"}
       />
+      )}
 
       {hands.map((hand, playerIndex) => {
         const isCurrent = currentPlayer === playerIndex;
@@ -279,7 +265,7 @@ export function StarTradeGame() {
                     <button
                       key={card.id}
                       type="button"
-                      disabled={turnStep !== "play" || markets[playerIndex].length >= 3}
+                      disabled={isGameOver || turnStep !== "play" || markets[playerIndex].length >= 3}
                       onClick={() => playToMarket(card.id)}
                       className="disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -295,7 +281,7 @@ export function StarTradeGame() {
               <button
                 type="button"
                 onClick={drawCard}
-                disabled={turnStep !== "draw"}
+                disabled={isGameOver || turnStep !== "draw"}
                 className="mt-4 min-h-11 rounded-lg border border-accent/50 px-4 py-2 text-sm text-accent transition hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 山札から1枚引く
@@ -305,6 +291,22 @@ export function StarTradeGame() {
         );
       })}
 
+      {isGameOver && winner && (
+        <ResultPanel
+          variant="inline"
+          winners={winner}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              {scores.map((s, i) => (
+                <li key={i}>
+                  プレイヤー {i + 1}: {s} 点
+                </li>
+              ))}
+            </ul>
+          }
+        />
+      )}
     </div>
   );
 }

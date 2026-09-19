@@ -84,26 +84,21 @@ export function BackgammonGame() {
     );
   }
 
-  if (phase === "game-over" && state.winner != null) {
-    return (
-      <ResultPanel
-        winners={[state.winner]}
-        onReplay={() => setPhase("setup")}
-        details={<p className="text-slate-400">15枚すべてをベアオフしました。</p>}
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && state.winner != null;
+  const winners = isGameOver ? [state.winner!] : null;
 
   const player = state.current;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={player}
         playerLabel={`プレイヤー ${player + 1}`}
         stats={`ベアオフ P1:${state.off[0]} P2:${state.off[1]} · バー P1:${state.bar[0]} P2:${state.bar[1]}`}
         action={state.dice ? `残りダイス: ${state.movesLeft.join(", ")}` : "サイコロを振る"}
       />
+      )}
 
       <div className="mx-auto flex max-w-2xl flex-col gap-2">
         <div className="flex justify-between text-xs text-slate-500">
@@ -169,13 +164,13 @@ export function BackgammonGame() {
         ) : null}
       </div>
 
-      {!state.dice ? (
+      {!state.dice && !isGameOver ? (
         <div className="text-center">
           <button type="button" onClick={() => setState((s) => rollBackgammon(s))} className="btn-game">
             サイコロを振る
           </button>
         </div>
-      ) : moves.length === 0 ? (
+      ) : moves.length === 0 && !isGameOver ? (
         <div className="text-center">
           <button
             type="button"
@@ -186,6 +181,15 @@ export function BackgammonGame() {
           </button>
         </div>
       ) : null}
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">15枚すべてをベアオフしました。</p>}
+        />
+      )}
     </div>
   );
 }
