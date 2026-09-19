@@ -204,7 +204,7 @@ export function TicTacToeGame() {
           details={
             <p className="text-slate-400">
               {activeWinner === "draw"
-                ? "引き分けです。"
+                ? "盤が埋まり、3つ並びはありませんでした。"
                 : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
             </p>
           }

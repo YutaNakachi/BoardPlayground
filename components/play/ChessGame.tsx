@@ -103,7 +103,7 @@ export function ChessGame() {
     return (
       <SetupPanel
         title="チェス"
-        description="駒を選んでから移動先をクリックします。チェックメイトで勝利、ステイルメイトは引き分けです。"
+        description="駒を選んでから移動先をクリックします。チェックメイトで勝ち、ステイルメイトは引き分けです。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}

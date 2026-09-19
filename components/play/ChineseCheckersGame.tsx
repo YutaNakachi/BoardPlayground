@@ -62,7 +62,7 @@ export function ChineseCheckersGame() {
     return (
       <SetupPanel
         title="チャイニーズチェッカー"
-        description="六角形の星形盤。隣へ進むか、駒を飛び越えて連続ジャンプ。すべての駒を向かい側の三角へ移動させた方が勝ち。"
+        description="六角格子の盤。隣へ進むか、駒を飛び越えて連続ジャンプ。すべての駒を向かい側のエリアへ移動させた方が勝ち。"
         playerCount={playerCount}
         playerOptions={[2, 3, 4]}
         onPlayerCount={setPlayerCount}

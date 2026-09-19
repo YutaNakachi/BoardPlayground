@@ -54,7 +54,7 @@ export function LudoGame() {
     return (
       <SetupPanel
         title="ルード"
-        description="サイコロを振り、6が出たらコマを出す。相手を取り返し、4つすべてをゴールへ。"
+        description="サイコロを振り、6が出たらコマを出す。相手をスタートへ戻し、4つすべてをゴールへ。"
         playerCount={playerCount}
         playerOptions={[2, 3, 4]}
         onPlayerCount={setPlayerCount}
