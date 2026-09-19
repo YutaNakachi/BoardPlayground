@@ -509,28 +509,89 @@ function ChessPreview() {
 }
 
 function ShogiPreview() {
+  const pieceLabel: Record<string, string> = {
+    "0,8": "香",
+    "0,7": "桂",
+    "0,6": "銀",
+    "0,5": "金",
+    "0,4": "玉",
+    "0,3": "金",
+    "0,2": "銀",
+    "0,1": "桂",
+    "0,0": "香",
+    "1,1": "角",
+    "1,7": "飛",
+    "2,0": "歩",
+    "2,2": "歩",
+    "2,4": "歩",
+    "2,6": "歩",
+    "2,8": "歩",
+    "6,0": "歩",
+    "6,2": "歩",
+    "6,4": "歩",
+    "6,6": "歩",
+    "6,8": "歩",
+    "7,1": "飛",
+    "7,7": "角",
+    "8,8": "香",
+    "8,7": "桂",
+    "8,6": "銀",
+    "8,5": "金",
+    "8,4": "玉",
+    "8,3": "金",
+    "8,2": "銀",
+    "8,1": "桂",
+    "8,0": "香",
+  };
+  const pieceColor: Record<string, string> = {
+    "0": "#1e293b",
+    "8": "#7f1d1d",
+  };
+
+  const cell = 11.5;
+  const pad = 8;
+
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="10" fill="#d97706" />
+      <rect width="120" height="120" rx="10" fill="#78350f" />
+      <rect
+        x={pad - 1}
+        y={pad - 1}
+        width={cell * 9 + 2}
+        height={cell * 9 + 2}
+        rx="4"
+        fill="#fde68a"
+        stroke="#b45309"
+        strokeWidth="0.8"
+      />
       {Array.from({ length: 81 }, (_, index) => {
         const row = Math.floor(index / 9);
         const col = index % 9;
-        const x = 8 + col * 11.5;
-        const y = 8 + row * 11.5;
+        const x = pad + col * cell;
+        const y = pad + row * cell;
+        const key = `${row},${col}`;
+        const label = pieceLabel[key];
+        const color = pieceColor[String(row)] ?? "#1e293b";
         return (
-          <rect
-            key={index}
-            x={x}
-            y={y}
-            width="11"
-            height="11"
-            fill="#fbbf24"
-            stroke="#b45309"
-            strokeWidth="0.4"
-          />
+          <g key={index}>
+            <rect x={x} y={y} width={cell} height={cell} fill="#fef3c7" stroke="#d97706" strokeWidth="0.25" />
+            {label ? (
+              <text
+                x={x + cell / 2}
+                y={y + cell / 2 + 0.5}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={row === 8 ? "4.8" : "5.2"}
+                fill={color}
+                fontWeight="700"
+                transform={row === 8 ? `rotate(180 ${x + cell / 2} ${y + cell / 2})` : undefined}
+              >
+                {label}
+              </text>
+            ) : null}
+          </g>
         );
       })}
-      <text x="60" y="68" textAnchor="middle" fontSize="14" fill="#7c2d12">玉</text>
     </svg>
   );
 }
@@ -673,51 +734,154 @@ function SlidePuzzlePreview() {
 }
 
 function TttPreview() {
-  const marks = ["×", "", "○", "", "×", "○", "", "×", ""];
+  const marks: (0 | 1 | null)[] = [0, null, 1, null, 0, 1, null, 0, null];
+  const cellSize = 34;
+  const origin = 9;
+  const gridStroke = "#64748b";
+
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="10" fill="#1e293b" />
+      <rect width="120" height="120" rx="10" fill="#0f172a" />
+      <rect
+        x={origin}
+        y={origin}
+        width={cellSize * 3 + 2}
+        height={cellSize * 3 + 2}
+        rx="6"
+        fill="none"
+        stroke={gridStroke}
+        strokeWidth="2"
+      />
+      {[1, 2].map((line) => (
+        <line
+          key={`v-${line}`}
+          x1={origin + cellSize * line}
+          y1={origin}
+          x2={origin + cellSize * line}
+          y2={origin + cellSize * 3}
+          stroke={gridStroke}
+          strokeWidth="2"
+        />
+      ))}
+      {[1, 2].map((line) => (
+        <line
+          key={`h-${line}`}
+          x1={origin}
+          y1={origin + cellSize * line}
+          x2={origin + cellSize * 3}
+          y2={origin + cellSize * line}
+          stroke={gridStroke}
+          strokeWidth="2"
+        />
+      ))}
       {marks.map((mark, index) => {
         const row = Math.floor(index / 3);
         const col = index % 3;
-        const x = 20 + col * 30;
-        const y = 28 + row * 30;
-        return (
-          <text
-            key={index}
-            x={x}
-            y={y}
-            textAnchor="middle"
-            fontSize="18"
-            fill="#f8fafc"
-            fontWeight="700"
-          >
-            {mark}
-          </text>
-        );
+        const cx = origin + col * cellSize + cellSize / 2;
+        const cy = origin + row * cellSize + cellSize / 2;
+        if (mark === 0) {
+          return (
+            <text
+              key={index}
+              x={cx}
+              y={cy + 1}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="20"
+              fill="#f8fafc"
+              fontWeight="700"
+            >
+              ×
+            </text>
+          );
+        }
+        if (mark === 1) {
+          return (
+            <circle
+              key={index}
+              cx={cx}
+              cy={cy}
+              r="10"
+              fill="none"
+              stroke="#f8fafc"
+              strokeWidth="2.5"
+            />
+          );
+        }
+        return null;
       })}
     </svg>
   );
 }
 
 function GravityFourPreview() {
-  const cols = [0, 1, 2, 1, 0, 1, 2];
+  const cols = 7;
+  const rows = 6;
+  const board: (0 | 1 | null)[][] = Array.from({ length: rows }, () =>
+    Array(cols).fill(null)
+  );
+  const drops: [number, 0 | 1][] = [
+    [2, 0],
+    [3, 1],
+    [2, 0],
+    [3, 1],
+    [4, 0],
+    [3, 1],
+    [2, 0],
+    [1, 1],
+    [2, 0],
+    [3, 1],
+    [4, 0],
+    [3, 1],
+  ];
+  for (const [col, player] of drops) {
+    for (let row = rows - 1; row >= 0; row--) {
+      if (board[row][col] === null) {
+        board[row][col] = player;
+        break;
+      }
+    }
+  }
+
+  const cell = 13;
+  const padX = 9.5;
+  const padY = 12;
+
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="10" fill="#312e81" />
-      {cols.map((col, row) => {
-        const x = 18 + col * 14;
-        const y = 88 - row * 14;
-        return (
-          <circle
-            key={row}
-            cx={x}
-            cy={y}
-            r="5"
-            fill={row % 2 === 0 ? "#fb7185" : "#fcd34d"}
-          />
-        );
-      })}
+      <rect width="120" height="120" rx="10" fill="#1e1b4b" />
+      <rect
+        x={padX - 2}
+        y={padY - 2}
+        width={cols * cell + 4}
+        height={rows * cell + 4}
+        rx="8"
+        fill="#312e81"
+        opacity="0.95"
+      />
+      {board.map((rowCells, row) =>
+        rowCells.map((player, col) => {
+          const cx = padX + col * cell + cell / 2;
+          const cy = padY + row * cell + cell / 2;
+          const holeR = 4.6;
+          const discR = 3.6;
+          return (
+            <g key={`${row}-${col}`}>
+              <circle cx={cx} cy={cy} r={holeR} fill="#312e81" stroke="#4338ca" strokeWidth="0.6" />
+              {player !== null ? (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={discR}
+                  fill={player === 0 ? "#fb7185" : "#fcd34d"}
+                  stroke={player === 0 ? "#fda4af" : "#fde68a"}
+                  strokeWidth="0.5"
+                />
+              ) : null}
+            </g>
+          );
+        })
+      )}
     </svg>
   );
 }
