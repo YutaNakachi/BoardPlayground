@@ -37,6 +37,7 @@ export function CheckersGame() {
   const [current, setCurrent] = useState<Player>(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [lockFrom, setLockFrom] = useState<number | null>(null);
+  const [localSelected, setLocalSelected] = useState<number | null>(null);
   const [winner, setWinner] = useState<Player | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -56,6 +57,7 @@ export function CheckersGame() {
     setBoard(initialCheckersBoard());
     setCurrent(0);
     setSelected(null);
+    setLocalSelected(null);
     setLockFrom(null);
     setWinner(null);
     setNotice(null);
@@ -80,10 +82,9 @@ export function CheckersGame() {
           ? "playing"
           : "setup";
 
-  const [localSelected, setLocalSelected] = useState<number | null>(null);
   const activeSelected = isOnline
     ? onlineState?.lockFrom ?? selected
-    : localSelected;
+    : lockFrom ?? localSelected;
 
   const moves = useMemo(
     () =>
@@ -93,10 +94,12 @@ export function CheckersGame() {
     [activePhase, activeBoard, activeCurrent, activeLockFrom]
   );
 
+  const jumpFrom = activeLockFrom ?? activeSelected;
+
   const destinations = useMemo(() => {
-    if (activeSelected == null) return [];
-    return moves.filter((m) => m.from === activeSelected);
-  }, [moves, activeSelected]);
+    if (jumpFrom == null) return [];
+    return moves.filter((m) => m.from === jumpFrom);
+  }, [moves, jumpFrom]);
 
   const mustCapture = moves.some((m) => m.capture != null);
 
@@ -182,6 +185,10 @@ export function CheckersGame() {
     setLocalPhase("setup");
     setMode("local");
     setSelected(null);
+    setLocalSelected(null);
+    setLockFrom(null);
+    setNotice(null);
+    setWinner(null);
     setPlayMode({ mode: "local" });
   }, [online, setPlayMode]);
 
@@ -247,9 +254,11 @@ export function CheckersGame() {
         action={
           isOnline && !online.isMyTurn
             ? "相手の手番です"
-            : mustCapture
-              ? "ジャンプ必須"
-              : undefined
+            : activeLockFrom != null
+              ? "ジャンプ継続"
+              : mustCapture
+                ? "ジャンプ必須"
+                : undefined
         }
       />
       )}
@@ -261,7 +270,7 @@ export function CheckersGame() {
         {activeBoard.map((piece, index) => {
           const dark = isDarkSquare(index);
           const isDest = destinations.some((m) => m.to === index);
-          const isFrom = activeSelected === index;
+          const isFrom = jumpFrom === index;
           return (
             <button
               key={index}
