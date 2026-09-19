@@ -1,14 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
+import { CatalogSortSelect } from "@/components/CatalogSortSelect";
 import { FilterChip } from "@/components/FilterChip";
 import { GameCard } from "@/components/GameCard";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
-import {
-  CATALOG_SORT_OPTIONS,
-  sortCatalogGames,
-} from "@/lib/catalog-sort";
+import { sortCatalogGames } from "@/lib/catalog-sort";
 import {
   countCatalogFilters,
   getCatalogTags,
@@ -63,6 +61,7 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
             {displayed.length}
           </span>
         </span>
+        <CatalogSortSelect value={sort} onChange={setSort} />
         {activeCount > 0 ? (
           <button
             type="button"
@@ -72,20 +71,6 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
             条件をクリア（{activeCount}）
           </button>
         ) : null}
-      </div>
-
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <span className="text-sm text-slate-500">並び替え</span>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="並び替え">
-          {CATALOG_SORT_OPTIONS.map((option) => (
-            <FilterChip
-              key={option.key}
-              label={option.label}
-              active={sort === option.key}
-              onClick={() => setSort(option.key)}
-            />
-          ))}
-        </div>
       </div>
 
       {tags.length > 0 ? (
