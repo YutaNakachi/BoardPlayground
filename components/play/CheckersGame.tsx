@@ -5,6 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { CheckersState } from "@/lib/online/moves";
@@ -289,11 +290,7 @@ export function CheckersGame() {
             >
               {piece ? (
                 <span
-                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-[10px] font-bold sm:text-xs ${
-                    piece.player === 0
-                      ? "bg-indigo-500 text-white"
-                      : "bg-rose-200 text-rose-950"
-                  }`}
+                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-[10px] font-bold sm:text-xs ${playerPieceClasses(piece.player)}`}
                 >
                   {piece.king ? "K" : ""}
                 </span>

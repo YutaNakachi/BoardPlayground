@@ -17,8 +17,6 @@ import {
 
 type Phase = "setup" | "playing" | "game-over";
 
-const PLAYER_COLORS = ["bg-indigo-500", "bg-rose-400", "bg-emerald-400", "bg-amber-400"];
-
 export function ChineseCheckersGame() {
   const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
@@ -110,7 +108,7 @@ export function ChineseCheckersGame() {
               >
                 {piece ? (
                   <span
-                    className={`block h-full w-full rounded-full ${PLAYER_COLORS[piece.player]} ${
+                    className={`block h-full w-full rounded-full ${getPlayerTurnStyle(piece.player).piece} ${
                       getPlayerTurnStyle(piece.player).dotShadow
                     }`}
                   />

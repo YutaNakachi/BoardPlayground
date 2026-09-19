@@ -153,9 +153,7 @@ export function ChessGame() {
             >
               {piece ? (
                 <span
-                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-xs font-bold sm:text-sm ${
-                    pieceStyle?.bg ?? ""
-                  } ${pieceStyle?.label ?? ""} ring-1 ${pieceStyle?.sectionBorder ?? ""}`}
+                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-xs font-bold sm:text-sm ${pieceStyle?.piece ?? ""} ${pieceStyle?.pieceText ?? ""} ring-1 ${pieceStyle?.pieceRing ?? ""}`}
                 >
                   {chessPieceLabel(piece)}
                 </span>

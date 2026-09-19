@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyBackgammonMove,
   backgammonMoves,
@@ -118,7 +119,11 @@ export function BackgammonGame() {
                 type="button"
                 onClick={() => onPoint(point)}
                 className={`flex min-h-16 flex-col items-center justify-between rounded-md border px-1 py-1 text-[10px] ${
-                  point < 6 ? "bg-indigo-950/50" : point > 17 ? "bg-rose-950/50" : "bg-white/5"
+                  point < 6
+                    ? getPlayerTurnStyle(0).surface
+                    : point > 17
+                      ? getPlayerTurnStyle(1).surface
+                      : "bg-white/5"
                 } ${isFrom ? "ring-2 ring-accent" : "border-surface-border"} ${
                   isDest ? "ring-2 ring-lime-300" : ""
                 }`}
@@ -126,10 +131,18 @@ export function BackgammonGame() {
                 <span className="text-slate-500">{point + 1}</span>
                 <div className="flex flex-col gap-0.5">
                   {p1 > 0 ? (
-                    <span className="rounded bg-rose-400 px-1 text-rose-950">{p1}</span>
+                    <span
+                      className={`rounded px-1 ${getPlayerTurnStyle(1).piece} ${getPlayerTurnStyle(1).pieceText}`}
+                    >
+                      {p1}
+                    </span>
                   ) : null}
                   {p0 > 0 ? (
-                    <span className="rounded bg-indigo-400 px-1 text-indigo-950">{p0}</span>
+                    <span
+                      className={`rounded px-1 ${getPlayerTurnStyle(0).piece} ${getPlayerTurnStyle(0).pieceText}`}
+                    >
+                      {p0}
+                    </span>
                   ) : null}
                 </div>
               </button>

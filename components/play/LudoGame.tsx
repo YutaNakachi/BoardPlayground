@@ -17,8 +17,6 @@ import {
 
 type Phase = "setup" | "playing" | "game-over";
 
-const PLAYER_COLORS = ["bg-indigo-500", "bg-rose-400", "bg-emerald-400", "bg-amber-400"];
-
 export function LudoGame() {
   const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
@@ -114,7 +112,7 @@ export function LudoGame() {
                         aria-label={`P${t.player + 1} コマ ${t.index + 1}`}
                       >
                         <span
-                          className={`h-5 w-5 rounded-full ${PLAYER_COLORS[t.player]} ${style.dotShadow}`}
+                          className={`h-5 w-5 rounded-full ${style.piece} ${style.dotShadow}`}
                         />
                       </button>
                     );
@@ -144,7 +142,7 @@ export function LudoGame() {
                       key={`${t.player}-${t.index}`}
                       type="button"
                       onClick={() => onToken(state.tokens.indexOf(t))}
-                      className={`absolute h-3 w-3 rounded-full ${PLAYER_COLORS[t.player]} ${
+                      className={`absolute h-3 w-3 rounded-full ${style.piece} ${
                         canMove ? "ring-2 ring-lime-300" : ""
                       } ${style.dotShadow}`}
                       aria-label={`P${t.player + 1} コマ ${t.index + 1}`}
@@ -158,13 +156,16 @@ export function LudoGame() {
       </div>
 
       <div className="flex flex-wrap justify-center gap-4">
-        {Array.from({ length: state.players }, (_, p) => (
+        {Array.from({ length: state.players }, (_, p) => {
+          const style = getPlayerTurnStyle(p);
+          return (
           <div key={p} className="rounded-lg border border-surface-border px-3 py-2 text-sm">
-            <span className={`inline-block h-2 w-2 rounded-full ${PLAYER_COLORS[p]} mr-2`} />
+            <span className={`inline-block h-2 w-2 rounded-full ${style.piece} mr-2`} />
             P{p + 1}: ゴール{" "}
             {state.tokens.filter((t) => t.player === p && t.position === 58).length}/4
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {state.lastRoll == null && !isGameOver ? (

@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyNebulaPlace,
   initialNebulaLink,
@@ -15,13 +16,6 @@ import {
   nebulaWinners,
   type NebulaState,
 } from "@/lib/play/nebula-link";
-
-const PLAYER_STYLES = [
-  "bg-indigo-500 text-white",
-  "bg-rose-500 text-white",
-  "bg-emerald-500 text-white",
-  "bg-amber-500 text-black",
-];
 
 type Phase = "setup" | "playing" | "game-over";
 
@@ -98,6 +92,7 @@ export function NebulaLinkGame() {
         {game.board.map((owner, index) => {
           const isCore = index === NEBULA_CORE;
           const empty = owner === null;
+          const ownerStyle = owner === null ? null : getPlayerTurnStyle(owner);
           return (
             <button
               key={index}
@@ -109,7 +104,7 @@ export function NebulaLinkGame() {
                   ? "cursor-default bg-yellow-300/20 text-yellow-200 ring-1 ring-yellow-300/40"
                   : empty
                     ? "bg-surface-raised ring-1 ring-surface-border hover:ring-accent"
-                    : PLAYER_STYLES[owner]
+                    : `${ownerStyle?.piece ?? ""} ${ownerStyle?.pieceText ?? ""}`
               }`}
               aria-label={
                 isCore
@@ -126,22 +121,25 @@ export function NebulaLinkGame() {
       </div>
 
       <ul className="grid gap-2 sm:grid-cols-2">
-        {game.remaining.map((n, i) => (
+        {game.remaining.map((n, i) => {
+          const style = getPlayerTurnStyle(i);
+          return (
           <li
             key={i}
             className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm ${
               game.currentPlayer === i
-                ? "border-accent/60 bg-accent/5"
+                ? `${style.sectionBorder} ${style.sectionBg}`
                 : "border-surface-border bg-surface-raised"
             }`}
           >
             <span className="flex items-center gap-2">
-              <span className={`inline-block h-3 w-3 rounded-full ${PLAYER_STYLES[i]}`} />
+              <span className={`inline-block h-3 w-3 rounded-full ${style.dot}`} />
               プレイヤー {i + 1}
             </span>
             <span className="text-slate-400">残り {n}</span>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       {isGameOver && winner && (
