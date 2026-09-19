@@ -55,10 +55,9 @@ export function CatalogSortSelect({
             ? CATALOG_SORT_ORDER_LABEL.desc
             : CATALOG_SORT_ORDER_LABEL.asc
         }に変更`}
-        className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-surface-raised px-3 text-sm text-slate-300 ring-1 ring-surface-border transition hover:text-white focus:outline-none focus:ring-2 focus:ring-accent"
+        className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg bg-surface-raised text-base text-slate-300 ring-1 ring-surface-border transition hover:text-white focus:outline-none focus:ring-2 focus:ring-accent"
       >
         <span aria-hidden>{order === "asc" ? "↑" : "↓"}</span>
-        <span>{orderLabel}</span>
       </button>
     </div>
   );
