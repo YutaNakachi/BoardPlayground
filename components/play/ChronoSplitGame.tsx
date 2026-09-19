@@ -5,138 +5,64 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { shuffle, winnerIndices } from "@/lib/game-engine";
+import {
+  applyChronoTake,
+  CHRONO_SLOTS,
+  chronoWinners,
+  initialChronoSplit,
+  scoreChronoTimeline,
+  type Fragment,
+} from "@/lib/play/chrono-split";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 
-type Era = "past" | "present" | "future";
-
-type Fragment = {
-  id: string;
-  era: Era;
-  value: number;
-};
-
-type Phase = "setup" | "playing" | "game-over";
-
-const ERAS: Era[] = ["past", "present", "future"];
-const ERA_LABEL: Record<Era, string> = {
+const ERA_LABEL: Record<Fragment["era"], string> = {
   past: "過去",
   present: "現在",
   future: "未来",
 };
-const ERA_COLOR: Record<Era, string> = {
+const ERA_COLOR: Record<Fragment["era"], string> = {
   past: "text-violet-300",
   present: "text-sky-300",
   future: "text-lime-300",
 };
 
-const SLOTS = 5;
-
-function createDeck(): Fragment[] {
-  const deck: Fragment[] = [];
-  let n = 0;
-  for (const era of ERAS) {
-    for (let value = 1; value <= 4; value++) {
-      for (let copy = 0; copy < 2; copy++) {
-        deck.push({ id: `${era}-${value}-${copy}-${n++}`, era, value });
-      }
-    }
-  }
-  return shuffle(deck);
-}
-
-function scoreTimeline(line: (Fragment | null)[]) {
-  const cards = line.filter((c): c is Fragment => c !== null);
-  const base = cards.reduce((s, c) => s + c.value, 0);
-  let adjacent = 0;
-  for (let i = 0; i < line.length - 1; i++) {
-    const a = line[i];
-    const b = line[i + 1];
-    if (a && b && a.era === b.era) adjacent += 2;
-  }
-  const eras = new Set(cards.map((c) => c.era)).size;
-  const eraBonus = eras === 3 ? 3 : 0;
-  let increasing = cards.length === SLOTS;
-  for (let i = 0; i < line.length - 1; i++) {
-    const a = line[i];
-    const b = line[i + 1];
-    if (!a || !b || a.value >= b.value) increasing = false;
-  }
-  const increaseBonus = increasing ? 7 : 0;
-  return {
-    total: base + adjacent + eraBonus + increaseBonus,
-    base,
-    adjacent,
-    eraBonus,
-    increaseBonus,
-  };
-}
+type Phase = "setup" | "playing" | "game-over";
 
 export function ChronoSplitGame() {
   const { recordLocalPlay } = usePlayPage();
   const [playerCount, setPlayerCount] = useState(2);
   const [phase, setPhase] = useState<Phase>("setup");
-  const [currentPlayer, setCurrentPlayer] = useState(0);
-  const [deck, setDeck] = useState<Fragment[]>([]);
-  const [offer, setOffer] = useState<Fragment[]>([]);
-  const [timelines, setTimelines] = useState<(Fragment | null)[][]>([]);
+  const [game, setGame] = useState<ReturnType<typeof initialChronoSplit> | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const startGame = useCallback(() => {
     recordLocalPlay();
-    const d = createDeck();
-    const startOffer = [d.pop()!, d.pop()!, d.pop()!];
-    setDeck(d);
-    setOffer(startOffer);
-    setTimelines(
-      Array.from({ length: playerCount }, () => Array(SLOTS).fill(null))
-    );
-    setCurrentPlayer(0);
+    setGame(initialChronoSplit(playerCount));
     setSelectedId(null);
     setPhase("playing");
   }, [recordLocalPlay, playerCount]);
 
   const takeToSlot = useCallback(
     (slotIndex: number) => {
-      if (phase !== "playing" || !selectedId) return;
-      const line = timelines[currentPlayer];
-      if (line[slotIndex] !== null) return;
-      const card = offer.find((c) => c.id === selectedId);
-      if (!card) return;
-
-      const nextOffer = offer.filter((c) => c.id !== selectedId);
-      const nextDeck = [...deck];
-      if (nextDeck.length > 0 && nextOffer.length < 3) {
-        nextOffer.push(nextDeck.pop()!);
-      }
-
-      const nextLines = timelines.map((row, i) =>
-        i === currentPlayer ? row.map((c, s) => (s === slotIndex ? card : c)) : row
-      );
-      setTimelines(nextLines);
-      setOffer(nextOffer);
-      setDeck(nextDeck);
+      if (!game || phase !== "playing" || !selectedId) return;
+      const next = applyChronoTake(game, selectedId, slotIndex);
+      if (!next) return;
+      setGame(next);
       setSelectedId(null);
-
-      if (nextLines.every((row) => row.every((c) => c !== null))) {
-        setPhase("game-over");
-        return;
-      }
-
-      setCurrentPlayer((currentPlayer + 1) % playerCount);
+      if (next.gameOver) setPhase("game-over");
     },
-    [phase, selectedId, timelines, currentPlayer, offer, deck, playerCount]
+    [phase, game, selectedId]
   );
 
   const breakdown = useMemo(
-    () => timelines.map((line) => scoreTimeline(line)),
-    [timelines]
+    () => (game ? game.timelines.map((line) => scoreChronoTimeline(line)) : []),
+    [game]
   );
 
   const winner = useMemo(() => {
-    if (phase !== "game-over") return null;
-    return winnerIndices(breakdown.map((b) => b.total));
-  }, [phase, breakdown]);
+    if (phase !== "game-over" || !game) return null;
+    return chronoWinners(game);
+  }, [phase, game]);
 
   if (phase === "setup") {
     return (
@@ -150,15 +76,17 @@ export function ChronoSplitGame() {
     );
   }
 
+  if (!game) return null;
+
   const isGameOver = phase === "game-over" && winner !== null;
 
   return (
     <div className="space-y-6">
       {!isGameOver && (
       <TurnBanner
-        playerIndex={currentPlayer}
-        playerLabel={`プレイヤー ${currentPlayer + 1}`}
-        stats={`山札 ${deck.length} 枚`}
+        playerIndex={game.currentPlayer}
+        playerLabel={`プレイヤー ${game.currentPlayer + 1}`}
+        stats={`山札 ${game.deck.length} 枚`}
         action={selectedId ? "空枠を選ぶ" : "場のカードを選ぶ"}
       />
       )}
@@ -166,7 +94,7 @@ export function ChronoSplitGame() {
       <section>
         <p className="mb-2 text-xs text-slate-500">場（最大3枚）</p>
         <div className="flex flex-wrap gap-2">
-          {offer.map((card) => (
+          {game.offer.map((card) => (
             <button
               key={card.id}
               type="button"
@@ -176,14 +104,14 @@ export function ChronoSplitGame() {
               <FragmentView card={card} selected={selectedId === card.id} />
             </button>
           ))}
-          {offer.length === 0 && (
+          {game.offer.length === 0 && (
             <span className="text-sm text-slate-600">（カードなし）</span>
           )}
         </div>
       </section>
 
-      {timelines.map((line, playerIndex) => {
-        const isCurrent = currentPlayer === playerIndex;
+      {game.timelines.map((line, playerIndex) => {
+        const isCurrent = game.currentPlayer === playerIndex;
         const playerStyle = getPlayerTurnStyle(playerIndex);
         return (
         <section
@@ -199,14 +127,14 @@ export function ChronoSplitGame() {
               プレイヤー {playerIndex + 1}
             </h3>
             <span className="text-sm text-slate-500">
-              見込み {scoreTimeline(line).total} 点
+              見込み {scoreChronoTimeline(line).total} 点
             </span>
           </div>
           <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
             {line.map((card, slot) => {
               const canPlace =
                 !isGameOver &&
-                currentPlayer === playerIndex &&
+                game.currentPlayer === playerIndex &&
                 selectedId !== null &&
                 card === null;
               return (
