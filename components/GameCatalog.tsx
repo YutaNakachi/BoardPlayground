@@ -88,19 +88,20 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
 
       {tags.length > 0 ? (
         <div
-          className="mb-8 flex flex-wrap items-center gap-2"
+          className="mb-8 -mx-4 overflow-x-auto px-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           role="group"
           aria-label="タグで絞る"
         >
-          <span className="text-sm text-slate-500">タグ</span>
-          {tags.map((tag) => (
-            <FilterChip
-              key={tag}
-              label={tag}
-              active={filters.tags.includes(tag)}
-              onClick={() => toggleTag(tag)}
-            />
-          ))}
+          <div className="flex w-max gap-2 pb-1">
+            {tags.map((tag) => (
+              <FilterChip
+                key={tag}
+                label={tag}
+                active={filters.tags.includes(tag)}
+                onClick={() => toggleTag(tag)}
+              />
+            ))}
+          </div>
         </div>
       ) : null}
 
