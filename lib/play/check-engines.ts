@@ -1,4 +1,10 @@
-import { applyCheckersMove, checkersMoves, initialCheckersBoard } from "./checkers";
+import {
+  applyCheckersMove,
+  checkersIndex,
+  checkersMoves,
+  initialCheckersBoard,
+  type Board,
+} from "./checkers";
 import { chessMoves, initialChessState } from "./chess";
 import { drawDotsBoxesEdge, initialDotsBoxes } from "./dots-and-boxes";
 import {
@@ -77,6 +83,34 @@ export function runPlayEngineChecks() {
   const applied = applyCheckersMove(capBoard, jumped);
   assert(applied.board[jumped.to]?.player === 0, "checkers jumper lands");
   assert(applied.board[35] === null, "checkers captured removed");
+
+  const chainBoard = Array(64).fill(null) as Board;
+  const place = (row: number, col: number, player: 0 | 1, king = false) => {
+    chainBoard[checkersIndex(row, col)] = { player, king };
+  };
+  place(5, 2, 0);
+  place(4, 1, 1);
+  place(2, 1, 1);
+  const firstJump = checkersMoves(chainBoard, 0).find((m) => m.capture === checkersIndex(4, 1));
+  assert(firstJump != null, "checkers chain first jump exists");
+  const afterFirst = applyCheckersMove(chainBoard, firstJump!);
+  assert(afterFirst.continueFrom === firstJump!.to, "checkers chain continues");
+  const secondJump = checkersMoves(afterFirst.board, 0, afterFirst.continueFrom);
+  assert(
+    secondJump.some((m) => m.capture === checkersIndex(2, 1)),
+    "checkers chain second jump offered"
+  );
+  const afterSecond = applyCheckersMove(afterFirst.board, secondJump[0]);
+  assert(afterSecond.continueFrom === null, "checkers chain ends after second jump");
+
+  const kingStop = Array(64).fill(null) as Board;
+  kingStop[checkersIndex(2, 2)] = { player: 0, king: false };
+  kingStop[checkersIndex(1, 1)] = { player: 1, king: false };
+  const kingJump = checkersMoves(kingStop, 0)[0];
+  assert(kingJump != null, "checkers king promotion jump exists");
+  const kinged = applyCheckersMove(kingStop, kingJump);
+  assert(kinged.board[kingJump.to]?.king === true, "checkers promotes on jump");
+  assert(kinged.continueFrom === null, "checkers promotion ends jump chain");
 
   let morris = initialMorrisState();
   morris = clickMorris(morris, 0);
