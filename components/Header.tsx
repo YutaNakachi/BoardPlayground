@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 import { countSidebarFilters } from "@/lib/games";
 import { SiteBrand } from "@/components/SiteBrand";
+import { SITE_NAME } from "@/lib/site";
 
 function MenuIcon() {
   return (
@@ -55,13 +56,9 @@ export function Header() {
 
         <Link
           href="/"
-          className={`flex min-w-0 items-center gap-2.5 ${isHome ? "flex-1 sm:flex-none" : ""}`}
+          className={`flex min-w-0 items-center ${isHome ? "flex-1 sm:flex-none" : ""}`}
+          aria-label={`${SITE_NAME} トップ`}
         >
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-warm text-sm font-extrabold text-white shadow-md shadow-accent/25 sm:h-9 sm:w-9"
-          >
-            ボ
-          </span>
           <SiteBrand variant="header" />
         </Link>
 
