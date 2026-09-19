@@ -174,32 +174,12 @@ export function ReversiGame() {
     );
   }
 
-  if (activePhase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        winnersLabel={
-          isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
-        }
-        onReplay={reset}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            <li>
-              {formatSeatLabel(roomPlayers, 0, "黒")}: {counts[0]} 個
-            </li>
-            <li>
-              {formatSeatLabel(roomPlayers, 1, "白")}: {counts[1]} 個
-            </li>
-          </ul>
-        }
-      />
-    );
-  }
-
-  const canInteract = isOnline ? online.isMyTurn : true;
+  const isGameOver = activePhase === "game-over" && winners !== null;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
         playerLabel={formatSeatLabel(
@@ -210,6 +190,7 @@ export function ReversiGame() {
         stats={`黒 ${counts[0]} · 白 ${counts[1]}`}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
+      )}
       {displayPassNotice ? (
         <p className="text-center text-sm text-amber-200">{displayPassNotice}</p>
       ) : null}
@@ -253,6 +234,27 @@ export function ReversiGame() {
           );
         })}
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              <li>
+                {formatSeatLabel(roomPlayers, 0, "黒")}: {counts[0]} 個
+              </li>
+              <li>
+                {formatSeatLabel(roomPlayers, 1, "白")}: {counts[1]} 個
+              </li>
+            </ul>
+          }
+        />
+      )}
     </div>
   );
 }

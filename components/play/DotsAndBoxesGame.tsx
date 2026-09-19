@@ -95,29 +95,18 @@ export function DotsAndBoxesGame() {
     );
   }
 
-  if (phase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        onReplay={() => setPhase("setup")}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            <li>プレイヤー 1: {state.scores[0]} 箱</li>
-            <li>プレイヤー 2: {state.scores[1]} 箱</li>
-          </ul>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winners !== null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
         stats={`箱 P1 ${state.scores[0]} · P2 ${state.scores[1]}`}
         action="線を1本引く"
       />
+      )}
 
       <div className="relative mx-auto aspect-square w-full max-w-md">
         <svg viewBox="0 0 100 100" className="h-full w-full">
@@ -218,6 +207,20 @@ export function DotsAndBoxesGame() {
           })}
         </svg>
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              <li>プレイヤー 1: {state.scores[0]} 箱</li>
+              <li>プレイヤー 2: {state.scores[1]} 箱</li>
+            </ul>
+          }
+        />
+      )}
     </div>
   );
 }

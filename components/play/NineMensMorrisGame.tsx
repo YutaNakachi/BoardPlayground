@@ -63,19 +63,8 @@ export function NineMensMorrisGame() {
     );
   }
 
-  if (state.over) {
-    return (
-      <ResultPanel
-        winners={state.winners}
-        onReplay={() => setPhase("setup")}
-        details={
-          <p className="text-slate-400">
-            {state.notice ?? "相手の駒が足りないか、動けなくなりました。"}
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = state.over;
+  const winners = isGameOver ? state.winners : null;
 
   const placing = state.toPlace[state.current] > 0;
   const flying = morrisIsFlying(state, state.current);
@@ -89,13 +78,15 @@ export function NineMensMorrisGame() {
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
         stats={`手持ち P1 ${state.toPlace[0]} · P2 ${state.toPlace[1]} ／ 盤上 P1 ${morrisCount(state.board, 0)} · P2 ${morrisCount(state.board, 1)}`}
         action={right}
       />
-      {state.notice ? (
+      )}
+      {state.notice && !isGameOver ? (
         <p className="text-center text-sm text-amber-200">{state.notice}</p>
       ) : null}
 
@@ -154,6 +145,18 @@ export function NineMensMorrisGame() {
         })}
       </div>
 
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {state.notice ?? "相手の駒が足りないか、動けなくなりました。"}
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

@@ -134,31 +134,17 @@ export function NebulaLinkGame() {
     );
   }
 
-  if (phase === "game-over" && winner) {
-    return (
-      <ResultPanel
-        winners={winner}
-        onReplay={() => setPhase("setup")}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            {breakdown.map((b, i) => (
-              <li key={i}>
-                プレイヤー {i + 1}: {b.total} 点（連結 {b.group}×2 + 星核隣接 {b.adj}）
-              </li>
-            ))}
-          </ul>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winner !== null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={currentPlayer}
         playerLabel={`プレイヤー ${currentPlayer + 1}`}
         stats={`残り ${remaining.reduce((a, b) => a + b, 0)} 個`}
       />
+      )}
 
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1.5 sm:gap-2">
         {board.map((owner, index) => {
@@ -168,7 +154,7 @@ export function NebulaLinkGame() {
             <button
               key={index}
               type="button"
-              disabled={isCore || !empty}
+              disabled={isCore || !empty || isGameOver}
               onClick={() => place(index)}
               className={`aspect-square min-h-11 rounded-lg text-xs font-semibold transition sm:text-sm ${
                 isCore
@@ -209,6 +195,23 @@ export function NebulaLinkGame() {
           </li>
         ))}
       </ul>
+
+      {isGameOver && winner && (
+        <ResultPanel
+          variant="inline"
+          winners={winner}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              {breakdown.map((b, i) => (
+                <li key={i}>
+                  プレイヤー {i + 1}: {b.total} 点（連結 {b.group}×2 + 星核隣接 {b.adj}）
+                </li>
+              ))}
+            </ul>
+          }
+        />
+      )}
     </div>
   );
 }

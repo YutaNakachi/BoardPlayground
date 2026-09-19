@@ -120,15 +120,8 @@ export function ShogiGame() {
     );
   }
 
-  if (phase === "game-over" && winner !== null) {
-    return (
-      <ResultPanel
-        winners={[winner]}
-        onReplay={() => setPhase("setup")}
-        details={<p className="text-slate-400">王手のまま合法手がなくなりました。</p>}
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winner !== null;
+  const winners = isGameOver ? [winner!] : null;
 
   const current = state.current;
   const hand = state.hands[current];
@@ -136,11 +129,13 @@ export function ShogiGame() {
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
         action={inCheck ? "王手" : dropPiece ? `${shogiHandLabel(dropPiece)}を打つ` : undefined}
       />
+      )}
 
       <section className="rounded-xl border border-surface-border bg-surface-raised p-3">
         <h3 className="mb-2 text-sm font-medium text-slate-400">持ち駒（プレイヤー {current + 1}）</h3>
@@ -201,6 +196,15 @@ export function ShogiGame() {
           );
         })}
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">王手のまま合法手がなくなりました。</p>}
+        />
+      )}
     </div>
   );
 }

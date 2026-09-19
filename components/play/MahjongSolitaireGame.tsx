@@ -74,23 +74,11 @@ export function MahjongSolitaireGame() {
     );
   }
 
-  if (phase === "game-over") {
-    const won = mahjongWon(state);
-    return (
-      <ResultPanel
-        winners={won ? [0] : []}
-        onReplay={() => setPhase("idle")}
-        details={
-          <p className="text-slate-400">
-            {won ? "すべての牌を取り除きました。" : "これ以上ペアを取れません。"}
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over";
+  const won = isGameOver && mahjongWon(state);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <p className="text-center text-sm text-slate-400">
         残り {(state.tiles.length - state.removed.length) / 2} ペア
         {stuck ? " · 行き詰まり" : ""}
@@ -122,6 +110,19 @@ export function MahjongSolitaireGame() {
           );
         })}
       </div>
+
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          winners={won ? [0] : []}
+          onReplay={() => setPhase("idle")}
+          details={
+            <p className="text-slate-400">
+              {won ? "すべての牌を取り除きました。" : "これ以上ペアを取れません。"}
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

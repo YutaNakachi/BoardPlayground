@@ -166,29 +166,12 @@ export function GomokuGame() {
     );
   }
 
-  if (activePhase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        winnersLabel={
-          isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
-        }
-        onReplay={reset}
-        details={
-          <p className="text-slate-400">
-            {activeWinner === "draw"
-              ? "盤が埋まり、5つ並びはありませんでした。"
-              : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が5つ並べました。`}
-          </p>
-        }
-      />
-    );
-  }
-
-  const canInteract = isOnline ? online.isMyTurn : true;
+  const isGameOver = activePhase === "game-over" && winners !== null;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
         playerLabel={formatSeatLabel(
@@ -199,6 +182,7 @@ export function GomokuGame() {
         stats={`黒 ${stones.black} · 白 ${stones.white}`}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
+      )}
 
       <div className="-mx-4 overflow-x-auto px-4">
         <div
@@ -229,6 +213,24 @@ export function GomokuGame() {
           ))}
         </div>
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              {activeWinner === "draw"
+                ? "盤が埋まり、5つ並びはありませんでした。"
+                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が5つ並べました。`}
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

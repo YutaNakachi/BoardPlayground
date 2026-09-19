@@ -156,29 +156,12 @@ export function TicTacToeGame() {
     );
   }
 
-  if (activePhase === "game-over" && winners) {
-    return (
-      <ResultPanel
-        winners={winners}
-        winnersLabel={
-          isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
-        }
-        onReplay={reset}
-        details={
-          <p className="text-slate-400">
-            {activeWinner === "draw"
-              ? "引き分けです。"
-              : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
-          </p>
-        }
-      />
-    );
-  }
-
-  const canInteract = isOnline ? online.isMyTurn : true;
+  const isGameOver = activePhase === "game-over" && winners !== null;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
         playerLabel={formatSeatLabel(
@@ -188,9 +171,10 @@ export function TicTacToeGame() {
         )}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
+      )}
 
       <div
-        className="mx-auto grid max-w-xs gap-1.5 rounded-xl bg-white/5 p-2"
+        className="mx-auto grid max-w-xs gap-px rounded-xl border-2 border-slate-500/80 bg-slate-500/80 p-px"
         style={{ gridTemplateColumns: `repeat(${TTT_SIZE}, minmax(0, 1fr))` }}
       >
         {activeBoard.map((cell, index) => (
@@ -199,7 +183,7 @@ export function TicTacToeGame() {
             type="button"
             disabled={!canInteract || cell !== null}
             onClick={() => place(index)}
-            className="flex aspect-square min-h-20 items-center justify-center rounded-lg bg-surface-raised text-3xl font-bold text-white disabled:cursor-default sm:min-h-24 sm:text-4xl"
+            className="flex aspect-square min-h-20 items-center justify-center bg-surface-raised text-3xl font-bold text-white disabled:cursor-default sm:min-h-24 sm:text-4xl"
             aria-label={
               cell === 0 ? "×" : cell === 1 ? "○" : `空マス ${index + 1}`
             }
@@ -208,6 +192,24 @@ export function TicTacToeGame() {
           </button>
         ))}
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              {activeWinner === "draw"
+                ? "引き分けです。"
+                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }
