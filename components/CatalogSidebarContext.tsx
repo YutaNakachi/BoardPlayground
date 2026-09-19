@@ -13,6 +13,10 @@ import {
   type CatalogFilters,
   type GameMeta,
 } from "@/lib/games";
+import {
+  DEFAULT_CATALOG_SORT,
+  type CatalogSort,
+} from "@/lib/catalog-sort";
 
 type CatalogSidebarContextValue = {
   open: boolean;
@@ -22,6 +26,8 @@ type CatalogSidebarContextValue = {
   filters: CatalogFilters;
   setFilters: (filters: CatalogFilters) => void;
   clearFilters: () => void;
+  sort: CatalogSort;
+  setSort: (sort: CatalogSort) => void;
   games: GameMeta[];
 };
 
@@ -37,6 +43,7 @@ type ProviderProps = {
 export function CatalogSidebarProvider({ games, children }: ProviderProps) {
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState<CatalogFilters>(EMPTY_CATALOG_FILTERS);
+  const [sort, setSort] = useState<CatalogSort>(DEFAULT_CATALOG_SORT);
 
   const openSidebar = useCallback(() => setOpen(true), []);
   const closeSidebar = useCallback(() => setOpen(false), []);
@@ -52,9 +59,11 @@ export function CatalogSidebarProvider({ games, children }: ProviderProps) {
       filters,
       setFilters,
       clearFilters,
+      sort,
+      setSort,
       games,
     }),
-    [open, openSidebar, closeSidebar, toggleSidebar, filters, clearFilters, games]
+    [open, openSidebar, closeSidebar, toggleSidebar, filters, clearFilters, sort, games]
   );
 
   return (

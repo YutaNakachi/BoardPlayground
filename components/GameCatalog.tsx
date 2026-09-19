@@ -1,8 +1,14 @@
 "use client";
 
+import { useMemo } from "react";
 import { FilterChip } from "@/components/FilterChip";
 import { GameCard } from "@/components/GameCard";
+import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
+import {
+  CATALOG_SORT_OPTIONS,
+  sortCatalogGames,
+} from "@/lib/catalog-sort";
 import {
   countCatalogFilters,
   getCatalogTags,
@@ -18,10 +24,23 @@ type Props = {
 };
 
 export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
-  const { filters, setFilters, clearFilters } = useCatalogSidebar();
+  const { filters, setFilters, clearFilters, sort, setSort } = useCatalogSidebar();
+  const { counts: clientCounts } = usePlayStats();
   const tags = getCatalogTags(games);
   const activeCount = countCatalogFilters(filters);
-  const filtered = games.filter((game) => matchesCatalogFilters(game, filters));
+
+  const playCounts = useMemo(() => {
+    const merged = { ...initialPlayCounts };
+    for (const [slug, count] of Object.entries(clientCounts)) {
+      if (count != null) merged[slug] = count;
+    }
+    return merged;
+  }, [initialPlayCounts, clientCounts]);
+
+  const displayed = useMemo(() => {
+    const filtered = games.filter((game) => matchesCatalogFilters(game, filters));
+    return sortCatalogGames(filtered, sort, playCounts);
+  }, [games, filters, sort, playCounts]);
 
   function toggleTag(tag: GameTag) {
     setFilters({
@@ -38,10 +57,10 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
         <h2 className="text-xl font-semibold">{CATALOG_HEADING}</h2>
         <span
           className="inline-flex min-w-9 items-center justify-center rounded-md bg-white/10 px-2.5 py-1 ring-1 ring-white/10"
-          aria-label={`${filtered.length}件のゲーム`}
+          aria-label={`${displayed.length}件のゲーム`}
         >
           <span className="text-base font-bold tabular-nums text-accent">
-            {filtered.length}
+            {displayed.length}
           </span>
         </span>
         {activeCount > 0 ? (
@@ -55,12 +74,27 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
         ) : null}
       </div>
 
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="text-sm text-slate-500">並び替え</span>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="並び替え">
+          {CATALOG_SORT_OPTIONS.map((option) => (
+            <FilterChip
+              key={option.key}
+              label={option.label}
+              active={sort === option.key}
+              onClick={() => setSort(option.key)}
+            />
+          ))}
+        </div>
+      </div>
+
       {tags.length > 0 ? (
         <div
-          className="mb-8 flex flex-wrap gap-2"
+          className="mb-8 flex flex-wrap items-center gap-2"
           role="group"
           aria-label="タグで絞る"
         >
+          <span className="text-sm text-slate-500">タグ</span>
           {tags.map((tag) => (
             <FilterChip
               key={tag}
@@ -72,17 +106,17 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
         </div>
       ) : null}
 
-      {filtered.length === 0 ? (
+      {displayed.length === 0 ? (
         <p className="text-slate-400">
           該当するゲームはありません。タグやメニューの条件を変えてください。
         </p>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((game) => (
+          {displayed.map((game) => (
             <GameCard
               key={game.slug}
               game={game}
-              initialPlayCount={initialPlayCounts[game.slug]}
+              initialPlayCount={playCounts[game.slug]}
             />
           ))}
         </div>
