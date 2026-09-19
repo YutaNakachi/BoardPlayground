@@ -14,7 +14,12 @@ import {
   type Board as GravityBoard,
 } from "./gravity-four";
 import { emptyHexBoard, HEX_SIZE, hexWinner } from "./hex";
-import { foxHoundsMoves, foxHoundsWinner, initialFoxHounds } from "./fox-hounds";
+import {
+  foxHoundsMoves,
+  foxHoundsWinner,
+  initialFoxHounds,
+  type Board as FoxHoundsBoard,
+} from "./fox-hounds";
 import { initialKlondike } from "./klondike";
 import { initialMahjongSolitaire } from "./mahjong-solitaire";
 import { gomokuWinner } from "./gomoku";
@@ -165,7 +170,10 @@ export function runPlayEngineChecks() {
     rabbitStart === 7 * 8 + 3,
     `fox-hounds rabbit starts bottom center ${rabbitStart}`
   );
-  assert(foxHoundsMoves(fox, 1).length > 0, "fox-hounds hounds can move from opening");
+  assert(
+    !foxHoundsMoves(fox, 1).includes(1 * 8 + 0),
+    "fox-hounds hounds cannot move diagonally down from opening"
+  );
   const afterRabbit = fox.slice();
   const rabbitMove = foxHoundsMoves(afterRabbit, 0)[0];
   afterRabbit[rabbitStart] = null;
@@ -174,6 +182,11 @@ export function runPlayEngineChecks() {
     foxHoundsWinner(afterRabbit, 1) === null,
     "fox-hounds no false rabbit win after one move"
   );
+  const advancedHound = Array(64).fill(null) as FoxHoundsBoard;
+  advancedHound[2 * 8 + 4] = 1;
+  const upMoves = foxHoundsMoves(advancedHound, 1);
+  assert(upMoves.includes(1 * 8 + 3), "fox-hounds hound advances diagonally up");
+  assert(!upMoves.some((to) => Math.floor(to / 8) > 2), "fox-hounds hounds never move down");
 
   const reportedBoard = initialCheckersBoard();
   let rb = applyCheckersMove(reportedBoard, {
