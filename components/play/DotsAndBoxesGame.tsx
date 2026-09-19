@@ -86,7 +86,7 @@ export function DotsAndBoxesGame() {
     return (
       <SetupPanel
         title="ドッツ・アンド・ボックス"
-        description="点を線でつないで箱を作ります。箱を完成させたプレイヤーが1点。点が多い方が勝ちです。"
+        description="点を線でつないで箱を作ります。箱を完成させたプレイヤーが1点。箱が多い方が勝ちです。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
