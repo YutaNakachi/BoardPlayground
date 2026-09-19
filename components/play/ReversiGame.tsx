@@ -131,30 +131,26 @@ export function ReversiGame() {
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-        <h2 className="text-xl font-semibold">リバーシ</h2>
-        <p className="mt-2 text-sm text-[#a1a1a6]">
-          挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。
-        </p>
-        <div className="mt-6">
-          <OnlineSetupPanel
-            mode={mode}
-            onModeChange={setMode}
-            onlineSupported={onlineEnabled}
-            onCreateRoom={online.handleCreate}
-            onJoinRoom={online.handleJoin}
-            onStartLocal={startLocal}
-            loading={online.loading}
-            error={online.error}
-          />
-        </div>
-      </div>
+      <OnlineSetupPanel
+        title="リバーシ"
+        description="挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。"
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+      />
     );
   }
 
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
+        title="リバーシ"
+        description="挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。"
         mode="online"
         onModeChange={() => {}}
         onlineSupported={onlineEnabled}

@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import {
+  PlaySetupCard,
+  setupPillClass,
+} from "@/components/play/shared/PlaySetupCard";
 import type { PlayMode } from "@/lib/online/types";
 
 type Props = {
+  title: string;
+  description: string;
   mode: PlayMode;
   onModeChange: (mode: PlayMode) => void;
   onlineSupported: boolean;
@@ -23,6 +29,8 @@ type Props = {
 };
 
 export function OnlineSetupPanel({
+  title,
+  description,
   mode,
   onModeChange,
   onlineSupported,
@@ -40,12 +48,11 @@ export function OnlineSetupPanel({
 
   if (waiting) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-        <h2 className="text-xl font-semibold">部屋を待機中</h2>
-        <p className="mt-2 text-sm text-[#a1a1a6]">
-          参加者にこのコードを共有してください
-        </p>
-        <p className="mt-4 font-mono text-3xl font-bold tracking-widest text-accent">
+      <PlaySetupCard
+        title="部屋を待機中"
+        description="参加者にこのコードを共有してください"
+      >
+        <p className="font-mono text-3xl font-bold tracking-widest text-accent">
           {waiting.code}
         </p>
         <ul className="mt-6 space-y-2 text-sm text-slate-300">
@@ -72,33 +79,25 @@ export function OnlineSetupPanel({
               : "ホストの開始を待っています…"}
           </p>
         )}
-      </div>
+      </PlaySetupCard>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 sm:p-8">
+    <PlaySetupCard title={title} description={description}>
       {onlineSupported ? (
-        <div className="mb-6 flex justify-center gap-2">
+        <div className="flex justify-center gap-2">
           <button
             type="button"
             onClick={() => onModeChange("local")}
-            className={`min-h-11 rounded-full px-5 text-sm font-medium transition ${
-              mode === "local"
-                ? "bg-[#f5f5f7] text-[#1d1d1f]"
-                : "bg-white/10 text-[#c7c7cc] ring-1 ring-white/10 hover:bg-white/15"
-            }`}
+            className={setupPillClass(mode === "local")}
           >
             ローカル
           </button>
           <button
             type="button"
             onClick={() => onModeChange("online")}
-            className={`min-h-11 rounded-full px-5 text-sm font-medium transition ${
-              mode === "online"
-                ? "bg-[#f5f5f7] text-[#1d1d1f]"
-                : "bg-white/10 text-[#c7c7cc] ring-1 ring-white/10 hover:bg-white/15"
-            }`}
+            className={setupPillClass(mode === "online")}
           >
             オンライン
           </button>
@@ -106,33 +105,23 @@ export function OnlineSetupPanel({
       ) : null}
 
       {mode === "local" || !onlineSupported ? (
-        <div className="text-center">
-          <button type="button" onClick={onStartLocal} className="btn-game">
-            ゲーム開始
-          </button>
-        </div>
+        <button type="button" onClick={onStartLocal} className="btn-game mt-8">
+          ゲーム開始
+        </button>
       ) : (
-        <div className="space-y-6">
+        <div className="mt-8 space-y-6">
           <div className="flex justify-center gap-2">
             <button
               type="button"
               onClick={() => setAction("create")}
-              className={`min-h-9 rounded-full px-4 text-sm transition ${
-                action === "create"
-                  ? "bg-accent/30 text-white ring-1 ring-accent/50"
-                  : "text-slate-400 hover:text-white"
-              }`}
+              className={setupPillClass(action === "create")}
             >
               部屋を作る
             </button>
             <button
               type="button"
               onClick={() => setAction("join")}
-              className={`min-h-9 rounded-full px-4 text-sm transition ${
-                action === "join"
-                  ? "bg-accent/30 text-white ring-1 ring-accent/50"
-                  : "text-slate-400 hover:text-white"
-              }`}
+              className={setupPillClass(action === "join")}
             >
               部屋に入る
             </button>
@@ -140,13 +129,13 @@ export function OnlineSetupPanel({
 
           {action === "create" ? (
             <form
-              className="mx-auto max-w-sm space-y-4"
+              className="mx-auto max-w-sm space-y-4 text-left"
               onSubmit={(e) => {
                 e.preventDefault();
                 onCreateRoom(displayName);
               }}
             >
-              <label className="block text-left text-sm">
+              <label className="block text-sm">
                 <span className="text-slate-400">プレイヤー名</span>
                 <input
                   type="text"
@@ -164,13 +153,13 @@ export function OnlineSetupPanel({
             </form>
           ) : (
             <form
-              className="mx-auto max-w-sm space-y-4"
+              className="mx-auto max-w-sm space-y-4 text-left"
               onSubmit={(e) => {
                 e.preventDefault();
                 onJoinRoom(joinCode, joinName);
               }}
             >
-              <label className="block text-left text-sm">
+              <label className="block text-sm">
                 <span className="text-slate-400">部屋コード</span>
                 <input
                   type="text"
@@ -182,7 +171,7 @@ export function OnlineSetupPanel({
                   placeholder="ABC123"
                 />
               </label>
-              <label className="block text-left text-sm">
+              <label className="block text-sm">
                 <span className="text-slate-400">プレイヤー名</span>
                 <input
                   type="text"
@@ -201,7 +190,7 @@ export function OnlineSetupPanel({
         </div>
       )}
 
-      {error ? <p className="mt-4 text-center text-sm text-red-300">{error}</p> : null}
-    </div>
+      {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
+    </PlaySetupCard>
   );
 }
