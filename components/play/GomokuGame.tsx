@@ -5,7 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
+import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { GomokuState } from "@/lib/online/moves";
@@ -199,7 +199,7 @@ export function GomokuGame() {
             >
               {cell === null ? null : (
                 <span
-                  className={`h-[72%] w-[72%] rounded-full ${getPlayerTurnStyle(cell).piece} ring-1 ${getPlayerTurnStyle(cell).pieceRing}`}
+                  className={`h-[72%] w-[72%] rounded-full ${playerPieceClasses(cell)}`}
                 />
               )}
             </button>

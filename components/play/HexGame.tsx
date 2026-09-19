@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
+import { playerPieceClasses } from "@/lib/player-colors";
 import {
   emptyHexBoard,
   HEX_SIZE,
@@ -100,7 +100,7 @@ export function HexGame() {
                   className={`h-[70%] w-[70%] rounded-md ${
                     cell === null
                       ? "bg-emerald-900/50 ring-1 ring-emerald-700/50"
-                      : `${getPlayerTurnStyle(cell).piece} ring-1 ${getPlayerTurnStyle(cell).pieceRing}`
+                      : playerPieceClasses(cell)
                   }`}
                 />
               </button>

@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
+import { playerPieceClasses } from "@/lib/player-colors";
 import {
   dropGravityFour,
   emptyGravityFourBoard,
@@ -131,7 +131,7 @@ export function GravityFourGame() {
                 >
                   {cell === null ? null : (
                     <span
-                      className={`h-[78%] w-[78%] rounded-full ${getPlayerTurnStyle(cell).piece} ring-1 ${getPlayerTurnStyle(cell).pieceRing}`}
+                      className={`h-[78%] w-[78%] rounded-full ${playerPieceClasses(cell)}`}
                     />
                   )}
                 </div>

@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
+import { getPlayerTurnStyle, playerPieceClasses } from "@/lib/player-colors";
 import {
   applyChineseCheckersMove,
   chineseCheckersCells,
@@ -108,9 +108,7 @@ export function ChineseCheckersGame() {
               >
                 {piece ? (
                   <span
-                    className={`block h-full w-full rounded-full ${getPlayerTurnStyle(piece.player).piece} ${
-                      getPlayerTurnStyle(piece.player).dotShadow
-                    }`}
+                    className={`block h-full w-full rounded-full ${playerPieceClasses(piece.player)}`}
                   />
                 ) : isDest ? (
                   <span className="mx-auto block h-2 w-2 rounded-full bg-lime-300/80" />

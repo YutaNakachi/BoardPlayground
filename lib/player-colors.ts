@@ -102,5 +102,5 @@ export function getPlayerFill(playerIndex: number): string {
 
 export function playerPieceClasses(playerIndex: number): string {
   const style = getPlayerTurnStyle(playerIndex);
-  return `${style.piece} ${style.pieceText} ring-1 ${style.pieceRing}`;
+  return `${style.piece} ${style.pieceText} ring-2 ring-black/30 ${style.dotShadow}`;
 }

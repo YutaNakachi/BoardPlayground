@@ -5,7 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
+import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import { winnerIndices } from "@/lib/game-engine";
@@ -220,7 +220,7 @@ export function ReversiGame() {
                 ) : null
               ) : (
                 <span
-                  className={`h-[70%] w-[70%] rounded-full ${getPlayerTurnStyle(cell).piece} ring-1 ${getPlayerTurnStyle(cell).pieceRing}`}
+                  className={`h-[70%] w-[70%] rounded-full ${playerPieceClasses(cell)}`}
                 />
               )}
             </button>

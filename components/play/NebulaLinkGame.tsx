@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
+import { getPlayerTurnStyle, playerPieceClasses } from "@/lib/player-colors";
 import {
   applyNebulaPlace,
   initialNebulaLink,
@@ -92,7 +92,6 @@ export function NebulaLinkGame() {
         {game.board.map((owner, index) => {
           const isCore = index === NEBULA_CORE;
           const empty = owner === null;
-          const ownerStyle = owner === null ? null : getPlayerTurnStyle(owner);
           return (
             <button
               key={index}
@@ -104,7 +103,7 @@ export function NebulaLinkGame() {
                   ? "cursor-default bg-yellow-300/20 text-yellow-200 ring-1 ring-yellow-300/40"
                   : empty
                     ? "bg-surface-raised ring-1 ring-surface-border hover:ring-accent"
-                    : `${ownerStyle?.piece ?? ""} ${ownerStyle?.pieceText ?? ""}`
+                    : owner === null ? "" : playerPieceClasses(owner)
               }`}
               aria-label={
                 isCore
