@@ -9,11 +9,17 @@ import {
 } from "@/lib/games";
 import { SHOW_ABOUT_PAGE, SITE_NAME } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "制作代行について",
-  description:
-    "オリジナルボードゲームのルール設計からブラウザ実装までのオーダーメイド制作代行。",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  if (!SHOW_ABOUT_PAGE) {
+    return { title: "ページが見つかりません" };
+  }
+
+  return {
+    title: "制作代行について",
+    description:
+      "オリジナルボードゲームのルール設計からブラウザ実装までのオーダーメイド制作代行。",
+  };
+}
 
 export default function AboutPage() {
   if (!SHOW_ABOUT_PAGE) {

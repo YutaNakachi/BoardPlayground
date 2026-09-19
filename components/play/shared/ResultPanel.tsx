@@ -7,13 +7,15 @@ type Props = {
   winners: number[];
   details: ReactNode;
   onReplay: () => void;
+  /** オンライン対局など、席番号以外の勝者表示名を使う場合 */
+  winnersLabel?: string;
 };
 
-export function ResultPanel({ winners, details, onReplay }: Props) {
+export function ResultPanel({ winners, details, onReplay, winnersLabel }: Props) {
   return (
     <div className="rounded-2xl border border-surface-border bg-surface-raised p-6 text-center sm:p-8">
       <h2 className="text-2xl font-bold">ゲーム終了</h2>
-      <p className="mt-4 text-lg">勝者: {formatWinners(winners)}</p>
+      <p className="mt-4 text-lg">勝者: {winnersLabel ?? formatWinners(winners)}</p>
       <div className="mt-4">{details}</div>
       <button
         type="button"

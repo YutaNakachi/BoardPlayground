@@ -8,6 +8,11 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { TttState } from "@/lib/online/moves";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  getSeatDisplayName,
+} from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import {
   emptyTttBoard,
@@ -97,6 +102,8 @@ export function TicTacToeGame() {
     return [activeWinner];
   }, [activePhase, activeWinner]);
 
+  const roomPlayers = isOnline ? online.players : [];
+
   const reset = useCallback(() => {
     online.reset();
     setLocalPhase("setup");
@@ -153,12 +160,15 @@ export function TicTacToeGame() {
     return (
       <ResultPanel
         winners={winners}
+        winnersLabel={
+          isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+        }
         onReplay={reset}
         details={
           <p className="text-slate-400">
             {activeWinner === "draw"
               ? "引き分けです。"
-              : `プレイヤー ${Number(activeWinner) + 1} が3つ並べました。`}
+              : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
           </p>
         }
       />
@@ -171,7 +181,11 @@ export function TicTacToeGame() {
     <div className="space-y-6">
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={`プレイヤー ${activeCurrent + 1}（${activeCurrent === 0 ? "×" : "○"}）`}
+        playerLabel={formatSeatLabel(
+          roomPlayers,
+          activeCurrent,
+          activeCurrent === 0 ? "×" : "○"
+        )}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
 

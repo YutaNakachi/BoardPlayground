@@ -48,11 +48,11 @@ export function SiteSidebar() {
       <aside
         id="site-sidebar"
         aria-hidden={!open}
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-surface-border bg-surface shadow-xl transition-transform duration-300 ease-out ${
+        className={`fixed left-0 top-0 z-50 flex h-dvh max-h-dvh w-72 max-w-[85vw] flex-col overflow-hidden border-r border-surface-border bg-surface shadow-xl transition-transform duration-300 ease-out ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-surface-border px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-surface-border px-4 py-3">
           <p className="text-sm font-semibold">絞り込み</p>
           <button
             type="button"
@@ -64,7 +64,7 @@ export function SiteSidebar() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
           <CatalogFilterPanel
             games={games}
             filters={filters}

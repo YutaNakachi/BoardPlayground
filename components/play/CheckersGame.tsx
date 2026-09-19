@@ -8,6 +8,11 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { CheckersState } from "@/lib/online/moves";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  getSeatDisplayName,
+} from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import {
   applyCheckersMove,
@@ -173,6 +178,8 @@ export function CheckersGame() {
     ]
   );
 
+  const roomPlayers = isOnline ? online.players : [];
+
   const reset = useCallback(() => {
     online.reset();
     setLocalPhase("setup");
@@ -234,6 +241,11 @@ export function CheckersGame() {
     return (
       <ResultPanel
         winners={[activeWinner]}
+        winnersLabel={
+          isOnline
+            ? formatWinnersWithNames(roomPlayers, [activeWinner])
+            : undefined
+        }
         onReplay={reset}
         details={
           <p className="text-slate-400">
@@ -248,8 +260,12 @@ export function CheckersGame() {
     <div className="space-y-6">
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={`プレイヤー ${activeCurrent + 1}`}
-        stats={`P1 ${checkersPieceCount(activeBoard, 0)} · P2 ${checkersPieceCount(activeBoard, 1)}`}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+        stats={
+          isOnline
+            ? `${getSeatDisplayName(roomPlayers, 0)} ${checkersPieceCount(activeBoard, 0)} · ${getSeatDisplayName(roomPlayers, 1)} ${checkersPieceCount(activeBoard, 1)}`
+            : `P1 ${checkersPieceCount(activeBoard, 0)} · P2 ${checkersPieceCount(activeBoard, 1)}`
+        }
         action={
           isOnline && !online.isMyTurn
             ? "相手の手番です"
@@ -281,7 +297,7 @@ export function CheckersGame() {
               }`}
               aria-label={
                 piece
-                  ? `プレイヤー ${piece.player + 1}${piece.king ? " キング" : ""}`
+                  ? `${getSeatDisplayName(roomPlayers, piece.player)}${piece.king ? " キング" : ""}`
                   : isDest
                     ? "移動先"
                     : dark
