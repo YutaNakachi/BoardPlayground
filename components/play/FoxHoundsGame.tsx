@@ -88,7 +88,7 @@ export function FoxHoundsGame() {
     return (
       <SetupPanel
         title="ウサギと猟犬"
-        description="プレイヤー1はウサギ、プレイヤー2は猟犬4匹。ウサギは最上段へ抜けば勝ち、猟犬は囲めば勝ちです。"
+        description="プレイヤー1はウサギ、プレイヤー2は猟犬4匹。ウサギは最上段へ到達すれば勝ち、猟犬は囲めば勝ちです。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
