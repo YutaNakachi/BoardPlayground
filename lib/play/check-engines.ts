@@ -16,6 +16,7 @@ import {
 import { emptyHexBoard, HEX_SIZE, hexWinner } from "./hex";
 import { foxHoundsMoves, foxHoundsWinner, initialFoxHounds } from "./fox-hounds";
 import { initialKlondike } from "./klondike";
+import { initialMahjongSolitaire } from "./mahjong-solitaire";
 import { gomokuWinner } from "./gomoku";
 import { isSlideSolved, shuffledSlide } from "./slide-puzzle";
 import { initialMancala, sowMancala } from "./mancala";
@@ -159,6 +160,47 @@ export function runPlayEngineChecks() {
   const fox = initialFoxHounds();
   assert(foxHoundsMoves(fox, 0).length > 0, "fox opening moves");
   assert(foxHoundsWinner(fox, 0) === null, "fox-hounds no early winner");
+  const rabbitStart = fox.indexOf(0);
+  assert(
+    rabbitStart === 7 * 8 + 3,
+    `fox-hounds rabbit starts bottom center ${rabbitStart}`
+  );
+  assert(foxHoundsMoves(fox, 1).length > 0, "fox-hounds hounds can move from opening");
+  const afterRabbit = fox.slice();
+  const rabbitMove = foxHoundsMoves(afterRabbit, 0)[0];
+  afterRabbit[rabbitStart] = null;
+  afterRabbit[rabbitMove] = 0;
+  assert(
+    foxHoundsWinner(afterRabbit, 1) === null,
+    "fox-hounds no false rabbit win after one move"
+  );
+
+  const reportedBoard = initialCheckersBoard();
+  let rb = applyCheckersMove(reportedBoard, {
+    from: checkersIndex(5, 0),
+    to: checkersIndex(4, 1),
+  }).board;
+  rb = applyCheckersMove(rb, {
+    from: checkersIndex(2, 3),
+    to: checkersIndex(3, 2),
+  }).board;
+  const reportedCap = checkersMoves(rb, 0).find(
+    (m) => m.from === checkersIndex(4, 1) && m.capture === checkersIndex(3, 2)
+  );
+  assert(reportedCap != null, "checkers reported first capture exists");
+  const reportedApplied = applyCheckersMove(rb, reportedCap!);
+  assert(
+    reportedApplied.continueFrom === null,
+    "checkers reported chain blocked by occupied landing square"
+  );
+  assert(
+    reportedApplied.board[checkersIndex(0, 5)] != null,
+    "checkers reported landing square occupied"
+  );
+
+  const mj = initialMahjongSolitaire();
+  assert(mj.tiles.length === 36, `mahjong solitaire has 36 tiles ${mj.tiles.length}`);
+  assert(mj.tiles.every((t) => t.type != null), "mahjong solitaire all tiles typed");
 
   const chess = initialChessState();
   assert(chessMoves(chess).length === 20, `chess opening ${chessMoves(chess).length}`);

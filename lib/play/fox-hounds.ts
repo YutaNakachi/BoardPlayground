@@ -5,11 +5,13 @@ export type Player = 0 | 1; // 0 rabbit, 1 hounds
 export type Cell = Player | null;
 export type Board = Cell[];
 
-const HOUND_START = [1, 3, 5, 7].map((col) => col);
+const HOUND_START = [1, 3, 5, 7];
 
 export function initialFoxHounds(): Board {
   const board: Board = Array(FH_CELLS).fill(null);
-  board[FH_CELLS - 1] = 0;
+  const rabbitRow = FH_SIZE - 1;
+  const rabbitCol = Math.floor((FH_SIZE - 1) / 2);
+  board[rabbitRow * FH_SIZE + rabbitCol] = 0;
   for (const col of HOUND_START) {
     board[col] = 1;
   }
@@ -40,9 +42,9 @@ export function foxHoundsMoves(board: Board, player: Player): number[] {
     if (board[i] !== 1) continue;
     const row = Math.floor(i / FH_SIZE);
     const col = i % FH_SIZE;
-    if (row <= 0) continue;
+    if (row >= FH_SIZE - 1) continue;
     for (const dc of [-1, 1]) {
-      const nr = row - 1;
+      const nr = row + 1;
       const nc = col + dc;
       if (nc < 0 || nc >= FH_SIZE) continue;
       const ni = nr * FH_SIZE + nc;
