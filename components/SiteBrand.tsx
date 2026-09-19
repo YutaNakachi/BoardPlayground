@@ -11,7 +11,7 @@ export function SiteBrand({ variant }: Props) {
     return (
       <div className="mx-auto flex justify-center">
         <Image
-          src={BRAND_ASSETS.fullDark}
+          src={BRAND_ASSETS.fullLight}
           alt={SITE_NAME}
           width={1015}
           height={307}
