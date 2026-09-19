@@ -22,7 +22,15 @@ type Props = {
 };
 
 export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
-  const { filters, setFilters, clearFilters, sort, setSort } = useCatalogSidebar();
+  const {
+    filters,
+    setFilters,
+    clearFilters,
+    sort,
+    setSort,
+    sortOrder,
+    toggleSortOrder,
+  } = useCatalogSidebar();
   const { counts: clientCounts } = usePlayStats();
   const tags = getCatalogTags(games);
   const activeCount = countCatalogFilters(filters);
@@ -37,8 +45,8 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
 
   const displayed = useMemo(() => {
     const filtered = games.filter((game) => matchesCatalogFilters(game, filters));
-    return sortCatalogGames(filtered, sort, playCounts);
-  }, [games, filters, sort, playCounts]);
+    return sortCatalogGames(filtered, sort, sortOrder, playCounts);
+  }, [games, filters, sort, sortOrder, playCounts]);
 
   function toggleTag(tag: GameTag) {
     setFilters({
@@ -61,7 +69,12 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
             {displayed.length}
           </span>
         </span>
-        <CatalogSortSelect value={sort} onChange={setSort} />
+        <CatalogSortSelect
+          value={sort}
+          order={sortOrder}
+          onChange={setSort}
+          onToggleOrder={toggleSortOrder}
+        />
         {activeCount > 0 ? (
           <button
             type="button"

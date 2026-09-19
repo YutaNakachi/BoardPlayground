@@ -15,7 +15,9 @@ import {
 } from "@/lib/games";
 import {
   DEFAULT_CATALOG_SORT,
+  DEFAULT_CATALOG_SORT_ORDER,
   type CatalogSort,
+  type CatalogSortOrder,
 } from "@/lib/catalog-sort";
 
 type CatalogSidebarContextValue = {
@@ -28,6 +30,9 @@ type CatalogSidebarContextValue = {
   clearFilters: () => void;
   sort: CatalogSort;
   setSort: (sort: CatalogSort) => void;
+  sortOrder: CatalogSortOrder;
+  setSortOrder: (order: CatalogSortOrder) => void;
+  toggleSortOrder: () => void;
   games: GameMeta[];
 };
 
@@ -43,7 +48,19 @@ type ProviderProps = {
 export function CatalogSidebarProvider({ games, children }: ProviderProps) {
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState<CatalogFilters>(EMPTY_CATALOG_FILTERS);
-  const [sort, setSort] = useState<CatalogSort>(DEFAULT_CATALOG_SORT);
+  const [sort, setSortState] = useState<CatalogSort>(DEFAULT_CATALOG_SORT);
+  const [sortOrder, setSortOrder] = useState<CatalogSortOrder>(
+    DEFAULT_CATALOG_SORT_ORDER[DEFAULT_CATALOG_SORT]
+  );
+
+  const setSort = useCallback((next: CatalogSort) => {
+    setSortState(next);
+    setSortOrder(DEFAULT_CATALOG_SORT_ORDER[next]);
+  }, []);
+
+  const toggleSortOrder = useCallback(() => {
+    setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+  }, []);
 
   const openSidebar = useCallback(() => setOpen(true), []);
   const closeSidebar = useCallback(() => setOpen(false), []);
@@ -61,9 +78,24 @@ export function CatalogSidebarProvider({ games, children }: ProviderProps) {
       clearFilters,
       sort,
       setSort,
+      sortOrder,
+      setSortOrder,
+      toggleSortOrder,
       games,
     }),
-    [open, openSidebar, closeSidebar, toggleSidebar, filters, clearFilters, sort, games]
+    [
+      open,
+      openSidebar,
+      closeSidebar,
+      toggleSidebar,
+      filters,
+      clearFilters,
+      sort,
+      setSort,
+      sortOrder,
+      toggleSortOrder,
+      games,
+    ]
   );
 
   return (
