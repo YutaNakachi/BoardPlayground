@@ -21,7 +21,6 @@ const LAYOUT: { layer: number; row: number; col: number }[] = [
   { layer: 0, row: 0, col: 4 },
   { layer: 0, row: 0, col: 5 },
   { layer: 0, row: 0, col: 6 },
-  { layer: 0, row: 0, col: 7 },
   { layer: 0, row: 1, col: 1 },
   { layer: 0, row: 1, col: 2 },
   { layer: 0, row: 1, col: 3 },
