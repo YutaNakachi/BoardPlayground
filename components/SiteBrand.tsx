@@ -51,9 +51,9 @@ export function SiteBrand({ variant }: Props) {
         alt={SITE_NAME}
         width={1015}
         height={218}
-        className="h-5 w-auto max-w-[10rem] opacity-90"
+        className="h-6 w-auto max-w-[11rem] mix-blend-lighten"
       />
-      <p className="text-slate-500">{SITE_NAME_EN}</p>
+      <p className="text-sm text-slate-400">{SITE_NAME_EN}</p>
     </div>
   );
 }
