@@ -2,7 +2,7 @@ import { GameCatalog } from "@/components/GameCatalog";
 import { PageContainer } from "@/components/PageContainer";
 import { SiteBrand } from "@/components/SiteBrand";
 import { fetchGameCounts } from "@/lib/stats/game-counts";
-import { SITE_TAGLINE, SITE_TAGLINE_SUB } from "@/lib/site";
+import { HeroTaglines } from "@/components/HeroTaglines";
 import { getAllGames } from "@/lib/games";
 
 export default async function HomePage() {
@@ -21,10 +21,7 @@ export default async function HomePage() {
           aria-hidden
         />
         <SiteBrand variant="hero" />
-        <p className="mt-6 text-xl font-bold text-white sm:text-2xl">{SITE_TAGLINE}</p>
-        <p className="mx-auto mt-3 max-w-lg text-base text-slate-400 sm:text-lg">
-          {SITE_TAGLINE_SUB}
-        </p>
+        <HeroTaglines />
       </section>
 
       <GameCatalog games={games} initialPlayCounts={initialPlayCounts} />
