@@ -15,9 +15,6 @@ type Props = {
   initialPlayCount?: number;
 };
 
-const CARD_ACTION_CLASS =
-  "pointer-events-auto inline-flex min-h-8 items-center rounded-full border border-white/20 bg-black/45 px-3 text-xs text-slate-200 backdrop-blur-sm transition hover:border-white/35 hover:bg-black/60 hover:text-white";
-
 export function GameCard({ game, initialPlayCount }: Props) {
   const { getCount, statsEnabled, onlineEnabled } = usePlayStats();
   const clientCount = getCount(game.slug);
@@ -40,16 +37,12 @@ export function GameCard({ game, initialPlayCount }: Props) {
         </div>
       ) : null}
 
-      <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
-        {playable ? (
-          <Link href={playHref} className={CARD_ACTION_CLASS}>
-            遊ぶ
-          </Link>
-        ) : null}
-        <Link href={`/games/${game.slug}`} className={CARD_ACTION_CLASS}>
-          ルール
-        </Link>
-      </div>
+      <Link
+        href={`/games/${game.slug}`}
+        className="pointer-events-auto absolute right-3 top-3 z-20 inline-flex min-h-8 items-center rounded-full border border-white/20 bg-black/45 px-3 text-xs text-slate-200 backdrop-blur-sm transition hover:border-white/35 hover:bg-black/60 hover:text-white"
+      >
+        ルール
+      </Link>
 
       <div className="pointer-events-none relative z-10 flex flex-1 flex-col p-5">
         <div className="mb-2 flex flex-wrap gap-1.5">
@@ -60,7 +53,7 @@ export function GameCard({ game, initialPlayCount }: Props) {
             </span>
           ))}
         </div>
-        <h4 className="pr-28 text-lg font-semibold tracking-tight text-white/95">
+        <h4 className="pr-16 text-lg font-semibold tracking-tight text-white/95">
           {game.title}
         </h4>
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
