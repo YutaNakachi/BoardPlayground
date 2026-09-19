@@ -8,6 +8,7 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
   applyFoxHoundsMove,
   FH_SIZE,
+  foxHoundsHoundDestinations,
   foxHoundsMoves,
   foxHoundsWinner,
   initialFoxHounds,
@@ -45,14 +46,7 @@ export function FoxHoundsGame() {
       return foxHoundsMoves(board, 0);
     }
     if (current === 1 && board[selected] === 1) {
-      const all = foxHoundsMoves(board, 1);
-      const row = Math.floor(selected / FH_SIZE);
-      const col = selected % FH_SIZE;
-      return all.filter((to) => {
-        const tr = Math.floor(to / FH_SIZE);
-        const tc = to % FH_SIZE;
-        return tr === row + 1 && Math.abs(tc - col) === 1;
-      });
+      return foxHoundsHoundDestinations(board, selected);
     }
     return [];
   }, [selected, board, current]);
