@@ -78,27 +78,22 @@ export function DominoesGame() {
     );
   }
 
-  if (phase === "game-over" && state.winner != null) {
-    return (
-      <ResultPanel
-        winners={[state.winner]}
-        onReplay={() => setPhase("setup")}
-        details={<p className="text-slate-400">手札をすべて出し切りました。</p>}
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && state.winner != null;
+  const winners = isGameOver ? [state.winner!] : null;
 
   const hand = state.hands[state.current];
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
         stats={`手札 ${hand.length} · 山札 ${state.boneyard.length}`}
         action={plays.length === 0 ? "出せないときは山札から引く" : undefined}
       />
-      {notice ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
+      )}
+      {notice && !isGameOver ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
 
       <div className="rounded-xl border border-surface-border bg-surface-raised p-4">
         <p className="mb-2 text-center text-xs text-slate-500">
@@ -122,7 +117,7 @@ export function DominoesGame() {
               <button
                 key={tile.id}
                 type="button"
-                disabled={!canPlay}
+                disabled={!canPlay || isGameOver}
                 onClick={() => {
                   const options = plays.filter((x) => x.tileId === tile.id);
                   if (options.length === 1) play(options[0]);
@@ -140,7 +135,7 @@ export function DominoesGame() {
         </div>
       </div>
 
-      {plays.length === 0 ? (
+      {plays.length === 0 && !isGameOver ? (
         <div className="text-center">
           <button type="button" onClick={onDraw} className="btn-game">
             山札から引く
@@ -151,6 +146,15 @@ export function DominoesGame() {
       <p className="text-center text-xs text-slate-500">
         相手の手札: {state.hands[state.current === 0 ? 1 : 0].length} 枚（伏せ）
       </p>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">手札をすべて出し切りました。</p>}
+        />
+      )}
     </div>
   );
 }

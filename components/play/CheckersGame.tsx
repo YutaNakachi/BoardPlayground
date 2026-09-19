@@ -230,27 +230,12 @@ export function CheckersGame() {
     );
   }
 
-  if (activePhase === "game-over" && activeWinner !== null) {
-    return (
-      <ResultPanel
-        winners={[activeWinner]}
-        winnersLabel={
-          isOnline
-            ? formatWinnersWithNames(roomPlayers, [activeWinner])
-            : undefined
-        }
-        onReplay={reset}
-        details={
-          <p className="text-slate-400">
-            相手の駒がなくなったか、相手が動ける手がありませんでした。
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = activePhase === "game-over" && activeWinner !== null;
+  const winners = isGameOver ? [activeWinner] : null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
         playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
@@ -267,6 +252,7 @@ export function CheckersGame() {
               : undefined
         }
       />
+      )}
       {activeNotice ? (
         <p className="text-center text-sm text-amber-200">{activeNotice}</p>
       ) : null}
@@ -313,6 +299,24 @@ export function CheckersGame() {
           );
         })}
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline
+              ? formatWinnersWithNames(roomPlayers, winners)
+              : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              相手の駒がなくなったか、相手が動ける手がありませんでした。
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

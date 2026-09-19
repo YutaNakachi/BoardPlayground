@@ -71,25 +71,20 @@ export function ChineseCheckersGame() {
     );
   }
 
-  if (phase === "game-over" && state.winner != null) {
-    return (
-      <ResultPanel
-        winners={[state.winner]}
-        onReplay={() => setPhase("setup")}
-        details={<p className="text-slate-400">すべての駒を向かい側のエリアへ移動しました。</p>}
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && state.winner != null;
+  const winners = isGameOver ? [state.winner!] : null;
 
   const minQ = Math.min(...cells.map((c) => c.q));
   const maxQ = Math.max(...cells.map((c) => c.q));
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
       />
+      )}
 
       <div className="mx-auto max-w-lg overflow-x-auto">
         <div className="relative min-h-80">
@@ -130,6 +125,15 @@ export function ChineseCheckersGame() {
       <p className="text-center text-xs text-slate-500">
         駒をタップして選択し、移動先（緑）をタップ。ジャンプは連続可能。
       </p>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">すべての駒を向かい側のエリアへ移動しました。</p>}
+        />
+      )}
     </div>
   );
 }

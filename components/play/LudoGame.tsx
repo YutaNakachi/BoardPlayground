@@ -63,18 +63,12 @@ export function LudoGame() {
     );
   }
 
-  if (phase === "game-over" && state.winner != null) {
-    return (
-      <ResultPanel
-        winners={[state.winner]}
-        onReplay={() => setPhase("setup")}
-        details={<p className="text-slate-400">4つのコマをすべてゴールしました。</p>}
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && state.winner != null;
+  const winners = isGameOver ? [state.winner!] : null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
@@ -86,6 +80,7 @@ export function LudoGame() {
               : "コマを選ぶ"
         }
       />
+      )}
 
       <div className="mx-auto max-w-md">
         <div
@@ -130,17 +125,17 @@ export function LudoGame() {
         ))}
       </div>
 
-      {state.lastRoll == null ? (
+      {state.lastRoll == null && !isGameOver ? (
         <div className="text-center">
           <button type="button" onClick={onRoll} className="btn-game">
             サイコロを振る
           </button>
         </div>
-      ) : (
+      ) : !isGameOver ? (
         <p className="text-center text-lg font-bold text-white">出目: {state.lastRoll}</p>
-      )}
+      ) : null}
 
-      {state.lastRoll != null && moves.length === 0 ? (
+      {state.lastRoll != null && moves.length === 0 && !isGameOver ? (
         <div className="text-center">
           <button
             type="button"
@@ -158,6 +153,15 @@ export function LudoGame() {
           </button>
         </div>
       ) : null}
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">4つのコマをすべてゴールしました。</p>}
+        />
+      )}
     </div>
   );
 }

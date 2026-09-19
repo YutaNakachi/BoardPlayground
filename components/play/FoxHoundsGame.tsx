@@ -105,26 +105,17 @@ export function FoxHoundsGame() {
     );
   }
 
-  if (phase === "game-over" && winner !== null) {
-    return (
-      <ResultPanel
-        winners={[winner]}
-        onReplay={() => setPhase("setup")}
-        details={
-          <p className="text-slate-400">
-            {winner === 0 ? "ウサギが上の段に到達しました。" : "猟犬がウサギを囲みました。"}
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winner !== null;
+  const winners = isGameOver ? [winner!] : null;
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "ウサギ" : "猟犬"}）`}
       />
+      )}
 
       <div className="mx-auto grid max-w-md grid-cols-8 gap-0.5">
         {board.map((cell, index) => {
@@ -150,6 +141,19 @@ export function FoxHoundsGame() {
           );
         })}
       </div>
+
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {winner === 0 ? "ウサギが上の段に到達しました。" : "猟犬がウサギを囲みました。"}
+            </p>
+          }
+        />
+      )}
     </div>
   );
 }

@@ -112,26 +112,20 @@ export function ChessGame() {
     );
   }
 
-  if (phase === "game-over" && result) {
-    return (
-      <ResultPanel
-        winners={result.winners}
-        onReplay={() => setPhase("setup")}
-        details={<p className="text-slate-400">{result.message}</p>}
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && result !== null;
 
   const current = state.current;
   const style = getPlayerTurnStyle(current);
 
   return (
     <div className="space-y-6">
+      {!isGameOver && (
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "白" : "黒"}）`}
         action={inCheck ? "チェック" : undefined}
       />
+      )}
 
       <div className="mx-auto grid max-w-md grid-cols-8 overflow-hidden rounded-xl border border-surface-border">
         {state.board.map((piece, index) => {
@@ -176,6 +170,15 @@ export function ChessGame() {
       <p className={`text-center text-sm ${style.label}`}>
         {current === 0 ? "白" : "黒"}の手番です
       </p>
+
+      {isGameOver && result && (
+        <ResultPanel
+          variant="inline"
+          winners={result.winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">{result.message}</p>}
+        />
+      )}
     </div>
   );
 }

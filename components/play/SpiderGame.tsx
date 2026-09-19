@@ -90,24 +90,16 @@ export function SpiderGame() {
     );
   }
 
-  if (phase === "game-over") {
-    return (
-      <ResultPanel
-        winners={[0]}
-        onReplay={() => setPhase("idle")}
-        details={<p className="text-slate-400">8組の完成列をすべて除去しました。</p>}
-      />
-    );
-  }
+  const isGameOver = phase === "game-over";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-slate-400">完成: {state.completed} / 8</p>
         <button
           type="button"
           onClick={onDeal}
-          disabled={!canDealSpider(state)}
+          disabled={!canDealSpider(state) || isGameOver}
           className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm text-accent disabled:opacity-40"
         >
           配布 ({state.stock.length})
@@ -160,6 +152,15 @@ export function SpiderGame() {
           </div>
         ))}
       </div>
+
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          winners={[0]}
+          onReplay={() => setPhase("idle")}
+          details={<p className="text-slate-400">8組の完成列をすべて除去しました。</p>}
+        />
+      )}
     </div>
   );
 }
