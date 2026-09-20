@@ -460,6 +460,26 @@ function checkLudo() {
   const partialGoal = initialLudo(2);
   partialGoal.tokens[0] = { player: 0, index: 0, zone: "home", steps: 1 };
   assert(ludoGoalCount(partialGoal, 0) === 1, "ludo counts any home slot as goal");
+
+  const deepest = initialLudo(2);
+  deepest.tokens[0] = { player: 0, index: 0, zone: "home", steps: 3 };
+  deepest.lastRoll = 1;
+  const deepestMove = ludoMoves(deepest).find((m) => m.tokenIndex === 0);
+  assert(deepestMove != null, "ludo can reach deepest home slot");
+  const atGoal = applyLudoMove(deepest, deepestMove!);
+  assert(
+    atGoal !== null && atGoal.tokens[0].zone === "home" && atGoal.tokens[0].steps === 4,
+    "ludo deepest home slot reached"
+  );
+
+  const blockedHome = initialLudo(2);
+  blockedHome.tokens[0] = { player: 0, index: 0, zone: "home", steps: 0 };
+  blockedHome.tokens[1] = { player: 0, index: 1, zone: "home", steps: 1 };
+  blockedHome.lastRoll = 1;
+  assert(
+    ludoMoves(blockedHome).find((m) => m.tokenIndex === 0) == null,
+    "ludo home overlap blocked"
+  );
 }
 
 function checkBackgammon() {

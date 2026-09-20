@@ -55,21 +55,64 @@ export function rollLudo(state: LudoState): LudoState {
   return { ...state, lastRoll: roll, extraTurn: roll === 6 };
 }
 
-function totalSteps(token: LudoToken): number {
-  if (token.zone === "yard") return -1;
-  if (token.zone === "track") return token.steps;
-  return LUDO_TRACK_STEPS + token.steps;
-}
-
 function isFinished(token: LudoToken): boolean {
   return token.zone === "home" && token.steps === LUDO_HOME_LEN - 1;
 }
 
-function canAdvance(token: LudoToken, roll: number): boolean {
+function homeSlotOccupied(
+  tokens: LudoToken[],
+  player: number,
+  slot: number,
+  excludeIndex: number
+): boolean {
+  return tokens.some(
+    (t, i) =>
+      i !== excludeIndex &&
+      t.player === player &&
+      t.zone === "home" &&
+      t.steps === slot
+  );
+}
+
+/** ゴール列の到達先スロット。コース上に留まる場合は null */
+function targetHomeSlot(token: LudoToken, roll: number): number | null {
+  if (token.zone === "home") {
+    const slot = token.steps + roll;
+    return slot <= LUDO_HOME_LEN - 1 ? slot : null;
+  }
+  const nextTotal = token.steps + roll;
+  if (nextTotal <= LUDO_TRACK_STEPS) return null;
+  const slot = nextTotal - LUDO_TRACK_STEPS - 1;
+  return slot <= LUDO_HOME_LEN - 1 ? slot : null;
+}
+
+function canReachHomeSlot(
+  tokens: LudoToken[],
+  player: number,
+  fromHomeSlot: number | null,
+  targetSlot: number,
+  excludeIndex: number
+): boolean {
+  const start = fromHomeSlot === null ? 0 : fromHomeSlot + 1;
+  for (let slot = start; slot <= targetSlot; slot++) {
+    if (homeSlotOccupied(tokens, player, slot, excludeIndex)) return false;
+  }
+  return true;
+}
+
+function canAdvance(tokens: LudoToken[], tokenIndex: number, roll: number): boolean {
+  const token = tokens[tokenIndex];
   if (isFinished(token)) return false;
   if (token.zone === "yard") return roll === 6;
-  const next = totalSteps(token) + roll;
-  return next <= LUDO_TRACK_STEPS + LUDO_HOME_LEN - 1;
+
+  const targetSlot = targetHomeSlot(token, roll);
+  if (targetSlot !== null) {
+    const fromSlot = token.zone === "home" ? token.steps : null;
+    return canReachHomeSlot(tokens, token.player, fromSlot, targetSlot, tokenIndex);
+  }
+
+  if (token.zone === "home") return false;
+  return token.steps + roll <= LUDO_TRACK_STEPS;
 }
 
 export function ludoMoves(state: LudoState): LudoMove[] {
@@ -81,7 +124,7 @@ export function ludoMoves(state: LudoState): LudoMove[] {
   for (let i = 0; i < state.tokens.length; i++) {
     const token = state.tokens[i];
     if (token.player !== player) continue;
-    if (canAdvance(token, roll)) moves.push({ tokenIndex: i });
+    if (canAdvance(state.tokens, i, roll)) moves.push({ tokenIndex: i });
   }
   return moves;
 }
@@ -90,7 +133,10 @@ function applyTokenAdvance(token: LudoToken, roll: number): LudoToken {
   if (token.zone === "yard") {
     return { ...token, zone: "track", steps: 0 };
   }
-  const nextTotal = totalSteps(token) + roll;
+  if (token.zone === "home") {
+    return { ...token, zone: "home", steps: token.steps + roll };
+  }
+  const nextTotal = token.steps + roll;
   if (nextTotal <= LUDO_TRACK_STEPS) {
     return { ...token, zone: "track", steps: nextTotal };
   }
