@@ -6,12 +6,12 @@ type DiceFaceProps = {
 };
 
 const PIP_GRID: Record<number, boolean[]> = {
-  1: [0, 0, 0, 0, 1, 0, 0, 0, 0],
-  2: [1, 0, 0, 0, 0, 0, 0, 0, 1],
-  3: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-  4: [1, 0, 1, 0, 0, 0, 1, 0, 1],
-  5: [1, 0, 1, 0, 1, 0, 1, 0, 1],
-  6: [1, 0, 1, 1, 0, 1, 1, 0, 1],
+  1: [false, false, false, false, true, false, false, false, false],
+  2: [true, false, false, false, false, false, false, false, true],
+  3: [true, false, false, false, true, false, false, false, true],
+  4: [true, false, true, false, false, false, true, false, true],
+  5: [true, false, true, false, true, false, true, false, true],
+  6: [true, false, true, true, false, true, true, false, true],
 };
 
 const SIZE_CLASS = {
