@@ -197,7 +197,7 @@ export function CheckersGame() {
     return (
       <OnlineSetupPanel
         title="チェッカー"
-        description="暗いマスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
+        description="黒マスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
         mode={mode}
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
@@ -214,7 +214,7 @@ export function CheckersGame() {
     return (
       <OnlineSetupPanel
         title="チェッカー"
-        description="暗いマスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
+        description="黒マスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
         mode="online"
         onModeChange={() => {}}
         onlineSupported={onlineEnabled}
@@ -284,8 +284,8 @@ export function CheckersGame() {
                   : isDest
                     ? "移動先"
                     : dark
-                      ? "暗いマス"
-                      : "明るいマス"
+                      ? "黒マス"
+                      : "白マス"
               }
             >
               {piece ? (
