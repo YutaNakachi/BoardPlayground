@@ -219,14 +219,13 @@ export function RulesMarkdown({ content, className = "" }: Props) {
 
         if (block.type === "meta-summary") {
           return (
-            <p key={index} className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400">
+            <ul key={index} className="list-disc space-y-2 pl-5">
               {block.items.map((item) => (
-                <span key={item.label}>
-                  <span className="text-slate-500">{item.label}</span>
-                  <span className="ml-1.5">{renderInline(item.value)}</span>
-                </span>
+                <li key={item.label}>
+                  {item.label} {renderInline(item.value)}
+                </li>
               ))}
-            </p>
+            </ul>
           );
         }
 
