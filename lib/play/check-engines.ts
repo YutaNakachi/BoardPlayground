@@ -464,6 +464,32 @@ function checkLudo() {
   const afterCap = applyLudoMove(capture, capMove!);
   assert(afterCap !== null && afterCap.tokens[4].zone === "yard", "ludo capture sends home");
 
+  const startCapture = initialLudo(2);
+  startCapture.lastRoll = 6;
+  startCapture.extraTurn = true;
+  startCapture.tokens[0] = { player: 0, index: 0, zone: "yard", steps: 0 };
+  startCapture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 22 };
+  const startCapMove = ludoMoves(startCapture).find((m) => m.tokenIndex === 0);
+  assert(startCapMove != null, "ludo can start onto occupied start square");
+  const afterStartCap = applyLudoMove(startCapture, startCapMove!);
+  assert(
+    afterStartCap !== null && afterStartCap.tokens[4].zone === "yard",
+    "ludo captures non-start enemy on start square"
+  );
+
+  const safeStart = initialLudo(2);
+  safeStart.lastRoll = 1;
+  safeStart.extraTurn = false;
+  safeStart.tokens[0] = { player: 0, index: 0, zone: "track", steps: 21 };
+  safeStart.tokens[4] = { player: 2, index: 0, zone: "track", steps: 0 };
+  const safeCapMove = ludoMoves(safeStart).find((m) => m.tokenIndex === 0);
+  assert(safeCapMove != null, "ludo can land on enemy start");
+  const afterSafe = applyLudoMove(safeStart, safeCapMove!);
+  assert(
+    afterSafe !== null && afterSafe.tokens[4].zone === "track" && afterSafe.tokens[4].steps === 0,
+    "ludo own-start token stays safe"
+  );
+
   const partialGoal = initialLudo(2);
   partialGoal.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
   assert(ludoGoalCount(partialGoal, 0) === 1, "ludo counts finished tokens as goal");
