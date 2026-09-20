@@ -478,7 +478,25 @@ function checkLudo() {
   blockedHome.lastRoll = 1;
   assert(
     ludoMoves(blockedHome).find((m) => m.tokenIndex === 0) == null,
-    "ludo home overlap blocked"
+    "ludo home overlap blocked past entry"
+  );
+
+  const entryStack = initialLudo(2);
+  entryStack.tokens[0] = { player: 0, index: 0, zone: "home", steps: 0 };
+  entryStack.tokens[1] = { player: 0, index: 1, zone: "track", steps: 43 };
+  entryStack.lastRoll = 1;
+  assert(
+    ludoMoves(entryStack).find((m) => m.tokenIndex === 1) != null,
+    "ludo home entry allows stacking"
+  );
+
+  const slot3Blocked = initialLudo(2);
+  slot3Blocked.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
+  slot3Blocked.tokens[1] = { player: 0, index: 1, zone: "home", steps: 3 };
+  slot3Blocked.lastRoll = 1;
+  assert(
+    ludoMoves(slot3Blocked).length === 0,
+    "ludo slot3 cannot advance when slot4 occupied"
   );
 }
 

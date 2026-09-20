@@ -95,6 +95,8 @@ function canReachHomeSlot(
 ): boolean {
   const start = fromHomeSlot === null ? 0 : fromHomeSlot + 1;
   for (let slot = start; slot <= targetSlot; slot++) {
+    // 入口（slot 0）はコース上と同様に重なってもよい
+    if (slot === 0) continue;
     if (homeSlotOccupied(tokens, player, slot, excludeIndex)) return false;
   }
   return true;
