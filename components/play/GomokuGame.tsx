@@ -103,16 +103,6 @@ export function GomokuGame() {
     return [activeWinner];
   }, [activePhase, activeWinner]);
 
-  const stones = useMemo(() => {
-    let black = 0;
-    let white = 0;
-    for (const cell of activeBoard) {
-      if (cell === 0) black += 1;
-      else if (cell === 1) white += 1;
-    }
-    return { black, white };
-  }, [activeBoard]);
-
   const roomPlayers = isOnline ? online.players : [];
 
   const reset = useCallback(() => {
@@ -171,12 +161,7 @@ export function GomokuGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(
-          roomPlayers,
-          activeCurrent,
-          activeCurrent === 0 ? "黒" : "白"
-        )}
-        stats={`黒 ${stones.black} · 白 ${stones.white}`}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
       )}

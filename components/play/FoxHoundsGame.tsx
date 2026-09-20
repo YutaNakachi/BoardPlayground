@@ -100,7 +100,7 @@ export function FoxHoundsGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "ウサギ" : "猟犬"}）`}
+        playerLabel={`プレイヤー ${current + 1}`}
       />
       )}
 

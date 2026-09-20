@@ -179,12 +179,7 @@ export function ReversiGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(
-          roomPlayers,
-          activeCurrent,
-          activeCurrent === 0 ? "黒" : "白"
-        )}
-        stats={`黒 ${counts[0]} · 白 ${counts[1]}`}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
       )}
@@ -236,16 +231,6 @@ export function ReversiGame() {
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }
           onReplay={reset}
-          details={
-            <ul className="space-y-1 text-slate-400">
-              <li>
-                {formatSeatLabel(roomPlayers, 0, "黒")}: {counts[0]} 個
-              </li>
-              <li>
-                {formatSeatLabel(roomPlayers, 1, "白")}: {counts[1]} 個
-              </li>
-            </ul>
-          }
         />
       )}
     </div>
