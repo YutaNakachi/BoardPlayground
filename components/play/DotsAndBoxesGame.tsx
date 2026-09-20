@@ -104,7 +104,6 @@ export function DotsAndBoxesGame() {
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
-        stats={`箱 P1 ${state.scores[0]} · P2 ${state.scores[1]}`}
         action="線を1本引く"
       />
       )}

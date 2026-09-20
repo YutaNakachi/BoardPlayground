@@ -5,7 +5,7 @@ import { formatWinners } from "@/lib/game-engine";
 
 type Props = {
   winners: number[];
-  details: ReactNode;
+  details?: ReactNode;
   onReplay: () => void;
   /** オンライン対局など、席番号以外の勝者表示名を使う場合 */
   winnersLabel?: string;
@@ -36,7 +36,7 @@ export function ResultPanel({
       <p className={inline ? "mt-2 text-base" : "mt-4 text-lg"}>
         勝者: {winnersLabel ?? formatWinners(winners)}
       </p>
-      <div className={inline ? "mt-2" : "mt-4"}>{details}</div>
+      {details ? <div className={inline ? "mt-2" : "mt-4"}>{details}</div> : null}
       <button
         type="button"
         onClick={onReplay}

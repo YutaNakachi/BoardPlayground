@@ -161,11 +161,7 @@ export function TicTacToeGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(
-          roomPlayers,
-          activeCurrent,
-          activeCurrent === 0 ? "×" : "○"
-        )}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
       )}

@@ -131,7 +131,6 @@ export function BackgammonGame() {
       <TurnBanner
         playerIndex={player}
         playerLabel={`プレイヤー ${player + 1}`}
-        stats={`ベアオフ P1:${state.off[0]} P2:${state.off[1]} · バー P1:${state.bar[0]} P2:${state.bar[1]}`}
         action={state.dice ? `残りダイス: ${state.movesLeft.join(", ")}` : "サイコロを振る"}
       />
       )}

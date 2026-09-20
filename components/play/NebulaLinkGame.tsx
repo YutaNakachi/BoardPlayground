@@ -84,7 +84,6 @@ export function NebulaLinkGame() {
       <TurnBanner
         playerIndex={game.currentPlayer}
         playerLabel={`プレイヤー ${game.currentPlayer + 1}`}
-        stats={`残り ${game.remaining.reduce((a, b) => a + b, 0)} 個`}
       />
       )}
 

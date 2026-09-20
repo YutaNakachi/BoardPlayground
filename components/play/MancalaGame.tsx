@@ -81,7 +81,6 @@ export function MancalaGame() {
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
-        stats={`倉 1: ${pits[6]} · 倉 2: ${pits[13]}`}
       />
       )}
       {notice && !isGameOver ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}

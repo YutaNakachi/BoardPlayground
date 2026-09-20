@@ -89,7 +89,6 @@ export function DominoesGame() {
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
-        stats={`手札 ${hand.length} · 山札 ${state.boneyard.length}`}
         action={plays.length === 0 ? "出せないときは山札から引く" : undefined}
       />
       )}

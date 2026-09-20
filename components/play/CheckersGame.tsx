@@ -243,11 +243,6 @@ export function CheckersGame() {
       <TurnBanner
         playerIndex={activeCurrent}
         playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
-        stats={
-          isOnline
-            ? `${getSeatDisplayName(roomPlayers, 0)} ${checkersPieceCount(activeBoard, 0)} · ${getSeatDisplayName(roomPlayers, 1)} ${checkersPieceCount(activeBoard, 1)}`
-            : `P1 ${checkersPieceCount(activeBoard, 0)} · P2 ${checkersPieceCount(activeBoard, 1)}`
-        }
         action={
           isOnline && !online.isMyTurn
             ? "相手の手番です"

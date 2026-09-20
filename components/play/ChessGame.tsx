@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle, playerPieceClasses } from "@/lib/player-colors";
+import { playerPieceClasses } from "@/lib/player-colors";
 import {
   applyChessMove,
   chessMoves,
@@ -115,14 +115,13 @@ export function ChessGame() {
   const isGameOver = phase === "game-over" && result !== null;
 
   const current = state.current;
-  const style = getPlayerTurnStyle(current);
 
   return (
     <div className="space-y-6">
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}（${current === 0 ? "白" : "黒"}）`}
+        playerLabel={`プレイヤー ${current + 1}`}
         action={inCheck ? "チェック" : undefined}
       />
       )}
@@ -163,10 +162,6 @@ export function ChessGame() {
           );
         })}
       </div>
-
-      <p className={`text-center text-sm ${style.label}`}>
-        {current === 0 ? "白" : "黒"}の手番です
-      </p>
 
       {isGameOver && result && (
         <ResultPanel

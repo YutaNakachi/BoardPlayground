@@ -70,11 +70,7 @@ export function HexGame() {
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
-        action={
-          current === 0
-            ? "上下の辺をつなぐ（ローズ）"
-            : "左右の辺をつなぐ（スカイ）"
-        }
+        action={current === 0 ? "上下の辺をつなぐ" : "左右の辺をつなぐ"}
       />
       )}
 

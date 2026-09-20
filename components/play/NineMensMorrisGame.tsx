@@ -12,7 +12,6 @@ import {
   MORRIS_LINES,
   MORRIS_XY,
   morrisCanMove,
-  morrisCount,
   morrisIsFlying,
   morrisLegalDestinations,
   morrisRemovable,
@@ -83,7 +82,6 @@ export function NineMensMorrisGame() {
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
-        stats={`手持ち P1 ${state.toPlace[0]} · P2 ${state.toPlace[1]} ／ 盤上 P1 ${morrisCount(state.board, 0)} · P2 ${morrisCount(state.board, 1)}`}
         action={right}
       />
       )}
