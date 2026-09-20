@@ -477,17 +477,17 @@ function checkLudo() {
     "ludo captures non-start enemy on start square"
   );
 
-  const safeStart = initialLudo(2);
-  safeStart.lastRoll = 1;
-  safeStart.extraTurn = false;
-  safeStart.tokens[0] = { player: 0, index: 0, zone: "track", steps: 21 };
-  safeStart.tokens[4] = { player: 2, index: 0, zone: "track", steps: 0 };
-  const safeCapMove = ludoMoves(safeStart).find((m) => m.tokenIndex === 0);
-  assert(safeCapMove != null, "ludo can land on enemy start");
-  const afterSafe = applyLudoMove(safeStart, safeCapMove!);
+  const captureOnStart = initialLudo(2);
+  captureOnStart.lastRoll = 1;
+  captureOnStart.extraTurn = false;
+  captureOnStart.tokens[0] = { player: 0, index: 0, zone: "track", steps: 21 };
+  captureOnStart.tokens[4] = { player: 2, index: 0, zone: "track", steps: 0 };
+  const captureOnStartMove = ludoMoves(captureOnStart).find((m) => m.tokenIndex === 0);
+  assert(captureOnStartMove != null, "ludo can land on enemy start");
+  const afterCaptureOnStart = applyLudoMove(captureOnStart, captureOnStartMove!);
   assert(
-    afterSafe !== null && afterSafe.tokens[4].zone === "track" && afterSafe.tokens[4].steps === 0,
-    "ludo own-start token stays safe"
+    afterCaptureOnStart !== null && afterCaptureOnStart.tokens[4].zone === "yard",
+    "ludo captures enemy on start square"
   );
 
   const partialGoal = initialLudo(2);

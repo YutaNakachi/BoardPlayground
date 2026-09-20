@@ -169,8 +169,6 @@ function captureAt(
   return tokens.map((t, i) => {
     if (i === moverIndex || t.player === player || t.zone !== "track") return t;
     if (pathIndexForSteps(t.player, t.steps) !== pathIndex) return t;
-    // 自分のスタートマス（steps 0）にいるコマだけ保護
-    if (t.steps === 0) return t;
     return { ...t, zone: "yard", steps: 0 };
   });
 }
