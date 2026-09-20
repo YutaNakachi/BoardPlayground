@@ -452,13 +452,7 @@ export function LudoGame() {
           {(isRolling || state.lastRoll != null) && (
             <div className="flex flex-col items-center gap-2">
               <DiceFace value={diceFace} size="lg" rolling={isRolling} />
-              {!isRolling && state.lastRoll != null ? (
-                <p className="text-sm font-medium text-slate-300">
-                  出目: <span className="text-lg font-bold text-white">{state.lastRoll}</span>
-                </p>
-              ) : (
-                <p className="text-sm text-slate-400">振っています…</p>
-              )}
+              {isRolling ? <p className="text-sm text-slate-400">振っています…</p> : null}
             </div>
           )}
 
