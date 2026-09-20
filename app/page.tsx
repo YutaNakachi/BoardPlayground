@@ -11,7 +11,7 @@ export default async function HomePage() {
 
   return (
     <PageContainer>
-      <section className="relative mb-12 overflow-hidden rounded-3xl border border-surface-border hero-glow px-6 py-12 text-center sm:mb-14 sm:px-10 sm:py-14">
+      <section className="relative mb-10 overflow-hidden rounded-3xl border border-surface-border hero-glow px-6 py-8 text-center sm:mb-12 sm:px-10 sm:py-10">
         <div
           className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-accent/20 blur-3xl"
           aria-hidden
