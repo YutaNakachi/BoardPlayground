@@ -46,7 +46,7 @@ import {
 } from "./fox-hounds";
 import { gomokuWinner } from "./gomoku";
 import { initialKlondike } from "./klondike";
-import { initialLudo, applyLudoMove, ludoMoves } from "./ludo";
+import { initialLudo, applyLudoMove, ludoGoalCount, ludoMoves } from "./ludo";
 import {
   initialMahjongSolitaire,
   isMahjongTileFree,
@@ -456,6 +456,10 @@ function checkLudo() {
   assert(capMove != null, "ludo capture move exists");
   const afterCap = applyLudoMove(capture, capMove!);
   assert(afterCap !== null && afterCap.tokens[4].zone === "yard", "ludo capture sends home");
+
+  const partialGoal = initialLudo(2);
+  partialGoal.tokens[0] = { player: 0, index: 0, zone: "home", steps: 1 };
+  assert(ludoGoalCount(partialGoal, 0) === 1, "ludo counts any home slot as goal");
 }
 
 function checkBackgammon() {

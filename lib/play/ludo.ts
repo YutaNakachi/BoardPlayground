@@ -132,7 +132,7 @@ export function applyLudoMove(state: LudoState, move: LudoMove): LudoState | nul
 
   const allHome = tokens
     .filter((t) => t.player === player)
-    .every((t) => t.zone === "home" && t.steps === LUDO_HOME_LEN - 1);
+    .every((t) => t.zone === "home");
 
   const extra = state.extraTurn;
   const turnIndex = state.activePlayers.indexOf(player);
@@ -168,9 +168,7 @@ export function ludoTokenCoord(token: LudoToken): Coord {
 }
 
 export function ludoGoalCount(state: LudoState, player: number): number {
-  return state.tokens.filter(
-    (t) => t.player === player && t.zone === "home" && t.steps === LUDO_HOME_LEN - 1
-  ).length;
+  return state.tokens.filter((t) => t.player === player && t.zone === "home").length;
 }
 
 export { trackCoord } from "@/lib/play/ludo-board";
