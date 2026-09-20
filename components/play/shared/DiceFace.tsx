@@ -21,9 +21,9 @@ const SIZE_CLASS = {
 } as const;
 
 const PIP_CLASS = {
-  sm: "h-1.5 w-1.5",
-  md: "h-2 w-2",
-  lg: "h-2.5 w-2.5",
+  sm: "h-2 w-2",
+  md: "h-2.5 w-2.5",
+  lg: "h-3.5 w-3.5",
 } as const;
 
 export function DiceFace({ value, size = "md", rolling = false, className = "" }: DiceFaceProps) {
@@ -41,8 +41,8 @@ export function DiceFace({ value, size = "md", rolling = false, className = "" }
         <span key={i} className="flex items-center justify-center">
           {on ? (
             <span
-              className={`rounded-full bg-slate-900 shadow-[inset_0_1px_1px_rgba(255,255,255,0.25)] ${PIP_CLASS[size]} ${
-                face === 1 ? "bg-red-600" : ""
+              className={`rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.25)] ${PIP_CLASS[size]} ${
+                face === 1 ? "bg-red-600" : "bg-slate-900"
               }`}
             />
           ) : null}
