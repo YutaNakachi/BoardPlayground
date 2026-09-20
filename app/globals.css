@@ -23,6 +23,22 @@ body {
 }
 
 @layer utilities {
+  .clip-triangle-tl {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
+  .clip-triangle-tr {
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+
+  .clip-triangle-br {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+
+  .clip-triangle-bl {
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+  }
+
   .text-balance {
     text-wrap: balance;
   }
