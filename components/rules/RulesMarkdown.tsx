@@ -36,6 +36,8 @@ function isOrderedListLine(line: string): boolean {
   return /^\d+\.\s/.test(line.trim());
 }
 
+const HIDDEN_RULE_TABLE_ROWS = new Set(["ジャンル"]);
+
 function parseTableBlock(lines: string[]): Block | null {
   if (!lines.every((line) => line.trim().startsWith("|"))) {
     return null;
@@ -48,7 +50,8 @@ function parseTableBlock(lines: string[]): Block | null {
         .split("|")
         .slice(1, -1)
         .map((cell) => cell.trim())
-    );
+    )
+    .filter((row, index) => index === 0 || !HIDDEN_RULE_TABLE_ROWS.has(row[0] ?? ""));
 
   return rows.length > 0 ? { type: "table", rows } : null;
 }
