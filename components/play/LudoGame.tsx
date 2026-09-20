@@ -11,6 +11,7 @@ import {
   LUDO_GRID,
   LUDO_HOME,
   LUDO_PATH,
+  LUDO_PLAYER_META,
   ludoStartCoord,
   type Coord,
 } from "@/lib/play/ludo-board";
@@ -36,11 +37,12 @@ type CellInfo = {
   homeSlot?: number;
 };
 
+/** 0=赤BL / 1=青TL / 2=緑BR / 3=黄TR */
 const BASE_REGIONS: { player: number; rows: [number, number]; cols: [number, number] }[] = [
   { player: 0, rows: [9, 14], cols: [0, 5] },
   { player: 1, rows: [0, 5], cols: [0, 5] },
-  { player: 2, rows: [0, 5], cols: [9, 14] },
-  { player: 3, rows: [9, 14], cols: [9, 14] },
+  { player: 2, rows: [9, 14], cols: [9, 14] },
+  { player: 3, rows: [0, 5], cols: [9, 14] },
 ];
 
 function buildCellMap(activePlayers: number[]) {
@@ -266,14 +268,15 @@ export function LudoGame() {
         <div className="mt-2 flex flex-wrap justify-center gap-3 text-[10px] text-slate-400">
           {state.activePlayers.map((p, displayIdx) => {
             const style = getPlayerTurnStyle(p);
+            const meta = LUDO_PLAYER_META[p];
             return (
               <span key={p} className="inline-flex items-center gap-1">
                 <span className={`h-2.5 w-2.5 rounded-sm ring-2 ring-inset ${style.pieceRing} ${style.bg}`} />
-                P{displayIdx + 1} スタート
+                P{displayIdx + 1}（{meta.name}・{meta.corner}）出
                 <span className={`h-2.5 w-2.5 rounded-sm ${style.sectionBg}`} />
                 1〜3
                 <span className={`h-2.5 w-2.5 rounded-sm ${style.piece}/35 ring-1 ${style.pieceRing}`} />
-                ★ゴール
+                ★
               </span>
             );
           })}

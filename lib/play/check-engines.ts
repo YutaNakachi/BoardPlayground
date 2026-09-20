@@ -450,8 +450,8 @@ function checkLudo() {
   const capture = initialLudo(2);
   capture.lastRoll = 3;
   capture.extraTurn = false;
-  capture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 2 };
-  capture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 31 };
+  capture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 7 };
+  capture.tokens[4] = { player: 3, index: 0, zone: "track", steps: 36 };
   const capMove = ludoMoves(capture).find((m) => m.tokenIndex === 0);
   assert(capMove != null, "ludo capture move exists");
   const afterCap = applyLudoMove(capture, capMove!);

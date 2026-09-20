@@ -1,13 +1,24 @@
-/** 15×15 十字型ルドー盤の座標定義 */
+/** 15×15 十字型ルドー盤（どようび堂の木製盤面準拠） */
 
 export const LUDO_GRID = 15;
 export const LUDO_PATH_LEN = 52;
 export const LUDO_HOME_LEN = 4;
-export const LUDO_TRACK_STEPS = 51; // entry(0) からゴール列入口まで
+export const LUDO_TRACK_STEPS = 51;
 
 export type Coord = { r: number; c: number };
 
-/** 共有コース 52 マス（プレイヤー0のスタートから反時計回り） */
+/**
+ * プレイヤーと色（サイト表示色との対応）
+ * 0=赤・左下 / 1=青・左上 / 2=緑・右下 / 3=黄・右上
+ */
+export const LUDO_PLAYER_META = [
+  { name: "赤", corner: "左下" },
+  { name: "青", corner: "左上" },
+  { name: "緑", corner: "右下" },
+  { name: "黄", corner: "右上" },
+] as const;
+
+/** 共有コース 52 マス（赤スタートから反時計回り） */
 const RAW_PATH: readonly [number, number][] = [
   [6, 13], [6, 12], [6, 11], [6, 10], [6, 9],
   [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
@@ -25,28 +36,28 @@ const RAW_PATH: readonly [number, number][] = [
 
 export const LUDO_PATH: readonly Coord[] = RAW_PATH.map(([c, r]) => ({ r, c }));
 
-/** 各プレイヤーのスタートマス（コース上のインデックス） */
-export const LUDO_ENTRY: readonly number[] = [0, 13, 26, 39];
+/** 各プレイヤーのスタート（コース上のインデックス） */
+export const LUDO_ENTRY: readonly number[] = [0, 13, 39, 26];
 
-/** ゴール列 4 マス（内側が最終ゴール） */
+/** ゴール列 4 マス（外側=入口 → 内側=★ゴール） */
 export const LUDO_HOME: readonly Coord[][] = [
   [{ r: 12, c: 7 }, { r: 11, c: 7 }, { r: 10, c: 7 }, { r: 9, c: 7 }],
-  [{ r: 7, c: 12 }, { r: 7, c: 11 }, { r: 7, c: 10 }, { r: 7, c: 9 }],
-  [{ r: 1, c: 7 }, { r: 2, c: 7 }, { r: 3, c: 7 }, { r: 4, c: 7 }],
-  [{ r: 7, c: 1 }, { r: 7, c: 2 }, { r: 7, c: 3 }, { r: 7, c: 4 }],
+  [{ r: 7, c: 9 }, { r: 7, c: 10 }, { r: 7, c: 11 }, { r: 7, c: 12 }],
+  [{ r: 7, c: 4 }, { r: 7, c: 3 }, { r: 7, c: 2 }, { r: 7, c: 1 }],
+  [{ r: 4, c: 7 }, { r: 3, c: 7 }, { r: 2, c: 7 }, { r: 1, c: 7 }],
 ];
 
-/** コマ置き場（ヤード）の 4 スロット */
+/** コマ置き場（ヤード） */
 export const LUDO_YARD: readonly Coord[][] = [
   [{ r: 10, c: 1 }, { r: 10, c: 2 }, { r: 11, c: 1 }, { r: 11, c: 2 }],
   [{ r: 1, c: 1 }, { r: 1, c: 2 }, { r: 2, c: 1 }, { r: 2, c: 2 }],
-  [{ r: 1, c: 12 }, { r: 1, c: 13 }, { r: 2, c: 12 }, { r: 2, c: 13 }],
   [{ r: 10, c: 12 }, { r: 10, c: 13 }, { r: 11, c: 12 }, { r: 11, c: 13 }],
+  [{ r: 1, c: 12 }, { r: 1, c: 13 }, { r: 2, c: 12 }, { r: 2, c: 13 }],
 ];
 
 export function ludoActivePlayers(count: number): number[] {
-  if (count === 2) return [0, 2];
-  if (count === 3) return [0, 1, 2];
+  if (count === 2) return [0, 3];
+  if (count === 3) return [0, 1, 3];
   return [0, 1, 2, 3];
 }
 
@@ -66,7 +77,6 @@ export function isStartPathIndex(pathIndex: number): boolean {
   return LUDO_ENTRY.includes(pathIndex);
 }
 
-/** 各プレイヤーのスタートマス座標 */
 export const LUDO_START: readonly Coord[] = LUDO_ENTRY.map((i) => LUDO_PATH[i]);
 
 export function ludoStartCoord(player: number): Coord {
