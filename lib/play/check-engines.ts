@@ -46,7 +46,14 @@ import {
 } from "./fox-hounds";
 import { gomokuWinner } from "./gomoku";
 import { initialKlondike } from "./klondike";
-import { initialLudo, applyLudoMove, ludoGoalCount, ludoMoves } from "./ludo";
+import {
+  initialLudo,
+  applyLudoMove,
+  isLudoTokenFinished,
+  ludoDeepestFinishSlot,
+  ludoGoalCount,
+  ludoMoves,
+} from "./ludo";
 import {
   initialMahjongSolitaire,
   isMahjongTileFree,
@@ -437,7 +444,7 @@ function checkLudo() {
   assert(started !== null && started.current === 0, "ludo extra turn after six start");
 
   const nearGoal = initialLudo(2);
-  nearGoal.tokens[0] = { player: 0, index: 0, zone: "track", steps: 50 };
+  nearGoal.tokens[0] = { player: 0, index: 0, zone: "track", steps: 43 };
   for (let i = 1; i < 4; i++) {
     nearGoal.tokens[i] = { player: 0, index: i, zone: "home", steps: 3 };
   }
@@ -450,16 +457,133 @@ function checkLudo() {
   const capture = initialLudo(2);
   capture.lastRoll = 3;
   capture.extraTurn = false;
-  capture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 7 };
-  capture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 36 };
+  capture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 5 };
+  capture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 30 };
   const capMove = ludoMoves(capture).find((m) => m.tokenIndex === 0);
   assert(capMove != null, "ludo capture move exists");
   const afterCap = applyLudoMove(capture, capMove!);
   assert(afterCap !== null && afterCap.tokens[4].zone === "yard", "ludo capture sends home");
 
+  const startCapture = initialLudo(2);
+  startCapture.lastRoll = 6;
+  startCapture.extraTurn = true;
+  startCapture.tokens[0] = { player: 0, index: 0, zone: "yard", steps: 0 };
+  startCapture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 22 };
+  const startCapMove = ludoMoves(startCapture).find((m) => m.tokenIndex === 0);
+  assert(startCapMove != null, "ludo can start onto occupied start square");
+  const afterStartCap = applyLudoMove(startCapture, startCapMove!);
+  assert(
+    afterStartCap !== null && afterStartCap.tokens[4].zone === "yard",
+    "ludo captures non-start enemy on start square"
+  );
+
+  const captureOnStart = initialLudo(2);
+  captureOnStart.lastRoll = 1;
+  captureOnStart.extraTurn = false;
+  captureOnStart.tokens[0] = { player: 0, index: 0, zone: "track", steps: 21 };
+  captureOnStart.tokens[4] = { player: 2, index: 0, zone: "track", steps: 0 };
+  const captureOnStartMove = ludoMoves(captureOnStart).find((m) => m.tokenIndex === 0);
+  assert(captureOnStartMove != null, "ludo can land on enemy start");
+  const afterCaptureOnStart = applyLudoMove(captureOnStart, captureOnStartMove!);
+  assert(
+    afterCaptureOnStart !== null && afterCaptureOnStart.tokens[4].zone === "yard",
+    "ludo captures enemy on start square"
+  );
+
   const partialGoal = initialLudo(2);
-  partialGoal.tokens[0] = { player: 0, index: 0, zone: "home", steps: 1 };
-  assert(ludoGoalCount(partialGoal, 0) === 1, "ludo counts any home slot as goal");
+  partialGoal.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
+  assert(ludoGoalCount(partialGoal, 0) === 1, "ludo counts finished tokens as goal");
+  partialGoal.tokens[1] = { player: 0, index: 1, zone: "home", steps: 1 };
+  assert(ludoGoalCount(partialGoal, 0) === 1, "ludo mid-home token is not goal yet");
+
+  const deepest = initialLudo(2);
+  deepest.tokens[0] = { player: 0, index: 0, zone: "home", steps: 3 };
+  deepest.lastRoll = 1;
+  assert(ludoDeepestFinishSlot(deepest.tokens, 0) === 4, "ludo deepest slot defaults to 4");
+  const deepestMove = ludoMoves(deepest).find((m) => m.tokenIndex === 0);
+  assert(deepestMove != null, "ludo can reach deepest home slot");
+  const atGoal = applyLudoMove(deepest, deepestMove!);
+  assert(
+    atGoal !== null && atGoal.tokens[0].zone === "home" && atGoal.tokens[0].steps === 4,
+    "ludo deepest home slot reached"
+  );
+  assert(isLudoTokenFinished(atGoal!.tokens, 0), "ludo slot4 token is finished");
+
+  const dynamicDeepest = initialLudo(2);
+  dynamicDeepest.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
+  dynamicDeepest.tokens[1] = { player: 0, index: 1, zone: "home", steps: 2 };
+  dynamicDeepest.lastRoll = 1;
+  assert(ludoDeepestFinishSlot(dynamicDeepest.tokens, 0) === 3, "ludo deepest retreats to slot3");
+  const toSlot3 = ludoMoves(dynamicDeepest).find((m) => m.tokenIndex === 1);
+  assert(toSlot3 != null, "ludo can finish at slot3 when slot4 taken");
+  const atSlot3 = applyLudoMove(dynamicDeepest, toSlot3!);
+  assert(
+    atSlot3 !== null && isLudoTokenFinished(atSlot3.tokens, 1),
+    "ludo slot3 finish when slot4 occupied"
+  );
+
+  const homeEntry = initialLudo(2);
+  homeEntry.tokens[0] = { player: 0, index: 0, zone: "track", steps: 43 };
+  homeEntry.lastRoll = 1;
+  const homeEntryMove = ludoMoves(homeEntry).find((m) => m.tokenIndex === 0);
+  assert(homeEntryMove != null, "ludo home entry roll 1 advances");
+  const afterHomeEntry = applyLudoMove(homeEntry, homeEntryMove!);
+  assert(
+    afterHomeEntry !== null &&
+      afterHomeEntry.tokens[0].zone === "home" &&
+      afterHomeEntry.tokens[0].steps === 1,
+    "ludo home entry roll 1 reaches slot1"
+  );
+
+  const homeFromApproach = initialLudo(2);
+  homeFromApproach.tokens[0] = { player: 0, index: 0, zone: "track", steps: 42 };
+  homeFromApproach.lastRoll = 2;
+  const homeFromApproachMove = ludoMoves(homeFromApproach).find((m) => m.tokenIndex === 0);
+  assert(homeFromApproachMove != null, "ludo approach roll 2 enters home");
+  const afterApproach = applyLudoMove(homeFromApproach, homeFromApproachMove!);
+  assert(
+    afterApproach !== null &&
+      afterApproach.tokens[0].zone === "home" &&
+      afterApproach.tokens[0].steps === 1,
+    "ludo approach roll 2 reaches slot1"
+  );
+
+  const homeEntryCapture = initialLudo(2);
+  homeEntryCapture.lastRoll = 2;
+  homeEntryCapture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 42 };
+  homeEntryCapture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 21 };
+  const homeEntryCaptureMove = ludoMoves(homeEntryCapture).find((m) => m.tokenIndex === 0);
+  assert(homeEntryCaptureMove != null, "ludo can enter home past entry");
+  const afterHomeEntryCapture = applyLudoMove(homeEntryCapture, homeEntryCaptureMove!);
+  assert(
+    afterHomeEntryCapture !== null && afterHomeEntryCapture.tokens[4].zone === "yard",
+    "ludo captures enemy on home entry when passing through"
+  );
+
+  const blockedHome = initialLudo(2);
+  blockedHome.tokens[0] = { player: 0, index: 0, zone: "home", steps: 0 };
+  blockedHome.tokens[1] = { player: 0, index: 1, zone: "home", steps: 1 };
+  blockedHome.lastRoll = 1;
+  assert(
+    ludoMoves(blockedHome).find((m) => m.tokenIndex === 0) == null,
+    "ludo home overlap blocked past entry"
+  );
+
+  const entryStack = initialLudo(2);
+  entryStack.tokens[0] = { player: 0, index: 0, zone: "home", steps: 0 };
+  entryStack.tokens[1] = { player: 0, index: 1, zone: "track", steps: 43 };
+  entryStack.lastRoll = 1;
+  assert(
+    ludoMoves(entryStack).find((m) => m.tokenIndex === 1) != null,
+    "ludo home entry allows stacking"
+  );
+
+  const slot3Finished = initialLudo(2);
+  slot3Finished.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
+  slot3Finished.tokens[1] = { player: 0, index: 1, zone: "home", steps: 3 };
+  slot3Finished.lastRoll = 1;
+  assert(isLudoTokenFinished(slot3Finished.tokens, 1), "ludo slot3 finished when slot4 occupied");
+  assert(ludoMoves(slot3Finished).length === 0, "ludo finished tokens cannot move");
 }
 
 function checkBackgammon() {

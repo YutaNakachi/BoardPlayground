@@ -1,14 +1,22 @@
-/** 15×15 十字型ルドー盤（クラシック盤面準拠） */
+/** 15×15 十字型ルドー盤（表示は外周1マスを除く13×13） */
 
 export const LUDO_GRID = 15;
-export const LUDO_PATH_LEN = 52;
+export const LUDO_DISPLAY_MARGIN = 1;
+export const LUDO_DISPLAY_GRID = LUDO_GRID - LUDO_DISPLAY_MARGIN * 2;
 export const LUDO_HOME_LEN = 5;
-export const LUDO_TRACK_STEPS = LUDO_PATH_LEN - 1;
 
 export type Coord = { r: number; c: number };
 
 /** 盤面表示用のプレイヤー色インデックス（赤・緑・黄・青） */
 export const LUDO_STYLE_INDEX: readonly number[] = [0, 2, 3, 1];
+
+/** 待機席（ヤード）の背景色 — Tailwind に完全なクラス名を渡す */
+export const LUDO_YARD_BG: readonly string[] = [
+  "bg-accent/25",
+  "bg-emerald-500/25",
+  "bg-amber-500/25",
+  "bg-sky-500/25",
+];
 
 /**
  * プレイヤー配置（画像と同じ：左上から反時計回り）
@@ -37,10 +45,52 @@ const RAW_PATH: readonly [number, number][] = [
   [7, 14], [6, 14],
 ];
 
-export const LUDO_PATH: readonly Coord[] = RAW_PATH.map(([c, r]) => ({ r, c }));
+/** 十字の先端1列（コース・表示ともに除外） */
+export function isLudoArmTip(r: number, c: number): boolean {
+  if (r === 0 && c >= 6 && c <= 8) return true;
+  if (r === 14 && c >= 6 && c <= 8) return true;
+  if (c === 0 && r >= 6 && r <= 8) return true;
+  if (c === 14 && r >= 6 && r <= 8) return true;
+  return false;
+}
+
+const HOME_ENTRIES: readonly Coord[] = [
+  { r: 7, c: 1 },
+  { r: 1, c: 7 },
+  { r: 7, c: 13 },
+  { r: 13, c: 7 },
+];
+
+function isHomeEntry({ r, c }: Coord): boolean {
+  return HOME_ENTRIES.some((e) => e.r === r && e.c === c);
+}
+
+/** ゴール列入口が飛ばされないよう、対角ジャンプの中間に挿入 */
+function buildTrackPath(raw: readonly Coord[]): Coord[] {
+  const filtered = raw.filter(({ r, c }) => !isLudoArmTip(r, c));
+  const fixed: Coord[] = [];
+  for (let i = 0; i < filtered.length; i++) {
+    fixed.push(filtered[i]);
+    const a = filtered[i];
+    const b = filtered[(i + 1) % filtered.length];
+    const dist = Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
+    if (dist === 2) {
+      const mid = { r: (a.r + b.r) / 2, c: (a.c + b.c) / 2 };
+      if (isHomeEntry(mid)) fixed.push(mid);
+    }
+  }
+  return fixed;
+}
+
+export const LUDO_PATH: readonly Coord[] = buildTrackPath(
+  RAW_PATH.map(([c, r]) => ({ r, c }))
+);
+
+export const LUDO_PATH_LEN = LUDO_PATH.length;
+export const LUDO_TRACK_STEPS = LUDO_PATH_LEN - 1;
 
 /** 各プレイヤーのスタート（コース上のインデックス） */
-export const LUDO_ENTRY: readonly number[] = [13, 26, 39, 0];
+export const LUDO_ENTRY: readonly number[] = [11, 22, 33, 0];
 
 /** スタートマスの進行方向（矢印表示用） */
 export const LUDO_START_ARROW: readonly ("right" | "down" | "left" | "up")[] = [

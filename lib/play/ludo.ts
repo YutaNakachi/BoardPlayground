@@ -1,6 +1,5 @@
 import { rollDie } from "@/lib/play/dice";
 import {
-  isStartPathIndex,
   ludoActivePlayers,
   LUDO_HOME_LEN,
   LUDO_TRACK_STEPS,
@@ -11,7 +10,7 @@ import {
 export type LudoToken = {
   player: number;
   index: number;
-  /** yard | track steps 0-51 | home slot 0-4 */
+  /** yard | track steps 0-43 | home slot 0-4 */
   zone: "yard" | "track" | "home";
   steps: number;
 };
@@ -55,21 +54,83 @@ export function rollLudo(state: LudoState): LudoState {
   return { ...state, lastRoll: roll, extraTurn: roll === 6 };
 }
 
-function totalSteps(token: LudoToken): number {
-  if (token.zone === "yard") return -1;
-  if (token.zone === "track") return token.steps;
-  return LUDO_TRACK_STEPS + token.steps;
+/** いま到達可能な最奥スロット（内側から見て最初の空き） */
+export function ludoDeepestFinishSlot(tokens: LudoToken[], player: number): number {
+  for (let slot = LUDO_HOME_LEN - 1; slot >= 0; slot--) {
+    if (!homeSlotOccupied(tokens, player, slot, -1)) return slot;
+  }
+  return -1;
 }
 
-function isFinished(token: LudoToken): boolean {
-  return token.zone === "home" && token.steps === LUDO_HOME_LEN - 1;
+/** 内側のマスがすべて埋まっていれば、そのコマは最奥到達済み */
+export function isLudoTokenFinished(tokens: LudoToken[], tokenIndex: number): boolean {
+  const token = tokens[tokenIndex];
+  if (token.zone !== "home") return false;
+  for (let slot = token.steps + 1; slot < LUDO_HOME_LEN; slot++) {
+    if (!homeSlotOccupied(tokens, token.player, slot, -1)) return false;
+  }
+  return true;
 }
 
-function canAdvance(token: LudoToken, roll: number): boolean {
-  if (isFinished(token)) return false;
+function homeSlotOccupied(
+  tokens: LudoToken[],
+  player: number,
+  slot: number,
+  excludeIndex: number
+): boolean {
+  return tokens.some(
+    (t, i) =>
+      i !== excludeIndex &&
+      t.player === player &&
+      t.zone === "home" &&
+      t.steps === slot
+  );
+}
+
+/** ゴール列の到達先スロット。コース上に留まる場合は null */
+function targetHomeSlot(token: LudoToken, roll: number): number | null {
+  if (token.zone === "home") {
+    const slot = token.steps + roll;
+    return slot <= LUDO_HOME_LEN - 1 ? slot : null;
+  }
+  const nextTotal = token.steps + roll;
+  if (nextTotal <= LUDO_TRACK_STEPS) return null;
+  // トラック最終マス＝ゴール入口(slot0)。それより先は home slot = nextTotal - TRACK_STEPS
+  const slot = nextTotal - LUDO_TRACK_STEPS;
+  return slot <= LUDO_HOME_LEN - 1 ? slot : null;
+}
+
+function canReachHomeSlot(
+  tokens: LudoToken[],
+  player: number,
+  fromHomeSlot: number | null,
+  targetSlot: number,
+  excludeIndex: number
+): boolean {
+  const start = fromHomeSlot === null ? 0 : fromHomeSlot + 1;
+  for (let slot = start; slot <= targetSlot; slot++) {
+    // 入口（slot 0）はコース上と同様に重なってもよい
+    if (slot === 0) continue;
+    if (homeSlotOccupied(tokens, player, slot, excludeIndex)) return false;
+  }
+  return true;
+}
+
+function canAdvance(tokens: LudoToken[], tokenIndex: number, roll: number): boolean {
+  const token = tokens[tokenIndex];
+  if (isLudoTokenFinished(tokens, tokenIndex)) return false;
   if (token.zone === "yard") return roll === 6;
-  const next = totalSteps(token) + roll;
-  return next <= LUDO_TRACK_STEPS + LUDO_HOME_LEN - 1;
+
+  const targetSlot = targetHomeSlot(token, roll);
+  if (targetSlot !== null) {
+    const deepest = ludoDeepestFinishSlot(tokens, token.player);
+    if (targetSlot > deepest) return false;
+    const fromSlot = token.zone === "home" ? token.steps : null;
+    return canReachHomeSlot(tokens, token.player, fromSlot, targetSlot, tokenIndex);
+  }
+
+  if (token.zone === "home") return false;
+  return token.steps + roll <= LUDO_TRACK_STEPS;
 }
 
 export function ludoMoves(state: LudoState): LudoMove[] {
@@ -81,7 +142,7 @@ export function ludoMoves(state: LudoState): LudoMove[] {
   for (let i = 0; i < state.tokens.length; i++) {
     const token = state.tokens[i];
     if (token.player !== player) continue;
-    if (canAdvance(token, roll)) moves.push({ tokenIndex: i });
+    if (canAdvance(state.tokens, i, roll)) moves.push({ tokenIndex: i });
   }
   return moves;
 }
@@ -90,11 +151,14 @@ function applyTokenAdvance(token: LudoToken, roll: number): LudoToken {
   if (token.zone === "yard") {
     return { ...token, zone: "track", steps: 0 };
   }
-  const nextTotal = totalSteps(token) + roll;
+  if (token.zone === "home") {
+    return { ...token, zone: "home", steps: token.steps + roll };
+  }
+  const nextTotal = token.steps + roll;
   if (nextTotal <= LUDO_TRACK_STEPS) {
     return { ...token, zone: "track", steps: nextTotal };
   }
-  return { ...token, zone: "home", steps: nextTotal - LUDO_TRACK_STEPS - 1 };
+  return { ...token, zone: "home", steps: nextTotal - LUDO_TRACK_STEPS };
 }
 
 function captureAt(
@@ -103,7 +167,6 @@ function captureAt(
   pathIndex: number,
   moverIndex: number
 ): LudoToken[] {
-  if (isStartPathIndex(pathIndex)) return tokens;
   return tokens.map((t, i) => {
     if (i === moverIndex || t.player === player || t.zone !== "track") return t;
     if (pathIndexForSteps(t.player, t.steps) !== pathIndex) return t;
@@ -128,11 +191,17 @@ export function applyLudoMove(state: LudoState, move: LudoMove): LudoState | nul
     tokens.splice(0, tokens.length, ...captured);
   } else {
     tokens[move.tokenIndex] = advanced;
+    // ゴール列に入る際、入口（slot0）を通過したらそこで取る
+    if (token.zone === "track" && token.steps < LUDO_TRACK_STEPS) {
+      const entryPathIndex = pathIndexForSteps(player, LUDO_TRACK_STEPS);
+      const captured = captureAt(tokens, player, entryPathIndex, move.tokenIndex);
+      tokens.splice(0, tokens.length, ...captured);
+    }
   }
 
-  const allHome = tokens
-    .filter((t) => t.player === player)
-    .every((t) => t.zone === "home");
+  const allFinished = tokens.every(
+    (t, i) => t.player !== player || isLudoTokenFinished(tokens, i)
+  );
 
   const extra = state.extraTurn;
   const turnIndex = state.activePlayers.indexOf(player);
@@ -146,7 +215,7 @@ export function applyLudoMove(state: LudoState, move: LudoMove): LudoState | nul
     current: nextPlayer,
     lastRoll: null,
     extraTurn: false,
-    winner: allHome ? player : null,
+    winner: allFinished ? player : null,
   };
 }
 
@@ -168,7 +237,9 @@ export function ludoTokenCoord(token: LudoToken): Coord {
 }
 
 export function ludoGoalCount(state: LudoState, player: number): number {
-  return state.tokens.filter((t) => t.player === player && t.zone === "home").length;
+  return state.tokens.filter(
+    (t, i) => t.player === player && isLudoTokenFinished(state.tokens, i)
+  ).length;
 }
 
 export { trackCoord } from "@/lib/play/ludo-board";
