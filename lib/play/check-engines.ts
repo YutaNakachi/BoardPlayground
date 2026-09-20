@@ -522,6 +522,32 @@ function checkLudo() {
     "ludo slot3 finish when slot4 occupied"
   );
 
+  const homeEntry = initialLudo(2);
+  homeEntry.tokens[0] = { player: 0, index: 0, zone: "track", steps: 43 };
+  homeEntry.lastRoll = 1;
+  const homeEntryMove = ludoMoves(homeEntry).find((m) => m.tokenIndex === 0);
+  assert(homeEntryMove != null, "ludo home entry roll 1 advances");
+  const afterHomeEntry = applyLudoMove(homeEntry, homeEntryMove!);
+  assert(
+    afterHomeEntry !== null &&
+      afterHomeEntry.tokens[0].zone === "home" &&
+      afterHomeEntry.tokens[0].steps === 1,
+    "ludo home entry roll 1 reaches slot1"
+  );
+
+  const homeFromApproach = initialLudo(2);
+  homeFromApproach.tokens[0] = { player: 0, index: 0, zone: "track", steps: 42 };
+  homeFromApproach.lastRoll = 2;
+  const homeFromApproachMove = ludoMoves(homeFromApproach).find((m) => m.tokenIndex === 0);
+  assert(homeFromApproachMove != null, "ludo approach roll 2 enters home");
+  const afterApproach = applyLudoMove(homeFromApproach, homeFromApproachMove!);
+  assert(
+    afterApproach !== null &&
+      afterApproach.tokens[0].zone === "home" &&
+      afterApproach.tokens[0].steps === 1,
+    "ludo approach roll 2 reaches slot1"
+  );
+
   const blockedHome = initialLudo(2);
   blockedHome.tokens[0] = { player: 0, index: 0, zone: "home", steps: 0 };
   blockedHome.tokens[1] = { player: 0, index: 1, zone: "home", steps: 1 };

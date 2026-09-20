@@ -95,7 +95,8 @@ function targetHomeSlot(token: LudoToken, roll: number): number | null {
   }
   const nextTotal = token.steps + roll;
   if (nextTotal <= LUDO_TRACK_STEPS) return null;
-  const slot = nextTotal - LUDO_TRACK_STEPS - 1;
+  // トラック最終マス＝ゴール入口(slot0)。それより先は home slot = nextTotal - TRACK_STEPS
+  const slot = nextTotal - LUDO_TRACK_STEPS;
   return slot <= LUDO_HOME_LEN - 1 ? slot : null;
 }
 
@@ -157,7 +158,7 @@ function applyTokenAdvance(token: LudoToken, roll: number): LudoToken {
   if (nextTotal <= LUDO_TRACK_STEPS) {
     return { ...token, zone: "track", steps: nextTotal };
   }
-  return { ...token, zone: "home", steps: nextTotal - LUDO_TRACK_STEPS - 1 };
+  return { ...token, zone: "home", steps: nextTotal - LUDO_TRACK_STEPS };
 }
 
 function captureAt(
