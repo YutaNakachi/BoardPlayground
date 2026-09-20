@@ -55,8 +55,22 @@ export function rollLudo(state: LudoState): LudoState {
   return { ...state, lastRoll: roll, extraTurn: roll === 6 };
 }
 
-function isFinished(token: LudoToken): boolean {
-  return token.zone === "home" && token.steps === LUDO_HOME_LEN - 1;
+/** いま到達可能な最奥スロット（内側から見て最初の空き） */
+export function ludoDeepestFinishSlot(tokens: LudoToken[], player: number): number {
+  for (let slot = LUDO_HOME_LEN - 1; slot >= 0; slot--) {
+    if (!homeSlotOccupied(tokens, player, slot, -1)) return slot;
+  }
+  return -1;
+}
+
+/** 内側のマスがすべて埋まっていれば、そのコマは最奥到達済み */
+export function isLudoTokenFinished(tokens: LudoToken[], tokenIndex: number): boolean {
+  const token = tokens[tokenIndex];
+  if (token.zone !== "home") return false;
+  for (let slot = token.steps + 1; slot < LUDO_HOME_LEN; slot++) {
+    if (!homeSlotOccupied(tokens, token.player, slot, -1)) return false;
+  }
+  return true;
 }
 
 function homeSlotOccupied(
@@ -104,11 +118,13 @@ function canReachHomeSlot(
 
 function canAdvance(tokens: LudoToken[], tokenIndex: number, roll: number): boolean {
   const token = tokens[tokenIndex];
-  if (isFinished(token)) return false;
+  if (isLudoTokenFinished(tokens, tokenIndex)) return false;
   if (token.zone === "yard") return roll === 6;
 
   const targetSlot = targetHomeSlot(token, roll);
   if (targetSlot !== null) {
+    const deepest = ludoDeepestFinishSlot(tokens, token.player);
+    if (targetSlot > deepest) return false;
     const fromSlot = token.zone === "home" ? token.steps : null;
     return canReachHomeSlot(tokens, token.player, fromSlot, targetSlot, tokenIndex);
   }
@@ -178,9 +194,9 @@ export function applyLudoMove(state: LudoState, move: LudoMove): LudoState | nul
     tokens[move.tokenIndex] = advanced;
   }
 
-  const allHome = tokens
-    .filter((t) => t.player === player)
-    .every((t) => t.zone === "home");
+  const allFinished = tokens.every(
+    (t, i) => t.player !== player || isLudoTokenFinished(tokens, i)
+  );
 
   const extra = state.extraTurn;
   const turnIndex = state.activePlayers.indexOf(player);
@@ -194,7 +210,7 @@ export function applyLudoMove(state: LudoState, move: LudoMove): LudoState | nul
     current: nextPlayer,
     lastRoll: null,
     extraTurn: false,
-    winner: allHome ? player : null,
+    winner: allFinished ? player : null,
   };
 }
 
@@ -216,7 +232,9 @@ export function ludoTokenCoord(token: LudoToken): Coord {
 }
 
 export function ludoGoalCount(state: LudoState, player: number): number {
-  return state.tokens.filter((t) => t.player === player && t.zone === "home").length;
+  return state.tokens.filter(
+    (t, i) => t.player === player && isLudoTokenFinished(state.tokens, i)
+  ).length;
 }
 
 export { trackCoord } from "@/lib/play/ludo-board";

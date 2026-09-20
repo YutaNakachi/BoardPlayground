@@ -46,7 +46,14 @@ import {
 } from "./fox-hounds";
 import { gomokuWinner } from "./gomoku";
 import { initialKlondike } from "./klondike";
-import { initialLudo, applyLudoMove, ludoGoalCount, ludoMoves } from "./ludo";
+import {
+  initialLudo,
+  applyLudoMove,
+  isLudoTokenFinished,
+  ludoDeepestFinishSlot,
+  ludoGoalCount,
+  ludoMoves,
+} from "./ludo";
 import {
   initialMahjongSolitaire,
   isMahjongTileFree,
@@ -458,18 +465,35 @@ function checkLudo() {
   assert(afterCap !== null && afterCap.tokens[4].zone === "yard", "ludo capture sends home");
 
   const partialGoal = initialLudo(2);
-  partialGoal.tokens[0] = { player: 0, index: 0, zone: "home", steps: 1 };
-  assert(ludoGoalCount(partialGoal, 0) === 1, "ludo counts any home slot as goal");
+  partialGoal.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
+  assert(ludoGoalCount(partialGoal, 0) === 1, "ludo counts finished tokens as goal");
+  partialGoal.tokens[1] = { player: 0, index: 1, zone: "home", steps: 1 };
+  assert(ludoGoalCount(partialGoal, 0) === 1, "ludo mid-home token is not goal yet");
 
   const deepest = initialLudo(2);
   deepest.tokens[0] = { player: 0, index: 0, zone: "home", steps: 3 };
   deepest.lastRoll = 1;
+  assert(ludoDeepestFinishSlot(deepest.tokens, 0) === 4, "ludo deepest slot defaults to 4");
   const deepestMove = ludoMoves(deepest).find((m) => m.tokenIndex === 0);
   assert(deepestMove != null, "ludo can reach deepest home slot");
   const atGoal = applyLudoMove(deepest, deepestMove!);
   assert(
     atGoal !== null && atGoal.tokens[0].zone === "home" && atGoal.tokens[0].steps === 4,
     "ludo deepest home slot reached"
+  );
+  assert(isLudoTokenFinished(atGoal!.tokens, 0), "ludo slot4 token is finished");
+
+  const dynamicDeepest = initialLudo(2);
+  dynamicDeepest.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
+  dynamicDeepest.tokens[1] = { player: 0, index: 1, zone: "home", steps: 2 };
+  dynamicDeepest.lastRoll = 1;
+  assert(ludoDeepestFinishSlot(dynamicDeepest.tokens, 0) === 3, "ludo deepest retreats to slot3");
+  const toSlot3 = ludoMoves(dynamicDeepest).find((m) => m.tokenIndex === 1);
+  assert(toSlot3 != null, "ludo can finish at slot3 when slot4 taken");
+  const atSlot3 = applyLudoMove(dynamicDeepest, toSlot3!);
+  assert(
+    atSlot3 !== null && isLudoTokenFinished(atSlot3.tokens, 1),
+    "ludo slot3 finish when slot4 occupied"
   );
 
   const blockedHome = initialLudo(2);
@@ -490,14 +514,12 @@ function checkLudo() {
     "ludo home entry allows stacking"
   );
 
-  const slot3Blocked = initialLudo(2);
-  slot3Blocked.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
-  slot3Blocked.tokens[1] = { player: 0, index: 1, zone: "home", steps: 3 };
-  slot3Blocked.lastRoll = 1;
-  assert(
-    ludoMoves(slot3Blocked).length === 0,
-    "ludo slot3 cannot advance when slot4 occupied"
-  );
+  const slot3Finished = initialLudo(2);
+  slot3Finished.tokens[0] = { player: 0, index: 0, zone: "home", steps: 4 };
+  slot3Finished.tokens[1] = { player: 0, index: 1, zone: "home", steps: 3 };
+  slot3Finished.lastRoll = 1;
+  assert(isLudoTokenFinished(slot3Finished.tokens, 1), "ludo slot3 finished when slot4 occupied");
+  assert(ludoMoves(slot3Finished).length === 0, "ludo finished tokens cannot move");
 }
 
 function checkBackgammon() {

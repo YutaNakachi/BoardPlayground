@@ -1,7 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -26,6 +26,7 @@ import {
 import {
   applyLudoMove,
   initialLudo,
+  isLudoTokenFinished,
   ludoMoves,
   ludoTokenCoord,
   rollLudo,
@@ -352,16 +353,41 @@ export function LudoGame() {
                   />
                 ) : null}
 
-                {tokensByPlayer(here).map(([player, group]) => {
-                  const indices = group.map((t) => state.tokens.indexOf(t));
+                {tokensByPlayer(here).flatMap(([player, group]) => {
+                  const tokenStyle = ludoStyle(player);
+                  const onColoredCell = info.isStart || info.kind === "home";
+                  const finished = group.filter((t) =>
+                    isLudoTokenFinished(state.tokens, state.tokens.indexOf(t))
+                  );
+                  const active = group.filter(
+                    (t) => !isLudoTokenFinished(state.tokens, state.tokens.indexOf(t))
+                  );
+                  const pieces: ReactNode[] = [];
+
+                  for (const token of finished) {
+                    pieces.push(
+                      <span
+                        key={`${player}-done-${token.index}`}
+                        className={`pointer-events-none absolute inset-[14%] z-10 rounded-full opacity-90 ${tokenStyle.piece} ${
+                          onColoredCell
+                            ? "ring-2 ring-white/70 ring-offset-1 ring-offset-slate-950"
+                            : tokenStyle.dotShadow
+                        }`}
+                        aria-label={`P${state.activePlayers.indexOf(player) + 1} ゴール済みコマ`}
+                      />
+                    );
+                  }
+
+                  if (active.length === 0) return pieces;
+
+                  const indices = active.map((t) => state.tokens.indexOf(t));
                   const tokenIndex =
                     indices.find((i) => movableTokenIds.has(i)) ?? indices[0];
-                  const tokenStyle = ludoStyle(player);
                   const canMove = movableTokenIds.has(tokenIndex);
-                  const onColoredCell = info.isStart || info.kind === "home";
-                  return (
+
+                  pieces.push(
                     <button
-                      key={`${player}-${group.map((t) => t.index).join("-")}`}
+                      key={`${player}-active-${active.map((t) => t.index).join("-")}`}
                       type="button"
                       onClick={() => onToken(tokenIndex)}
                       disabled={!canMove}
@@ -372,18 +398,20 @@ export function LudoGame() {
                             ? "ring-2 ring-white ring-offset-1 ring-offset-slate-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
                             : tokenStyle.dotShadow
                       }`}
-                      aria-label={`P${state.activePlayers.indexOf(player) + 1} コマ ${group.length}個`}
+                      aria-label={`P${state.activePlayers.indexOf(player) + 1} コマ ${active.length}個`}
                     >
-                      {group.length >= 2 ? (
+                      {active.length >= 2 ? (
                         <span
                           className="pointer-events-none flex h-full items-center justify-center text-[9px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
                           aria-hidden
                         >
-                          {group.length}
+                          {active.length}
                         </span>
                       ) : null}
                     </button>
                   );
+
+                  return pieces;
                 })}
               </div>
             );
