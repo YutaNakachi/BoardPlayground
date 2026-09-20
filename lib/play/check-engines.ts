@@ -437,7 +437,7 @@ function checkLudo() {
   assert(started !== null && started.current === 0, "ludo extra turn after six start");
 
   const nearGoal = initialLudo(2);
-  nearGoal.tokens[0] = { player: 0, index: 0, zone: "track", steps: 49 };
+  nearGoal.tokens[0] = { player: 0, index: 0, zone: "track", steps: 41 };
   for (let i = 1; i < 4; i++) {
     nearGoal.tokens[i] = { player: 0, index: i, zone: "home", steps: 3 };
   }
@@ -451,7 +451,7 @@ function checkLudo() {
   capture.lastRoll = 3;
   capture.extraTurn = false;
   capture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 7 };
-  capture.tokens[4] = { player: 3, index: 0, zone: "track", steps: 36 };
+  capture.tokens[4] = { player: 3, index: 0, zone: "track", steps: 32 };
   const capMove = ludoMoves(capture).find((m) => m.tokenIndex === 0);
   assert(capMove != null, "ludo capture move exists");
   const afterCap = applyLudoMove(capture, capMove!);

@@ -39,10 +39,10 @@ type CellInfo = {
 
 /** 0=赤BL / 1=青TL / 2=緑BR / 3=黄TR */
 const BASE_REGIONS: { player: number; rows: [number, number]; cols: [number, number] }[] = [
-  { player: 0, rows: [9, 14], cols: [0, 5] },
-  { player: 1, rows: [0, 5], cols: [0, 5] },
-  { player: 2, rows: [9, 14], cols: [9, 14] },
-  { player: 3, rows: [0, 5], cols: [9, 14] },
+  { player: 0, rows: [8, 12], cols: [0, 4] },
+  { player: 1, rows: [0, 4], cols: [0, 4] },
+  { player: 2, rows: [8, 12], cols: [8, 12] },
+  { player: 3, rows: [0, 4], cols: [8, 12] },
 ];
 
 function buildCellMap(activePlayers: number[]) {
@@ -76,7 +76,7 @@ function cellInfo(
   baseMap: Map<string, number>
 ): CellInfo {
   const key = coordKey({ r, c });
-  if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { kind: "center" };
+  if (r >= 5 && r <= 7 && c >= 5 && c <= 7) return { kind: "center" };
   if (homeMap.has(key)) {
     const home = homeMap.get(key)!;
     return { kind: "home", owner: home.player, homeSlot: home.slot };
@@ -86,8 +86,8 @@ function cellInfo(
   }
   if (pathKeys.has(key)) return { kind: "path" };
   if (baseMap.has(key)) return { kind: "base", owner: baseMap.get(key) };
-  if (r >= 6 && r <= 8) return { kind: "path" };
-  if (c >= 6 && c <= 8) return { kind: "path" };
+  if (r >= 5 && r <= 7) return { kind: "path" };
+  if (c >= 5 && c <= 7) return { kind: "path" };
   return { kind: "empty" };
 }
 
@@ -228,14 +228,6 @@ export function LudoGame() {
                 key={`${r}-${c}`}
                 className={`relative aspect-square ${cellAppearance(info)}`}
               >
-                {here.length === 0 && info.isStart && markerStyle ? (
-                  <span
-                    className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[7px] font-bold ${markerStyle.label}`}
-                    aria-hidden
-                  >
-                    出
-                  </span>
-                ) : null}
                 {here.length === 0 && info.kind === "home" && markerStyle ? (
                   <span
                     className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[7px] font-bold ${markerStyle.label} opacity-80`}
@@ -272,7 +264,7 @@ export function LudoGame() {
             return (
               <span key={p} className="inline-flex items-center gap-1">
                 <span className={`h-2.5 w-2.5 rounded-sm ring-2 ring-inset ${style.pieceRing} ${style.bg}`} />
-                P{displayIdx + 1}（{meta.name}・{meta.corner}）出
+                P{displayIdx + 1}（{meta.name}・{meta.corner}）スタート
                 <span className={`h-2.5 w-2.5 rounded-sm ${style.sectionBg}`} />
                 1〜3
                 <span className={`h-2.5 w-2.5 rounded-sm ${style.piece}/35 ring-1 ${style.pieceRing}`} />
