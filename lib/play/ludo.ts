@@ -11,7 +11,7 @@ import {
 export type LudoToken = {
   player: number;
   index: number;
-  /** yard | track steps 0-51 | home slot 0-4 */
+  /** yard | track steps 0-39 | home slot 0-4 */
   zone: "yard" | "track" | "home";
   steps: number;
 };

@@ -1,9 +1,9 @@
-/** 15×15 十字型ルドー盤（クラシック盤面準拠） */
+/** 15×15 十字型ルドー盤（表示は外周1マスを除く13×13） */
 
 export const LUDO_GRID = 15;
-export const LUDO_PATH_LEN = 52;
+export const LUDO_DISPLAY_MARGIN = 1;
+export const LUDO_DISPLAY_GRID = LUDO_GRID - LUDO_DISPLAY_MARGIN * 2;
 export const LUDO_HOME_LEN = 5;
-export const LUDO_TRACK_STEPS = LUDO_PATH_LEN - 1;
 
 export type Coord = { r: number; c: number };
 
@@ -37,10 +37,24 @@ const RAW_PATH: readonly [number, number][] = [
   [7, 14], [6, 14],
 ];
 
-export const LUDO_PATH: readonly Coord[] = RAW_PATH.map(([c, r]) => ({ r, c }));
+/** 十字の先端1列（コース・表示ともに除外） */
+export function isLudoArmTip(r: number, c: number): boolean {
+  if (r === 0 && c >= 6 && c <= 8) return true;
+  if (r === 14 && c >= 6 && c <= 8) return true;
+  if (c === 0 && r >= 6 && r <= 8) return true;
+  if (c === 14 && r >= 6 && r <= 8) return true;
+  return false;
+}
+
+export const LUDO_PATH: readonly Coord[] = RAW_PATH.map(([c, r]) => ({ r, c })).filter(
+  ({ r, c }) => !isLudoArmTip(r, c)
+);
+
+export const LUDO_PATH_LEN = LUDO_PATH.length;
+export const LUDO_TRACK_STEPS = LUDO_PATH_LEN - 1;
 
 /** 各プレイヤーのスタート（コース上のインデックス） */
-export const LUDO_ENTRY: readonly number[] = [13, 26, 39, 0];
+export const LUDO_ENTRY: readonly number[] = [10, 20, 30, 0];
 
 /** スタートマスの進行方向（矢印表示用） */
 export const LUDO_START_ARROW: readonly ("right" | "down" | "left" | "up")[] = [
@@ -115,13 +129,4 @@ export const LUDO_START: readonly Coord[] = LUDO_ENTRY.map((i) => LUDO_PATH[i]);
 
 export function ludoStartCoord(player: number): Coord {
   return LUDO_PATH[LUDO_ENTRY[player]];
-}
-
-/** 十字の先端1列（表示不要・3マス×4方向） */
-export function isLudoArmTip(r: number, c: number): boolean {
-  if (r === 0 && c >= 6 && c <= 8) return true;
-  if (r === 14 && c >= 6 && c <= 8) return true;
-  if (c === 0 && r >= 6 && r <= 8) return true;
-  if (c === 14 && r >= 6 && r <= 8) return true;
-  return false;
 }

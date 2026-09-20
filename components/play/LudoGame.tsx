@@ -9,6 +9,8 @@ import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   coordKey,
   LUDO_BASE_REGIONS,
+  LUDO_DISPLAY_GRID,
+  LUDO_DISPLAY_MARGIN,
   LUDO_GRID,
   LUDO_HOME,
   LUDO_HOME_ARROW,
@@ -18,7 +20,6 @@ import {
   LUDO_START_ARROW,
   LUDO_STYLE_INDEX,
   LUDO_YARD,
-  isLudoArmTip,
   ludoStartCoord,
   type Coord,
 } from "@/lib/play/ludo-board";
@@ -86,7 +87,6 @@ function cellInfo(
   baseMap: Map<string, number>
 ): CellInfo {
   const key = coordKey({ r, c });
-  if (isLudoArmTip(r, c)) return { kind: "empty" };
   if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { kind: "center" };
   if (homeMap.has(key)) {
     const home = homeMap.get(key)!;
@@ -166,10 +166,10 @@ function tokensAt(tokens: LudoToken[], coord: Coord): LudoToken[] {
 }
 
 function baseCornerRadius(player: number, r: number, c: number): string {
-  if (player === 0 && r === 0 && c === 0) return "rounded-tl-[0.65rem]";
-  if (player === 1 && r === 0 && c === 14) return "rounded-tr-[0.65rem]";
-  if (player === 2 && r === 14 && c === 14) return "rounded-br-[0.65rem]";
-  if (player === 3 && r === 14 && c === 0) return "rounded-bl-[0.65rem]";
+  if (player === 0 && r === 1 && c === 1) return "rounded-tl-[0.65rem]";
+  if (player === 1 && r === 1 && c === 13) return "rounded-tr-[0.65rem]";
+  if (player === 2 && r === 13 && c === 13) return "rounded-br-[0.65rem]";
+  if (player === 3 && r === 13 && c === 1) return "rounded-bl-[0.65rem]";
   return "";
 }
 
@@ -270,12 +270,12 @@ export function LudoGame() {
         <div
           className="grid gap-0 rounded-2xl border border-amber-900/30 bg-amber-100/10 p-1.5 shadow-inner"
           style={{
-            gridTemplateColumns: `repeat(${LUDO_GRID}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${LUDO_DISPLAY_GRID}, minmax(0, 1fr))`,
           }}
         >
-          {Array.from({ length: LUDO_GRID * LUDO_GRID }, (_, i) => {
-            const r = Math.floor(i / LUDO_GRID);
-            const c = i % LUDO_GRID;
+          {Array.from({ length: LUDO_DISPLAY_GRID * LUDO_DISPLAY_GRID }, (_, i) => {
+            const r = Math.floor(i / LUDO_DISPLAY_GRID) + LUDO_DISPLAY_MARGIN;
+            const c = (i % LUDO_DISPLAY_GRID) + LUDO_DISPLAY_MARGIN;
             const info = cellInfo(
               r,
               c,
