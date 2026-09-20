@@ -36,7 +36,7 @@ export function SiteSidebar() {
     <>
       <button
         type="button"
-        aria-label="絞り込みメニューを閉じる"
+        aria-label="検索・絞り込みメニューを閉じる"
         aria-hidden={!open}
         tabIndex={open ? 0 : -1}
         onClick={closeSidebar}
@@ -53,12 +53,12 @@ export function SiteSidebar() {
         }`}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-surface-border px-4 py-3">
-          <p className="text-sm font-semibold">絞り込み</p>
+          <p className="text-sm font-semibold">検索・絞り込み</p>
           <button
             type="button"
             onClick={closeSidebar}
             className="min-h-9 rounded-lg px-2 text-sm text-slate-400 transition hover:text-white"
-            aria-label="絞り込みメニューを閉じる"
+            aria-label="検索・絞り込みメニューを閉じる"
           >
             閉じる
           </button>

@@ -107,7 +107,7 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
 
       {displayed.length === 0 ? (
         <p className="text-slate-400">
-          該当するゲームはありません。タグやメニューの条件を変えてください。
+          該当するゲームはありません。キーワードやタグ、メニューの条件を変えてください。
         </p>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
