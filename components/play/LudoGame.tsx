@@ -133,7 +133,7 @@ export function LudoGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
-        title="ルド"
+        title="ルドー"
         description="サイコロで6が出たらコマを出す。ぴったり止まって相手を戻し、4つすべてをゴールへ。"
         playerCount={playerCount}
         playerOptions={[2, 3, 4]}

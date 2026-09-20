@@ -1,4 +1,4 @@
-/** 15×15 十字型ルド盤の座標定義 */
+/** 15×15 十字型ルドー盤の座標定義 */
 
 export const LUDO_GRID = 15;
 export const LUDO_PATH_LEN = 52;

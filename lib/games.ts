@@ -407,7 +407,7 @@ const games: GameMeta[] = [
   },
   {
     slug: "ludo",
-    title: "ルド",
+    title: "ルドー",
     description:
       "サイコロで6が出るまでスタートできない、2〜4人用のすごろくゲーム。",
     origin: "classic",
