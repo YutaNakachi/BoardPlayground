@@ -1,4 +1,12 @@
-export const GAME_TAGS = ["盤", "カード", "駒取り", "そろえる", "集める"] as const;
+export const GAME_TAGS = [
+  "ボード",
+  "カード",
+  "コマ取り",
+  "そろえる",
+  "あつめる",
+  "心理戦",
+  "運",
+] as const;
 export type GameTag = (typeof GAME_TAGS)[number];
 
 export type GameOrigin = "original" | "classic";
@@ -48,7 +56,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["カード"],
+    tags: ["カード", "心理戦", "運"],
     rulesSummary: [
       "各プレイヤーは手札3枚からスタート。手番は山札から1枚引き、手札から1枚を公開エリアに出す。",
       "公開エリアは最大3枚。手札と公開エリアを合わせた点数に、種類ボーナス（2種類+2点、3種類以上+5点）を加える。",
@@ -71,7 +79,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤"],
+    tags: ["ボード", "心理戦"],
     rulesSummary: [
       "5×5の星雲ボードの中央は星核で、ここには置けない。手番に空いているマスへ自分のノードを1つ置く。",
       "ノード数は人数で均等（2人は12個、3人は8個、4人は6個）。置き切ると終了。",
@@ -94,7 +102,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["盤", "カード"],
+    tags: ["ボード", "カード", "心理戦", "運"],
     rulesSummary: [
       "場に公開された3枚の断片から1枚を取り、自分のタイムライン（5枠）の空いている枠へ置く。",
       "カードの点数に加え、隣り合う同じ時代の組ごとに+2、3時代すべて揃えると+3、左から値が厳密に増加していれば+7。",
@@ -116,7 +124,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["盤", "駒取り"],
+    tags: ["ボード", "コマ取り", "心理戦"],
     rulesSummary: [
       "中央に白黒2個ずつ置いた状態から、黒（プレイヤー1）が先手。",
       "縦・横・斜めのいずれかで相手の石を挟める空マスに置き、挟んだ石をすべて裏返す。",
@@ -139,7 +147,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["盤", "集める"],
+    tags: ["ボード", "あつめる"],
     rulesSummary: [
       "各6つの穴に種4個。自分の穴を選んで種をまき、自分の倉には入れ、相手の倉は飛ばす。",
       "最後の種が倉に入ったら追加手番。自分側の空き穴に入り、向かいにも種があれば両方を倉へ取る。",
@@ -162,7 +170,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤", "そろえる"],
+    tags: ["ボード", "そろえる", "心理戦"],
     rulesSummary: [
       "空の13×13盤に、黒（プレイヤー1）から交互に1つ置く。",
       "縦・横・斜めのいずれかで5個以上連続させれば勝ち。6個以上でも勝ち。",
@@ -185,7 +193,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["盤", "駒取り"],
+    tags: ["ボード", "コマ取り"],
     rulesSummary: [
       "各12個を下3段／上3段の暗いマスに置き、プレイヤー1から開始。",
       "斜め前へ1マス、または斜め前の相手をジャンプして取る。取れる手があるときは必ず取る。",
@@ -208,7 +216,7 @@ const games: GameMeta[] = [
     complexity: "hard",
     cpu: false,
     team: false,
-    tags: ["盤", "駒取り", "そろえる"],
+    tags: ["ボード", "コマ取り", "そろえる"],
     rulesSummary: [
       "空点に交互に置いていき、各9個を置き切ったら隣の空点へ動かす。",
       "同じ色が一直線に3つ並んだら、相手の駒を1つ外す（3つ並び以外を優先）。",
@@ -231,7 +239,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤", "そろえる"],
+    tags: ["ボード", "そろえる"],
     rulesSummary: [
       "空の3×3盤に、×（プレイヤー1）から交互に1マスずつ置く。",
       "縦・横・斜めのいずれかで3つ並べたら勝ち。",
@@ -253,7 +261,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤", "そろえる"],
+    tags: ["ボード", "そろえる", "心理戦"],
     rulesSummary: [
       "列を選んで石を落とす。満杯の列には置けない。",
       "縦・横・斜めのいずれかで4つ以上連続させれば勝ち。",
@@ -275,7 +283,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤", "集める"],
+    tags: ["ボード", "あつめる"],
     rulesSummary: [
       "4×4の箱を囲む点の辺に、交互に線を1本引く。",
       "箱が完成したらそのプレイヤーが1点。同じ手で箱を取れたら、取れるあいだ手番が続く。",
@@ -297,7 +305,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤", "集める"],
+    tags: ["ボード", "あつめる"],
     rulesSummary: [
       "初期は3・5・7個の3山。プレイヤー1から開始。",
       "1つの山を選び、1個以上取り除く。複数の山から同時に取れない。",
@@ -319,7 +327,7 @@ const games: GameMeta[] = [
     complexity: "hard",
     cpu: false,
     team: false,
-    tags: ["盤", "そろえる"],
+    tags: ["ボード", "そろえる", "心理戦"],
     rulesSummary: [
       "11×11の六角マスに交互に1石ずつ置く。",
       "プレイヤー1は上辺と下辺、プレイヤー2は左辺と右辺をつなげば勝ち。",
@@ -341,7 +349,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤"],
+    tags: ["ボード", "心理戦"],
     rulesSummary: [
       "ウサギ1匹（下段中央）と猟犬4匹（上段）から開始。ウサギが先手。",
       "ウサギは縦・横・斜めに1マス、猟犬は斜め前（下方向）に1マス進める。",
@@ -364,7 +372,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["カード"],
+    tags: ["カード", "心理戦", "運"],
     rulesSummary: [
       "各7枚の手札。残りは山札。先手は好きな1枚を場に出す。",
       "以降は場の両端の数字と一致する牌を1枚出す。",
@@ -387,7 +395,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["盤"],
+    tags: ["ボード"],
     rulesSummary: [
       "簡略化した六角盤（81穴）。2人は上下のエリアに各15個。3〜4人は開始位置が変わる。",
       "隣接する空の穴へ1マス進むか、隣の駒を飛び越えて連続ジャンプできる。",
@@ -410,7 +418,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤"],
+    tags: ["ボード", "運"],
     rulesSummary: [
       "共有トラックを回り、各プレイヤー4コマを持つ。",
       "サイコロを振り、出目6でスタート待機のコマを出せる。出目どおりに進める。",
@@ -433,7 +441,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["盤"],
+    tags: ["ボード", "運"],
     rulesSummary: [
       "各15個を標準配置。交互にサイコロ2つを振り、出目ごとに駒を動かす。",
       "相手の駒が2個以上いるマスには入れない。1個だけなら取ってバーへ送る。",
@@ -456,7 +464,7 @@ const games: GameMeta[] = [
     complexity: "hard",
     cpu: false,
     team: false,
-    tags: ["盤", "駒取り"],
+    tags: ["ボード", "コマ取り", "心理戦"],
     rulesSummary: [
       "標準配置。プレイヤー1（白）から開始。",
       "各駒の動きに従い1手。自分のキングをチェックにさらす手は不可。",
@@ -479,7 +487,7 @@ const games: GameMeta[] = [
     complexity: "hard",
     cpu: false,
     team: false,
-    tags: ["盤", "駒取り"],
+    tags: ["ボード", "コマ取り", "心理戦"],
     rulesSummary: [
       "標準配置。先手（プレイヤー1）から開始。",
       "駒を動かすか、持ち駒を空マスに打つ。敵陣入りは自動成り。",
@@ -502,7 +510,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["盤", "駒取り"],
+    tags: ["ボード", "コマ取り", "心理戦"],
     rulesSummary: [
       "5×5盤。後手は盤上に配置し、先手は歩以外を持ち駒として開始。",
       "将棋と同様に駒を動かすか持ち駒を打つ。敵陣入りは自動成り。",
@@ -525,7 +533,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["カード"],
+    tags: ["カード", "運"],
     rulesSummary: [
       "タブロー7列・組札4つ・山札（1枚ドロー）の標準構成。",
       "表向きのカードをタブロー間または組札へ移動できる。",
@@ -548,7 +556,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["カード", "そろえる"],
+    tags: ["カード", "そろえる", "運"],
     rulesSummary: [
       "10列に54枚を配る。空列には表向きのカードを置ける。",
       "降順に並んだ連続カードをまとめて移動できる。",
@@ -571,7 +579,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["カード"],
+    tags: ["カード", "運"],
     rulesSummary: [
       "36枚（18ペア）をレイヤー配置。上に乗っておらず、左右どちらかが開いている牌だけ選べる。",
       "同じ種類の牌を2枚選んで取り除く。",
@@ -594,7 +602,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["盤", "そろえる"],
+    tags: ["ボード", "そろえる"],
     rulesSummary: [
       "1〜15のタイルと空きマス1つの4×4盤。",
       "空きマスに隣接するタイルをタップしてスライドする。",
