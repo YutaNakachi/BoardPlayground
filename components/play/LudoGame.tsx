@@ -7,15 +7,75 @@ import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
+  coordKey,
+  LUDO_GRID,
+  LUDO_HOME,
+  LUDO_PATH,
+  type Coord,
+} from "@/lib/play/ludo-board";
+import {
   applyLudoMove,
   initialLudo,
-  LUDO_TRACK,
+  ludoGoalCount,
   ludoMoves,
+  ludoTokenCoord,
   rollLudo,
   type LudoState,
+  type LudoToken,
 } from "@/lib/play/ludo";
 
 type Phase = "setup" | "playing" | "game-over";
+
+type CellKind = "empty" | "base" | "path" | "home" | "center";
+
+const BASE_REGIONS: { player: number; rows: [number, number]; cols: [number, number] }[] = [
+  { player: 0, rows: [9, 14], cols: [0, 5] },
+  { player: 1, rows: [0, 5], cols: [0, 5] },
+  { player: 2, rows: [0, 5], cols: [9, 14] },
+  { player: 3, rows: [9, 14], cols: [9, 14] },
+];
+
+function buildCellMap(activePlayers: number[]) {
+  const pathKeys = new Set(LUDO_PATH.map(coordKey));
+  const homeMap = new Map<string, number>();
+  for (const p of activePlayers) {
+    for (const coord of LUDO_HOME[p]) {
+      homeMap.set(coordKey(coord), p);
+    }
+  }
+  const baseMap = new Map<string, number>();
+  for (const region of BASE_REGIONS) {
+    if (!activePlayers.includes(region.player)) continue;
+    for (let r = region.rows[0]; r <= region.rows[1]; r++) {
+      for (let c = region.cols[0]; c <= region.cols[1]; c++) {
+        baseMap.set(coordKey({ r, c }), region.player);
+      }
+    }
+  }
+  return { pathKeys, homeMap, baseMap };
+}
+
+function cellKind(
+  r: number,
+  c: number,
+  pathKeys: Set<string>,
+  homeMap: Map<string, number>,
+  baseMap: Map<string, number>
+): { kind: CellKind; owner?: number } {
+  const key = coordKey({ r, c });
+  if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { kind: "center" };
+  if (homeMap.has(key)) return { kind: "home", owner: homeMap.get(key) };
+  if (pathKeys.has(key)) return { kind: "path" };
+  if (baseMap.has(key)) return { kind: "base", owner: baseMap.get(key) };
+  if (r >= 6 && r <= 8) return { kind: "path" };
+  if (c >= 6 && c <= 8) return { kind: "path" };
+  return { kind: "empty" };
+}
+
+function tokensAt(tokens: LudoToken[], coord: Coord): LudoToken[] {
+  const key = coordKey(coord);
+  return tokens.filter((t) => coordKey(ludoTokenCoord(t)) === key);
+}
 
 export function LudoGame() {
   const { recordLocalPlay } = usePlayPage();
@@ -34,6 +94,16 @@ export function LudoGame() {
     [phase, state]
   );
 
+  const cellMap = useMemo(
+    () => buildCellMap(state.activePlayers),
+    [state.activePlayers]
+  );
+
+  const movableTokenIds = useMemo(
+    () => new Set(moves.map((m) => m.tokenIndex)),
+    [moves]
+  );
+
   const onRoll = useCallback(() => {
     setState((s) => rollLudo(s));
   }, []);
@@ -41,18 +111,30 @@ export function LudoGame() {
   const onToken = useCallback(
     (tokenIndex: number) => {
       if (!moves.some((m) => m.tokenIndex === tokenIndex)) return;
-      const next = applyLudoMove(state, { tokenIndex, steps: state.lastRoll! });
+      const next = applyLudoMove(state, { tokenIndex });
       if (next) setState(next);
       if (next?.winner != null) setPhase("game-over");
     },
     [moves, state]
   );
 
+  const passTurn = useCallback(() => {
+    setState((s) => {
+      const turnIndex = s.activePlayers.indexOf(s.current);
+      return {
+        ...s,
+        current: s.activePlayers[(turnIndex + 1) % s.activePlayers.length],
+        lastRoll: null,
+        extraTurn: false,
+      };
+    });
+  }, []);
+
   if (phase === "setup") {
     return (
       <SetupPanel
-        title="ルード"
-        description="サイコロを振り、6が出たらコマを出す。相手をスタートへ戻し、4つすべてをゴールへ。"
+        title="ルド"
+        description="サイコロで6が出たらコマを出す。ぴったり止まって相手を戻し、4つすべてをゴールへ。"
         playerCount={playerCount}
         playerOptions={[2, 3, 4]}
         onPlayerCount={setPlayerCount}
@@ -67,85 +149,68 @@ export function LudoGame() {
   return (
     <div className="space-y-6">
       {!isGameOver && (
-      <TurnBanner
-        playerIndex={state.current}
-        playerLabel={`プレイヤー ${state.current + 1}`}
-        action={
-          state.lastRoll == null
-            ? "サイコロを振る"
-            : moves.length === 0
-              ? "出せるコマがありません"
-              : "コマを選ぶ"
-        }
-      />
+        <TurnBanner
+          playerIndex={state.current}
+          playerLabel={`プレイヤー ${state.activePlayers.indexOf(state.current) + 1}`}
+          action={
+            state.lastRoll == null
+              ? "サイコロを振る"
+              : moves.length === 0
+                ? "出せるコマがありません"
+                : "コマを選ぶ"
+          }
+        />
       )}
 
-      <div className="mx-auto max-w-md space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          {Array.from({ length: state.players }, (_, player) => {
-            const yardTokens = state.tokens.filter(
-              (t) => t.player === player && t.position === -1
-            );
-            if (yardTokens.length === 0) return null;
-            return (
-              <div
-                key={`yard-${player}`}
-                className="rounded-lg border border-surface-border bg-surface-raised p-2"
-              >
-                <p className="mb-2 text-center text-[10px] text-slate-500">
-                  P{player + 1} スタート
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {yardTokens.map((t) => {
-                    const tokenIndex = state.tokens.indexOf(t);
-                    const canMove = moves.some((m) => m.tokenIndex === tokenIndex);
-                    const style = getPlayerTurnStyle(t.player);
-                    return (
-                      <button
-                        key={`yard-${t.player}-${t.index}`}
-                        type="button"
-                        onClick={() => onToken(tokenIndex)}
-                        disabled={!canMove}
-                        className={`flex h-10 items-center justify-center rounded-md bg-white/5 ${
-                          canMove ? "ring-2 ring-lime-300" : ""
-                        }`}
-                        aria-label={`P${t.player + 1} コマ ${t.index + 1}`}
-                      >
-                        <span
-                          className={`h-5 w-5 rounded-full ${style.piece} ${style.dotShadow}`}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
+      <div className="mx-auto w-full max-w-[min(100%,20rem)]">
         <div
-          className="grid gap-0.5 rounded-xl border border-surface-border bg-surface-raised p-2"
-          style={{ gridTemplateColumns: `repeat(${LUDO_TRACK}, minmax(0, 1fr))` }}
+          className="grid gap-px rounded-xl border border-surface-border bg-slate-900 p-1"
+          style={{
+            gridTemplateColumns: `repeat(${LUDO_GRID}, minmax(0, 1fr))`,
+          }}
         >
-          {Array.from({ length: LUDO_TRACK }, (_, pos) => {
-            const here = state.tokens.filter((t) => t.position === pos);
+          {Array.from({ length: LUDO_GRID * LUDO_GRID }, (_, i) => {
+            const r = Math.floor(i / LUDO_GRID);
+            const c = i % LUDO_GRID;
+            const { kind, owner } = cellKind(
+              r,
+              c,
+              cellMap.pathKeys,
+              cellMap.homeMap,
+              cellMap.baseMap
+            );
+            const here = tokensAt(state.tokens, { r, c });
+            const style = owner != null ? getPlayerTurnStyle(owner) : null;
+            const bg =
+              kind === "center"
+                ? "bg-slate-700"
+                : kind === "home" && style
+                  ? style.surface
+                  : kind === "base" && style
+                    ? style.bg
+                    : kind === "path"
+                      ? "bg-white/10"
+                      : "bg-slate-950/50";
+
             return (
               <div
-                key={pos}
-                className="relative flex aspect-square min-h-6 items-center justify-center rounded-sm bg-white/5 text-[8px] text-slate-600"
+                key={`${r}-${c}`}
+                className={`relative aspect-square ${bg}`}
               >
                 {here.map((t) => {
-                  const style = getPlayerTurnStyle(t.player);
-                  const canMove = moves.some((m) => m.tokenIndex === state.tokens.indexOf(t));
+                  const tokenIndex = state.tokens.indexOf(t);
+                  const tokenStyle = getPlayerTurnStyle(t.player);
+                  const canMove = movableTokenIds.has(tokenIndex);
                   return (
                     <button
                       key={`${t.player}-${t.index}`}
                       type="button"
-                      onClick={() => onToken(state.tokens.indexOf(t))}
-                      className={`absolute h-3 w-3 rounded-full ${style.piece} ${
+                      onClick={() => onToken(tokenIndex)}
+                      disabled={!canMove}
+                      className={`absolute inset-[15%] rounded-full ${tokenStyle.piece} ${
                         canMove ? "ring-2 ring-lime-300" : ""
-                      } ${style.dotShadow}`}
-                      aria-label={`P${t.player + 1} コマ ${t.index + 1}`}
+                      } ${tokenStyle.dotShadow}`}
+                      aria-label={`P${state.activePlayers.indexOf(t.player) + 1} コマ ${t.index + 1}`}
                     />
                   );
                 })}
@@ -156,14 +221,16 @@ export function LudoGame() {
       </div>
 
       <div className="flex flex-wrap justify-center gap-4">
-        {Array.from({ length: state.players }, (_, p) => {
+        {state.activePlayers.map((p, displayIdx) => {
           const style = getPlayerTurnStyle(p);
           return (
-          <div key={p} className="rounded-lg border border-surface-border px-3 py-2 text-sm">
-            <span className={`inline-block h-2 w-2 rounded-full ${style.piece} mr-2`} />
-            P{p + 1}: ゴール{" "}
-            {state.tokens.filter((t) => t.player === p && t.position === 58).length}/4
-          </div>
+            <div
+              key={p}
+              className="rounded-lg border border-surface-border px-3 py-2 text-sm"
+            >
+              <span className={`inline-block h-2 w-2 rounded-full ${style.piece} mr-2`} />
+              P{displayIdx + 1}: ゴール {ludoGoalCount(state, p)}/4
+            </div>
           );
         })}
       </div>
@@ -182,14 +249,7 @@ export function LudoGame() {
         <div className="text-center">
           <button
             type="button"
-            onClick={() =>
-              setState((s) => ({
-                ...s,
-                current: (s.current + 1) % s.players,
-                lastRoll: null,
-                extraTurn: false,
-              }))
-            }
+            onClick={passTurn}
             className="rounded-lg border border-white/20 px-4 py-2 text-sm"
           >
             手番を終える

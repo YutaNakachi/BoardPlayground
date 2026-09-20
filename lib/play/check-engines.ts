@@ -431,14 +431,31 @@ function checkLudo() {
   const ludo = initialLudo(2);
   const rolled = { ...ludo, lastRoll: 6, extraTurn: true };
   const moves = ludoMoves(rolled);
-  assert(moves.some((m) => m.steps === 0), "ludo six starts token");
-  const started = applyLudoMove(rolled, moves.find((m) => m.steps === 0)!);
+  const yardMove = moves.find((m) => ludo.tokens[m.tokenIndex].zone === "yard");
+  assert(yardMove != null, "ludo six starts token");
+  const started = applyLudoMove(rolled, yardMove!);
   assert(started !== null && started.current === 0, "ludo extra turn after six start");
 
   const nearGoal = initialLudo(2);
-  nearGoal.tokens[0].position = 57;
-  nearGoal.lastRoll = 2;
+  nearGoal.tokens[0] = { player: 0, index: 0, zone: "track", steps: 49 };
+  for (let i = 1; i < 4; i++) {
+    nearGoal.tokens[i] = { player: 0, index: i, zone: "home", steps: 3 };
+  }
+  for (let i = 4; i < 8; i++) {
+    nearGoal.tokens[i] = { player: 2, index: i - 4, zone: "home", steps: 3 };
+  }
+  nearGoal.lastRoll = 6;
   assert(ludoMoves(nearGoal).length === 0, "ludo overshoot home rejected");
+
+  const capture = initialLudo(2);
+  capture.lastRoll = 3;
+  capture.extraTurn = false;
+  capture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 2 };
+  capture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 31 };
+  const capMove = ludoMoves(capture).find((m) => m.tokenIndex === 0);
+  assert(capMove != null, "ludo capture move exists");
+  const afterCap = applyLudoMove(capture, capMove!);
+  assert(afterCap !== null && afterCap.tokens[4].zone === "yard", "ludo capture sends home");
 }
 
 function checkBackgammon() {
