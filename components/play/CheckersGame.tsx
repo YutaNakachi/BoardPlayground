@@ -28,24 +28,6 @@ import {
 
 type LocalPhase = "setup" | "playing" | "game-over";
 
-function CheckersKingCrown() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-[42%] w-[42%] text-amber-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]"
-      aria-hidden
-    >
-      <path
-        fill="currentColor"
-        d="M3 18h18v2H3v-2zm1.2-8.4 2.1 4.2 2.7-5.4 2.7 5.4 2.1-4.2L19 17H5l-.8-7.4z"
-      />
-      <circle cx="5" cy="8" r="1.2" fill="currentColor" />
-      <circle cx="12" cy="5.5" r="1.2" fill="currentColor" />
-      <circle cx="19" cy="8" r="1.2" fill="currentColor" />
-    </svg>
-  );
-}
-
 export function CheckersGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const { onlineEnabled } = usePlayStats();
@@ -303,9 +285,16 @@ export function CheckersGame() {
             >
               {piece ? (
                 <span
-                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-[10px] font-bold sm:text-xs ${playerPieceClasses(piece.player)}`}
+                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full ${playerPieceClasses(piece.player)}`}
                 >
-                  {piece.king ? <CheckersKingCrown /> : null}
+                  {piece.king ? (
+                    <span
+                      className="select-none text-[1.6rem] leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] sm:text-[2rem]"
+                      aria-hidden
+                    >
+                      👑
+                    </span>
+                  ) : null}
                 </span>
               ) : isDest ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-lime-300/90" />
