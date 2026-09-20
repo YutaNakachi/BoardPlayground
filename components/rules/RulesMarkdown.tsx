@@ -48,12 +48,7 @@ function formatMetaSummaryLine(label: string, value: string): string {
   }
 
   if (label === "プレイ時間") {
-    const duration = trimmed
-      .replace(/^おおよそ/, "")
-      .replace(/（[^）]*）/g, "")
-      .trim();
-    const minutes = duration.endsWith("分") ? duration : `${duration}分`;
-    return `プレイ時間：${minutes}`;
+    return `プレイ時間：${trimmed}`;
   }
 
   return `${label}：${trimmed}`;
