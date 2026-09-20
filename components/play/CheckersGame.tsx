@@ -285,9 +285,17 @@ export function CheckersGame() {
             >
               {piece ? (
                 <span
-                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-[10px] font-bold sm:text-xs ${playerPieceClasses(piece.player)}`}
+                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full ${playerPieceClasses(piece.player)}`}
                 >
-                  {piece.king ? "K" : ""}
+                  {piece.king ? (
+                    <span className="flex size-full items-center justify-center" aria-hidden>
+                      <span
+                        className="select-none text-[1.45rem] leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] -translate-y-px sm:text-[1.8rem]"
+                      >
+                        👑
+                      </span>
+                    </span>
+                  ) : null}
                 </span>
               ) : isDest ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-lime-300/90" />
