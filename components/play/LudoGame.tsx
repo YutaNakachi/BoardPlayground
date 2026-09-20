@@ -18,6 +18,7 @@ import {
   LUDO_START_ARROW,
   LUDO_STYLE_INDEX,
   LUDO_YARD,
+  isLudoArmTip,
   ludoStartCoord,
   type Coord,
 } from "@/lib/play/ludo-board";
@@ -85,6 +86,7 @@ function cellInfo(
   baseMap: Map<string, number>
 ): CellInfo {
   const key = coordKey({ r, c });
+  if (isLudoArmTip(r, c)) return { kind: "empty" };
   if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { kind: "center" };
   if (homeMap.has(key)) {
     const home = homeMap.get(key)!;
@@ -146,22 +148,29 @@ function cellAppearance(info: CellInfo): string {
   }
   const style = ludoStyle(info.owner);
   if (info.isStart) {
-    return `${style.piece} shadow-inner`;
+    return `${style.surface} ring-2 ring-inset ${style.pieceRing}`;
   }
   if (info.kind === "home") {
-    if (info.homeSlot === 4) return `${style.piece}`;
-    if (info.homeSlot === 3) return `${style.bg}`;
-    if (info.homeSlot === 2) return `${style.surface}`;
-    if (info.homeSlot === 1) return `${style.sectionBg}`;
-    return `${style.sectionBg}/80`;
+    if (info.homeSlot === 4) return `${style.bg} ring-1 ring-inset ${style.pieceRing}`;
+    if (info.homeSlot === 3) return `${style.surface}`;
+    if (info.homeSlot === 2) return `${style.sectionBg}`;
+    return `${style.sectionBg}/90`;
   }
-  if (info.kind === "base") return style.bg;
+  if (info.kind === "base") return `${style.piece}/30`;
   return "bg-transparent";
 }
 
 function tokensAt(tokens: LudoToken[], coord: Coord): LudoToken[] {
   const key = coordKey(coord);
   return tokens.filter((t) => coordKey(ludoTokenCoord(t)) === key);
+}
+
+function baseCornerRadius(player: number, r: number, c: number): string {
+  if (player === 0 && r === 0 && c === 0) return "rounded-tl-[0.65rem]";
+  if (player === 1 && r === 0 && c === 14) return "rounded-tr-[0.65rem]";
+  if (player === 2 && r === 14 && c === 14) return "rounded-br-[0.65rem]";
+  if (player === 3 && r === 14 && c === 0) return "rounded-bl-[0.65rem]";
+  return "";
 }
 
 function centerTriangleClass(r: number, c: number): string | null {
@@ -288,10 +297,15 @@ export function LudoGame() {
               yard.some((spot) => coordKey(spot) === yardKey)
             );
 
+            const baseRadius =
+              info.kind === "base" && info.owner != null
+                ? baseCornerRadius(info.owner, r, c)
+                : "";
+
             return (
               <div
                 key={`${r}-${c}`}
-                className={`relative aspect-square ${cellAppearance(info)}`}
+                className={`relative aspect-square ${cellAppearance(info)} ${baseRadius}`}
               >
                 {triangle ? (
                   <div className={`absolute inset-0 ${triangle}`} />
@@ -304,9 +318,9 @@ export function LudoGame() {
                   />
                 ) : null}
 
-                {isHomeCircle && markerStyle ? (
+                {isHomeCircle && !here.length && markerStyle ? (
                   <span
-                    className={`pointer-events-none absolute inset-[12%] rounded-full border border-white/20 ${cellAppearance(info)}`}
+                    className={`pointer-events-none absolute inset-[12%] rounded-full border border-white/25 ${cellAppearance(info)}`}
                     aria-hidden
                   />
                 ) : null}
@@ -334,15 +348,20 @@ export function LudoGame() {
                   const tokenIndex = state.tokens.indexOf(t);
                   const tokenStyle = ludoStyle(t.player);
                   const canMove = movableTokenIds.has(tokenIndex);
+                  const onColoredCell = info.isStart || info.kind === "home";
                   return (
                     <button
                       key={`${t.player}-${t.index}`}
                       type="button"
                       onClick={() => onToken(tokenIndex)}
                       disabled={!canMove}
-                      className={`absolute inset-[14%] rounded-full ${tokenStyle.piece} ${
-                        canMove ? "ring-2 ring-lime-300" : ""
-                      } ${tokenStyle.dotShadow}`}
+                      className={`absolute inset-[14%] z-10 rounded-full ${tokenStyle.piece} ${
+                        canMove
+                          ? "ring-2 ring-lime-300 ring-offset-1 ring-offset-slate-950"
+                          : onColoredCell
+                            ? "ring-2 ring-white ring-offset-1 ring-offset-slate-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
+                            : tokenStyle.dotShadow
+                      }`}
                       aria-label={`P${state.activePlayers.indexOf(t.player) + 1} コマ ${t.index + 1}`}
                     />
                   );

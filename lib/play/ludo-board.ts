@@ -116,3 +116,12 @@ export const LUDO_START: readonly Coord[] = LUDO_ENTRY.map((i) => LUDO_PATH[i]);
 export function ludoStartCoord(player: number): Coord {
   return LUDO_PATH[LUDO_ENTRY[player]];
 }
+
+/** 十字の先端1列（表示不要・3マス×4方向） */
+export function isLudoArmTip(r: number, c: number): boolean {
+  if (r === 0 && c >= 6 && c <= 8) return true;
+  if (r === 14 && c >= 6 && c <= 8) return true;
+  if (c === 0 && r >= 6 && r <= 8) return true;
+  if (c === 14 && r >= 6 && r <= 8) return true;
+  return false;
+}
