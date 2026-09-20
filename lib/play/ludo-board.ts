@@ -54,15 +54,43 @@ export function isLudoArmTip(r: number, c: number): boolean {
   return false;
 }
 
-export const LUDO_PATH: readonly Coord[] = RAW_PATH.map(([c, r]) => ({ r, c })).filter(
-  ({ r, c }) => !isLudoArmTip(r, c)
+const HOME_ENTRIES: readonly Coord[] = [
+  { r: 7, c: 1 },
+  { r: 1, c: 7 },
+  { r: 7, c: 13 },
+  { r: 13, c: 7 },
+];
+
+function isHomeEntry({ r, c }: Coord): boolean {
+  return HOME_ENTRIES.some((e) => e.r === r && e.c === c);
+}
+
+/** ゴール列入口が飛ばされないよう、対角ジャンプの中間に挿入 */
+function buildTrackPath(raw: readonly Coord[]): Coord[] {
+  const filtered = raw.filter(({ r, c }) => !isLudoArmTip(r, c));
+  const fixed: Coord[] = [];
+  for (let i = 0; i < filtered.length; i++) {
+    fixed.push(filtered[i]);
+    const a = filtered[i];
+    const b = filtered[(i + 1) % filtered.length];
+    const dist = Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
+    if (dist === 2) {
+      const mid = { r: (a.r + b.r) / 2, c: (a.c + b.c) / 2 };
+      if (isHomeEntry(mid)) fixed.push(mid);
+    }
+  }
+  return fixed;
+}
+
+export const LUDO_PATH: readonly Coord[] = buildTrackPath(
+  RAW_PATH.map(([c, r]) => ({ r, c }))
 );
 
 export const LUDO_PATH_LEN = LUDO_PATH.length;
 export const LUDO_TRACK_STEPS = LUDO_PATH_LEN - 1;
 
 /** 各プレイヤーのスタート（コース上のインデックス） */
-export const LUDO_ENTRY: readonly number[] = [10, 20, 30, 0];
+export const LUDO_ENTRY: readonly number[] = [11, 22, 33, 0];
 
 /** スタートマスの進行方向（矢印表示用） */
 export const LUDO_START_ARROW: readonly ("right" | "down" | "left" | "up")[] = [

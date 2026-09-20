@@ -163,6 +163,16 @@ function tokensAt(tokens: LudoToken[], coord: Coord): LudoToken[] {
   return tokens.filter((t) => coordKey(ludoTokenCoord(t)) === key);
 }
 
+function tokensByPlayer(tokens: LudoToken[]): [number, LudoToken[]][] {
+  const map = new Map<number, LudoToken[]>();
+  for (const t of tokens) {
+    const group = map.get(t.player) ?? [];
+    group.push(t);
+    map.set(t.player, group);
+  }
+  return Array.from(map.entries());
+}
+
 function baseCornerRadius(player: number, r: number, c: number): string {
   if (player === 0 && r === 1 && c === 1) return "rounded-tl-[0.65rem]";
   if (player === 1 && r === 1 && c === 13) return "rounded-tr-[0.65rem]";
@@ -342,14 +352,16 @@ export function LudoGame() {
                   />
                 ) : null}
 
-                {here.map((t) => {
-                  const tokenIndex = state.tokens.indexOf(t);
-                  const tokenStyle = ludoStyle(t.player);
+                {tokensByPlayer(here).map(([player, group]) => {
+                  const indices = group.map((t) => state.tokens.indexOf(t));
+                  const tokenIndex =
+                    indices.find((i) => movableTokenIds.has(i)) ?? indices[0];
+                  const tokenStyle = ludoStyle(player);
                   const canMove = movableTokenIds.has(tokenIndex);
                   const onColoredCell = info.isStart || info.kind === "home";
                   return (
                     <button
-                      key={`${t.player}-${t.index}`}
+                      key={`${player}-${group.map((t) => t.index).join("-")}`}
                       type="button"
                       onClick={() => onToken(tokenIndex)}
                       disabled={!canMove}
@@ -360,8 +372,17 @@ export function LudoGame() {
                             ? "ring-2 ring-white ring-offset-1 ring-offset-slate-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
                             : tokenStyle.dotShadow
                       }`}
-                      aria-label={`P${state.activePlayers.indexOf(t.player) + 1} コマ ${t.index + 1}`}
-                    />
+                      aria-label={`P${state.activePlayers.indexOf(player) + 1} コマ ${group.length}個`}
+                    >
+                      {group.length >= 2 ? (
+                        <span
+                          className="pointer-events-none flex h-full items-center justify-center text-[9px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                          aria-hidden
+                        >
+                          {group.length}
+                        </span>
+                      ) : null}
+                    </button>
                   );
                 })}
               </div>
