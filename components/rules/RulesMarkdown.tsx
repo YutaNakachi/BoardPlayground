@@ -1,9 +1,17 @@
 import type { ReactNode } from "react";
 
 type Block =
+  | { type: "heading"; level: 3 | 4 | 5 | 6; text: string }
   | { type: "paragraph"; text: string }
   | { type: "list"; ordered: boolean; items: string[] }
   | { type: "table"; rows: string[][] };
+
+function parseHeadingLine(line: string): { level: 3 | 4 | 5 | 6; text: string } | null {
+  const match = /^(#{3,6})\s+(.+)$/.exec(line.trim());
+  if (!match) return null;
+  const level = match[1].length as 3 | 4 | 5 | 6;
+  return { level, text: match[2].trim() };
+}
 
 function renderInline(text: string): ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -51,6 +59,12 @@ function parseLinesIntoBlocks(lines: string[]): Block[] {
 
   while (index < lines.length) {
     const line = lines[index];
+    const heading = parseHeadingLine(line);
+    if (heading) {
+      blocks.push({ type: "heading", ...heading });
+      index += 1;
+      continue;
+    }
 
     if (isUnorderedListLine(line)) {
       const items: string[] = [];
@@ -76,12 +90,16 @@ function parseLinesIntoBlocks(lines: string[]): Block[] {
     while (
       index < lines.length &&
       !isUnorderedListLine(lines[index]) &&
-      !isOrderedListLine(lines[index])
+      !isOrderedListLine(lines[index]) &&
+      !parseHeadingLine(lines[index])
     ) {
       paragraphLines.push(lines[index].trim());
       index += 1;
     }
-    blocks.push({ type: "paragraph", text: paragraphLines.join(" ") });
+    const text = paragraphLines.join(" ").trim();
+    if (text) {
+      blocks.push({ type: "paragraph", text });
+    }
   }
 
   return blocks;
@@ -123,6 +141,41 @@ export function RulesMarkdown({ content, className = "" }: Props) {
   return (
     <div className={`space-y-4 text-slate-300 leading-relaxed ${className}`}>
       {blocks.map((block, index) => {
+        if (block.type === "heading") {
+          const headingClass =
+            block.level === 3
+              ? "mt-2 text-base font-semibold text-slate-100"
+              : block.level === 4
+                ? "mt-1 text-sm font-semibold text-slate-100"
+                : "mt-1 text-sm font-semibold text-slate-200";
+          if (block.level === 3) {
+            return (
+              <h3 key={index} className={headingClass}>
+                {renderInline(block.text)}
+              </h3>
+            );
+          }
+          if (block.level === 4) {
+            return (
+              <h4 key={index} className={headingClass}>
+                {renderInline(block.text)}
+              </h4>
+            );
+          }
+          if (block.level === 5) {
+            return (
+              <h5 key={index} className={headingClass}>
+                {renderInline(block.text)}
+              </h5>
+            );
+          }
+          return (
+            <h6 key={index} className={headingClass}>
+              {renderInline(block.text)}
+            </h6>
+          );
+        }
+
         if (block.type === "paragraph") {
           return <p key={index}>{renderInline(block.text)}</p>;
         }
