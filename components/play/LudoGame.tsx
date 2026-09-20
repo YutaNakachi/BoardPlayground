@@ -1,7 +1,8 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { DiceFace } from "@/components/play/shared/DiceFace";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -217,9 +218,36 @@ export function LudoGame() {
     [moves]
   );
 
-  const onRoll = useCallback(() => {
-    setState((s) => rollLudo(s));
+  const [diceFace, setDiceFace] = useState(1);
+  const [isRolling, setIsRolling] = useState(false);
+  const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rollTimerRef.current) clearInterval(rollTimerRef.current);
+    };
   }, []);
+
+  const onRoll = useCallback(() => {
+    if (isRolling || state.lastRoll != null || state.winner != null) return;
+
+    setIsRolling(true);
+    let ticks = 0;
+    rollTimerRef.current = setInterval(() => {
+      ticks += 1;
+      setDiceFace(Math.floor(Math.random() * 6) + 1);
+      if (ticks >= 10) {
+        if (rollTimerRef.current) clearInterval(rollTimerRef.current);
+        rollTimerRef.current = null;
+        setState((s) => {
+          const next = rollLudo(s);
+          setDiceFace(next.lastRoll ?? 1);
+          setIsRolling(false);
+          return next;
+        });
+      }
+    }, 70);
+  }, [isRolling, state.lastRoll, state.winner]);
 
   const onToken = useCallback(
     (tokenIndex: number) => {
@@ -419,14 +447,27 @@ export function LudoGame() {
         </div>
       </div>
 
-      {state.lastRoll == null && !isGameOver ? (
-        <div className="text-center">
-          <button type="button" onClick={onRoll} className="btn-game">
-            サイコロを振る
-          </button>
+      {!isGameOver ? (
+        <div className="flex flex-col items-center gap-3">
+          {(isRolling || state.lastRoll != null) && (
+            <div className="flex flex-col items-center gap-2">
+              <DiceFace value={diceFace} size="lg" rolling={isRolling} />
+              {!isRolling && state.lastRoll != null ? (
+                <p className="text-sm font-medium text-slate-300">
+                  出目: <span className="text-lg font-bold text-white">{state.lastRoll}</span>
+                </p>
+              ) : (
+                <p className="text-sm text-slate-400">振っています…</p>
+              )}
+            </div>
+          )}
+
+          {state.lastRoll == null && !isRolling ? (
+            <button type="button" onClick={onRoll} className="btn-game">
+              サイコロを振る
+            </button>
+          ) : null}
         </div>
-      ) : !isGameOver ? (
-        <p className="text-center text-lg font-bold text-white">出目: {state.lastRoll}</p>
       ) : null}
 
       {state.lastRoll != null && moves.length === 0 && !isGameOver ? (
