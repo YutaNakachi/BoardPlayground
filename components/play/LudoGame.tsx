@@ -16,7 +16,6 @@ import {
   LUDO_HOME_ARROW,
   LUDO_HOME_ENTRY,
   LUDO_PATH,
-  LUDO_PLAYER_META,
   LUDO_START_ARROW,
   LUDO_STYLE_INDEX,
   LUDO_YARD,
@@ -27,7 +26,6 @@ import {
 import {
   applyLudoMove,
   initialLudo,
-  ludoGoalCount,
   ludoMoves,
   ludoTokenCoord,
   rollLudo,
@@ -370,34 +368,6 @@ export function LudoGame() {
             );
           })}
         </div>
-
-        <div className="mt-2 flex flex-wrap justify-center gap-3 text-[10px] text-slate-400">
-          {state.activePlayers.map((p, displayIdx) => {
-            const style = ludoStyle(p);
-            const meta = LUDO_PLAYER_META[p];
-            return (
-              <span key={p} className="inline-flex items-center gap-1">
-                <span className={`h-2.5 w-2.5 rounded-full ${style.piece}`} />
-                P{displayIdx + 1}（{meta.name}・{meta.corner}）
-              </span>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-4">
-        {state.activePlayers.map((p, displayIdx) => {
-          const style = ludoStyle(p);
-          return (
-            <div
-              key={p}
-              className="rounded-lg border border-surface-border px-3 py-2 text-sm"
-            >
-              <span className={`inline-block h-2 w-2 rounded-full ${style.piece} mr-2`} />
-              P{displayIdx + 1}: ゴール {ludoGoalCount(state, p)}/4
-            </div>
-          );
-        })}
       </div>
 
       {state.lastRoll == null && !isGameOver ? (
