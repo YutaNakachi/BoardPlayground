@@ -5,7 +5,7 @@ export const GAME_TAGS = [
   "そろえる",
   "あつめる",
   "心理戦",
-  "運",
+  "運要素",
 ] as const;
 export type GameTag = (typeof GAME_TAGS)[number];
 
@@ -56,7 +56,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["カード", "心理戦", "運"],
+    tags: ["カード", "心理戦", "運要素"],
     rulesSummary: [
       "各プレイヤーは手札3枚からスタート。手番は山札から1枚引き、手札から1枚を公開エリアに出す。",
       "公開エリアは最大3枚。手札と公開エリアを合わせた点数に、種類ボーナス（2種類+2点、3種類以上+5点）を加える。",
@@ -102,7 +102,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["ボード", "カード", "心理戦", "運"],
+    tags: ["ボード", "カード", "心理戦", "運要素"],
     rulesSummary: [
       "場に公開された3枚の断片から1枚を取り、自分のタイムライン（5枠）の空いている枠へ置く。",
       "カードの点数に加え、隣り合う同じ時代の組ごとに+2、3時代すべて揃えると+3、左から値が厳密に増加していれば+7。",
@@ -372,7 +372,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["カード", "心理戦", "運"],
+    tags: ["カード", "心理戦", "運要素"],
     rulesSummary: [
       "各7枚の手札。残りは山札。先手は好きな1枚を場に出す。",
       "以降は場の両端の数字と一致する牌を1枚出す。",
@@ -418,7 +418,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["ボード", "運"],
+    tags: ["ボード", "運要素"],
     rulesSummary: [
       "共有トラックを回り、各プレイヤー4コマを持つ。",
       "サイコロを振り、出目6でスタート待機のコマを出せる。出目どおりに進める。",
@@ -441,7 +441,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["ボード", "運"],
+    tags: ["ボード", "運要素"],
     rulesSummary: [
       "各15個を標準配置。交互にサイコロ2つを振り、出目ごとに駒を動かす。",
       "相手の駒が2個以上いるマスには入れない。1個だけなら取ってバーへ送る。",
@@ -533,7 +533,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["カード", "運"],
+    tags: ["カード", "運要素"],
     rulesSummary: [
       "タブロー7列・組札4つ・山札（1枚ドロー）の標準構成。",
       "表向きのカードをタブロー間または組札へ移動できる。",
@@ -556,7 +556,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["カード", "そろえる", "運"],
+    tags: ["カード", "そろえる", "運要素"],
     rulesSummary: [
       "10列に54枚を配る。空列には表向きのカードを置ける。",
       "降順に並んだ連続カードをまとめて移動できる。",
@@ -579,7 +579,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["カード", "運"],
+    tags: ["カード", "運要素"],
     rulesSummary: [
       "36枚（18ペア）をレイヤー配置。上に乗っておらず、左右どちらかが開いている牌だけ選べる。",
       "同じ種類の牌を2枚選んで取り除く。",
