@@ -548,6 +548,18 @@ function checkLudo() {
     "ludo approach roll 2 reaches slot1"
   );
 
+  const homeEntryCapture = initialLudo(2);
+  homeEntryCapture.lastRoll = 2;
+  homeEntryCapture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 42 };
+  homeEntryCapture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 21 };
+  const homeEntryCaptureMove = ludoMoves(homeEntryCapture).find((m) => m.tokenIndex === 0);
+  assert(homeEntryCaptureMove != null, "ludo can enter home past entry");
+  const afterHomeEntryCapture = applyLudoMove(homeEntryCapture, homeEntryCaptureMove!);
+  assert(
+    afterHomeEntryCapture !== null && afterHomeEntryCapture.tokens[4].zone === "yard",
+    "ludo captures enemy on home entry when passing through"
+  );
+
   const blockedHome = initialLudo(2);
   blockedHome.tokens[0] = { player: 0, index: 0, zone: "home", steps: 0 };
   blockedHome.tokens[1] = { player: 0, index: 1, zone: "home", steps: 1 };
