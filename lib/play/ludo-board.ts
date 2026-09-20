@@ -1,63 +1,97 @@
-/** 13×13 十字型ルドー盤（どようび堂の木製盤面準拠） */
+/** 15×15 十字型ルドー盤（クラシック盤面準拠） */
 
-export const LUDO_GRID = 13;
-export const LUDO_PATH_LEN = 44;
-export const LUDO_HOME_LEN = 4;
+export const LUDO_GRID = 15;
+export const LUDO_PATH_LEN = 52;
+export const LUDO_HOME_LEN = 5;
 export const LUDO_TRACK_STEPS = LUDO_PATH_LEN - 1;
 
 export type Coord = { r: number; c: number };
 
+/** 盤面表示用のプレイヤー色インデックス（赤・緑・黄・青） */
+export const LUDO_STYLE_INDEX: readonly number[] = [0, 2, 3, 1];
+
 /**
- * プレイヤーと色（サイト表示色との対応）
- * 0=赤・左下 / 1=青・左上 / 2=緑・右下 / 3=黄・右上
+ * プレイヤー配置（画像と同じ：左上から反時計回り）
+ * 0=赤・左上 / 1=緑・右上 / 2=黄・右下 / 3=青・左下
  */
 export const LUDO_PLAYER_META = [
-  { name: "赤", corner: "左下" },
-  { name: "青", corner: "左上" },
-  { name: "緑", corner: "右下" },
-  { name: "黄", corner: "右上" },
+  { name: "赤", corner: "左上" },
+  { name: "緑", corner: "右上" },
+  { name: "黄", corner: "右下" },
+  { name: "青", corner: "左下" },
 ] as const;
 
-/** 共有コース 44 マス（赤スタートから反時計回り） */
+/** 共有コース 52 マス（青スタートから反時計回り） */
 const RAW_PATH: readonly [number, number][] = [
-  [5, 12], [5, 11], [5, 10], [5, 9], [5, 8],
-  [4, 7], [3, 7], [2, 7], [1, 7], [0, 7],
-  [0, 6], [0, 5],
-  [1, 5], [2, 5], [3, 5], [4, 5],
-  [5, 4], [5, 3], [5, 2], [5, 1], [5, 0],
-  [6, 0], [7, 0],
-  [7, 1], [7, 2], [7, 3], [7, 4],
-  [8, 5], [9, 5], [10, 5], [11, 5], [12, 5],
-  [12, 6], [12, 7],
-  [11, 7], [10, 7], [9, 7], [8, 7],
-  [7, 8], [7, 9], [7, 10], [7, 11], [7, 12],
-  [6, 12],
+  [6, 13], [6, 12], [6, 11], [6, 10], [6, 9],
+  [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
+  [0, 7], [0, 6],
+  [1, 6], [2, 6], [3, 6], [4, 6], [5, 6],
+  [6, 5], [6, 4], [6, 3], [6, 2], [6, 1], [6, 0],
+  [7, 0], [8, 0],
+  [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
+  [9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6],
+  [14, 7], [14, 8],
+  [13, 8], [12, 8], [11, 8], [10, 8], [9, 8],
+  [8, 9], [8, 10], [8, 11], [8, 12], [8, 13], [8, 14],
+  [7, 14], [6, 14],
 ];
 
 export const LUDO_PATH: readonly Coord[] = RAW_PATH.map(([c, r]) => ({ r, c }));
 
 /** 各プレイヤーのスタート（コース上のインデックス） */
-export const LUDO_ENTRY: readonly number[] = [0, 11, 33, 22];
+export const LUDO_ENTRY: readonly number[] = [13, 26, 39, 0];
 
-/** ゴール列 4 マス（外側=入口 → 内側=★ゴール） */
-export const LUDO_HOME: readonly Coord[][] = [
-  [{ r: 11, c: 6 }, { r: 10, c: 6 }, { r: 9, c: 6 }, { r: 8, c: 6 }],
-  [{ r: 6, c: 8 }, { r: 6, c: 9 }, { r: 6, c: 10 }, { r: 6, c: 11 }],
-  [{ r: 6, c: 3 }, { r: 6, c: 2 }, { r: 6, c: 1 }, { r: 6, c: 0 }],
-  [{ r: 3, c: 6 }, { r: 2, c: 6 }, { r: 1, c: 6 }, { r: 0, c: 6 }],
+/** スタートマスの進行方向（矢印表示用） */
+export const LUDO_START_ARROW: readonly ("right" | "down" | "left" | "up")[] = [
+  "right",
+  "down",
+  "left",
+  "up",
 ];
 
-/** 5×5 コーナー内に 2×2 で中央配置したコマ待機位置 */
+/** ゴール列 5 マス（外側=入口 → 内側=ゴール） */
+export const LUDO_HOME: readonly Coord[][] = [
+  [{ r: 7, c: 1 }, { r: 7, c: 2 }, { r: 7, c: 3 }, { r: 7, c: 4 }, { r: 7, c: 5 }],
+  [{ r: 1, c: 7 }, { r: 2, c: 7 }, { r: 3, c: 7 }, { r: 4, c: 7 }, { r: 5, c: 7 }],
+  [{ r: 7, c: 13 }, { r: 7, c: 12 }, { r: 7, c: 11 }, { r: 7, c: 10 }, { r: 7, c: 9 }],
+  [{ r: 13, c: 7 }, { r: 12, c: 7 }, { r: 11, c: 7 }, { r: 10, c: 7 }, { r: 9, c: 7 }],
+];
+
+/** ゴール列入口（外周の矢印マス） */
+export const LUDO_HOME_ENTRY: readonly Coord[] = LUDO_HOME.map((home) => home[0]);
+
+/** ゴール列の進行方向 */
+export const LUDO_HOME_ARROW: readonly ("right" | "down" | "left" | "up")[] = [
+  "right",
+  "down",
+  "left",
+  "up",
+];
+
+/** 6×6 コーナー内に 2×2 で中央配置したコマ待機位置 */
 export const LUDO_YARD: readonly Coord[][] = [
-  [{ r: 10, c: 1 }, { r: 10, c: 2 }, { r: 11, c: 1 }, { r: 11, c: 2 }],
-  [{ r: 1, c: 1 }, { r: 1, c: 2 }, { r: 2, c: 1 }, { r: 2, c: 2 }],
-  [{ r: 10, c: 9 }, { r: 10, c: 10 }, { r: 11, c: 9 }, { r: 11, c: 10 }],
-  [{ r: 1, c: 9 }, { r: 1, c: 10 }, { r: 2, c: 9 }, { r: 2, c: 10 }],
+  [{ r: 2, c: 2 }, { r: 2, c: 3 }, { r: 3, c: 2 }, { r: 3, c: 3 }],
+  [{ r: 2, c: 11 }, { r: 2, c: 12 }, { r: 3, c: 11 }, { r: 3, c: 12 }],
+  [{ r: 11, c: 11 }, { r: 11, c: 12 }, { r: 12, c: 11 }, { r: 12, c: 12 }],
+  [{ r: 11, c: 2 }, { r: 11, c: 3 }, { r: 12, c: 2 }, { r: 12, c: 3 }],
+];
+
+/** 6×6 コーナー領域 */
+export const LUDO_BASE_REGIONS: readonly {
+  player: number;
+  rows: [number, number];
+  cols: [number, number];
+}[] = [
+  { player: 0, rows: [0, 5], cols: [0, 5] },
+  { player: 1, rows: [0, 5], cols: [9, 14] },
+  { player: 2, rows: [9, 14], cols: [9, 14] },
+  { player: 3, rows: [9, 14], cols: [0, 5] },
 ];
 
 export function ludoActivePlayers(count: number): number[] {
-  if (count === 2) return [0, 3];
-  if (count === 3) return [0, 1, 3];
+  if (count === 2) return [0, 2];
+  if (count === 3) return [0, 1, 2];
   return [0, 1, 2, 3];
 }
 

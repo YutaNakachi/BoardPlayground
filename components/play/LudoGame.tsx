@@ -8,10 +8,16 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   coordKey,
+  LUDO_BASE_REGIONS,
   LUDO_GRID,
   LUDO_HOME,
+  LUDO_HOME_ARROW,
+  LUDO_HOME_ENTRY,
   LUDO_PATH,
   LUDO_PLAYER_META,
+  LUDO_START_ARROW,
+  LUDO_STYLE_INDEX,
+  LUDO_YARD,
   ludoStartCoord,
   type Coord,
 } from "@/lib/play/ludo-board";
@@ -34,29 +40,30 @@ type CellInfo = {
   kind: CellKind;
   owner?: number;
   isStart?: boolean;
+  isHomeEntry?: boolean;
   homeSlot?: number;
 };
 
-/** 0=赤BL / 1=青TL / 2=緑BR / 3=黄TR */
-const BASE_REGIONS: { player: number; rows: [number, number]; cols: [number, number] }[] = [
-  { player: 0, rows: [8, 12], cols: [0, 4] },
-  { player: 1, rows: [0, 4], cols: [0, 4] },
-  { player: 2, rows: [8, 12], cols: [8, 12] },
-  { player: 3, rows: [0, 4], cols: [8, 12] },
-];
+function ludoStyle(player: number) {
+  return getPlayerTurnStyle(LUDO_STYLE_INDEX[player]);
+}
 
 function buildCellMap(activePlayers: number[]) {
   const pathKeys = new Set(LUDO_PATH.map(coordKey));
   const homeMap = new Map<string, { player: number; slot: number }>();
   const startMap = new Map<string, number>();
+  const homeEntryMap = new Map<string, number>();
+
   for (const p of activePlayers) {
     startMap.set(coordKey(ludoStartCoord(p)), p);
+    homeEntryMap.set(coordKey(LUDO_HOME_ENTRY[p]), p);
     LUDO_HOME[p].forEach((coord, slot) => {
       homeMap.set(coordKey(coord), { player: p, slot });
     });
   }
+
   const baseMap = new Map<string, number>();
-  for (const region of BASE_REGIONS) {
+  for (const region of LUDO_BASE_REGIONS) {
     if (!activePlayers.includes(region.player)) continue;
     for (let r = region.rows[0]; r <= region.rows[1]; r++) {
       for (let c = region.cols[0]; c <= region.cols[1]; c++) {
@@ -64,7 +71,8 @@ function buildCellMap(activePlayers: number[]) {
       }
     }
   }
-  return { pathKeys, homeMap, startMap, baseMap };
+
+  return { pathKeys, homeMap, startMap, homeEntryMap, baseMap };
 }
 
 function cellInfo(
@@ -73,47 +81,95 @@ function cellInfo(
   pathKeys: Set<string>,
   homeMap: Map<string, { player: number; slot: number }>,
   startMap: Map<string, number>,
+  homeEntryMap: Map<string, number>,
   baseMap: Map<string, number>
 ): CellInfo {
   const key = coordKey({ r, c });
-  if (r >= 5 && r <= 7 && c >= 5 && c <= 7) return { kind: "center" };
+  if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { kind: "center" };
   if (homeMap.has(key)) {
     const home = homeMap.get(key)!;
-    return { kind: "home", owner: home.player, homeSlot: home.slot };
+    return {
+      kind: "home",
+      owner: home.player,
+      homeSlot: home.slot,
+      isHomeEntry: homeEntryMap.has(key),
+    };
   }
   if (startMap.has(key)) {
     return { kind: "path", owner: startMap.get(key), isStart: true };
   }
   if (pathKeys.has(key)) return { kind: "path" };
   if (baseMap.has(key)) return { kind: "base", owner: baseMap.get(key) };
-  if (r >= 5 && r <= 7) return { kind: "path" };
-  if (c >= 5 && c <= 7) return { kind: "path" };
+  if (r >= 6 && r <= 8) return { kind: "path" };
+  if (c >= 6 && c <= 8) return { kind: "path" };
   return { kind: "empty" };
 }
 
+function ArrowIcon({
+  direction,
+  className = "",
+}: {
+  direction: "right" | "down" | "left" | "up";
+  className?: string;
+}) {
+  const rotation =
+    direction === "right"
+      ? "rotate-0"
+      : direction === "down"
+        ? "rotate-90"
+        : direction === "left"
+          ? "rotate-180"
+          : "-rotate-90";
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      className={`h-2.5 w-2.5 text-white ${rotation} ${className}`}
+      aria-hidden
+    >
+      <path
+        d="M2 6h6M6 3l3 3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function cellAppearance(info: CellInfo): string {
-  if (info.kind === "center") return "bg-slate-700";
+  if (info.kind === "center") return "bg-slate-800";
   if (info.owner == null) {
-    if (info.kind === "path") return "bg-white/10";
-    return "bg-slate-950/50";
+    if (info.kind === "path") return "bg-transparent";
+    return "bg-transparent";
   }
-  const style = getPlayerTurnStyle(info.owner);
+  const style = ludoStyle(info.owner);
   if (info.isStart) {
-    return `${style.bg} ring-2 ring-inset ${style.pieceRing} shadow-inner`;
+    return `${style.piece} shadow-inner`;
   }
   if (info.kind === "home") {
-    if (info.homeSlot === 3) return `${style.piece}/35 ring-2 ring-inset ${style.pieceRing}`;
-    if (info.homeSlot === 2) return `${style.bg}`;
-    if (info.homeSlot === 1) return `${style.surface}`;
-    return `${style.sectionBg}`;
+    if (info.homeSlot === 4) return `${style.piece}`;
+    if (info.homeSlot === 3) return `${style.bg}`;
+    if (info.homeSlot === 2) return `${style.surface}`;
+    if (info.homeSlot === 1) return `${style.sectionBg}`;
+    return `${style.sectionBg}/80`;
   }
   if (info.kind === "base") return style.bg;
-  return "bg-white/10";
+  return "bg-transparent";
 }
 
 function tokensAt(tokens: LudoToken[], coord: Coord): LudoToken[] {
   const key = coordKey(coord);
   return tokens.filter((t) => coordKey(ludoTokenCoord(t)) === key);
+}
+
+function centerTriangleClass(r: number, c: number): string | null {
+  if (r === 6 && c === 6) return `${ludoStyle(0).piece} clip-triangle-tl`;
+  if (r === 6 && c === 8) return `${ludoStyle(1).piece} clip-triangle-tr`;
+  if (r === 8 && c === 8) return `${ludoStyle(2).piece} clip-triangle-br`;
+  if (r === 8 && c === 6) return `${ludoStyle(3).piece} clip-triangle-bl`;
+  return null;
 }
 
 export function LudoGame() {
@@ -189,7 +245,7 @@ export function LudoGame() {
     <div className="space-y-6">
       {!isGameOver && (
         <TurnBanner
-          playerIndex={state.current}
+          playerIndex={LUDO_STYLE_INDEX[state.current]}
           playerLabel={`プレイヤー ${state.activePlayers.indexOf(state.current) + 1}`}
           action={
             state.lastRoll == null
@@ -201,9 +257,9 @@ export function LudoGame() {
         />
       )}
 
-      <div className="mx-auto w-full max-w-[min(100%,20rem)]">
+      <div className="mx-auto w-full max-w-[min(100%,22rem)]">
         <div
-          className="grid gap-px rounded-xl border border-surface-border bg-slate-900 p-1"
+          className="grid gap-0 rounded-2xl border border-amber-900/30 bg-amber-100/10 p-1.5 shadow-inner"
           style={{
             gridTemplateColumns: `repeat(${LUDO_GRID}, minmax(0, 1fr))`,
           }}
@@ -217,28 +273,66 @@ export function LudoGame() {
               cellMap.pathKeys,
               cellMap.homeMap,
               cellMap.startMap,
+              cellMap.homeEntryMap,
               cellMap.baseMap
             );
             const here = tokensAt(state.tokens, { r, c });
             const markerStyle =
-              info.owner != null ? getPlayerTurnStyle(info.owner) : null;
+              info.owner != null ? ludoStyle(info.owner) : null;
+            const triangle = info.kind === "center" ? centerTriangleClass(r, c) : null;
+            const isPathCircle =
+              info.kind === "path" && !info.isStart && info.owner == null;
+            const isHomeCircle = info.kind === "home";
+            const yardKey = coordKey({ r, c });
+            const isYardSpot = LUDO_YARD.some((yard) =>
+              yard.some((spot) => coordKey(spot) === yardKey)
+            );
 
             return (
               <div
                 key={`${r}-${c}`}
                 className={`relative aspect-square ${cellAppearance(info)}`}
               >
-                {here.length === 0 && info.kind === "home" && markerStyle ? (
+                {triangle ? (
+                  <div className={`absolute inset-0 ${triangle}`} />
+                ) : null}
+
+                {isPathCircle ? (
                   <span
-                    className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[7px] font-bold ${markerStyle.label} opacity-80`}
+                    className="pointer-events-none absolute inset-[18%] rounded-full border border-slate-400/40 bg-white/90 shadow-sm"
                     aria-hidden
-                  >
-                    {info.homeSlot === 3 ? "★" : info.homeSlot! + 1}
+                  />
+                ) : null}
+
+                {isHomeCircle && markerStyle ? (
+                  <span
+                    className={`pointer-events-none absolute inset-[12%] rounded-full border border-white/20 ${cellAppearance(info)}`}
+                    aria-hidden
+                  />
+                ) : null}
+
+                {info.isStart && info.owner != null ? (
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <ArrowIcon direction={LUDO_START_ARROW[info.owner]} />
                   </span>
                 ) : null}
+
+                {info.isHomeEntry && info.owner != null ? (
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <ArrowIcon direction={LUDO_HOME_ARROW[info.owner]} />
+                  </span>
+                ) : null}
+
+                {isYardSpot && !here.length ? (
+                  <span
+                    className="pointer-events-none absolute inset-[22%] rounded-full border border-white/30 bg-white/20"
+                    aria-hidden
+                  />
+                ) : null}
+
                 {here.map((t) => {
                   const tokenIndex = state.tokens.indexOf(t);
-                  const tokenStyle = getPlayerTurnStyle(t.player);
+                  const tokenStyle = ludoStyle(t.player);
                   const canMove = movableTokenIds.has(tokenIndex);
                   return (
                     <button
@@ -246,7 +340,7 @@ export function LudoGame() {
                       type="button"
                       onClick={() => onToken(tokenIndex)}
                       disabled={!canMove}
-                      className={`absolute inset-[15%] rounded-full ${tokenStyle.piece} ${
+                      className={`absolute inset-[14%] rounded-full ${tokenStyle.piece} ${
                         canMove ? "ring-2 ring-lime-300" : ""
                       } ${tokenStyle.dotShadow}`}
                       aria-label={`P${state.activePlayers.indexOf(t.player) + 1} コマ ${t.index + 1}`}
@@ -257,18 +351,15 @@ export function LudoGame() {
             );
           })}
         </div>
+
         <div className="mt-2 flex flex-wrap justify-center gap-3 text-[10px] text-slate-400">
           {state.activePlayers.map((p, displayIdx) => {
-            const style = getPlayerTurnStyle(p);
+            const style = ludoStyle(p);
             const meta = LUDO_PLAYER_META[p];
             return (
               <span key={p} className="inline-flex items-center gap-1">
-                <span className={`h-2.5 w-2.5 rounded-sm ring-2 ring-inset ${style.pieceRing} ${style.bg}`} />
-                P{displayIdx + 1}（{meta.name}・{meta.corner}）スタート
-                <span className={`h-2.5 w-2.5 rounded-sm ${style.sectionBg}`} />
-                1〜3
-                <span className={`h-2.5 w-2.5 rounded-sm ${style.piece}/35 ring-1 ${style.pieceRing}`} />
-                ★
+                <span className={`h-2.5 w-2.5 rounded-full ${style.piece}`} />
+                P{displayIdx + 1}（{meta.name}・{meta.corner}）
               </span>
             );
           })}
@@ -277,7 +368,7 @@ export function LudoGame() {
 
       <div className="flex flex-wrap justify-center gap-4">
         {state.activePlayers.map((p, displayIdx) => {
-          const style = getPlayerTurnStyle(p);
+          const style = ludoStyle(p);
           return (
             <div
               key={p}
