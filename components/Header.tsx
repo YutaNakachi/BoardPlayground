@@ -43,7 +43,7 @@ export function Header() {
             aria-expanded={open}
             aria-controls="site-sidebar"
             className="relative inline-flex min-h-9 min-w-9 items-center justify-center rounded-xl text-slate-300 transition hover:bg-surface-raised hover:text-white sm:min-h-10 sm:min-w-10"
-            aria-label="絞り込みメニューを開く"
+            aria-label="検索・絞り込みメニューを開く"
           >
             <MenuIcon />
             {filterCount > 0 ? (

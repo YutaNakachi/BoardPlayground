@@ -713,6 +713,7 @@ export function catalogHasTeam(list: GameMeta[] = getAllGames()): boolean {
 }
 
 export type CatalogFilters = {
+  query: string;
   origins: GameOrigin[];
   complexities: GameComplexity[];
   playerBuckets: PlayerBucket[];
@@ -723,6 +724,7 @@ export type CatalogFilters = {
 };
 
 export const EMPTY_CATALOG_FILTERS: CatalogFilters = {
+  query: "",
   origins: [],
   complexities: [],
   playerBuckets: [],
@@ -732,8 +734,33 @@ export const EMPTY_CATALOG_FILTERS: CatalogFilters = {
   tags: [],
 };
 
+function normalizeCatalogQuery(query: string): string {
+  return query.trim().toLowerCase();
+}
+
+export function matchesCatalogQuery(game: GameMeta, query: string): boolean {
+  const normalized = normalizeCatalogQuery(query);
+  if (!normalized) return true;
+
+  const haystack = [
+    game.title,
+    game.description,
+    game.slug.replace(/-/g, " "),
+    game.players,
+    ORIGIN_LABEL[game.origin],
+    COMPLEXITY_LABEL[game.complexity],
+    ...game.tags,
+    ...game.rulesSummary,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(normalized);
+}
+
 export function countSidebarFilters(filters: CatalogFilters): number {
   return (
+    (normalizeCatalogQuery(filters.query) ? 1 : 0) +
     filters.origins.length +
     filters.complexities.length +
     filters.playerBuckets.length +
@@ -748,6 +775,7 @@ export function countCatalogFilters(filters: CatalogFilters): number {
 }
 
 export function matchesCatalogFilters(game: GameMeta, filters: CatalogFilters): boolean {
+  if (!matchesCatalogQuery(game, filters.query)) return false;
   if (filters.origins.length > 0 && !filters.origins.includes(game.origin)) {
     return false;
   }
