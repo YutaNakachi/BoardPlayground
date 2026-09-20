@@ -4,6 +4,7 @@ export const GAME_TAGS = [
   "コマ取り",
   "そろえる",
   "あつめる",
+  "すごろく",
   "心理戦",
   "運要素",
 ] as const;
@@ -418,7 +419,7 @@ const games: GameMeta[] = [
     complexity: "easy",
     cpu: false,
     team: false,
-    tags: ["ボード", "運要素"],
+    tags: ["ボード", "コマ取り", "すごろく", "運要素"],
     rulesSummary: [
       "十字型の盤を一周し、各プレイヤー4コマを持つ。",
       "6が出るまでコマは出せない。6では新しく出すか、場のコマを6進める。",
@@ -441,7 +442,7 @@ const games: GameMeta[] = [
     complexity: "normal",
     cpu: false,
     team: false,
-    tags: ["ボード", "運要素"],
+    tags: ["ボード", "すごろく", "運要素"],
     rulesSummary: [
       "各15個を標準配置。交互にサイコロ2つを振り、出目ごとに駒を動かす。",
       "相手の駒が2個以上いるマスには入れない。1個だけなら取ってバーへ送る。",
