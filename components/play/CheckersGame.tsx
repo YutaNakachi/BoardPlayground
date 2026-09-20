@@ -197,7 +197,7 @@ export function CheckersGame() {
       <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
         <h2 className="text-xl font-semibold">チェッカー</h2>
         <p className="mt-2 text-sm text-[#a1a1a6]">
-          暗いマスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。
+          黒マスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。
         </p>
         <div className="mt-6">
           <OnlineSetupPanel
@@ -287,8 +287,8 @@ export function CheckersGame() {
                   : isDest
                     ? "移動先"
                     : dark
-                      ? "暗いマス"
-                      : "明るいマス"
+                      ? "黒マス"
+                      : "白マス"
               }
             >
               {piece ? (
