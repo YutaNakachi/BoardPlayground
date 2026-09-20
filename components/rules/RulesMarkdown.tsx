@@ -4,6 +4,7 @@ type Block =
   | { type: "heading"; level: 3 | 4 | 5 | 6; text: string }
   | { type: "paragraph"; text: string }
   | { type: "list"; ordered: boolean; items: string[] }
+  | { type: "meta-summary"; items: { label: string; value: string }[] }
   | { type: "table"; rows: string[][] };
 
 function parseHeadingLine(line: string): { level: 3 | 4 | 5 | 6; text: string } | null {
@@ -36,6 +37,37 @@ function isOrderedListLine(line: string): boolean {
   return /^\d+\.\s/.test(line.trim());
 }
 
+const HIDDEN_RULE_TABLE_ROWS = new Set(["ジャンル"]);
+
+function formatMetaSummaryLine(label: string, value: string): string {
+  const trimmed = value.trim();
+
+  if (label === "人数" || label === "プレイ人数") {
+    const players = trimmed.endsWith("人") ? trimmed : `${trimmed}人`;
+    return `プレイ人数：${players}`;
+  }
+
+  if (label === "プレイ時間") {
+    const duration = trimmed
+      .replace(/^おおよそ/, "")
+      .replace(/（[^）]*）/g, "")
+      .trim();
+    const minutes = duration.endsWith("分") ? duration : `${duration}分`;
+    return `プレイ時間：${minutes}`;
+  }
+
+  return `${label}：${trimmed}`;
+}
+
+function isMetaSummaryTable(rows: string[][]): boolean {
+  if (rows.length < 2) return false;
+  const [header, ...body] = rows;
+  if (header.length !== 2 || header[0] !== "項目" || header[1] !== "内容") {
+    return false;
+  }
+  return body.every((row) => row.length === 2);
+}
+
 function parseTableBlock(lines: string[]): Block | null {
   if (!lines.every((line) => line.trim().startsWith("|"))) {
     return null;
@@ -48,9 +80,20 @@ function parseTableBlock(lines: string[]): Block | null {
         .split("|")
         .slice(1, -1)
         .map((cell) => cell.trim())
-    );
+    )
+    .filter((row, index) => index === 0 || !HIDDEN_RULE_TABLE_ROWS.has(row[0] ?? ""));
 
-  return rows.length > 0 ? { type: "table", rows } : null;
+  if (rows.length === 0) return null;
+
+  if (isMetaSummaryTable(rows)) {
+    const [, ...body] = rows;
+    return {
+      type: "meta-summary",
+      items: body.map(([label, value]) => ({ label, value })),
+    };
+  }
+
+  return { type: "table", rows };
 }
 
 function parseLinesIntoBlocks(lines: string[]): Block[] {
@@ -191,6 +234,16 @@ export function RulesMarkdown({ content, className = "" }: Props) {
                 <li key={`${index}-${itemIndex}`}>{renderInline(item)}</li>
               ))}
             </ListTag>
+          );
+        }
+
+        if (block.type === "meta-summary") {
+          return (
+            <ul key={index} className="list-disc space-y-2 pl-5">
+              {block.items.map((item) => (
+                <li key={item.label}>{formatMetaSummaryLine(item.label, item.value)}</li>
+              ))}
+            </ul>
           );
         }
 
