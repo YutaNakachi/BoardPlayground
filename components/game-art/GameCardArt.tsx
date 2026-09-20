@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LudoBoardPreview } from "@/components/game-art/LudoBoardPreview";
 import type { GameMeta } from "@/lib/games";
 import { MORRIS_LINES, MORRIS_XY } from "@/lib/play/nine-mens-morris";
 
@@ -433,26 +434,7 @@ function ChineseCheckersPreview() {
 }
 
 function LudoPreview() {
-  return (
-    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="12" fill="#0f172a" />
-      <circle cx="60" cy="60" r="38" fill="none" stroke="#475569" strokeWidth="8" />
-      {[
-        [60, 22],
-        [98, 60],
-        [60, 98],
-        [22, 60],
-      ].map(([cx, cy], index) => (
-        <circle
-          key={index}
-          cx={cx}
-          cy={cy}
-          r="6"
-          fill={["#6366f1", "#fb7185", "#34d399", "#fbbf24"][index]}
-        />
-      ))}
-    </svg>
-  );
+  return <LudoBoardPreview />;
 }
 
 function BackgammonPreview() {
