@@ -65,3 +65,10 @@ export function trackCoord(player: number, steps: number): Coord {
 export function isStartPathIndex(pathIndex: number): boolean {
   return LUDO_ENTRY.includes(pathIndex);
 }
+
+/** 各プレイヤーのスタートマス座標 */
+export const LUDO_START: readonly Coord[] = LUDO_ENTRY.map((i) => LUDO_PATH[i]);
+
+export function ludoStartCoord(player: number): Coord {
+  return LUDO_PATH[LUDO_ENTRY[player]];
+}

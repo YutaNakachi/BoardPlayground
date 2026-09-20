@@ -11,6 +11,7 @@ import {
   LUDO_GRID,
   LUDO_HOME,
   LUDO_PATH,
+  ludoStartCoord,
   type Coord,
 } from "@/lib/play/ludo-board";
 import {
@@ -28,6 +29,13 @@ type Phase = "setup" | "playing" | "game-over";
 
 type CellKind = "empty" | "base" | "path" | "home" | "center";
 
+type CellInfo = {
+  kind: CellKind;
+  owner?: number;
+  isStart?: boolean;
+  homeSlot?: number;
+};
+
 const BASE_REGIONS: { player: number; rows: [number, number]; cols: [number, number] }[] = [
   { player: 0, rows: [9, 14], cols: [0, 5] },
   { player: 1, rows: [0, 5], cols: [0, 5] },
@@ -37,11 +45,13 @@ const BASE_REGIONS: { player: number; rows: [number, number]; cols: [number, num
 
 function buildCellMap(activePlayers: number[]) {
   const pathKeys = new Set(LUDO_PATH.map(coordKey));
-  const homeMap = new Map<string, number>();
+  const homeMap = new Map<string, { player: number; slot: number }>();
+  const startMap = new Map<string, number>();
   for (const p of activePlayers) {
-    for (const coord of LUDO_HOME[p]) {
-      homeMap.set(coordKey(coord), p);
-    }
+    startMap.set(coordKey(ludoStartCoord(p)), p);
+    LUDO_HOME[p].forEach((coord, slot) => {
+      homeMap.set(coordKey(coord), { player: p, slot });
+    });
   }
   const baseMap = new Map<string, number>();
   for (const region of BASE_REGIONS) {
@@ -52,24 +62,51 @@ function buildCellMap(activePlayers: number[]) {
       }
     }
   }
-  return { pathKeys, homeMap, baseMap };
+  return { pathKeys, homeMap, startMap, baseMap };
 }
 
-function cellKind(
+function cellInfo(
   r: number,
   c: number,
   pathKeys: Set<string>,
-  homeMap: Map<string, number>,
+  homeMap: Map<string, { player: number; slot: number }>,
+  startMap: Map<string, number>,
   baseMap: Map<string, number>
-): { kind: CellKind; owner?: number } {
+): CellInfo {
   const key = coordKey({ r, c });
   if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { kind: "center" };
-  if (homeMap.has(key)) return { kind: "home", owner: homeMap.get(key) };
+  if (homeMap.has(key)) {
+    const home = homeMap.get(key)!;
+    return { kind: "home", owner: home.player, homeSlot: home.slot };
+  }
+  if (startMap.has(key)) {
+    return { kind: "path", owner: startMap.get(key), isStart: true };
+  }
   if (pathKeys.has(key)) return { kind: "path" };
   if (baseMap.has(key)) return { kind: "base", owner: baseMap.get(key) };
   if (r >= 6 && r <= 8) return { kind: "path" };
   if (c >= 6 && c <= 8) return { kind: "path" };
   return { kind: "empty" };
+}
+
+function cellAppearance(info: CellInfo): string {
+  if (info.kind === "center") return "bg-slate-700";
+  if (info.owner == null) {
+    if (info.kind === "path") return "bg-white/10";
+    return "bg-slate-950/50";
+  }
+  const style = getPlayerTurnStyle(info.owner);
+  if (info.isStart) {
+    return `${style.bg} ring-2 ring-inset ${style.pieceRing} shadow-inner`;
+  }
+  if (info.kind === "home") {
+    if (info.homeSlot === 3) return `${style.piece}/35 ring-2 ring-inset ${style.pieceRing}`;
+    if (info.homeSlot === 2) return `${style.bg}`;
+    if (info.homeSlot === 1) return `${style.surface}`;
+    return `${style.sectionBg}`;
+  }
+  if (info.kind === "base") return style.bg;
+  return "bg-white/10";
 }
 
 function tokensAt(tokens: LudoToken[], coord: Coord): LudoToken[] {
@@ -172,31 +209,39 @@ export function LudoGame() {
           {Array.from({ length: LUDO_GRID * LUDO_GRID }, (_, i) => {
             const r = Math.floor(i / LUDO_GRID);
             const c = i % LUDO_GRID;
-            const { kind, owner } = cellKind(
+            const info = cellInfo(
               r,
               c,
               cellMap.pathKeys,
               cellMap.homeMap,
+              cellMap.startMap,
               cellMap.baseMap
             );
             const here = tokensAt(state.tokens, { r, c });
-            const style = owner != null ? getPlayerTurnStyle(owner) : null;
-            const bg =
-              kind === "center"
-                ? "bg-slate-700"
-                : kind === "home" && style
-                  ? style.surface
-                  : kind === "base" && style
-                    ? style.bg
-                    : kind === "path"
-                      ? "bg-white/10"
-                      : "bg-slate-950/50";
+            const markerStyle =
+              info.owner != null ? getPlayerTurnStyle(info.owner) : null;
 
             return (
               <div
                 key={`${r}-${c}`}
-                className={`relative aspect-square ${bg}`}
+                className={`relative aspect-square ${cellAppearance(info)}`}
               >
+                {here.length === 0 && info.isStart && markerStyle ? (
+                  <span
+                    className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[7px] font-bold ${markerStyle.label}`}
+                    aria-hidden
+                  >
+                    出
+                  </span>
+                ) : null}
+                {here.length === 0 && info.kind === "home" && markerStyle ? (
+                  <span
+                    className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[7px] font-bold ${markerStyle.label} opacity-80`}
+                    aria-hidden
+                  >
+                    {info.homeSlot === 3 ? "★" : info.homeSlot! + 1}
+                  </span>
+                ) : null}
                 {here.map((t) => {
                   const tokenIndex = state.tokens.indexOf(t);
                   const tokenStyle = getPlayerTurnStyle(t.player);
@@ -215,6 +260,21 @@ export function LudoGame() {
                   );
                 })}
               </div>
+            );
+          })}
+        </div>
+        <div className="mt-2 flex flex-wrap justify-center gap-3 text-[10px] text-slate-400">
+          {state.activePlayers.map((p, displayIdx) => {
+            const style = getPlayerTurnStyle(p);
+            return (
+              <span key={p} className="inline-flex items-center gap-1">
+                <span className={`h-2.5 w-2.5 rounded-sm ring-2 ring-inset ${style.pieceRing} ${style.bg}`} />
+                P{displayIdx + 1} スタート
+                <span className={`h-2.5 w-2.5 rounded-sm ${style.sectionBg}`} />
+                1〜3
+                <span className={`h-2.5 w-2.5 rounded-sm ${style.piece}/35 ring-1 ${style.pieceRing}`} />
+                ★ゴール
+              </span>
             );
           })}
         </div>
