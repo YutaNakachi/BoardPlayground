@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackToHomeLink } from "@/components/BackToHomeLink";
-import { GameMetaChips } from "@/components/GameMetaChips";
-import { GameRulesOnlineBadge } from "@/components/GameRulesOnlineBadge";
+import { GameMetaIndicators } from "@/components/GameMetaIndicators";
 import { PageContainer } from "@/components/PageContainer";
 import { OriginChip } from "@/components/OriginChip";
 import { GameRulesView } from "@/components/rules/GameRulesView";
@@ -40,15 +39,16 @@ export default async function GameDetailPage({ params }: Props) {
       <BackToHomeLink className="mb-8 inline-flex text-sm text-slate-400 transition hover:text-white" />
 
       <header className="mb-10">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <OriginChip origin={game.origin} className="rounded-full px-3 py-1" />
-          <GameRulesOnlineBadge slug={slug} />
-          <GameMetaChips game={game} className="contents" />
-          {game.tags.map((tag) => (
-            <span key={tag} className={`${TAG_CHIP_CLASS} rounded-full px-3 py-1`}>
-              {tag}
-            </span>
-          ))}
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <OriginChip origin={game.origin} className="rounded-full px-3 py-1" />
+            {game.tags.map((tag) => (
+              <span key={tag} className={`${TAG_CHIP_CLASS} rounded-full px-3 py-1`}>
+                {tag}
+              </span>
+            ))}
+          </div>
+          <GameMetaIndicators game={game} />
         </div>
         <h1 className="text-3xl font-bold sm:text-4xl">{game.title}</h1>
         <p className="mt-4 text-lg leading-relaxed text-slate-300">
