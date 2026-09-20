@@ -10,6 +10,14 @@ export type Coord = { r: number; c: number };
 /** 盤面表示用のプレイヤー色インデックス（赤・緑・黄・青） */
 export const LUDO_STYLE_INDEX: readonly number[] = [0, 2, 3, 1];
 
+/** 待機席（ヤード）の背景色 — Tailwind に完全なクラス名を渡す */
+export const LUDO_YARD_BG: readonly string[] = [
+  "bg-accent/25",
+  "bg-emerald-500/25",
+  "bg-amber-500/25",
+  "bg-sky-500/25",
+];
+
 /**
  * プレイヤー配置（画像と同じ：左上から反時計回り）
  * 0=赤・左上 / 1=緑・右上 / 2=黄・右下 / 3=青・左下

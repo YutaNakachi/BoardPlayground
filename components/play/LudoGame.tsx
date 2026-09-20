@@ -20,6 +20,7 @@ import {
   LUDO_START_ARROW,
   LUDO_STYLE_INDEX,
   LUDO_YARD,
+  LUDO_YARD_BG,
   ludoStartCoord,
   type Coord,
 } from "@/lib/play/ludo-board";
@@ -66,7 +67,6 @@ function buildCellMap(activePlayers: number[]) {
 
   const baseMap = new Map<string, number>();
   for (const region of LUDO_BASE_REGIONS) {
-    if (!activePlayers.includes(region.player)) continue;
     for (let r = region.rows[0]; r <= region.rows[1]; r++) {
       for (let c = region.cols[0]; c <= region.cols[1]; c++) {
         baseMap.set(coordKey({ r, c }), region.player);
@@ -156,7 +156,7 @@ function cellAppearance(info: CellInfo): string {
     if (info.homeSlot === 2) return `${style.sectionBg}`;
     return `${style.sectionBg}/90`;
   }
-  if (info.kind === "base") return `${style.piece}/30`;
+  if (info.kind === "base") return LUDO_YARD_BG[info.owner];
   return "bg-transparent";
 }
 
