@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
@@ -17,23 +18,69 @@ import {
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import {
+  applyTttPlace,
   emptyTttBoard,
+  emptyTttHistories,
   TTT_SIZE,
   tttBoardFull,
+  tttRotatingOldest,
   tttWinner,
   type Board,
   type Player,
+  type TttHistories,
+  type TttMode,
 } from "@/lib/play/tic-tac-toe";
 
 type LocalPhase = "setup" | "playing" | "game-over";
+
+const TTT_MODE_OPTIONS: { value: TttMode; label: string; description: string }[] = [
+  {
+    value: "classic",
+    label: "通常",
+    description: "空きマスに置き、3つ並べたら勝ち。盤が埋まれば引き分け。",
+  },
+  {
+    value: "rotating",
+    label: "ローテ",
+    description:
+      "自分の駒は盤上に3つまで。4つ目を置くと一番古い駒が消えます。引き分けなし。",
+  },
+];
+
+function modeSetupExtra(
+  gameMode: TttMode,
+  onGameModeChange: (mode: TttMode) => void
+) {
+  const selected = TTT_MODE_OPTIONS.find((o) => o.value === gameMode)!;
+  return (
+    <div className="mt-6 space-y-2">
+      <p className="text-center text-xs text-slate-400">ルール</p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {TTT_MODE_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onGameModeChange(option.value)}
+            className={`min-w-20 px-4 py-2 ${setupPillClass(gameMode === option.value)}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-center text-xs text-slate-500">{selected.description}</p>
+    </div>
+  );
+}
 
 export function TicTacToeGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const { onlineEnabled } = usePlayStats();
   const online = useOnlineRoom("tic-tac-toe");
   const [mode, setMode] = useState<PlayMode>("local");
+  const [gameMode, setGameMode] = useState<TttMode>("classic");
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [board, setBoard] = useState<Board>(emptyTttBoard);
+  const [histories, setHistories] = useState<TttHistories>(emptyTttHistories);
   const [current, setCurrent] = useState<Player>(0);
   const [winner, setWinner] = useState<Player | "draw" | null>(null);
 
@@ -51,6 +98,7 @@ export function TicTacToeGame() {
   const startLocal = useCallback(() => {
     recordLocalPlay();
     setBoard(emptyTttBoard());
+    setHistories(emptyTttHistories());
     setCurrent(0);
     setWinner(null);
     setLocalPhase("playing");
@@ -72,6 +120,11 @@ export function TicTacToeGame() {
           ? "playing"
           : "setup";
 
+  const fadingIndex =
+    !isOnline && gameMode === "rotating" && localPhase === "playing"
+      ? tttRotatingOldest(histories, current)
+      : null;
+
   const place = useCallback(
     (index: number) => {
       if (isOnline) {
@@ -79,23 +132,35 @@ export function TicTacToeGame() {
         void online.handleMove({ type: "place", index });
         return;
       }
-      if (localPhase !== "playing" || board[index] !== null) return;
-      const next = board.map((cell, i) => (i === index ? current : cell));
+      if (localPhase !== "playing") return;
+      const result = applyTttPlace(board, histories, index, current, gameMode);
+      if (!result) return;
+      const { board: next, histories: nextHistories } = result;
       setBoard(next);
+      setHistories(nextHistories);
       const won = tttWinner(next);
       if (won !== null) {
         setWinner(won);
         setLocalPhase("game-over");
         return;
       }
-      if (tttBoardFull(next)) {
+      if (gameMode === "classic" && tttBoardFull(next)) {
         setWinner("draw");
         setLocalPhase("game-over");
         return;
       }
       setCurrent(current === 0 ? 1 : 0);
     },
-    [isOnline, online, activePhase, localPhase, board, current]
+    [
+      isOnline,
+      online,
+      activePhase,
+      localPhase,
+      board,
+      histories,
+      current,
+      gameMode,
+    ]
   );
 
   const winners = useMemo(() => {
@@ -117,6 +182,11 @@ export function TicTacToeGame() {
     (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
   usePlaySetupNavigation(isSetupScreen, reset);
 
+  const ruleExtra =
+    mode === "local" || !onlineEnabled
+      ? modeSetupExtra(gameMode, setGameMode)
+      : undefined;
+
   if (localPhase === "setup" && online.phase === "idle") {
     return (
       <OnlineSetupPanel
@@ -130,6 +200,7 @@ export function TicTacToeGame() {
         onStartLocal={startLocal}
         loading={online.loading}
         error={online.error}
+        extra={ruleExtra}
       />
     );
   }
@@ -182,11 +253,17 @@ export function TicTacToeGame() {
       )}
 
       {!isGameOver && (
-      <TurnBanner
-        playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
-        action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
-      />
+        <TurnBanner
+          playerIndex={activeCurrent}
+          playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+          action={
+            isOnline && !online.isMyTurn
+              ? "相手の手番です"
+              : !isOnline && gameMode === "rotating"
+                ? "ローテモード"
+                : undefined
+          }
+        />
       )}
 
       <div
@@ -201,7 +278,7 @@ export function TicTacToeGame() {
             onClick={() => place(index)}
             className={`flex aspect-square min-h-20 items-center justify-center bg-surface-raised text-5xl font-bold leading-none disabled:cursor-default sm:min-h-24 sm:text-6xl ${
               cell === null ? "text-white" : getPlayerTurnStyle(cell).label
-            }`}
+            } ${fadingIndex === index ? "ring-2 ring-inset ring-amber-400/70" : ""}`}
             aria-label={
               cell === 0 ? "×" : cell === 1 ? "○" : `空マス ${index + 1}`
             }
@@ -210,7 +287,6 @@ export function TicTacToeGame() {
           </button>
         ))}
       </div>
-
     </div>
   );
 }

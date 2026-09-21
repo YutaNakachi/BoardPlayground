@@ -125,7 +125,14 @@ import {
   scoreStarTradeCards,
   scoreStarTradeRound,
 } from "./star-trade";
-import { emptyTttBoard, tttBoardFull, tttWinner } from "./tic-tac-toe";
+import {
+  applyTttPlace,
+  emptyTttBoard,
+  emptyTttHistories,
+  tttBoardFull,
+  tttRotatingOldest,
+  tttWinner,
+} from "./tic-tac-toe";
 
 function assert(cond: boolean, message: string) {
   if (!cond) throw new Error(message);
@@ -289,6 +296,18 @@ function checkTtt() {
   cat.forEach((p, i) => { draw[i] = p as 0 | 1; });
   assert(tttBoardFull(draw), "ttt board full");
   assert(tttWinner(draw) === null, "ttt draw");
+
+  let rotatingBoard = emptyTttBoard();
+  let rotatingHistories = emptyTttHistories();
+  const r1 = applyTttPlace(rotatingBoard, rotatingHistories, 0, 0, "rotating");
+  assert(r1 !== null, "ttt rotating place 1");
+  rotatingBoard = r1!.board;
+  rotatingHistories = r1!.histories;
+  const r2 = applyTttPlace(rotatingBoard, rotatingHistories, 1, 0, "rotating");
+  const r3 = applyTttPlace(r2!.board, r2!.histories, 2, 0, "rotating");
+  const r4 = applyTttPlace(r3!.board, r3!.histories, 3, 0, "rotating");
+  assert(r4!.board[0] === null && r4!.board[3] === 0, "ttt rotating drops oldest");
+  assert(tttRotatingOldest(r3!.histories, 0) === 0, "ttt rotating oldest hint");
 }
 
 function checkGravityFour() {
