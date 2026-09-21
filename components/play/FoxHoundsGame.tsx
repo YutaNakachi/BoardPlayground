@@ -103,7 +103,7 @@ export function FoxHoundsGame() {
     return (
       <SetupPanel
         title="ウサギと猟犬"
-        description="11点の専用盤で、猟犬3匹がウサギ1匹を囲い、ウサギは左端の列を目指します。猟犬が先手です。"
+        description="9点の専用盤で、猟犬3匹がウサギ1匹を囲い、ウサギは左端の列を目指します。猟犬が先手です。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}

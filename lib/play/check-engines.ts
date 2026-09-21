@@ -375,14 +375,15 @@ function checkFoxHounds() {
   assert(start.board[FH_HARE_START] === 1, "fox-hounds hare at right tip");
   assert(
     FH_HOUND_START.every((node) => start.board[node] === 0),
-    "fox-hounds hounds on left column"
+    "fox-hounds hounds on left opening"
   );
+  assert(start.board[2] === null, "fox-hounds left column center starts empty");
   assert(foxHoundsMoves(start, 0).length > 0, "fox-hounds opening hound moves");
   assert(foxHoundsWinner(start, 0) === null, "fox-hounds no early winner");
 
   assert(
-    !foxHoundsHoundDestinations(start.board, 2).includes(0),
-    "fox-hounds hounds cannot move backward to tip"
+    !foxHoundsHoundDestinations(start.board, 1).includes(0),
+    "fox-hounds hounds cannot move backward to left tip"
   );
 
   const houndMove = foxHoundsMoves(start, 0)[0];

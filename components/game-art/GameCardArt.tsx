@@ -355,17 +355,15 @@ function HexPreview() {
 
 function FoxHoundsPreview() {
   const nodes = [
-    [10, 60],
-    [30, 18],
-    [30, 60],
-    [30, 102],
-    [60, 18],
+    [18, 60],
+    [42, 18],
+    [42, 60],
+    [42, 102],
     [60, 60],
-    [60, 102],
-    [90, 18],
-    [90, 60],
-    [90, 102],
-    [110, 60],
+    [78, 18],
+    [78, 60],
+    [78, 102],
+    [102, 60],
   ];
   const edges = [
     [0, 1],
@@ -375,18 +373,17 @@ function FoxHoundsPreview() {
     [2, 3],
     [1, 4],
     [2, 4],
-    [2, 5],
-    [3, 5],
+    [3, 4],
+    [1, 5],
+    [3, 7],
     [4, 5],
-    [5, 6],
+    [4, 6],
     [4, 7],
+    [5, 6],
+    [6, 7],
     [5, 8],
-    [6, 9],
+    [6, 8],
     [7, 8],
-    [8, 9],
-    [7, 10],
-    [8, 10],
-    [9, 10],
   ];
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
@@ -410,10 +407,10 @@ function FoxHoundsPreview() {
       {nodes.map(([cx, cy], index) => (
         <circle key={index} cx={cx} cy={cy} r="5" fill="#1e293b" stroke="#94a3b8" strokeWidth="1.5" />
       ))}
-      {[1, 2, 3].map((index) => (
+      {[0, 1, 3].map((index) => (
         <circle key={`hound-${index}`} cx={nodes[index][0]} cy={nodes[index][1]} r="3.5" fill="#64748b" />
       ))}
-      <circle cx={nodes[10][0]} cy={nodes[10][1]} r="4" fill="#f97316" />
+      <circle cx={nodes[8][0]} cy={nodes[8][1]} r="4" fill="#f97316" />
     </svg>
   );
 }
