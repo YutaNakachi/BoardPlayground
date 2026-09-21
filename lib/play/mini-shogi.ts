@@ -472,8 +472,10 @@ export function miniShogiPieceLabel(piece: MiniPiece): string {
     };
     return promoted[piece.type] ?? piece.type;
   }
-  const base: Record<MiniPieceType, string> = {
-    K: "玉",
+  if (piece.type === "K") {
+    return piece.player === 0 ? "玉" : "王";
+  }
+  const base: Record<Exclude<MiniPieceType, "K">, string> = {
     G: "金",
     S: "銀",
     B: "角",

@@ -35,7 +35,7 @@ export function ShogiPieceTile({
     <span
       className={`relative inline-flex items-center justify-center ${
         isHand ? "h-9 w-7" : "h-11 w-9 sm:h-12 sm:w-10"
-      } ${className}`}
+      } ${player === 1 ? "rotate-180" : ""} ${className}`}
     >
       <span
         className={`absolute select-none leading-none text-amber-50 drop-shadow ${symbolSize}`}
@@ -46,7 +46,7 @@ export function ShogiPieceTile({
       <span
         className={`relative z-10 font-bold leading-none text-slate-900 ${labelSize} ${
           promoted ? "text-rose-800" : ""
-        } ${player === 1 ? "rotate-180" : ""}`}
+        }`}
       >
         {label}
       </span>
