@@ -10,6 +10,7 @@ import {
   applyFoxHoundsMove,
   FH_BOARD_LINES,
   FH_NODE_POS,
+  FH_VIEW_BOX,
   foxHoundsHareDestinations,
   foxHoundsHoundDestinations,
   foxHoundsWinMessage,
@@ -134,8 +135,20 @@ export function FoxHoundsGame() {
         className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 px-3 sm:px-5"
         aria-label="ウサギと猟犬の盤面"
       >
-        <svg viewBox="-12 8 124 84" className="block h-auto w-full" aria-label="ウサギと猟犬の盤">
-          <rect x="-12" y="8" width="124" height="84" rx="8" fill="#0f172a" opacity="0.35" />
+        <svg
+          viewBox={`${FH_VIEW_BOX.x} ${FH_VIEW_BOX.y} ${FH_VIEW_BOX.width} ${FH_VIEW_BOX.height}`}
+          className="block h-auto w-full"
+          aria-label="ウサギと猟犬の盤"
+        >
+          <rect
+            x={FH_VIEW_BOX.x}
+            y={FH_VIEW_BOX.y}
+            width={FH_VIEW_BOX.width}
+            height={FH_VIEW_BOX.height}
+            rx="8"
+            fill="#0f172a"
+            opacity="0.35"
+          />
 
           {FH_BOARD_LINES.map(([from, to]) => {
             const a = FH_NODE_POS[from];

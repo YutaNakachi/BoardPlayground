@@ -59,6 +59,9 @@ export const FH_NEIGHBORS: readonly number[][] = [
 export const FH_COLUMN_X = [0, 25, 50, 75, 100] as const;
 const FH_ROW_Y = [12, 50, 88] as const;
 
+/** SVG viewBox（駒の円・縁取りが切れない余白を含む） */
+export const FH_VIEW_BOX = { x: -14, y: -6, width: 128, height: 112 } as const;
+
 /** 描画用の点座標 */
 export const FH_NODE_POS: readonly { x: number; y: number }[] = [
   { x: FH_COLUMN_X[0], y: FH_ROW_Y[1] },
