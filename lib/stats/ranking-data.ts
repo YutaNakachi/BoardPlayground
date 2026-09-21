@@ -22,8 +22,19 @@ export function parseRankingPeriod(value?: string): RankingPeriod {
   return "all";
 }
 
+function listedSlugTitleMap(): {
+  slugToTitle: Map<string, string>;
+  listedSlugs: Set<string>;
+} {
+  const listed = getAllGames();
+  return {
+    slugToTitle: new Map(listed.map((g) => [g.slug, g.title])),
+    listedSlugs: new Set(listed.map((g) => g.slug)),
+  };
+}
+
 export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[]> {
-  const slugToTitle = new Map(getAllGames().map((g) => [g.slug, g.title]));
+  const { slugToTitle, listedSlugs } = listedSlugTitleMap();
 
   if (!isSupabaseConfigured()) return [];
 
@@ -37,12 +48,14 @@ export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[
       .order("play_count", { ascending: false })
       .limit(50);
 
-    return (data ?? []).map((row, i) => ({
-      rank: i + 1,
-      slug: row.game_slug,
-      title: slugToTitle.get(row.game_slug) ?? row.game_slug,
-      playCount: row.play_count,
-    }));
+    return (data ?? [])
+      .filter((row) => listedSlugs.has(row.game_slug))
+      .map((row, i) => ({
+        rank: i + 1,
+        slug: row.game_slug,
+        title: slugToTitle.get(row.game_slug)!,
+        playCount: row.play_count,
+      }));
   }
 
   const startDate = periodStartDate(period)!;
@@ -60,12 +73,13 @@ export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[
   }
 
   return [...totals.entries()]
+    .filter(([slug]) => listedSlugs.has(slug))
     .sort((a, b) => b[1] - a[1])
     .slice(0, 50)
     .map(([slug, playCount], i) => ({
       rank: i + 1,
       slug,
-      title: slugToTitle.get(slug) ?? slug,
+      title: slugToTitle.get(slug)!,
       playCount,
     }));
 }
