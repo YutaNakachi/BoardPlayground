@@ -9,8 +9,10 @@ type Props = {
   className?: string;
 };
 
-/** 将棋駒形（上向き）。後手は外枠で 180° 回転 */
-const KOMA_POINTS = "20,1 37,16 32,45 8,45 3,16";
+const SHOGI_PIECE_SYMBOL: Record<Player, string> = {
+  0: "☖",
+  1: "☗",
+};
 
 export function ShogiPieceTile({
   label,
@@ -20,6 +22,7 @@ export function ShogiPieceTile({
 }: Props) {
   const isHand = size === "hand";
   const pieceColor = getPlayerFill(player);
+  const symbolSize = isHand ? "text-2xl" : "text-[2.25rem] sm:text-[2.75rem]";
   const charCount = label.length;
   const labelSize =
     charCount >= 2
@@ -36,21 +39,17 @@ export function ShogiPieceTile({
         isHand ? "h-9 w-7" : "h-11 w-9 sm:h-12 sm:w-10"
       } ${player === 1 ? "rotate-180" : ""} ${className}`}
     >
-      <svg
-        viewBox="0 0 40 48"
-        className="absolute inset-0 h-full w-full drop-shadow-sm"
+      <span
+        className={`absolute select-none leading-none drop-shadow ${symbolSize}`}
+        style={{ color: pieceColor }}
         aria-hidden
       >
-        <polygon
-          points={KOMA_POINTS}
-          fill={pieceColor}
-          stroke="rgba(15, 23, 42, 0.35)"
-          strokeWidth="1.2"
-          strokeLinejoin="round"
-        />
-      </svg>
+        {SHOGI_PIECE_SYMBOL[player]}
+      </span>
       <span
-        className={`relative z-10 max-h-[70%] overflow-hidden font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl]`}
+        className={`relative z-10 font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl] ${
+          isHand ? "rounded-sm bg-white/95 px-px shadow-sm" : ""
+        }`}
       >
         {label}
       </span>
