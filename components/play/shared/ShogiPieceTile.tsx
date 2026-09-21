@@ -1,3 +1,4 @@
+import { getPlayerFill } from "@/lib/player-colors";
 import type { Player } from "@/lib/play/mini-shogi";
 
 type Props = {
@@ -21,6 +22,7 @@ export function ShogiPieceTile({
   className = "",
 }: Props) {
   const isHand = size === "hand";
+  const pieceColor = getPlayerFill(player);
   const symbolSize = isHand ? "text-2xl" : "text-[2.25rem] sm:text-[2.75rem]";
   const labelSize =
     label.length >= 2
@@ -38,15 +40,14 @@ export function ShogiPieceTile({
       } ${player === 1 ? "rotate-180" : ""} ${className}`}
     >
       <span
-        className={`absolute select-none leading-none text-amber-50 drop-shadow ${symbolSize}`}
+        className={`absolute select-none leading-none drop-shadow ${symbolSize}`}
+        style={{ color: pieceColor }}
         aria-hidden
       >
         {SHOGI_PIECE_SYMBOL[player]}
       </span>
       <span
-        className={`relative z-10 font-bold leading-none text-slate-900 ${labelSize} ${
-          promoted ? "text-rose-800" : ""
-        }`}
+        className={`relative z-10 font-bold leading-none text-slate-900 ${labelSize}`}
       >
         {label}
       </span>
