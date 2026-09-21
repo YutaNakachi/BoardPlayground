@@ -9,6 +9,7 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
   applyFoxHoundsMove,
   FH_BOARD_LINES,
+  FH_HIT_RADIUS,
   FH_NODE_POS,
   FH_VIEW_BOX,
   foxHoundsHareDestinations,
@@ -82,6 +83,35 @@ export function FoxHoundsGame() {
     [phase, destinations, selected, state, board, current]
   );
 
+  const onBoardPointer = useCallback(
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      if (phase !== "playing") return;
+      const svg = event.currentTarget;
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return;
+
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      const { x, y } = point.matrixTransform(ctm.inverse());
+
+      let nearest = -1;
+      let nearestDist = FH_HIT_RADIUS * FH_HIT_RADIUS;
+      for (let index = 0; index < FH_NODE_POS.length; index++) {
+        const pos = FH_NODE_POS[index];
+        const dx = pos.x - x;
+        const dy = pos.y - y;
+        const dist = dx * dx + dy * dy;
+        if (dist <= nearestDist) {
+          nearestDist = dist;
+          nearest = index;
+        }
+      }
+      if (nearest >= 0) onNode(nearest);
+    },
+    [phase, onNode]
+  );
+
   const hareFrom = board.indexOf(1);
 
   const backToSetup = useCallback(() => setPhase("setup"), []);
@@ -130,13 +160,14 @@ export function FoxHoundsGame() {
         </p>
       )}
       <div
-        className="relative mx-auto w-full max-w-[min(100%,22rem)] sm:max-w-md"
+        className="relative mx-auto w-full max-w-xl sm:max-w-2xl"
         aria-label="ウサギと猟犬の盤面"
       >
         <svg
           viewBox={`${FH_VIEW_BOX.x} ${FH_VIEW_BOX.y} ${FH_VIEW_BOX.width} ${FH_VIEW_BOX.height}`}
-          className="block h-auto w-full"
+          className="block h-auto w-full cursor-pointer touch-manipulation"
           aria-label="ウサギと猟犬の盤"
+          onPointerDown={onBoardPointer}
         >
           <rect
             x={FH_VIEW_BOX.x}
@@ -174,7 +205,7 @@ export function FoxHoundsGame() {
             const isHound = piece === 0;
 
             return (
-              <g key={index}>
+              <g key={index} className="pointer-events-none">
                 <circle
                   cx={pos.x}
                   cy={pos.y}
@@ -182,8 +213,6 @@ export function FoxHoundsGame() {
                   fill="#1e293b"
                   stroke={isSel ? "#a5b4fc" : isDest ? "#bef264" : "#94a3b8"}
                   strokeWidth={isSel || isDest ? 2 : 1.5}
-                  className="cursor-pointer"
-                  onClick={() => onNode(index)}
                 />
                 {isDest && piece === null ? (
                   <circle cx={pos.x} cy={pos.y} r="2" fill="#bef264" />
@@ -195,7 +224,7 @@ export function FoxHoundsGame() {
                     textAnchor="middle"
                     dominantBaseline="central"
                     fontSize="9"
-                    className="pointer-events-none select-none"
+                    className="select-none"
                   >
                     🐇
                   </text>
@@ -209,7 +238,7 @@ export function FoxHoundsGame() {
                       dominantBaseline="central"
                       fontSize="8.5"
                       transform="scale(-1, 1)"
-                      className="pointer-events-none select-none"
+                      className="select-none"
                     >
                       🐕
                     </text>
@@ -218,6 +247,7 @@ export function FoxHoundsGame() {
               </g>
             );
           })}
+
         </svg>
       </div>
 
