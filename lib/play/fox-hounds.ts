@@ -55,12 +55,15 @@ export const FH_NEIGHBORS: readonly number[][] = [
   [7, 8, 9], // 10 右端
 ];
 
-/** 5列の X 座標（0・123・456・789・10 を等間隔） */
-export const FH_COLUMN_X = [0, 25, 50, 75, 100] as const;
+/** 5列の X 座標（0・123・456・789・10 を等間隔・横長） */
+export const FH_COLUMN_X = [0, 35, 70, 105, 140] as const;
 const FH_ROW_Y = [12, 50, 88] as const;
 
+/** タップ／クリック用の当たり判定半径（viewBox 座標） */
+export const FH_HIT_RADIUS = 14;
+
 /** SVG viewBox（駒の円・縁取りが切れない余白を含む） */
-export const FH_VIEW_BOX = { x: -14, y: -6, width: 128, height: 112 } as const;
+export const FH_VIEW_BOX = { x: -18, y: -6, width: 176, height: 112 } as const;
 
 /** 描画用の点座標 */
 export const FH_NODE_POS: readonly { x: number; y: number }[] = [
