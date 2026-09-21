@@ -94,7 +94,7 @@ export function DotsAndBoxesGame() {
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
   const sizeSelector = (
-    <div className="space-y-2">
+    <div className="mt-6 space-y-2">
       <p className="text-center text-xs text-slate-400">盤面サイズ</p>
       <div className="flex flex-wrap justify-center gap-2">
         {DOTS_BOXES_SIZE_OPTIONS.map((option) => (
