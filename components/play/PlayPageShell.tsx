@@ -32,7 +32,7 @@ function PlayPageShellInner({ game, rules, children }: Props) {
               onClick={setupNav.backToSetup}
               className="min-h-9 rounded-full border border-white/15 bg-white/5 px-4 text-sm font-medium text-[#e8e8ed] transition hover:border-white/25 hover:bg-white/10"
             >
-              準備に戻る
+              はじめから
             </button>
           ) : null}
           <button
