@@ -580,7 +580,61 @@ function checkLudo() {
   blockedHome.lastRoll = 1;
   assert(
     ludoMoves(blockedHome).find((m) => m.tokenIndex === 0) == null,
-    "ludo home overlap blocked past entry"
+    "ludo cannot land on occupied inner home slot"
+  );
+  blockedHome.lastRoll = 2;
+  const homeJump = ludoMoves(blockedHome).find((m) => m.tokenIndex === 0);
+  assert(homeJump != null, "ludo can jump over own piece in home column");
+  const afterHomeJump = applyLudoMove(blockedHome, homeJump!);
+  assert(
+    afterHomeJump !== null && afterHomeJump.tokens[0].zone === "home" && afterHomeJump.tokens[0].steps === 2,
+    "ludo home jump lands on deepest empty slot"
+  );
+
+  const homeJumpFinish = initialLudo(4);
+  homeJumpFinish.current = 1;
+  homeJumpFinish.lastRoll = 2;
+  homeJumpFinish.tokens[4] = { player: 1, index: 0, zone: "home", steps: 1 };
+  homeJumpFinish.tokens[5] = { player: 1, index: 1, zone: "home", steps: 2 };
+  homeJumpFinish.tokens[6] = { player: 1, index: 2, zone: "home", steps: 4 };
+  for (const i of [0, 1, 2, 3]) {
+    homeJumpFinish.tokens[i] = { player: 0, index: i, zone: "yard", steps: 0 };
+  }
+  homeJumpFinish.tokens[7] = { player: 1, index: 3, zone: "yard", steps: 0 };
+  const jumpFinishMove = ludoMoves(homeJumpFinish).find((m) => m.tokenIndex === 4);
+  assert(jumpFinishMove != null, "ludo slot1 jumps to slot3 with roll 2");
+  const afterJumpFinish = applyLudoMove(homeJumpFinish, jumpFinishMove!);
+  assert(
+    afterJumpFinish !== null &&
+      afterJumpFinish.tokens[4].steps === 3 &&
+      isLudoTokenFinished(afterJumpFinish.tokens, 4) &&
+      isLudoTokenFinished(afterJumpFinish.tokens, 5),
+    "ludo jump finishes passed and inner tokens"
+  );
+  assert(ludoDeepestFinishSlot(afterJumpFinish!.tokens, 1) === 1, "ludo deepest retreats to slot1 after jump");
+
+  const homeEntryJumpWin = initialLudo(4);
+  homeEntryJumpWin.current = 1;
+  homeEntryJumpWin.lastRoll = 4;
+  homeEntryJumpWin.tokens[4] = { player: 1, index: 0, zone: "home", steps: 1 };
+  homeEntryJumpWin.tokens[5] = { player: 1, index: 1, zone: "home", steps: 2 };
+  homeEntryJumpWin.tokens[6] = { player: 1, index: 2, zone: "home", steps: 4 };
+  homeEntryJumpWin.tokens[7] = { player: 1, index: 3, zone: "track", steps: 42 };
+  for (const i of [0, 1, 2, 3]) {
+    homeEntryJumpWin.tokens[i] = { player: 0, index: i, zone: "yard", steps: 0 };
+  }
+  for (const i of [8, 9, 10, 11]) {
+    homeEntryJumpWin.tokens[i] = { player: 2, index: i - 8, zone: "yard", steps: 0 };
+  }
+  for (const i of [12, 13, 14, 15]) {
+    homeEntryJumpWin.tokens[i] = { player: 3, index: i - 12, zone: "yard", steps: 0 };
+  }
+  const entryJumpMove = ludoMoves(homeEntryJumpWin).find((m) => m.tokenIndex === 7);
+  assert(entryJumpMove != null, "ludo track piece jumps into deepest home slot");
+  const afterEntryJumpWin = applyLudoMove(homeEntryJumpWin, entryJumpMove!);
+  assert(
+    afterEntryJumpWin !== null && afterEntryJumpWin.winner === 1,
+    "ludo entry jump to slot3 can win when all tokens finish"
   );
 
   const entryStack = initialLudo(2);

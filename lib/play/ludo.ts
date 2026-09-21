@@ -100,20 +100,15 @@ function targetHomeSlot(token: LudoToken, roll: number): number | null {
   return slot <= LUDO_HOME_LEN - 1 ? slot : null;
 }
 
-function canReachHomeSlot(
+/** 着地マスに入れるか（入口 slot0 は重なり可。内側は飛び越えのみ可） */
+function canLandOnHomeSlot(
   tokens: LudoToken[],
   player: number,
-  fromHomeSlot: number | null,
   targetSlot: number,
   excludeIndex: number
 ): boolean {
-  const start = fromHomeSlot === null ? 0 : fromHomeSlot + 1;
-  for (let slot = start; slot <= targetSlot; slot++) {
-    // 入口（slot 0）はコース上と同様に重なってもよい
-    if (slot === 0) continue;
-    if (homeSlotOccupied(tokens, player, slot, excludeIndex)) return false;
-  }
-  return true;
+  if (targetSlot === 0) return true;
+  return !homeSlotOccupied(tokens, player, targetSlot, excludeIndex);
 }
 
 function canAdvance(tokens: LudoToken[], tokenIndex: number, roll: number): boolean {
@@ -125,8 +120,7 @@ function canAdvance(tokens: LudoToken[], tokenIndex: number, roll: number): bool
   if (targetSlot !== null) {
     const deepest = ludoDeepestFinishSlot(tokens, token.player);
     if (targetSlot > deepest) return false;
-    const fromSlot = token.zone === "home" ? token.steps : null;
-    return canReachHomeSlot(tokens, token.player, fromSlot, targetSlot, tokenIndex);
+    return canLandOnHomeSlot(tokens, token.player, targetSlot, tokenIndex);
   }
 
   if (token.zone === "home") return false;
