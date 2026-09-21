@@ -48,19 +48,37 @@ export function useOnlineRoom(gameSlug: string) {
     versionRef.current = version;
   }, [version]);
 
+  const applyRemoteGameState = useCallback(
+    (
+      state: GameState,
+      remoteVersion: number,
+      remoteCurrentPlayer: number | null
+    ) => {
+      if (pendingMoveRef.current) return;
+      if (remoteVersion < versionRef.current) return;
+      setGameState(state);
+      setVersion(remoteVersion);
+      versionRef.current = remoteVersion;
+      setCurrentPlayer(remoteCurrentPlayer);
+    },
+    []
+  );
+
   const refreshRoom = useCallback(async (roomId: string) => {
     const data = await fetchRoom(roomId);
     setRoom(data.room);
     if (data.gameState) {
-      setGameState(data.gameState.state as GameState);
-      setVersion(data.gameState.version);
-      setCurrentPlayer(data.gameState.currentPlayer);
+      applyRemoteGameState(
+        data.gameState.state as GameState,
+        data.gameState.version,
+        data.gameState.currentPlayer
+      );
       if (data.room.status === "playing") setPhase("playing");
       if (data.room.status === "finished") setPhase("finished");
     } else if (data.room.status === "waiting") {
       setPhase("waiting");
     }
-  }, []);
+  }, [applyRemoteGameState]);
 
   const subscribeRealtime = useCallback(
     (roomId: string) => {
@@ -83,15 +101,12 @@ export function useOnlineRoom(gameSlug: string) {
             filter: `room_id=eq.${roomId}`,
           },
           (payload) => {
-            if (pendingMoveRef.current) return;
             const row = payload.new as {
               state: GameState;
               version: number;
               current_player: number | null;
             };
-            setGameState(row.state);
-            setVersion(row.version);
-            setCurrentPlayer(row.current_player);
+            applyRemoteGameState(row.state, row.version, row.current_player);
           }
         )
         .on(
@@ -112,7 +127,7 @@ export function useOnlineRoom(gameSlug: string) {
         void supabase.removeChannel(channel);
       };
     },
-    [refreshRoom]
+    [applyRemoteGameState, refreshRoom]
   );
 
   useEffect(() => {
@@ -204,9 +219,11 @@ export function useOnlineRoom(gameSlug: string) {
       const prevPhase = phase;
 
       pendingMoveRef.current = true;
+      const optimisticVersion = prevVersion + 1;
       setGameState(result.state);
       setCurrentPlayer(result.currentPlayer);
-      setVersion(prevVersion + 1);
+      setVersion(optimisticVersion);
+      versionRef.current = optimisticVersion;
       if (result.state.phase === "game-over") {
         setPhase("finished");
       }
@@ -215,6 +232,7 @@ export function useOnlineRoom(gameSlug: string) {
         .then((serverResult) => {
           setGameState(serverResult.state as GameState);
           setVersion(serverResult.version);
+          versionRef.current = serverResult.version;
           setCurrentPlayer(serverResult.currentPlayer);
           if ((serverResult.state as GameState).phase === "game-over") {
             setPhase("finished");
@@ -223,6 +241,7 @@ export function useOnlineRoom(gameSlug: string) {
         .catch((e) => {
           setGameState(prevState);
           setVersion(prevVersion);
+          versionRef.current = prevVersion;
           setCurrentPlayer(prevCurrentPlayer);
           setPhase(prevPhase);
           setError(e instanceof Error ? e.message : "手の送信に失敗しました");
