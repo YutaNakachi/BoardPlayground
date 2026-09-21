@@ -109,6 +109,7 @@ export function KlondikeGame() {
       {isGameOver && (
         <ResultPanel
           variant="inline"
+          solo
           winners={[0]}
           onReplay={() => setPhase("idle")}
           details={<p className="text-slate-400">すべての組札を完成させました。</p>}

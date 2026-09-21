@@ -101,6 +101,7 @@ export function SpiderGame() {
       {isGameOver && (
         <ResultPanel
           variant="inline"
+          solo
           winners={[0]}
           onReplay={() => setPhase("idle")}
           details={<p className="text-slate-400">8組の完成列をすべて除去しました。</p>}

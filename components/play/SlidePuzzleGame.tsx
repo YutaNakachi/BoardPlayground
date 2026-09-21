@@ -93,6 +93,7 @@ export function SlidePuzzleGame() {
       {isGameOver && (
         <ResultPanel
           variant="inline"
+          solo
           winners={[0]}
           onReplay={() => setPhase("idle")}
           details={

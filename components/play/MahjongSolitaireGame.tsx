@@ -86,6 +86,7 @@ export function MahjongSolitaireGame() {
       {isGameOver && (
         <ResultPanel
           variant="inline"
+          solo
           winners={won ? [0] : []}
           onReplay={() => setPhase("idle")}
           details={
