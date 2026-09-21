@@ -168,6 +168,10 @@ function tokensAt(tokens: LudoToken[], coord: Coord): LudoToken[] {
   return tokens.filter((t) => coordKey(ludoTokenCoord(t)) === key);
 }
 
+function tokenIndexIn(tokens: LudoToken[], token: LudoToken): number {
+  return tokens.findIndex((t) => t.player === token.player && t.index === token.index);
+}
+
 function tokensByPlayer(tokens: LudoToken[]): [number, LudoToken[]][] {
   const map = new Map<number, LudoToken[]>();
   for (const t of tokens) {
@@ -430,12 +434,14 @@ export function LudoGame() {
                 {tokensByPlayer(here).flatMap(([player, group]) => {
                   const tokenStyle = ludoStyle(player);
                   const onColoredCell = info.isStart || info.kind === "home";
-                  const finished = group.filter((t) =>
-                    isLudoTokenFinished(state.tokens, state.tokens.indexOf(t))
-                  );
-                  const active = group.filter(
-                    (t) => !isLudoTokenFinished(state.tokens, state.tokens.indexOf(t))
-                  );
+                  const finished = group.filter((t) => {
+                    const i = tokenIndexIn(state.tokens, t);
+                    return i >= 0 && isLudoTokenFinished(state.tokens, i);
+                  });
+                  const active = group.filter((t) => {
+                    const i = tokenIndexIn(state.tokens, t);
+                    return i >= 0 && !isLudoTokenFinished(state.tokens, i);
+                  });
                   const pieces: ReactNode[] = [];
 
                   for (const token of finished) {
@@ -454,7 +460,7 @@ export function LudoGame() {
 
                   if (active.length === 0) return pieces;
 
-                  const indices = active.map((t) => state.tokens.indexOf(t));
+                  const indices = active.map((t) => tokenIndexIn(state.tokens, t));
                   const tokenIndex =
                     indices.find((i) => movableTokenIds.has(i)) ?? indices[0];
                   const canMove = !isAnimating && movableTokenIds.has(tokenIndex);
