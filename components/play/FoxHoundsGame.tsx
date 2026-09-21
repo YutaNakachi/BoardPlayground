@@ -8,7 +8,7 @@ import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
   applyFoxHoundsMove,
-  FH_NEIGHBORS,
+  FH_BOARD_LINES,
   FH_NODE_POS,
   foxHoundsHareDestinations,
   foxHoundsHoundDestinations,
@@ -23,18 +23,6 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 const PLAYER_LABELS = ["猟犬", "ウサギ"] as const;
-
-function uniqueEdges(): [number, number][] {
-  const edges: [number, number][] = [];
-  for (let from = 0; from < FH_NEIGHBORS.length; from++) {
-    for (const to of FH_NEIGHBORS[from]) {
-      if (from < to) edges.push([from, to]);
-    }
-  }
-  return edges;
-}
-
-const BOARD_EDGES = uniqueEdges();
 
 export function FoxHoundsGame() {
   const { recordLocalPlay } = usePlayPage();
@@ -68,8 +56,7 @@ export function FoxHoundsGame() {
     (index: number) => {
       if (phase !== "playing") return;
 
-      const from =
-        current === 1 ? board.indexOf(1) : selected;
+      const from = current === 1 ? board.indexOf(1) : selected;
       if (destinations.includes(index) && from !== null && from >= 0) {
         const next = applyFoxHoundsMove(state, from, index);
         if (!next) return;
@@ -142,11 +129,11 @@ export function FoxHoundsGame() {
         </p>
       )}
 
-      <div className="relative mx-auto aspect-[5/4] w-full max-w-md">
-        <svg viewBox="0 0 100 100" className="h-full w-full">
+      <div className="relative mx-auto aspect-[5/3] w-full max-w-2xl px-2">
+        <svg viewBox="0 0 100 100" className="h-full w-full" aria-label="ウサギと猟犬の盤">
           <rect width="100" height="100" rx="8" fill="#0f172a" opacity="0.35" />
 
-          {BOARD_EDGES.map(([from, to]) => {
+          {FH_BOARD_LINES.map(([from, to]) => {
             const a = FH_NODE_POS[from];
             const b = FH_NODE_POS[to];
             return (
@@ -157,7 +144,7 @@ export function FoxHoundsGame() {
                 x2={b.x}
                 y2={b.y}
                 stroke="#64748b"
-                strokeWidth="2.2"
+                strokeWidth="2"
                 strokeLinecap="round"
               />
             );
@@ -176,7 +163,7 @@ export function FoxHoundsGame() {
                 <circle
                   cx={pos.x}
                   cy={pos.y}
-                  r={isSel ? 7.5 : 6.5}
+                  r={isSel ? 7 : 6}
                   fill="#1e293b"
                   stroke={isSel ? "#a5b4fc" : isDest ? "#bef264" : "#94a3b8"}
                   strokeWidth={isSel || isDest ? 2 : 1.5}
@@ -184,7 +171,7 @@ export function FoxHoundsGame() {
                   onClick={() => onNode(index)}
                 />
                 {isDest && piece === null ? (
-                  <circle cx={pos.x} cy={pos.y} r="2.2" fill="#bef264" />
+                  <circle cx={pos.x} cy={pos.y} r="2" fill="#bef264" />
                 ) : null}
                 {isHare ? (
                   <text
@@ -199,16 +186,19 @@ export function FoxHoundsGame() {
                   </text>
                 ) : null}
                 {isHound ? (
-                  <text
-                    x={pos.x}
-                    y={pos.y}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize="8"
-                    className="pointer-events-none select-none"
-                  >
-                    🐕
-                  </text>
+                  <g transform={`translate(${pos.x} ${pos.y})`}>
+                    <text
+                      x={0}
+                      y={0}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize="8.5"
+                      transform="scale(-1, 1)"
+                      className="pointer-events-none select-none"
+                    >
+                      🐕
+                    </text>
+                  </g>
                 ) : null}
               </g>
             );

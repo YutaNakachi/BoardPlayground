@@ -55,15 +55,40 @@ export const FH_NEIGHBORS: readonly number[][] = [
 
 /** 描画用の点座標（viewBox 0–100） */
 export const FH_NODE_POS: readonly { x: number; y: number }[] = [
-  { x: 14, y: 50 },
-  { x: 32, y: 14 },
-  { x: 32, y: 50 },
-  { x: 32, y: 86 },
+  { x: 6, y: 50 },
+  { x: 26, y: 10 },
+  { x: 26, y: 50 },
+  { x: 26, y: 90 },
   { x: 50, y: 50 },
-  { x: 68, y: 14 },
-  { x: 68, y: 50 },
-  { x: 68, y: 86 },
-  { x: 86, y: 50 },
+  { x: 74, y: 10 },
+  { x: 74, y: 50 },
+  { x: 74, y: 90 },
+  { x: 94, y: 50 },
+];
+
+/**
+ * 盤面の線（表示用）。参照盤どおりに上下横線＋中央ハブの斜めのみ描く。
+ * ゲームロジックは FH_NEIGHBORS を使用。
+ */
+export const FH_BOARD_LINES: readonly [number, number][] = [
+  [0, 1],
+  [0, 2],
+  [0, 3],
+  [1, 2],
+  [2, 3],
+  [5, 6],
+  [6, 7],
+  [5, 8],
+  [6, 8],
+  [7, 8],
+  [1, 5],
+  [3, 7],
+  [2, 4],
+  [4, 6],
+  [1, 4],
+  [3, 4],
+  [5, 4],
+  [7, 4],
 ];
 
 export function initialFoxHounds(): FoxHoundsState {
