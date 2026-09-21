@@ -52,6 +52,7 @@ import {
   isLudoTokenFinished,
   ludoDeepestFinishSlot,
   ludoGoalCount,
+  ludoMoveAnimationSteps,
   ludoMoves,
 } from "./ludo";
 import {
@@ -584,6 +585,20 @@ function checkLudo() {
   slot3Finished.lastRoll = 1;
   assert(isLudoTokenFinished(slot3Finished.tokens, 1), "ludo slot3 finished when slot4 occupied");
   assert(ludoMoves(slot3Finished).length === 0, "ludo finished tokens cannot move");
+
+  const yardSteps = ludoMoveAnimationSteps(ludo.tokens[0], 6);
+  assert(yardSteps.length === 1 && yardSteps[0].zone === "track" && yardSteps[0].steps === 0, "ludo yard anim is one step to start");
+
+  const trackSteps = ludoMoveAnimationSteps(
+    { player: 0, index: 0, zone: "track", steps: 5 },
+    3
+  );
+  assert(
+    trackSteps.length === 3 &&
+      trackSteps[0].steps === 6 &&
+      trackSteps[2].steps === 8,
+    "ludo track anim steps one pip at a time"
+  );
 }
 
 function checkBackgammon() {

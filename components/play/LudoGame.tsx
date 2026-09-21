@@ -28,12 +28,15 @@ import {
   applyLudoMove,
   initialLudo,
   isLudoTokenFinished,
+  ludoMoveAnimationSteps,
   ludoMoves,
   ludoTokenCoord,
   rollLudo,
   type LudoState,
   type LudoToken,
 } from "@/lib/play/ludo";
+
+const LUDO_STEP_MS = 130;
 
 type Phase = "setup" | "playing" | "game-over";
 
@@ -222,14 +225,27 @@ export function LudoGame() {
   const [isRolling, setIsRolling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [animatingTokenIndex, setAnimatingTokenIndex] = useState<number | null>(null);
+  const [animatingToken, setAnimatingToken] = useState<LudoToken | null>(null);
+  const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAnimating = animatingTokenIndex !== null;
+
+  const displayTokens = useMemo(() => {
+    if (animatingTokenIndex === null || animatingToken === null) return state.tokens;
+    return state.tokens.map((t, i) =>
+      i === animatingTokenIndex ? animatingToken : t
+    );
+  }, [state.tokens, animatingTokenIndex, animatingToken]);
+
   useEffect(() => {
     return () => {
       if (rollTimerRef.current) clearInterval(rollTimerRef.current);
+      if (animTimerRef.current) clearTimeout(animTimerRef.current);
     };
   }, []);
 
   const onRoll = useCallback(() => {
-    if (isRolling || state.lastRoll != null || state.winner != null) return;
+    if (isAnimating || isRolling || state.lastRoll != null || state.winner != null) return;
 
     setIsRolling(true);
     let ticks = 0;
@@ -247,19 +263,49 @@ export function LudoGame() {
         });
       }
     }, 70);
-  }, [isRolling, state.lastRoll, state.winner]);
+  }, [isAnimating, isRolling, state.lastRoll, state.winner]);
 
   const onToken = useCallback(
     (tokenIndex: number) => {
+      if (isAnimating) return;
       if (!moves.some((m) => m.tokenIndex === tokenIndex)) return;
-      const next = applyLudoMove(state, { tokenIndex });
-      if (next) setState(next);
-      if (next?.winner != null) setPhase("game-over");
+
+      const roll = state.lastRoll!;
+      const steps = ludoMoveAnimationSteps(state.tokens[tokenIndex], roll);
+
+      if (steps.length === 0) {
+        const next = applyLudoMove(state, { tokenIndex });
+        if (next) setState(next);
+        if (next?.winner != null) setPhase("game-over");
+        return;
+      }
+
+      setAnimatingTokenIndex(tokenIndex);
+
+      const finishMove = () => {
+        const next = applyLudoMove(state, { tokenIndex });
+        setAnimatingTokenIndex(null);
+        setAnimatingToken(null);
+        if (next) setState(next);
+        if (next?.winner != null) setPhase("game-over");
+      };
+
+      const showStep = (stepIndex: number) => {
+        setAnimatingToken(steps[stepIndex]);
+        if (stepIndex < steps.length - 1) {
+          animTimerRef.current = setTimeout(() => showStep(stepIndex + 1), LUDO_STEP_MS);
+        } else {
+          animTimerRef.current = setTimeout(finishMove, LUDO_STEP_MS);
+        }
+      };
+
+      showStep(0);
     },
-    [moves, state]
+    [isAnimating, moves, state]
   );
 
   const passTurn = useCallback(() => {
+    if (isAnimating) return;
     setState((s) => {
       const turnIndex = s.activePlayers.indexOf(s.current);
       return {
@@ -269,7 +315,7 @@ export function LudoGame() {
         extraTurn: false,
       };
     });
-  }, []);
+  }, [isAnimating]);
 
   if (phase === "setup") {
     return (
@@ -322,7 +368,7 @@ export function LudoGame() {
               cellMap.homeEntryMap,
               cellMap.baseMap
             );
-            const here = tokensAt(state.tokens, { r, c });
+            const here = tokensAt(displayTokens, { r, c });
             const markerStyle =
               info.owner != null ? ludoStyle(info.owner) : null;
             const triangle = info.kind === "center" ? centerTriangleClass(r, c) : null;
@@ -411,7 +457,8 @@ export function LudoGame() {
                   const indices = active.map((t) => state.tokens.indexOf(t));
                   const tokenIndex =
                     indices.find((i) => movableTokenIds.has(i)) ?? indices[0];
-                  const canMove = movableTokenIds.has(tokenIndex);
+                  const canMove = !isAnimating && movableTokenIds.has(tokenIndex);
+                  const isMoving = tokenIndex === animatingTokenIndex;
 
                   pieces.push(
                     <button
@@ -419,12 +466,14 @@ export function LudoGame() {
                       type="button"
                       onClick={() => onToken(tokenIndex)}
                       disabled={!canMove}
-                      className={`absolute inset-[14%] z-10 rounded-full ${tokenStyle.piece} ${
-                        canMove
-                          ? "ring-2 ring-lime-300 ring-offset-1 ring-offset-slate-950"
-                          : onColoredCell
-                            ? "ring-2 ring-white ring-offset-1 ring-offset-slate-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
-                            : tokenStyle.dotShadow
+                      className={`absolute inset-[14%] z-10 rounded-full transition-transform duration-75 ${tokenStyle.piece} ${
+                        isMoving
+                          ? "z-20 scale-110 ring-2 ring-white ring-offset-1 ring-offset-slate-950"
+                          : canMove
+                            ? "ring-2 ring-lime-300 ring-offset-1 ring-offset-slate-950"
+                            : onColoredCell
+                              ? "ring-2 ring-white ring-offset-1 ring-offset-slate-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
+                              : tokenStyle.dotShadow
                       }`}
                       aria-label={`P${state.activePlayers.indexOf(player) + 1} コマ ${active.length}個`}
                     >
@@ -456,7 +505,7 @@ export function LudoGame() {
             </div>
           )}
 
-          {state.lastRoll == null && !isRolling ? (
+          {state.lastRoll == null && !isRolling && !isAnimating ? (
             <button type="button" onClick={onRoll} className="btn-game">
               サイコロを振る
             </button>
@@ -464,7 +513,7 @@ export function LudoGame() {
         </div>
       ) : null}
 
-      {state.lastRoll != null && moves.length === 0 && !isGameOver ? (
+      {state.lastRoll != null && moves.length === 0 && !isGameOver && !isAnimating ? (
         <div className="text-center">
           <button
             type="button"

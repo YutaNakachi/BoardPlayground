@@ -147,6 +147,23 @@ export function ludoMoves(state: LudoState): LudoMove[] {
   return moves;
 }
 
+/** 各出目ごとの表示位置。ヤードからの出発はスタート1マスのみ。 */
+export function ludoMoveAnimationSteps(
+  token: LudoToken,
+  roll: number
+): LudoToken[] {
+  if (token.zone === "yard") {
+    return [{ ...applyTokenAdvance(token, roll) }];
+  }
+  const steps: LudoToken[] = [];
+  let cur = token;
+  for (let i = 0; i < roll; i++) {
+    cur = applyTokenAdvance(cur, 1);
+    steps.push({ ...cur });
+  }
+  return steps;
+}
+
 function applyTokenAdvance(token: LudoToken, roll: number): LudoToken {
   if (token.zone === "yard") {
     return { ...token, zone: "track", steps: 0 };
