@@ -1,0 +1,62 @@
+---
+description: オンライン対戦（部屋・Realtime・API・ゲーム追加）。新ゲーム追加・サイト横断 UI・CPU では使わない
+alwaysApply: false
+---
+
+# オンライン対戦 Agent
+
+対象: `lib/online/`、`hooks/useOnlineRoom.ts`、`app/api/rooms/`、`supabase/migrations/`（部屋関連）、`components/play/shared/OnlineSetupPanel.tsx`、各ゲームのオンライン統合部分、`lib/supabase/`（Realtime）、`docs/future-online-lobby.md`
+
+## やる
+
+- 既存ゲームへのオンライン対戦追加（`lib/online/types.ts` の `ONLINE_GAME_SLUGS`、`lib/online/moves.ts`、プレイ画面の `useOnlineRoom` 統合）
+- 部屋の作成・参加・開始・手番同期・終局の API とクライアント改善
+- Supabase Realtime 購読・ポーリング fallback・再接続の堅牢化
+- 部屋関連の DB マイグレーション（`supabase/migrations/`）
+- 非法手のサーバー側拒否（`move` API で `applyMove` を通す）
+- 2ブラウザでの手動テスト手順を PR に記載
+- 将来構想は `docs/future-online-lobby.md` を参照し、フェーズごとに小さく PR を分ける
+
+## やらない
+
+- 新ゲームの企画・追加（ゲーム追加 Agent。ローカル実装が先）
+- ローカル専用のルール・勝利条件変更（ゲームロジック検証 Agent と連携）
+- サイト一覧・ヘッダー・about などオンラインと無関係な UI
+- CPU 対戦の実装
+- 手札・秘密情報があるゲームのオンライン（スター・トレード等。サーバー秘匿 or 個人ビュー設計が先）
+- 日本語の推敲・表記統一（文章・文言検証 Agent）
+
+## 現行アーキテクチャ
+
+- **部屋 API**: `app/api/rooms/create` / `join` / `[id]` / `start` / `move`
+- **同期**: `room_state` テーブル + Supabase Realtime（`hooks/useOnlineRoom.ts`）
+- **プレイヤー ID**: `localStorage`（`lib/online/player-id.ts`）
+- **対応ゲーム**: `reversi`, `tic-tac-toe`, `gomoku`, `checkers`（`lib/online/types.ts`）
+- **部屋 TTL**: 24時間（`rooms.expires_at`）
+
+## ゲームをオンライン対応する手順
+
+1. `lib/play/{slug}/` にロジックが抽出済みか確認（未抽出なら先に抽出 or ゲームロジック検証 Agent と連携）
+2. `lib/online/moves.ts` に `createInitialState` / `applyMove` / 合法手判定を追加
+3. `ONLINE_GAME_SLUGS` と `lib/games.ts` の `online: true` を更新
+4. プレイ画面で `OnlineSetupPanel` + `useOnlineRoom` を統合（既存4ゲームを参考）
+5. 2ブラウザで作成→参加→対局→終局を手動確認
+
+## 確認の観点（チェックリスト）
+
+1. ローカルプレイと同じ勝敗・手番・終局になるか
+2. 相手の手が Realtime で即反映されるか（切断時はポーリング fallback）
+3. 自分の手番以外・非法手がサーバーで拒否されるか
+4. 楽観的更新とサーバー応答の不一致時に状態が復元されるか
+5. 部屋コード共有・ホストのみ開始・2人揃うまで待機が動くか
+6. 環境変数未設定時はオンライン UI が無効化され、ローカルだけ動くか
+
+## 将来構想（未実装）
+
+`docs/future-online-lobby.md` — 常設ロビー、再接続、プレゼンス、再戦・別ゲーム。1 PR で全部やらず、再戦 → 再接続 → プレゼンス → ロビー化の順を推奨。
+
+## 出力
+
+- 変更概要と影響範囲（API / DB / クライアント）
+- マイグレーションがある場合は Supabase への適用手順
+- 2ブラウザ手動テスト手順

@@ -26,6 +26,20 @@ New Agent 起動時にコピペする用。`{ゲーム名}` は差し替える�
 AGENTS.md に従い、{ゲーム名} を追加してください。lib/games.ts → games/{slug}/rules.md → components/play/ → lib/play-registry.ts の順で。
 ```
 
+## オンライン対戦（ゲーム追加）
+
+```
+.cursor/rules/online-play.mdc と AGENTS.md に従い、{ゲーム名} にオンライン対戦（部屋コード）を追加してください。lib/online/moves.ts → ONLINE_GAME_SLUGS → プレイ画面統合の順で。2ブラウザ手動テスト手順を PR に書いてください。
+```
+
+## オンライン対戦（部屋・機能改善）
+
+```
+.cursor/rules/online-play.mdc と docs/future-online-lobby.md を読み、{機能名} を実装してください。1 PR は1機能に絞り、DB マイグレーションと手動テスト手順を PR に書いてください。
+```
+
+例: `{機能名}` = 対局終了後の再戦、部屋への再接続、明示退出 API
+
 ## CPU 対戦
 
 ```

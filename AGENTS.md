@@ -34,6 +34,7 @@
 - **ゲーム追加**: 1ゲームにつき 1 Agent。`lib/games.ts` → `games/{slug}/rules.md` → `components/play/` → `lib/play-registry.ts`
 - **ゲームロジック検証**: ゲーム変更の前後で起動（常設ではない）。`rules.md` と実装の一致、境界ケース、`lib/play/*.ts` のテスト。サイト改善 PR には触れない
 - **文章・文言検証**: サイト横断の日本語・説明の正確さ（常設ではない）。ルール文・一覧説明・UI 文言のわかりやすさと表記統一。ゲームロジックの実装変更はしない
+- **オンライン対戦**: 1機能 or 1ゲームにつき 1 Agent（常設ではない）。部屋・Realtime・API・既存ゲームのオンライン化。将来構想は `docs/future-online-lobby.md`
 - **CPU 対戦**: 1ゲームにつき 1 Agent（常設ではない）。`lib/play/{slug}/` にロジックがある前提で `ai.ts` を追加し、`lib/games.ts` の `cpu: true` を更新。手札非公開ゲームはオンライン部屋対応後
 - ゲーム固有ルールまで一般化しない。同じ処理が3本目で必要になったら共通化してよい
 
@@ -52,6 +53,13 @@
 - **やらない**: ルール仕様の変更（実装と食い違う記述の**指摘**はする。直すのはゲーム追加 or ロジック検証と連携）、レイアウト変更、新ゲーム追加、ロジック修正
 - ルール Cursor ルール: `.cursor/rules/copy-verification.mdc`
 
+### オンライン対戦 Agent
+
+- **担当**: `lib/online/`、`hooks/useOnlineRoom.ts`、`app/api/rooms/`、部屋関連マイグレーション、`OnlineSetupPanel`、各ゲームのオンライン統合、`docs/future-online-lobby.md`
+- **やる**: 部屋作成・参加・同期の改善、既存ゲームのオンライン化（`lib/online/moves.ts` + `ONLINE_GAME_SLUGS`）、再接続・再戦などロビー機能（フェーズごとに小さく PR）
+- **やらない**: 新ゲーム追加、ローカル専用ルール変更、サイト横断 UI、CPU 実装、手札非公開ゲームのオンライン
+- ルール Cursor ルール: `.cursor/rules/online-play.mdc`
+
 ### CPU 対戦 Agent
 
 - **担当**: `lib/play/{slug}/ai.ts`（新規）、対象ゲームのプレイ画面、`lib/games.ts` の `cpu` フラグ
@@ -64,6 +72,7 @@
 1. ゲーム追加 Agent → ルール・実装・PR
 2. ゲームロジック検証 Agent → 境界ケース確認・テスト追加
 3. 文章・文言検証 Agent → ルール文・一覧・UI 文言の推敲（ゲーム PR に含めても、別 PR でも可）
-4. CPU 対戦 Agent → 必要なゲームだけ別 PR
+4. オンライン対戦 Agent → 2人・盤面公開ゲームのみ別 PR（既存4本は対応済み。新ゲーム or 部屋機能改善）
+5. CPU 対戦 Agent → 必要なゲームだけ別 PR
 
 サイト改善 PR のマージ前に、必要なら文章・文言検証 Agent を回す。
