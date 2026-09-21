@@ -12,7 +12,7 @@ type Props = {
 };
 
 const shogiKomaFont = Shippori_Mincho({
-  weight: ["400"],
+  weight: ["700", "800"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -23,11 +23,12 @@ const KOMA_GLYPH = "☗";
 function komaNeonStyle(color: string): CSSProperties {
   return {
     color,
-    WebkitTextStroke: "0.75px rgba(15, 23, 42, 0.35)",
+    WebkitTextStroke: "1px rgba(15, 23, 42, 0.5)",
     paintOrder: "stroke fill",
     filter: [
-      `drop-shadow(0 0 2px ${color}55)`,
-      `drop-shadow(0 0 5px ${color}33)`,
+      `drop-shadow(0 0 2px ${color}cc)`,
+      `drop-shadow(0 0 6px ${color}99)`,
+      `drop-shadow(0 0 12px ${color}55)`,
     ].join(" "),
   };
 }
@@ -65,7 +66,7 @@ export function ShogiPieceTile({
         <span className="translate-y-[6%]">{KOMA_GLYPH}</span>
       </span>
       <span
-        className={`pointer-events-none absolute left-1/2 top-[57%] z-10 -translate-x-1/2 -translate-y-1/2 font-normal text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl] ${shogiKomaFont.className}`}
+        className={`pointer-events-none absolute left-1/2 top-[57%] z-10 -translate-x-1/2 -translate-y-1/2 font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl] ${shogiKomaFont.className}`}
       >
         {label}
       </span>
