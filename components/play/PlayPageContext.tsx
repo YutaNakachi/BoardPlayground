@@ -9,12 +9,19 @@ type PlayModeInfo = {
   roomCode?: string;
 };
 
+type SetupNav = {
+  isSetupScreen: boolean;
+  backToSetup: (() => void) | null;
+};
+
 type PlayPageContextValue = {
   gameSlug: string;
   recordLocalPlay: () => void;
   recordOnlinePlay: () => void;
   playMode: PlayModeInfo;
   setPlayMode: (info: PlayModeInfo) => void;
+  setupNav: SetupNav;
+  setSetupNav: (nav: SetupNav) => void;
 };
 
 const PlayPageContext = createContext<PlayPageContextValue | null>(null);
@@ -28,6 +35,10 @@ export function PlayPageProvider({
 }) {
   const recordPlay = useRecordPlay(gameSlug);
   const [playMode, setPlayMode] = useState<PlayModeInfo>({ mode: "local" });
+  const [setupNav, setSetupNav] = useState<SetupNav>({
+    isSetupScreen: true,
+    backToSetup: null,
+  });
 
   const recordLocalPlay = useCallback(() => recordPlay("local"), [recordPlay]);
   const recordOnlinePlay = useCallback(() => recordPlay("online"), [recordPlay]);
@@ -39,8 +50,10 @@ export function PlayPageProvider({
       recordOnlinePlay,
       playMode,
       setPlayMode,
+      setupNav,
+      setSetupNav,
     }),
-    [gameSlug, recordLocalPlay, recordOnlinePlay, playMode]
+    [gameSlug, recordLocalPlay, recordOnlinePlay, playMode, setupNav]
   );
 
   return (
@@ -57,6 +70,8 @@ export function usePlayPage(): PlayPageContextValue {
       recordOnlinePlay: () => {},
       playMode: { mode: "local" },
       setPlayMode: () => {},
+      setupNav: { isSetupScreen: true, backToSetup: null },
+      setSetupNav: () => {},
     };
   }
   return ctx;

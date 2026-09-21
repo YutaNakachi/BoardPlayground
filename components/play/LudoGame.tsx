@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DiceFace } from "@/components/play/shared/DiceFace";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -313,6 +314,9 @@ export function LudoGame() {
     if (isAnimating) return;
     setState((s) => endLudoTurn(s));
   }, [isAnimating]);
+
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
     return (
