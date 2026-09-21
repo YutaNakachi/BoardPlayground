@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import {
@@ -60,6 +61,9 @@ export function MahjongSolitaireGame() {
 
   const stuck = phase === "playing" && mahjongStuck(state) && !mahjongWon(state);
 
+  const backToSetup = useCallback(() => setPhase("idle"), []);
+  usePlaySetupNavigation(phase === "idle", backToSetup);
+
   if (phase === "idle") {
     return (
       <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
@@ -79,6 +83,20 @@ export function MahjongSolitaireGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          solo
+          winners={won ? [0] : []}
+          onReplay={() => setPhase("idle")}
+          details={
+            <p className="text-slate-400">
+              {won ? "すべての牌を取り除きました。" : "これ以上ペアを取れません。"}
+            </p>
+          }
+        />
+      )}
+
       <p className="text-center text-sm text-slate-400">
         残り {(state.tiles.length - state.removed.length) / 2} ペア
         {stuck ? " · 行き詰まり" : ""}
@@ -111,18 +129,6 @@ export function MahjongSolitaireGame() {
         })}
       </div>
 
-      {isGameOver && (
-        <ResultPanel
-          variant="inline"
-          winners={won ? [0] : []}
-          onReplay={() => setPhase("idle")}
-          details={
-            <p className="text-slate-400">
-              {won ? "すべての牌を取り除きました。" : "これ以上ペアを取れません。"}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

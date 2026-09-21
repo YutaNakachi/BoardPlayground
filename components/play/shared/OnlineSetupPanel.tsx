@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState } from "react";
 import {
   PlaySetupCard,
@@ -18,6 +19,8 @@ type Props = {
   onStartLocal: () => void;
   loading?: boolean;
   error?: string | null;
+  /** ローカル開始ボタンの上に表示する追加 UI（ルール選択など） */
+  extra?: ReactNode;
   /** Waiting room UI */
   waiting?: {
     code: string;
@@ -39,6 +42,7 @@ export function OnlineSetupPanel({
   onStartLocal,
   loading,
   error,
+  extra,
   waiting,
 }: Props) {
   const [displayName, setDisplayName] = useState("");
@@ -105,9 +109,12 @@ export function OnlineSetupPanel({
       ) : null}
 
       {mode === "local" || !onlineSupported ? (
-        <button type="button" onClick={onStartLocal} className="btn-game mt-8">
-          ゲーム開始
-        </button>
+        <>
+          {extra}
+          <button type="button" onClick={onStartLocal} className="btn-game mt-8">
+            ゲーム開始
+          </button>
+        </>
       ) : (
         <div className="mt-8 space-y-6">
           <div className="flex justify-center gap-2">

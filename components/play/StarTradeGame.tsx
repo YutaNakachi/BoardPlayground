@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { HandoffGate } from "@/components/play/shared/HandoffGate";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -130,6 +131,9 @@ export function StarTradeGame() {
     return winnerIndices(scores);
   }, [phase, scores]);
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -179,6 +183,23 @@ export function StarTradeGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winner && (
+        <ResultPanel
+          variant="inline"
+          winners={winner}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              {scores.map((s, i) => (
+                <li key={i}>
+                  プレイヤー {i + 1}: {s} 点
+                </li>
+              ))}
+            </ul>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={currentPlayer}
@@ -254,22 +275,6 @@ export function StarTradeGame() {
         );
       })}
 
-      {isGameOver && winner && (
-        <ResultPanel
-          variant="inline"
-          winners={winner}
-          onReplay={() => setPhase("setup")}
-          details={
-            <ul className="space-y-1 text-slate-400">
-              {scores.map((s, i) => (
-                <li key={i}>
-                  プレイヤー {i + 1}: {s} 点
-                </li>
-              ))}
-            </ul>
-          }
-        />
-      )}
     </div>
   );
 }

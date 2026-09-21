@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SUIT_SYMBOL } from "@/lib/play/cards";
@@ -76,6 +77,9 @@ export function SpiderGame() {
     setFromIndex(null);
   }, [phase, state]);
 
+  const backToSetup = useCallback(() => setPhase("idle"), []);
+  usePlaySetupNavigation(phase === "idle", backToSetup);
+
   if (phase === "idle") {
     return (
       <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
@@ -94,6 +98,16 @@ export function SpiderGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          solo
+          winners={[0]}
+          onReplay={() => setPhase("idle")}
+          details={<p className="text-slate-400">8組の完成列をすべて除去しました。</p>}
+        />
+      )}
+
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-slate-400">完成: {state.completed} / 8</p>
         <button
@@ -153,14 +167,6 @@ export function SpiderGame() {
         ))}
       </div>
 
-      {isGameOver && (
-        <ResultPanel
-          variant="inline"
-          winners={[0]}
-          onReplay={() => setPhase("idle")}
-          details={<p className="text-slate-400">8組の完成列をすべて除去しました。</p>}
-        />
-      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -49,6 +50,9 @@ export function NimGame() {
     [phase, heaps, current]
   );
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -69,6 +73,19 @@ export function NimGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              最後の石を取ったプレイヤー {winner! + 1} の勝ちです。
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
@@ -128,18 +145,6 @@ export function NimGame() {
         初期配置は {NIM_HEAPS.join("・")} 個の3山です。
       </p>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <p className="text-slate-400">
-              最後の石を取ったプレイヤー {winner! + 1} の勝ちです。
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

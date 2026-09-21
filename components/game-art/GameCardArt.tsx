@@ -354,35 +354,71 @@ function HexPreview() {
 }
 
 function FoxHoundsPreview() {
-  const board = Array(64).fill(null) as (0 | 1 | null)[];
-  board[63] = 0;
-  [1, 3, 5, 7].forEach((col) => {
-    board[col] = 1;
-  });
+  const colX = [4, 30, 60, 90, 116];
+  const rowY = [16, 60, 104];
+  const nodes = [
+    [colX[0], rowY[1]],
+    [colX[1], rowY[0]],
+    [colX[1], rowY[1]],
+    [colX[1], rowY[2]],
+    [colX[2], rowY[0]],
+    [colX[2], rowY[1]],
+    [colX[2], rowY[2]],
+    [colX[3], rowY[0]],
+    [colX[3], rowY[1]],
+    [colX[3], rowY[2]],
+    [colX[4], rowY[1]],
+  ];
+  const edges = [
+    [0, 2],
+    [0, 1],
+    [0, 3],
+    [10, 8],
+    [10, 7],
+    [10, 9],
+    [1, 2],
+    [2, 3],
+    [4, 5],
+    [5, 6],
+    [7, 8],
+    [8, 9],
+    [1, 4],
+    [4, 7],
+    [2, 5],
+    [5, 8],
+    [3, 6],
+    [6, 9],
+    [1, 5],
+    [3, 5],
+    [5, 7],
+    [5, 9],
+  ];
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="10" fill="#422006" />
-      {board.map((cell, index) => {
-        const row = Math.floor(index / 8);
-        const col = index % 8;
-        const x = 8 + col * 13;
-        const y = 8 + row * 13;
+      <rect width="120" height="120" rx="10" fill="#0f172a" />
+      {edges.map(([from, to], index) => {
+        const [x1, y1] = nodes[from];
+        const [x2, y2] = nodes[to];
         return (
-          <rect
+          <line
             key={index}
-            x={x}
-            y={y}
-            width="12"
-            height="12"
-            fill={(row + col) % 2 === 0 ? "#78350f" : "#92400e"}
-            rx="1"
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="#64748b"
+            strokeWidth="3"
+            strokeLinecap="round"
           />
         );
       })}
-      <circle cx={8 + 7 * 13 + 6} cy={8 + 7 * 13 + 6} r="4.5" fill="#f97316" />
-      {[1, 3, 5, 7].map((col) => (
-        <circle key={col} cx={8 + col * 13 + 6} cy={8 + 6} r="4" fill="#64748b" />
+      {nodes.map(([cx, cy], index) => (
+        <circle key={index} cx={cx} cy={cy} r="5" fill="#1e293b" stroke="#94a3b8" strokeWidth="1.5" />
       ))}
+      {[0, 1, 3].map((index) => (
+        <circle key={`hound-${index}`} cx={nodes[index][0]} cy={nodes[index][1]} r="3.5" fill="#64748b" />
+      ))}
+      <circle cx={nodes[10][0]} cy={nodes[10][1]} r="4" fill="#f97316" />
     </svg>
   );
 }
@@ -579,25 +615,58 @@ function ShogiPreview() {
 }
 
 function MiniShogiPreview() {
+  const pieceLabel: Record<string, string> = {
+    "0,0": "飛",
+    "0,1": "角",
+    "0,2": "銀",
+    "0,3": "金",
+    "0,4": "王",
+    "1,4": "歩",
+    "3,0": "歩",
+    "4,0": "玉",
+    "4,1": "金",
+    "4,2": "銀",
+    "4,3": "角",
+    "4,4": "飛",
+  };
+  const cell = 19;
+  const pad = 12;
+
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
       <rect width="120" height="120" rx="10" fill="#92400e" />
       {Array.from({ length: 25 }, (_, index) => {
         const row = Math.floor(index / 5);
         const col = index % 5;
-        const x = 22 + col * 15;
-        const y = 22 + row * 15;
+        const x = pad + col * cell;
+        const y = pad + row * cell;
+        const label = pieceLabel[`${row},${col}`];
         return (
-          <rect
-            key={index}
-            x={x}
-            y={y}
-            width="14"
-            height="14"
-            fill="#fde68a"
-            stroke="#b45309"
-            strokeWidth="0.5"
-          />
+          <g key={index}>
+            <rect
+              x={x}
+              y={y}
+              width={cell - 1}
+              height={cell - 1}
+              fill="#fde68a"
+              stroke="#b45309"
+              strokeWidth="0.5"
+            />
+            {label ? (
+              <text
+                x={x + cell / 2 - 0.5}
+                y={y + cell / 2 + 1}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="6"
+                fill={row <= 1 ? "#1e293b" : "#7f1d1d"}
+                fontWeight="700"
+                transform={row >= 3 ? `rotate(180 ${x + cell / 2} ${y + cell / 2})` : undefined}
+              >
+                {label}
+              </text>
+            ) : null}
+          </g>
         );
       })}
     </svg>
@@ -869,6 +938,32 @@ function GravityFourPreview() {
 }
 
 function DotsBoxesPreview() {
+  const dot = (row: number, col: number) => ({
+    cx: 24 + col * 36,
+    cy: 24 + row * 36,
+  });
+
+  const edge = (
+    from: { cx: number; cy: number },
+    to: { cx: number; cy: number },
+    color = "#e2e8f0"
+  ) => (
+    <line
+      key={`${from.cx}-${from.cy}-${to.cx}-${to.cy}`}
+      x1={from.cx}
+      y1={from.cy}
+      x2={to.cx}
+      y2={to.cy}
+      stroke={color}
+      strokeWidth="3"
+    />
+  );
+
+  const topLeft = dot(0, 0);
+  const topMid = dot(0, 1);
+  const midLeft = dot(1, 0);
+  const midMid = dot(1, 1);
+
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
       <rect width="120" height="120" rx="10" fill="#0f172a" />
@@ -876,15 +971,19 @@ function DotsBoxesPreview() {
         [0, 1, 2].map((col) => (
           <circle
             key={`${row}-${col}`}
-            cx={24 + col * 36}
-            cy={24 + row * 36}
+            cx={dot(row, col).cx}
+            cy={dot(row, col).cy}
             r="4"
             fill="#94a3b8"
           />
         ))
       )}
-      <line x1="24" y1="24" x2="60" y2="24" stroke="#e2e8f0" strokeWidth="3" />
-      <line x1="60" y1="24" x2="60" y2="60" stroke="#e2e8f0" strokeWidth="3" />
+      {edge(topLeft, topMid)}
+      {edge(topMid, midMid)}
+      {edge(midMid, midLeft)}
+      {edge(midLeft, topLeft)}
+      {edge(topMid, dot(0, 2), "#64748b")}
+      {edge(midMid, dot(1, 2), "#64748b")}
       <text x="42" y="48" textAnchor="middle" fontSize="14" fill="#d4849a" fontWeight="700">
         1
       </text>

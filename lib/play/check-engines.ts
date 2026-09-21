@@ -38,11 +38,14 @@ import {
 } from "./gravity-four";
 import { emptyHexBoard, HEX_SIZE, hexWinner } from "./hex";
 import {
+  applyFoxHoundsMove,
+  FH_HARE_START,
+  FH_HOUND_START,
+  FH_LEFT_NODES,
+  foxHoundsHoundDestinations,
   foxHoundsMoves,
   foxHoundsWinner,
   initialFoxHounds,
-  FH_SIZE,
-  type Board as FoxHoundsBoard,
 } from "./fox-hounds";
 import { gomokuWinner } from "./gomoku";
 import { initialKlondike } from "./klondike";
@@ -62,7 +65,18 @@ import {
   removeMahjongPair,
 } from "./mahjong-solitaire";
 import { initialMancala, sowMancala } from "./mancala";
-import { miniShogiMoves, initialMiniShogiState } from "./mini-shogi";
+import {
+  applyMiniShogiMove,
+  canChoosePromotion,
+  enemyBackRank,
+  initialMiniShogiState,
+  miniShogiIndex,
+  miniShogiMoves,
+  miniShogiPositionKey,
+  miniShogiStatus,
+  mustPromote,
+  repetitionCount,
+} from "./mini-shogi";
 import {
   applyNebulaPass,
   applyNebulaPlace,
@@ -93,11 +107,12 @@ import {
 import { initialShogiState, shogiMoves } from "./shogi";
 import {
   isSlideSolved,
+  isSlideSolvable,
   shuffledSlide,
+  slideCells,
   slideMove,
   solvedSlide,
-  isSlideSolvable,
-  SLIDE_CELLS,
+  SLIDE_SIZE_OPTIONS,
 } from "./slide-puzzle";
 import {
   canDealSpider,
@@ -113,7 +128,14 @@ import {
   scoreStarTradeCards,
   scoreStarTradeRound,
 } from "./star-trade";
-import { emptyTttBoard, tttBoardFull, tttWinner } from "./tic-tac-toe";
+import {
+  applyTttPlace,
+  emptyTttBoard,
+  emptyTttHistories,
+  tttBoardFull,
+  tttRotatingOldest,
+  tttWinner,
+} from "./tic-tac-toe";
 
 function assert(cond: boolean, message: string) {
   if (!cond) throw new Error(message);
@@ -277,6 +299,18 @@ function checkTtt() {
   cat.forEach((p, i) => { draw[i] = p as 0 | 1; });
   assert(tttBoardFull(draw), "ttt board full");
   assert(tttWinner(draw) === null, "ttt draw");
+
+  let rotatingBoard = emptyTttBoard();
+  let rotatingHistories = emptyTttHistories();
+  const r1 = applyTttPlace(rotatingBoard, rotatingHistories, 0, 0, "rotating");
+  assert(r1 !== null, "ttt rotating place 1");
+  rotatingBoard = r1!.board;
+  rotatingHistories = r1!.histories;
+  const r2 = applyTttPlace(rotatingBoard, rotatingHistories, 1, 0, "rotating");
+  const r3 = applyTttPlace(r2!.board, r2!.histories, 2, 0, "rotating");
+  const r4 = applyTttPlace(r3!.board, r3!.histories, 3, 0, "rotating");
+  assert(r4!.board[0] === null && r4!.board[3] === 0, "ttt rotating drops oldest");
+  assert(tttRotatingOldest(r3!.histories, 0) === 0, "ttt rotating oldest hint");
 }
 
 function checkGravityFour() {
@@ -312,6 +346,10 @@ function checkDotsBoxes() {
   assert(boxed !== null && boxed.scores[0] === 1, "dots-and-boxes capture");
   assert(boxed!.current === 0, "dots-and-boxes extra turn on capture");
   assert(dotsBoxesWinners([8, 8]).length === 2, "dots-and-boxes tie");
+  assert(db.edgeOwners["h:0:0"] === 0, "dots-and-boxes edge owner");
+
+  const small = initialDotsBoxes(3);
+  assert(small.rows === 3 && small.owners.length === 9, "dots-and-boxes 3x3");
 }
 
 function checkNim() {
@@ -336,44 +374,37 @@ function checkHex() {
 }
 
 function checkFoxHounds() {
-  const fox = initialFoxHounds();
-  assert(foxHoundsMoves(fox, 0).length > 0, "fox opening moves");
-  assert(foxHoundsWinner(fox, 0) === null, "fox-hounds no early winner");
-  const rabbitStart = fox.indexOf(0);
-  assert(rabbitStart === 7 * FH_SIZE + 3, `fox-hounds rabbit starts bottom center ${rabbitStart}`);
+  const start = initialFoxHounds();
+  assert(start.current === 0, "fox-hounds hounds move first");
+  assert(start.board[FH_HARE_START] === 1, "fox-hounds hare at right tip");
   assert(
-    !foxHoundsMoves(fox, 1).includes(1 * FH_SIZE + 0),
-    "fox-hounds hounds cannot move diagonally down from opening"
+    FH_HOUND_START.every((node) => start.board[node] === 0),
+    "fox-hounds hounds on left opening"
   );
-  const afterRabbit = fox.slice();
-  const rabbitMove = foxHoundsMoves(afterRabbit, 0)[0];
-  afterRabbit[rabbitStart] = null;
-  afterRabbit[rabbitMove] = 0;
+  assert(start.board[2] === null, "fox-hounds left column center starts empty");
+  assert(foxHoundsMoves(start, 0).length > 0, "fox-hounds opening hound moves");
+  assert(foxHoundsWinner(start, 0) === null, "fox-hounds no early winner");
+
   assert(
-    foxHoundsWinner(afterRabbit, 1) === null,
-    "fox-hounds no false rabbit win after one move"
-  );
-  const advancedHound = Array(FH_SIZE * FH_SIZE).fill(null) as FoxHoundsBoard;
-  advancedHound[2 * FH_SIZE + 4] = 1;
-  const upMoves = foxHoundsMoves(advancedHound, 1);
-  assert(upMoves.includes(1 * FH_SIZE + 3), "fox-hounds hound advances diagonally up");
-  assert(
-    !upMoves.some((to) => Math.floor(to / FH_SIZE) > 2),
-    "fox-hounds hounds never move down"
+    !foxHoundsHoundDestinations(start.board, 1).includes(0),
+    "fox-hounds hounds cannot move backward to left tip"
   );
 
-  const winBoard = initialFoxHounds();
-  const foxIdx = winBoard.indexOf(0);
-  winBoard[foxIdx] = null;
-  winBoard[3] = 0;
-  assert(foxHoundsWinner(winBoard, 1) === 0, "fox-hounds rabbit reaches top");
+  const houndMove = foxHoundsMoves(start, 0)[0];
+  const afterHound = applyFoxHoundsMove(start, houndMove.from, houndMove.to)!;
+  assert(afterHound.current === 1, "fox-hounds hare turn after hound");
 
-  const trapped = initialFoxHounds();
-  const tIdx = trapped.indexOf(0);
-  trapped[tIdx] = null;
-  trapped[tIdx - FH_SIZE] = 0;
-  for (const m of foxHoundsMoves(trapped, 0)) trapped[m] = 1;
-  assert(foxHoundsWinner(trapped, 0) === 1, "fox-hounds rabbit trapped");
+  const breakthrough = initialFoxHounds();
+  breakthrough.board[FH_HARE_START] = null;
+  breakthrough.board[FH_LEFT_NODES[1]] = 1;
+  const won = foxHoundsWinner(breakthrough, 0);
+  assert(won?.winner === 1 && won.reason === "hare-breakthrough", "fox-hounds hare breakthrough");
+
+  const stalled = { ...initialFoxHounds(), stallTurns: 10 };
+  assert(
+    foxHoundsWinner(stalled, 0)?.reason === "hounds-stalling",
+    "fox-hounds stalling limit"
+  );
 }
 
 function checkMahjong() {
@@ -411,14 +442,25 @@ function checkKlondike() {
 }
 
 function checkSlidePuzzle() {
-  const slide = shuffledSlide();
-  assert(!isSlideSolved(slide), "slide puzzle starts unsolved");
-  assert(isSlideSolvable(slide), "slide puzzle shuffled solvable");
-  assert(isSlideSolved(solvedSlide()), "slide puzzle solved state");
-  const board = solvedSlide();
-  const moved = slideMove(board, SLIDE_CELLS - 2);
-  assert(moved !== null && !isSlideSolved(moved), "slide puzzle move works");
-  assert(slideMove(board, 0) === null, "slide puzzle rejects non-adjacent");
+  for (const size of SLIDE_SIZE_OPTIONS) {
+    const slide = shuffledSlide(size);
+    assert(!isSlideSolved(slide, size), `slide ${size}x${size} starts unsolved`);
+    assert(isSlideSolvable(slide, size), `slide ${size}x${size} shuffled solvable`);
+    assert(isSlideSolvable(solvedSlide(size), size), `slide ${size}x${size} solved is solvable`);
+    assert(isSlideSolved(solvedSlide(size), size), `slide ${size}x${size} solved state`);
+
+    const swapped = solvedSlide(size);
+    const cells = slideCells(size);
+    swapped[cells - 3] = cells - 1;
+    swapped[cells - 2] = cells - 2;
+    assert(!isSlideSolvable(swapped, size), `slide ${size}x${size} rejects unsolvable swap`);
+
+    const board = solvedSlide(size);
+    const moved = slideMove(board, cells - 2, size);
+    assert(moved !== null && !isSlideSolved(moved, size), `slide ${size}x${size} move works`);
+    assert(isSlideSolvable(moved!, size), `slide ${size}x${size} one move stays solvable`);
+    assert(slideMove(board, 0, size) === null, `slide ${size}x${size} rejects non-adjacent`);
+  }
 }
 
 function checkDominoes() {
@@ -720,12 +762,79 @@ function checkShogi() {
   assert(shogiMoves(shogi).length > 0, "shogi opening moves");
   const mini = initialMiniShogiState();
   assert(miniShogiMoves(mini).length > 0, "mini-shogi opening moves");
+  assert(mini.board[miniShogiIndex(0, 0)]?.type === "R", "mini-shogi gote rook at 5一");
+  assert(mini.board[miniShogiIndex(4, 4)]?.type === "R", "mini-shogi sente rook at 1五");
+  assert(mini.hands[0].G === 0 && mini.hands[1].G === 0, "mini-shogi no initial hand");
   assert(
     !miniShogiMoves(mini).some(
-      (m) => m.kind === "drop" && m.piece === "P" && m.to === 0
+      (m) => m.kind === "drop" && m.piece === "P" && m.to === enemyBackRank(0)
     ),
     "mini-shogi no pawn drop on last rank"
   );
+
+  const sentePawn = mini.board[miniShogiIndex(3, 0)]!;
+  assert(
+    mustPromote(sentePawn, miniShogiIndex(0, 0)),
+    "mini-shogi pawn must promote on enemy back rank"
+  );
+  const senteSilver = mini.board[miniShogiIndex(4, 2)]!;
+  assert(
+    canChoosePromotion(senteSilver, miniShogiIndex(1, 2), miniShogiIndex(0, 2)),
+    "mini-shogi silver can promote when entering enemy back rank"
+  );
+  assert(
+    !canChoosePromotion(senteSilver, miniShogiIndex(4, 2), miniShogiIndex(3, 2)),
+    "mini-shogi silver no promotion on own territory"
+  );
+
+  const promoState: ReturnType<typeof initialMiniShogiState> = {
+    board: Array(25).fill(null),
+    hands: [
+      { G: 0, S: 0, B: 0, R: 0, P: 0 },
+      { G: 0, S: 0, B: 0, R: 0, P: 0 },
+    ],
+    current: 0,
+    positionCounts: {},
+  };
+  promoState.board[miniShogiIndex(1, 2)] = { type: "S", player: 0, promoted: false };
+  promoState.board[miniShogiIndex(4, 0)] = { type: "K", player: 0, promoted: false };
+  promoState.positionCounts[miniShogiPositionKey(promoState)] = 1;
+  const promoChoice = miniShogiMoves(promoState).filter(
+    (m) =>
+      m.kind === "move" &&
+      m.from === miniShogiIndex(1, 2) &&
+      m.to === miniShogiIndex(0, 2)
+  );
+  assert(promoChoice.length === 2, "mini-shogi promotion choice when entering enemy back rank");
+
+  const kingCapture: ReturnType<typeof initialMiniShogiState> = {
+    board: Array(25).fill(null),
+    hands: [
+      { G: 0, S: 0, B: 0, R: 0, P: 0 },
+      { G: 0, S: 0, B: 0, R: 0, P: 0 },
+    ],
+    current: 0,
+    positionCounts: {},
+  };
+  kingCapture.board[miniShogiIndex(0, 2)] = { type: "K", player: 1, promoted: false };
+  kingCapture.board[miniShogiIndex(4, 2)] = { type: "R", player: 0, promoted: false };
+  kingCapture.positionCounts[miniShogiPositionKey(kingCapture)] = 1;
+  const capturedKing = applyMiniShogiMove(kingCapture, {
+    kind: "move",
+    from: miniShogiIndex(4, 2),
+    to: miniShogiIndex(0, 2),
+    promote: false,
+  });
+  assert(
+    miniShogiStatus(capturedKing).kind === "king-captured",
+    "mini-shogi king capture wins"
+  );
+
+  const rep = initialMiniShogiState();
+  assert(repetitionCount(rep) === 1, "mini-shogi initial position counted once");
+  const repKey = miniShogiPositionKey(rep);
+  rep.positionCounts[repKey] = 4;
+  assert(miniShogiStatus(rep).kind === "repetition", "mini-shogi repetition gote wins");
 }
 
 function checkSpider() {

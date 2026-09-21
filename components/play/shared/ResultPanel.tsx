@@ -9,7 +9,9 @@ type Props = {
   onReplay: () => void;
   /** オンライン対局など、席番号以外の勝者表示名を使う場合 */
   winnersLabel?: string;
-  /** 盤面の下に結果を表示するコンパクト版 */
+  /** 1人用ゲームなど、勝者行を出さない場合 */
+  solo?: boolean;
+  /** 盤面の上に結果を表示するコンパクト版 */
   variant?: "default" | "inline";
 };
 
@@ -18,6 +20,7 @@ export function ResultPanel({
   details,
   onReplay,
   winnersLabel,
+  solo = false,
   variant = "default",
 }: Props) {
   const inline = variant === "inline";
@@ -33,9 +36,11 @@ export function ResultPanel({
       <h2 className={inline ? "text-lg font-bold" : "text-2xl font-bold"}>
         ゲーム終了
       </h2>
-      <p className={inline ? "mt-2 text-base" : "mt-4 text-lg"}>
-        勝者: {winnersLabel ?? formatWinners(winners)}
-      </p>
+      {!solo ? (
+        <p className={inline ? "mt-2 text-base" : "mt-4 text-lg"}>
+          勝者: {winnersLabel ?? formatWinners(winners)}
+        </p>
+      ) : null}
       {details ? <div className={inline ? "mt-2" : "mt-4"}>{details}</div> : null}
       <button
         type="button"

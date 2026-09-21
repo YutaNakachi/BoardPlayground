@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -50,6 +51,9 @@ export function NineMensMorrisGame() {
     [phase, state.over]
   );
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -78,6 +82,19 @@ export function NineMensMorrisGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {state.notice ?? "相手の駒が足りないか、動けなくなりました。"}
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
@@ -115,7 +132,7 @@ export function NineMensMorrisGame() {
               type="button"
               onClick={() => onPoint(index)}
               style={{ left: `${(x / 300) * 100}%`, top: `${(y / 300) * 100}%` }}
-              className={`absolute flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full sm:h-10 sm:w-10 ${
+              className={`absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
                 selected ? "ring-2 ring-accent" : ""
               } ${isDest || canRemove ? "ring-2 ring-lime-300" : ""}`}
               aria-label={
@@ -129,7 +146,7 @@ export function NineMensMorrisGame() {
               }
             >
               <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
+                className={`flex h-5 w-5 items-center justify-center rounded-full sm:h-6 sm:w-6 ${
                   owner === null
                     ? isDest
                       ? "bg-lime-300/80"
@@ -142,18 +159,6 @@ export function NineMensMorrisGame() {
         })}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <p className="text-slate-400">
-              {state.notice ?? "相手の駒が足りないか、動けなくなりました。"}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

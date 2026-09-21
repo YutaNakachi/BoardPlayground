@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DiceFace } from "@/components/play/shared/DiceFace";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -314,6 +315,9 @@ export function LudoGame() {
     setState((s) => endLudoTurn(s));
   }, [isAnimating]);
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -332,6 +336,15 @@ export function LudoGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">4つのコマをすべてゴールしました。</p>}
+        />
+      )}
+
       {!isGameOver && (
         <TurnBanner
           playerIndex={LUDO_STYLE_INDEX[state.current]}
@@ -526,14 +539,6 @@ export function LudoGame() {
         </div>
       ) : null}
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">4つのコマをすべてゴールしました。</p>}
-        />
-      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -49,6 +50,9 @@ export function HexGame() {
 
   const winners = useMemo(() => (winner === null ? null : [winner]), [winner]);
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -66,6 +70,19 @@ export function HexGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              プレイヤー {winner! + 1} が両端をつなぎました。
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
@@ -108,18 +125,6 @@ export function HexGame() {
         プレイヤー1は上と下、プレイヤー2は左と右をつなぎます。
       </p>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <p className="text-slate-400">
-              プレイヤー {winner! + 1} が両端をつなぎました。
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }
