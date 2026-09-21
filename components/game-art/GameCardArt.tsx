@@ -579,25 +579,58 @@ function ShogiPreview() {
 }
 
 function MiniShogiPreview() {
+  const pieceLabel: Record<string, string> = {
+    "0,0": "飛",
+    "0,1": "角",
+    "0,2": "銀",
+    "0,3": "金",
+    "0,4": "玉",
+    "1,4": "歩",
+    "3,0": "歩",
+    "4,0": "玉",
+    "4,1": "金",
+    "4,2": "銀",
+    "4,3": "角",
+    "4,4": "飛",
+  };
+  const cell = 19;
+  const pad = 12;
+
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
       <rect width="120" height="120" rx="10" fill="#92400e" />
       {Array.from({ length: 25 }, (_, index) => {
         const row = Math.floor(index / 5);
         const col = index % 5;
-        const x = 22 + col * 15;
-        const y = 22 + row * 15;
+        const x = pad + col * cell;
+        const y = pad + row * cell;
+        const label = pieceLabel[`${row},${col}`];
         return (
-          <rect
-            key={index}
-            x={x}
-            y={y}
-            width="14"
-            height="14"
-            fill="#fde68a"
-            stroke="#b45309"
-            strokeWidth="0.5"
-          />
+          <g key={index}>
+            <rect
+              x={x}
+              y={y}
+              width={cell - 1}
+              height={cell - 1}
+              fill="#fde68a"
+              stroke="#b45309"
+              strokeWidth="0.5"
+            />
+            {label ? (
+              <text
+                x={x + cell / 2 - 0.5}
+                y={y + cell / 2 + 1}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="6"
+                fill={row <= 1 ? "#1e293b" : "#7f1d1d"}
+                fontWeight="700"
+                transform={row >= 3 ? `rotate(180 ${x + cell / 2} ${y + cell / 2})` : undefined}
+              >
+                {label}
+              </text>
+            ) : null}
+          </g>
         );
       })}
     </svg>

@@ -18,18 +18,20 @@ export type MiniShogiState = {
   board: Board;
   hands: [Hand, Hand];
   current: Player;
+  positionCounts: Record<string, number>;
 };
 
 export type MiniShogiMove =
-  | { kind: "move"; from: number; to: number }
+  | { kind: "move"; from: number; to: number; promote: boolean }
   | { kind: "drop"; piece: Droppable; to: number };
 
 export type MiniShogiStatus =
   | { kind: "playing" }
-  | { kind: "checkmate"; winner: Player };
+  | { kind: "checkmate"; winner: Player }
+  | { kind: "king-captured"; winner: Player }
+  | { kind: "repetition"; winner: 1 };
 
 const SIZE = 5;
-const PROMO_ZONE = 2;
 
 const ORTHO: [number, number][] = [
   [-1, 0],
@@ -68,25 +70,39 @@ function emptyHand(): Hand {
   return { G: 0, S: 0, B: 0, R: 0, P: 0 };
 }
 
-export function initialMiniShogiState(): MiniShogiState {
-  const board: Board = Array(SIZE * SIZE).fill(null);
-  board[miniShogiIndex(0, 1)] = { type: "R", player: 1, promoted: false };
-  board[miniShogiIndex(0, 3)] = { type: "B", player: 1, promoted: false };
-  const goteRow: MiniPieceType[] = ["G", "S", "K", "S", "G"];
-  for (let col = 0; col < SIZE; col++) {
-    board[miniShogiIndex(1, col)] = { type: goteRow[col], player: 1, promoted: false };
-  }
-  board[miniShogiIndex(2, 2)] = { type: "P", player: 1, promoted: false };
-  board[miniShogiIndex(3, 2)] = { type: "P", player: 0, promoted: false };
-
-  const hands: [Hand, Hand] = [emptyHand(), emptyHand()];
-  hands[0] = { G: 2, S: 2, B: 1, R: 1, P: 0 };
-
-  return { board, hands, current: 0 };
+/** 敵陣の最奥1段（先手=1段目 row0、後手=5段目 row4） */
+export function enemyBackRank(player: Player): number {
+  return player === 0 ? 0 : SIZE - 1;
 }
 
-function inPromotionZone(player: Player, row: number): boolean {
-  return player === 0 ? row < PROMO_ZONE : row >= SIZE - PROMO_ZONE;
+export function initialMiniShogiState(): MiniShogiState {
+  const board: Board = Array(SIZE * SIZE).fill(null);
+
+  // 後手（一段）
+  board[miniShogiIndex(0, 0)] = { type: "R", player: 1, promoted: false };
+  board[miniShogiIndex(0, 1)] = { type: "B", player: 1, promoted: false };
+  board[miniShogiIndex(0, 2)] = { type: "S", player: 1, promoted: false };
+  board[miniShogiIndex(0, 3)] = { type: "G", player: 1, promoted: false };
+  board[miniShogiIndex(0, 4)] = { type: "K", player: 1, promoted: false };
+  // 二段 1二歩
+  board[miniShogiIndex(1, 4)] = { type: "P", player: 1, promoted: false };
+  // 四段 5四歩
+  board[miniShogiIndex(3, 0)] = { type: "P", player: 0, promoted: false };
+  // 先手（五段）
+  board[miniShogiIndex(4, 0)] = { type: "K", player: 0, promoted: false };
+  board[miniShogiIndex(4, 1)] = { type: "G", player: 0, promoted: false };
+  board[miniShogiIndex(4, 2)] = { type: "S", player: 0, promoted: false };
+  board[miniShogiIndex(4, 3)] = { type: "B", player: 0, promoted: false };
+  board[miniShogiIndex(4, 4)] = { type: "R", player: 0, promoted: false };
+
+  const state: MiniShogiState = {
+    board,
+    hands: [emptyHand(), emptyHand()],
+    current: 0,
+    positionCounts: {},
+  };
+  recordPosition(state);
+  return state;
 }
 
 function goldDirs(player: Player): [number, number][] {
@@ -112,9 +128,14 @@ function silverDirs(player: Player): [number, number][] {
   ];
 }
 
-function canPromote(piece: MiniPiece, to: number): boolean {
+export function canChoosePromotion(piece: MiniPiece, from: number, to: number): boolean {
   if (piece.promoted || piece.type === "K" || piece.type === "G") return false;
-  return inPromotionZone(piece.player, rowOf(to));
+  const back = enemyBackRank(piece.player);
+  return rowOf(from) === back || rowOf(to) === back;
+}
+
+export function mustPromote(piece: MiniPiece, to: number): boolean {
+  return piece.type === "P" && rowOf(to) === enemyBackRank(piece.player);
 }
 
 function addStepMoves(
@@ -122,7 +143,7 @@ function addStepMoves(
   from: number,
   piece: MiniPiece,
   dirs: [number, number][],
-  moves: MiniShogiMove[]
+  moves: Array<{ from: number; to: number }>
 ): void {
   const row = rowOf(from);
   const col = colOf(from);
@@ -133,7 +154,7 @@ function addStepMoves(
     const to = miniShogiIndex(r, c);
     const target = board[to];
     if (!target || target.player !== piece.player) {
-      moves.push({ kind: "move", from, to });
+      moves.push({ from, to });
     }
   }
 }
@@ -143,7 +164,7 @@ function addSlideMoves(
   from: number,
   piece: MiniPiece,
   dirs: [number, number][],
-  moves: MiniShogiMove[]
+  moves: Array<{ from: number; to: number }>
 ): void {
   const row = rowOf(from);
   const col = colOf(from);
@@ -154,9 +175,9 @@ function addSlideMoves(
       const to = miniShogiIndex(r, c);
       const target = board[to];
       if (!target) {
-        moves.push({ kind: "move", from, to });
+        moves.push({ from, to });
       } else {
-        if (target.player !== piece.player) moves.push({ kind: "move", from, to });
+        if (target.player !== piece.player) moves.push({ from, to });
         break;
       }
       r += dr;
@@ -165,25 +186,47 @@ function addSlideMoves(
   }
 }
 
-function effectiveType(piece: MiniPiece): MiniPieceType | "G+" {
-  if (piece.promoted && piece.type !== "K" && piece.type !== "G") return "G+";
-  return piece.type;
+function promotedMoves(
+  board: Board,
+  from: number,
+  piece: MiniPiece,
+  moves: Array<{ from: number; to: number }>
+): void {
+  if (!piece.promoted) return;
+  switch (piece.type) {
+    case "P":
+    case "S":
+      addStepMoves(board, from, piece, goldDirs(piece.player), moves);
+      break;
+    case "B":
+      addSlideMoves(board, from, piece, DIAG, moves);
+      addStepMoves(board, from, piece, ORTHO, moves);
+      break;
+    case "R":
+      addSlideMoves(board, from, piece, ORTHO, moves);
+      addStepMoves(board, from, piece, DIAG, moves);
+      break;
+    default:
+      break;
+  }
 }
 
-function pseudoMovesFrom(board: Board, from: number): MiniShogiMove[] {
+function pseudoMovesFrom(board: Board, from: number): Array<{ from: number; to: number }> {
   const piece = board[from];
   if (!piece) return [];
-  const moves: MiniShogiMove[] = [];
-  const eff = effectiveType(piece);
+  const moves: Array<{ from: number; to: number }> = [];
 
-  if (eff === "G+" || piece.type === "G") {
-    addStepMoves(board, from, piece, goldDirs(piece.player), moves);
+  if (piece.promoted) {
+    promotedMoves(board, from, piece, moves);
     return moves;
   }
 
   switch (piece.type) {
     case "K":
       addStepMoves(board, from, piece, [...ORTHO, ...DIAG], moves);
+      break;
+    case "G":
+      addStepMoves(board, from, piece, goldDirs(piece.player), moves);
       break;
     case "S":
       addStepMoves(board, from, piece, silverDirs(piece.player), moves);
@@ -205,6 +248,26 @@ function pseudoMovesFrom(board: Board, from: number): MiniShogiMove[] {
   return moves;
 }
 
+function expandPromotionMoves(
+  board: Board,
+  from: number,
+  to: number
+): MiniShogiMove[] {
+  const piece = board[from];
+  if (!piece) return [];
+
+  if (mustPromote(piece, to)) {
+    return [{ kind: "move", from, to, promote: true }];
+  }
+  if (canChoosePromotion(piece, from, to)) {
+    return [
+      { kind: "move", from, to, promote: true },
+      { kind: "move", from, to, promote: false },
+    ];
+  }
+  return [{ kind: "move", from, to, promote: false }];
+}
+
 function findKing(board: Board, player: Player): number {
   for (let i = 0; i < board.length; i++) {
     const piece = board[i];
@@ -213,9 +276,9 @@ function findKing(board: Board, player: Player): number {
   return -1;
 }
 
-function attacksSquare(board: Board, from: number, target: number, piece: MiniPiece): boolean {
+function attacksSquare(board: Board, from: number, target: number): boolean {
   const moves = pseudoMovesFrom(board, from);
-  return moves.some((m) => m.kind === "move" && m.to === target);
+  return moves.some((m) => m.to === target);
 }
 
 export function isMiniKingInCheck(board: Board, player: Player): boolean {
@@ -225,22 +288,39 @@ export function isMiniKingInCheck(board: Board, player: Player): boolean {
   for (let i = 0; i < board.length; i++) {
     const piece = board[i];
     if (!piece || piece.player !== enemy) continue;
-    if (attacksSquare(board, i, king, piece)) return true;
+    if (attacksSquare(board, i, king)) return true;
   }
   return false;
 }
 
-function applyBoardMove(board: Board, move: Extract<MiniShogiMove, { kind: "move" }>): Board {
+function captureToHand(piece: MiniPiece): Droppable {
+  if (piece.type === "K") return "G";
+  if (piece.promoted) {
+    const demote: Record<MiniPieceType, Droppable> = {
+      K: "G",
+      G: "G",
+      S: "S",
+      B: "B",
+      R: "R",
+      P: "P",
+    };
+    return demote[piece.type];
+  }
+  return piece.type;
+}
+
+function applyBoardMove(
+  board: Board,
+  move: Extract<MiniShogiMove, { kind: "move" }>
+): Board {
   const next = board.slice();
   const piece = next[move.from];
   if (!piece) return next;
-  const captured = next[move.to];
   next[move.from] = null;
-  const promoted = canPromote(piece, move.to);
   next[move.to] = {
     type: piece.type,
     player: piece.player,
-    promoted: piece.promoted || promoted,
+    promoted: piece.promoted || move.promote,
   };
   return next;
 }
@@ -258,11 +338,10 @@ function applyMoveBoard(state: MiniShogiState, move: MiniShogiMove): MiniShogiSt
       board: nextBoard,
       hands,
       current: state.current === 0 ? 1 : 0,
+      positionCounts: { ...state.positionCounts },
     };
   }
 
-  const piece = state.board[move.from];
-  if (!piece) return state;
   const captured = state.board[move.to];
   const nextBoard = applyBoardMove(state.board, move);
   const hands: [Hand, Hand] = [
@@ -270,14 +349,13 @@ function applyMoveBoard(state: MiniShogiState, move: MiniShogiMove): MiniShogiSt
     { ...state.hands[1] },
   ];
   if (captured) {
-    const dropType: Droppable =
-      captured.type === "K" ? "G" : captured.promoted ? "G" : captured.type;
-    hands[state.current][dropType] += 1;
+    hands[state.current][captureToHand(captured)] += 1;
   }
   return {
     board: nextBoard,
     hands,
     current: state.current === 0 ? 1 : 0,
+    positionCounts: { ...state.positionCounts },
   };
 }
 
@@ -287,7 +365,7 @@ function isLegalMove(state: MiniShogiState, move: MiniShogiMove): boolean {
 }
 
 function pawnDropForbiddenRow(player: Player, row: number): boolean {
-  return player === 0 ? row === 0 : row === SIZE - 1;
+  return row === enemyBackRank(player);
 }
 
 function hasPawnInColumn(board: Board, player: Player, col: number): boolean {
@@ -320,28 +398,80 @@ function dropMoves(state: MiniShogiState): MiniShogiMove[] {
   return moves;
 }
 
+export function miniShogiPositionKey(state: MiniShogiState): string {
+  const boardPart = state.board
+    .map((p) =>
+      p ? `${p.player}${p.type}${p.promoted ? "+" : ""}` : "."
+    )
+    .join("");
+  const handPart = [0, 1]
+    .map((player) =>
+      (Object.keys(state.hands[player]) as Droppable[])
+        .map((t) => `${t}${state.hands[player][t]}`)
+        .join("")
+    )
+    .join("|");
+  return `${boardPart}:${handPart}:${state.current}`;
+}
+
+function recordPosition(state: MiniShogiState): void {
+  const key = miniShogiPositionKey(state);
+  state.positionCounts[key] = (state.positionCounts[key] ?? 0) + 1;
+}
+
+export function repetitionCount(state: MiniShogiState): number {
+  const key = miniShogiPositionKey(state);
+  return state.positionCounts[key] ?? 0;
+}
+
 export function miniShogiMoves(state: MiniShogiState): MiniShogiMove[] {
   const pseudo: MiniShogiMove[] = [];
   for (let i = 0; i < state.board.length; i++) {
     const piece = state.board[i];
     if (!piece || piece.player !== state.current) continue;
-    pseudo.push(...pseudoMovesFrom(state.board, i));
+    for (const { from, to } of pseudoMovesFrom(state.board, i)) {
+      pseudo.push(...expandPromotionMoves(state.board, from, to));
+    }
   }
   pseudo.push(...dropMoves(state));
   return pseudo.filter((move) => isLegalMove(state, move));
 }
 
+export function findKingOnBoard(board: Board, player: Player): boolean {
+  return findKing(board, player) >= 0;
+}
+
 export function miniShogiStatus(state: MiniShogiState): MiniShogiStatus {
+  if (!findKingOnBoard(state.board, 0)) {
+    return { kind: "king-captured", winner: 1 };
+  }
+  if (!findKingOnBoard(state.board, 1)) {
+    return { kind: "king-captured", winner: 0 };
+  }
+  if (repetitionCount(state) >= 4) {
+    return { kind: "repetition", winner: 1 };
+  }
   const moves = miniShogiMoves(state);
   if (moves.length > 0) return { kind: "playing" };
   return { kind: "checkmate", winner: state.current === 0 ? 1 : 0 };
 }
 
 export function applyMiniShogiMove(state: MiniShogiState, move: MiniShogiMove): MiniShogiState {
-  return applyMoveBoard(state, move);
+  const next = applyMoveBoard(state, move);
+  recordPosition(next);
+  return next;
 }
 
 export function miniShogiPieceLabel(piece: MiniPiece): string {
+  if (piece.promoted) {
+    const promoted: Partial<Record<MiniPieceType, string>> = {
+      P: "と",
+      S: "成銀",
+      B: "馬",
+      R: "竜",
+    };
+    return promoted[piece.type] ?? piece.type;
+  }
   const base: Record<MiniPieceType, string> = {
     K: "玉",
     G: "金",
@@ -350,9 +480,6 @@ export function miniShogiPieceLabel(piece: MiniPiece): string {
     R: "飛",
     P: "歩",
   };
-  if (piece.promoted && piece.type !== "K" && piece.type !== "G") {
-    return "全";
-  }
   return base[piece.type];
 }
 
@@ -365,4 +492,23 @@ export function miniShogiHandLabel(type: Droppable): string {
     P: "歩",
   };
   return labels[type];
+}
+
+/** 同一マスへの移動候補（成り分岐あり） */
+export function movesToSquare(
+  moves: MiniShogiMove[],
+  from: number,
+  to: number
+): MiniShogiMove[] {
+  return moves.filter(
+    (m) => m.kind === "move" && m.from === from && m.to === to
+  );
+}
+
+export function needsPromotionChoice(moves: MiniShogiMove[]): boolean {
+  if (moves.length !== 2) return false;
+  return (
+    moves.every((m) => m.kind === "move") &&
+    moves[0].promote !== moves[1].promote
+  );
 }
