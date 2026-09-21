@@ -129,9 +129,10 @@ export function FoxHoundsGame() {
         </p>
       )}
 
-      <div className="relative mx-auto aspect-[3/1] w-full max-w-7xl px-1 sm:px-0">
-        <svg viewBox="-10 5 120 90" className="h-full w-full" aria-label="ウサギと猟犬の盤" preserveAspectRatio="xMidYMid meet">
-          <rect x="-10" y="5" width="120" height="90" rx="8" fill="#0f172a" opacity="0.35" />
+      <div className="flex justify-center overflow-visible">
+        <div className="relative aspect-[7/2] w-[min(96rem,calc(100vw-1.5rem))]">
+        <svg viewBox="-12 8 124 84" className="h-full w-full" aria-label="ウサギと猟犬の盤" preserveAspectRatio="xMidYMid meet">
+          <rect x="-12" y="8" width="124" height="84" rx="8" fill="#0f172a" opacity="0.35" />
 
           {FH_BOARD_LINES.map(([from, to]) => {
             const a = FH_NODE_POS[from];
@@ -204,6 +205,7 @@ export function FoxHoundsGame() {
             );
           })}
         </svg>
+        </div>
       </div>
 
       <p className="text-center text-xs text-slate-500">
