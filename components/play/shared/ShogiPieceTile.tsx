@@ -52,13 +52,9 @@ export function ShogiPieceTile({
         <span className="translate-y-[6%]">{KOMA_GLYPH}</span>
       </span>
       <span
-        className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center ${shogiKomaFont.className}`}
+        className={`pointer-events-none absolute left-1/2 top-[57%] z-10 -translate-x-1/2 -translate-y-1/2 font-extrabold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl] ${shogiKomaFont.className}`}
       >
-        <span
-          className={`-translate-x-[3px] translate-y-[10%] font-extrabold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl]`}
-        >
-          {label}
-        </span>
+        {label}
       </span>
     </span>
   );
