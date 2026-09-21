@@ -129,9 +129,12 @@ export function FoxHoundsGame() {
         </p>
       )}
 
-      <div className="flex justify-center overflow-visible">
-        <div className="relative aspect-[7/2] w-[min(96rem,calc(100vw-1.5rem))]">
-        <svg viewBox="-12 8 124 84" className="h-full w-full" aria-label="ウサギと猟犬の盤" preserveAspectRatio="xMidYMid meet">
+      {/* PageContainer の padding / max-width を抜けて画面幅いっぱいに表示 */}
+      <section
+        className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 px-3 sm:px-5"
+        aria-label="ウサギと猟犬の盤面"
+      >
+        <svg viewBox="-12 8 124 84" className="block h-auto w-full" aria-label="ウサギと猟犬の盤">
           <rect x="-12" y="8" width="124" height="84" rx="8" fill="#0f172a" opacity="0.35" />
 
           {FH_BOARD_LINES.map(([from, to]) => {
@@ -205,8 +208,7 @@ export function FoxHoundsGame() {
             );
           })}
         </svg>
-        </div>
-      </div>
+      </section>
 
       <p className="text-center text-xs text-slate-500">
         プレイヤー1＝猟犬（先手）／プレイヤー2＝ウサギ
