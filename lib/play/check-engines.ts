@@ -49,9 +49,11 @@ import { initialKlondike } from "./klondike";
 import {
   initialLudo,
   applyLudoMove,
+  endLudoTurn,
   isLudoTokenFinished,
   ludoDeepestFinishSlot,
   ludoGoalCount,
+  ludoMoveAnimationSteps,
   ludoMoves,
 } from "./ludo";
 import {
@@ -548,16 +550,28 @@ function checkLudo() {
     "ludo approach roll 2 reaches slot1"
   );
 
+  const homeEntryNoCapture = initialLudo(2);
+  homeEntryNoCapture.lastRoll = 2;
+  homeEntryNoCapture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 42 };
+  homeEntryNoCapture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 21 };
+  const homeEntryNoCaptureMove = ludoMoves(homeEntryNoCapture).find((m) => m.tokenIndex === 0);
+  assert(homeEntryNoCaptureMove != null, "ludo can enter home past entry");
+  const afterHomeEntryNoCapture = applyLudoMove(homeEntryNoCapture, homeEntryNoCaptureMove!);
+  assert(
+    afterHomeEntryNoCapture !== null && afterHomeEntryNoCapture.tokens[4].zone === "track",
+    "ludo does not capture on home entry when overshooting past slot0"
+  );
+
   const homeEntryCapture = initialLudo(2);
-  homeEntryCapture.lastRoll = 2;
+  homeEntryCapture.lastRoll = 1;
   homeEntryCapture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 42 };
   homeEntryCapture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 21 };
   const homeEntryCaptureMove = ludoMoves(homeEntryCapture).find((m) => m.tokenIndex === 0);
-  assert(homeEntryCaptureMove != null, "ludo can enter home past entry");
+  assert(homeEntryCaptureMove != null, "ludo can land on home entry");
   const afterHomeEntryCapture = applyLudoMove(homeEntryCapture, homeEntryCaptureMove!);
   assert(
     afterHomeEntryCapture !== null && afterHomeEntryCapture.tokens[4].zone === "yard",
-    "ludo captures enemy on home entry when passing through"
+    "ludo captures enemy when stopping exactly on home entry"
   );
 
   const blockedHome = initialLudo(2);
@@ -566,7 +580,61 @@ function checkLudo() {
   blockedHome.lastRoll = 1;
   assert(
     ludoMoves(blockedHome).find((m) => m.tokenIndex === 0) == null,
-    "ludo home overlap blocked past entry"
+    "ludo cannot land on occupied inner home slot"
+  );
+  blockedHome.lastRoll = 2;
+  const homeJump = ludoMoves(blockedHome).find((m) => m.tokenIndex === 0);
+  assert(homeJump != null, "ludo can jump over own piece in home column");
+  const afterHomeJump = applyLudoMove(blockedHome, homeJump!);
+  assert(
+    afterHomeJump !== null && afterHomeJump.tokens[0].zone === "home" && afterHomeJump.tokens[0].steps === 2,
+    "ludo home jump lands on deepest empty slot"
+  );
+
+  const homeJumpFinish = initialLudo(4);
+  homeJumpFinish.current = 1;
+  homeJumpFinish.lastRoll = 2;
+  homeJumpFinish.tokens[4] = { player: 1, index: 0, zone: "home", steps: 1 };
+  homeJumpFinish.tokens[5] = { player: 1, index: 1, zone: "home", steps: 2 };
+  homeJumpFinish.tokens[6] = { player: 1, index: 2, zone: "home", steps: 4 };
+  for (const i of [0, 1, 2, 3]) {
+    homeJumpFinish.tokens[i] = { player: 0, index: i, zone: "yard", steps: 0 };
+  }
+  homeJumpFinish.tokens[7] = { player: 1, index: 3, zone: "yard", steps: 0 };
+  const jumpFinishMove = ludoMoves(homeJumpFinish).find((m) => m.tokenIndex === 4);
+  assert(jumpFinishMove != null, "ludo slot1 jumps to slot3 with roll 2");
+  const afterJumpFinish = applyLudoMove(homeJumpFinish, jumpFinishMove!);
+  assert(
+    afterJumpFinish !== null &&
+      afterJumpFinish.tokens[4].steps === 3 &&
+      isLudoTokenFinished(afterJumpFinish.tokens, 4) &&
+      isLudoTokenFinished(afterJumpFinish.tokens, 5),
+    "ludo jump finishes passed and inner tokens"
+  );
+  assert(ludoDeepestFinishSlot(afterJumpFinish!.tokens, 1) === 1, "ludo deepest retreats to slot1 after jump");
+
+  const homeEntryJumpWin = initialLudo(4);
+  homeEntryJumpWin.current = 1;
+  homeEntryJumpWin.lastRoll = 4;
+  homeEntryJumpWin.tokens[4] = { player: 1, index: 0, zone: "home", steps: 1 };
+  homeEntryJumpWin.tokens[5] = { player: 1, index: 1, zone: "home", steps: 2 };
+  homeEntryJumpWin.tokens[6] = { player: 1, index: 2, zone: "home", steps: 4 };
+  homeEntryJumpWin.tokens[7] = { player: 1, index: 3, zone: "track", steps: 42 };
+  for (const i of [0, 1, 2, 3]) {
+    homeEntryJumpWin.tokens[i] = { player: 0, index: i, zone: "yard", steps: 0 };
+  }
+  for (const i of [8, 9, 10, 11]) {
+    homeEntryJumpWin.tokens[i] = { player: 2, index: i - 8, zone: "yard", steps: 0 };
+  }
+  for (const i of [12, 13, 14, 15]) {
+    homeEntryJumpWin.tokens[i] = { player: 3, index: i - 12, zone: "yard", steps: 0 };
+  }
+  const entryJumpMove = ludoMoves(homeEntryJumpWin).find((m) => m.tokenIndex === 7);
+  assert(entryJumpMove != null, "ludo track piece jumps into deepest home slot");
+  const afterEntryJumpWin = applyLudoMove(homeEntryJumpWin, entryJumpMove!);
+  assert(
+    afterEntryJumpWin !== null && afterEntryJumpWin.winner === 1,
+    "ludo entry jump to slot3 can win when all tokens finish"
   );
 
   const entryStack = initialLudo(2);
@@ -584,6 +652,48 @@ function checkLudo() {
   slot3Finished.lastRoll = 1;
   assert(isLudoTokenFinished(slot3Finished.tokens, 1), "ludo slot3 finished when slot4 occupied");
   assert(ludoMoves(slot3Finished).length === 0, "ludo finished tokens cannot move");
+
+  const yardSteps = ludoMoveAnimationSteps(ludo.tokens[0], 6);
+  assert(yardSteps.length === 1 && yardSteps[0].zone === "track" && yardSteps[0].steps === 0, "ludo yard anim is one step to start");
+
+  const trackSteps = ludoMoveAnimationSteps(
+    { player: 0, index: 0, zone: "track", steps: 5 },
+    3
+  );
+  assert(
+    trackSteps.length === 3 &&
+      trackSteps[0].steps === 6 &&
+      trackSteps[2].steps === 8,
+    "ludo track anim steps one pip at a time"
+  );
+
+  const sixNoMove = initialLudo(4);
+  sixNoMove.current = 1;
+  sixNoMove.lastRoll = 6;
+  sixNoMove.extraTurn = true;
+  for (let i = 4; i <= 7; i++) {
+    sixNoMove.tokens[i] = { player: 1, index: i - 4, zone: "home", steps: 1 };
+  }
+  sixNoMove.tokens[5] = { player: 1, index: 1, zone: "home", steps: 2 };
+  sixNoMove.tokens[6] = { player: 1, index: 2, zone: "home", steps: 4 };
+  assert(ludoMoves(sixNoMove).length === 0, "ludo six with blocked home has no moves");
+  const afterSixPass = endLudoTurn(sixNoMove);
+  assert(
+    afterSixPass.current === 1 && afterSixPass.lastRoll === null && !afterSixPass.extraTurn,
+    "ludo six bonus allows reroll when no legal move"
+  );
+
+  const threeNoMove = initialLudo(2);
+  threeNoMove.lastRoll = 3;
+  threeNoMove.extraTurn = false;
+  for (const i of [0, 1, 2, 3]) {
+    threeNoMove.tokens[i] = { player: 0, index: i, zone: "yard", steps: 0 };
+  }
+  const afterThreePass = endLudoTurn(threeNoMove);
+  assert(
+    afterThreePass.current === 2 && afterThreePass.lastRoll === null,
+    "ludo non-six pass advances turn"
+  );
 }
 
 function checkBackgammon() {

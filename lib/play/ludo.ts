@@ -100,20 +100,15 @@ function targetHomeSlot(token: LudoToken, roll: number): number | null {
   return slot <= LUDO_HOME_LEN - 1 ? slot : null;
 }
 
-function canReachHomeSlot(
+/** 着地マスに入れるか（入口 slot0 は重なり可。内側は飛び越えのみ可） */
+function canLandOnHomeSlot(
   tokens: LudoToken[],
   player: number,
-  fromHomeSlot: number | null,
   targetSlot: number,
   excludeIndex: number
 ): boolean {
-  const start = fromHomeSlot === null ? 0 : fromHomeSlot + 1;
-  for (let slot = start; slot <= targetSlot; slot++) {
-    // 入口（slot 0）はコース上と同様に重なってもよい
-    if (slot === 0) continue;
-    if (homeSlotOccupied(tokens, player, slot, excludeIndex)) return false;
-  }
-  return true;
+  if (targetSlot === 0) return true;
+  return !homeSlotOccupied(tokens, player, targetSlot, excludeIndex);
 }
 
 function canAdvance(tokens: LudoToken[], tokenIndex: number, roll: number): boolean {
@@ -125,8 +120,7 @@ function canAdvance(tokens: LudoToken[], tokenIndex: number, roll: number): bool
   if (targetSlot !== null) {
     const deepest = ludoDeepestFinishSlot(tokens, token.player);
     if (targetSlot > deepest) return false;
-    const fromSlot = token.zone === "home" ? token.steps : null;
-    return canReachHomeSlot(tokens, token.player, fromSlot, targetSlot, tokenIndex);
+    return canLandOnHomeSlot(tokens, token.player, targetSlot, tokenIndex);
   }
 
   if (token.zone === "home") return false;
@@ -145,6 +139,23 @@ export function ludoMoves(state: LudoState): LudoMove[] {
     if (canAdvance(state.tokens, i, roll)) moves.push({ tokenIndex: i });
   }
   return moves;
+}
+
+/** 各出目ごとの表示位置。ヤードからの出発はスタート1マスのみ。 */
+export function ludoMoveAnimationSteps(
+  token: LudoToken,
+  roll: number
+): LudoToken[] {
+  if (token.zone === "yard") {
+    return [{ ...applyTokenAdvance(token, roll) }];
+  }
+  const steps: LudoToken[] = [];
+  let cur = token;
+  for (let i = 0; i < roll; i++) {
+    cur = applyTokenAdvance(cur, 1);
+    steps.push({ ...cur });
+  }
+  return steps;
 }
 
 function applyTokenAdvance(token: LudoToken, roll: number): LudoToken {
@@ -191,12 +202,6 @@ export function applyLudoMove(state: LudoState, move: LudoMove): LudoState | nul
     tokens.splice(0, tokens.length, ...captured);
   } else {
     tokens[move.tokenIndex] = advanced;
-    // ゴール列に入る際、入口（slot0）を通過したらそこで取る
-    if (token.zone === "track" && token.steps < LUDO_TRACK_STEPS) {
-      const entryPathIndex = pathIndexForSteps(player, LUDO_TRACK_STEPS);
-      const captured = captureAt(tokens, player, entryPathIndex, move.tokenIndex);
-      tokens.splice(0, tokens.length, ...captured);
-    }
   }
 
   const allFinished = tokens.every(
@@ -221,6 +226,24 @@ export function applyLudoMove(state: LudoState, move: LudoMove): LudoState | nul
 
 export function mustMoveLudo(state: LudoState): boolean {
   return state.lastRoll != null && ludoMoves(state).length > 0;
+}
+
+/** 動かせるコマがないときに手番を進める。6のボーナス中は同プレイヤーが再振りできる。 */
+export function endLudoTurn(state: LudoState): LudoState {
+  if (state.lastRoll == null || state.winner != null) return state;
+  if (ludoMoves(state).length > 0) return state;
+
+  if (state.extraTurn) {
+    return { ...state, lastRoll: null, extraTurn: false };
+  }
+
+  const turnIndex = state.activePlayers.indexOf(state.current);
+  return {
+    ...state,
+    current: state.activePlayers[(turnIndex + 1) % state.activePlayers.length],
+    lastRoll: null,
+    extraTurn: false,
+  };
 }
 
 export function ludoTokenPathIndex(token: LudoToken): number | null {
