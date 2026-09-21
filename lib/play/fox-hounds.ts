@@ -1,22 +1,22 @@
-export const FH_NODE_COUNT = 9;
+export const FH_NODE_COUNT = 11;
 
 /**
- * 正式盤（1-3-1-3-1 の9点）。
+ * 正式盤（1-3-3-3-1 の11点）。
  * 列番号は左=0。猟犬は列が減る方向へ戻れない。
  *
  *        0
  *      1 2 3
- *        4
- *      5 6 7
- *        8
+ *      4 5 6
+ *      7 8 9
+ *       10
  */
-export const FH_NODE_COL = [0, 1, 1, 1, 2, 3, 3, 3, 4] as const;
+export const FH_NODE_COL = [0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4] as const;
 
 /** ウサギの突破目標（左の3点列） */
 export const FH_LEFT_NODES = [1, 2, 3] as const;
 
-export const FH_HARE_START = 8;
-/** 左端・左列の上下（中央は空き） */
+export const FH_HARE_START = 10;
+/** 左端・左列の上下（左列中央は空き） */
 export const FH_HOUND_START = [0, 1, 3] as const;
 
 export const FH_STALL_LIMIT = 10;
@@ -40,55 +40,70 @@ export type FoxHoundsMove = {
   to: number;
 };
 
-/** 9点ボードの隣接リスト（中央ハブ型の標準形） */
+/** 11点ボードの隣接リスト */
 export const FH_NEIGHBORS: readonly number[][] = [
   [1, 2, 3], // 0 左端
-  [0, 2, 4, 5], // 1 左上
-  [0, 1, 3, 4], // 2 左中
-  [0, 2, 4, 7], // 3 左下
-  [1, 2, 3, 5, 6, 7], // 4 中央
-  [1, 4, 6], // 5 右上
-  [4, 5, 7, 8], // 6 右中
-  [3, 4, 6, 8], // 7 右下
-  [5, 6, 7], // 8 右端
+  [0, 2, 4, 5], // 1 左列上
+  [0, 1, 3, 4, 5, 6, 8], // 2 左列中
+  [0, 2, 5, 6], // 3 左列下
+  [1, 2, 5, 7, 8], // 4 中列上
+  [1, 2, 3, 4, 6, 7, 8, 9], // 5 中央ハブ
+  [2, 3, 5, 8, 9], // 6 中列下
+  [4, 5, 8, 10], // 7 右列上
+  [2, 4, 5, 6, 7, 9, 10], // 8 右列中
+  [5, 6, 8, 10], // 9 右列下
+  [7, 8, 9], // 10 右端
 ];
 
 /** 描画用の点座標（viewBox 0–100） */
 export const FH_NODE_POS: readonly { x: number; y: number }[] = [
-  { x: 6, y: 50 },
-  { x: 26, y: 10 },
-  { x: 26, y: 50 },
-  { x: 26, y: 90 },
-  { x: 50, y: 50 },
-  { x: 74, y: 10 },
-  { x: 74, y: 50 },
-  { x: 74, y: 90 },
-  { x: 94, y: 50 },
+  { x: 5, y: 50 },
+  { x: 24, y: 10 },
+  { x: 24, y: 50 },
+  { x: 24, y: 90 },
+  { x: 43, y: 10 },
+  { x: 43, y: 50 },
+  { x: 43, y: 90 },
+  { x: 62, y: 10 },
+  { x: 62, y: 50 },
+  { x: 62, y: 90 },
+  { x: 81, y: 50 },
 ];
 
-/**
- * 盤面の線（表示用）。参照盤どおりに上下横線＋中央ハブの斜めのみ描く。
- * ゲームロジックは FH_NEIGHBORS を使用。
- */
+/** 盤面の線（表示用）。参照画像どおりに描画 */
 export const FH_BOARD_LINES: readonly [number, number][] = [
+  // 左端
   [0, 1],
   [0, 2],
   [0, 3],
+  // 右端
+  [10, 7],
+  [10, 8],
+  [10, 9],
+  // 縦線（3点列×3）
   [1, 2],
   [2, 3],
+  [4, 5],
   [5, 6],
-  [6, 7],
-  [5, 8],
-  [6, 8],
   [7, 8],
-  [1, 5],
-  [3, 7],
-  [2, 4],
-  [4, 6],
+  [8, 9],
+  // 横線（上・中・下）
   [1, 4],
-  [3, 4],
-  [5, 4],
-  [7, 4],
+  [4, 7],
+  [2, 5],
+  [5, 8],
+  [3, 6],
+  [6, 9],
+  // 中央ハブの斜め
+  [5, 1],
+  [5, 3],
+  [5, 7],
+  [5, 9],
+  // 中列上下の斜め
+  [4, 2],
+  [4, 8],
+  [6, 2],
+  [6, 8],
 ];
 
 export function initialFoxHounds(): FoxHoundsState {
@@ -197,13 +212,11 @@ export function applyFoxHoundsMove(
       FH_NODE_COL[to] > FH_NODE_COL[from] ? 0 : state.stallTurns + 1;
   }
 
-  const next: FoxHoundsState = {
+  return {
     board: nextBoard,
     current: current === 0 ? 1 : 0,
     stallTurns,
   };
-
-  return next;
 }
 
 export function foxHoundsWinMessage(reason: FoxHoundsWinReason): string {

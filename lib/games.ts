@@ -341,7 +341,7 @@ const games: GameMeta[] = [
     slug: "fox-hounds",
     title: "ウサギと猟犬",
     description:
-      "9点の専用盤で猟犬3匹とウサギ1匹が対峙。ウサギは左端を目指し、猟犬は囲んで止める。",
+      "11点の専用盤で猟犬3匹とウサギ1匹が対峙。ウサギは左端を目指し、猟犬は囲んで止める。",
     origin: "classic",
     players: "2",
     playersMin: 2,
