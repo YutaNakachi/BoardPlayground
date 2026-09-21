@@ -615,6 +615,11 @@ const games: GameMeta[] = [
   },
 ];
 
+/** 登録済みゲーム全件（`listed` 未掲載も含む）。管理用・生成スクリプト向け */
+export function getAllRegisteredGames(): readonly GameMeta[] {
+  return games;
+}
+
 export function getAllGames(): GameMeta[] {
   return games.filter((game) => game.listed);
 }
