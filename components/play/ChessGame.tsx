@@ -122,6 +122,15 @@ export function ChessGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && result && (
+        <ResultPanel
+          variant="inline"
+          winners={result.winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">{result.message}</p>}
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
@@ -167,14 +176,6 @@ export function ChessGame() {
         })}
       </div>
 
-      {isGameOver && result && (
-        <ResultPanel
-          variant="inline"
-          winners={result.winners}
-          onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">{result.message}</p>}
-        />
-      )}
     </div>
   );
 }

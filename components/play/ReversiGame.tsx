@@ -181,6 +181,17 @@ export function ReversiGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
@@ -228,16 +239,6 @@ export function ReversiGame() {
         })}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          winnersLabel={
-            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
-          }
-          onReplay={reset}
-        />
-      )}
     </div>
   );
 }

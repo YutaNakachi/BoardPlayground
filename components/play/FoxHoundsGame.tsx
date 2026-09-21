@@ -101,6 +101,21 @@ export function FoxHoundsGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {winner === 0
+                ? "ウサギが最上段に着いたか、猟犬が動けなくなりました。"
+                : "猟犬がウサギを囲みました。"}
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
@@ -143,20 +158,6 @@ export function FoxHoundsGame() {
         })}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <p className="text-slate-400">
-              {winner === 0
-                ? "ウサギが最上段に着いたか、猟犬が動けなくなりました。"
-                : "猟犬がウサギを囲みました。"}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

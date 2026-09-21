@@ -106,6 +106,15 @@ export function KlondikeGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          winners={[0]}
+          onReplay={() => setPhase("idle")}
+          details={<p className="text-slate-400">すべての組札を完成させました。</p>}
+        />
+      )}
+
       <div className="flex flex-wrap items-start justify-center gap-3">
         <button
           type="button"
@@ -194,14 +203,6 @@ export function KlondikeGame() {
         カードをタップして選択し、移動先をタップ。山札をタップで1枚めくり。
       </p>
 
-      {isGameOver && (
-        <ResultPanel
-          variant="inline"
-          winners={[0]}
-          onReplay={() => setPhase("idle")}
-          details={<p className="text-slate-400">すべての組札を完成させました。</p>}
-        />
-      )}
     </div>
   );
 }

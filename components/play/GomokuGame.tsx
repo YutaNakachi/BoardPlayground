@@ -163,6 +163,24 @@ export function GomokuGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              {activeWinner === "draw"
+                ? "盤が埋まり、5つ並びはありませんでした。"
+                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が5つ並べました。`}
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
@@ -197,23 +215,6 @@ export function GomokuGame() {
         </div>
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          winnersLabel={
-            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
-          }
-          onReplay={reset}
-          details={
-            <p className="text-slate-400">
-              {activeWinner === "draw"
-                ? "盤が埋まり、5つ並びはありませんでした。"
-                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が5つ並べました。`}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

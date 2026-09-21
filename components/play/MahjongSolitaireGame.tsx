@@ -83,6 +83,19 @@ export function MahjongSolitaireGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          winners={won ? [0] : []}
+          onReplay={() => setPhase("idle")}
+          details={
+            <p className="text-slate-400">
+              {won ? "すべての牌を取り除きました。" : "これ以上ペアを取れません。"}
+            </p>
+          }
+        />
+      )}
+
       <p className="text-center text-sm text-slate-400">
         残り {(state.tiles.length - state.removed.length) / 2} ペア
         {stuck ? " · 行き詰まり" : ""}
@@ -115,18 +128,6 @@ export function MahjongSolitaireGame() {
         })}
       </div>
 
-      {isGameOver && (
-        <ResultPanel
-          variant="inline"
-          winners={won ? [0] : []}
-          onReplay={() => setPhase("idle")}
-          details={
-            <p className="text-slate-400">
-              {won ? "すべての牌を取り除きました。" : "これ以上ペアを取れません。"}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

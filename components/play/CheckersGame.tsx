@@ -244,6 +244,24 @@ export function CheckersGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline
+              ? formatWinnersWithNames(roomPlayers, winners)
+              : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              相手の駒がなくなったか、相手が動ける手がありませんでした。
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
@@ -310,23 +328,6 @@ export function CheckersGame() {
         })}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          winnersLabel={
-            isOnline
-              ? formatWinnersWithNames(roomPlayers, winners)
-              : undefined
-          }
-          onReplay={reset}
-          details={
-            <p className="text-slate-400">
-              相手の駒がなくなったか、相手が動ける手がありませんでした。
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

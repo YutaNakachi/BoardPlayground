@@ -9,7 +9,7 @@ type Props = {
   onReplay: () => void;
   /** オンライン対局など、席番号以外の勝者表示名を使う場合 */
   winnersLabel?: string;
-  /** 盤面の下に結果を表示するコンパクト版 */
+  /** 盤面の上に結果を表示するコンパクト版 */
   variant?: "default" | "inline";
 };
 

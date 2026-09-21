@@ -131,6 +131,15 @@ export function BackgammonGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">15個すべてをベアオフしました。</p>}
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={player}
@@ -247,14 +256,6 @@ export function BackgammonGame() {
         </div>
       ) : null}
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">15個すべてをベアオフしました。</p>}
-        />
-      )}
     </div>
   );
 }

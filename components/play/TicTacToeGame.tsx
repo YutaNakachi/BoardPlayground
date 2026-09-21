@@ -163,6 +163,24 @@ export function TicTacToeGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              {activeWinner === "draw"
+                ? "盤が埋まり、3つ並びはありませんでした。"
+                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
@@ -193,23 +211,6 @@ export function TicTacToeGame() {
         ))}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          winnersLabel={
-            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
-          }
-          onReplay={reset}
-          details={
-            <p className="text-slate-400">
-              {activeWinner === "draw"
-                ? "盤が埋まり、3つ並びはありませんでした。"
-                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }
