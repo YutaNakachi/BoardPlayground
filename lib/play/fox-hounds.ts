@@ -57,7 +57,7 @@ export const FH_NEIGHBORS: readonly number[][] = [
 
 /** 5列の X 座標（0・123・456・789・10 を等間隔） */
 export const FH_COLUMN_X = [0, 25, 50, 75, 100] as const;
-const FH_ROW_Y = [10, 50, 90] as const;
+const FH_ROW_Y = [12, 50, 88] as const;
 
 /** 描画用の点座標 */
 export const FH_NODE_POS: readonly { x: number; y: number }[] = [

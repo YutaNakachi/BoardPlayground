@@ -129,9 +129,9 @@ export function FoxHoundsGame() {
         </p>
       )}
 
-      <div className="relative mx-auto aspect-[2.2/1] w-full max-w-5xl">
-        <svg viewBox="-6 0 112 100" className="h-full w-full" aria-label="ウサギと猟犬の盤">
-          <rect width="100" height="100" rx="8" fill="#0f172a" opacity="0.35" />
+      <div className="relative mx-auto aspect-[3/1] w-full max-w-7xl px-1 sm:px-0">
+        <svg viewBox="-10 5 120 90" className="h-full w-full" aria-label="ウサギと猟犬の盤" preserveAspectRatio="xMidYMid meet">
+          <rect x="-10" y="5" width="120" height="90" rx="8" fill="#0f172a" opacity="0.35" />
 
           {FH_BOARD_LINES.map(([from, to]) => {
             const a = FH_NODE_POS[from];
