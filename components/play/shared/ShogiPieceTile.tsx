@@ -9,10 +9,8 @@ type Props = {
   className?: string;
 };
 
-const SHOGI_PIECE_SYMBOL: Record<Player, string> = {
-  0: "☖",
-  1: "☗",
-};
+/** 塗りつぶし表示になる字形（先手・後手共通） */
+const KOMA_GLYPH = "☗";
 
 export function ShogiPieceTile({
   label,
@@ -22,36 +20,38 @@ export function ShogiPieceTile({
 }: Props) {
   const isHand = size === "hand";
   const pieceColor = getPlayerFill(player);
-  const symbolSize = isHand ? "text-2xl" : "text-[2.25rem] sm:text-[2.75rem]";
+  const symbolSize = isHand ? "text-[2rem]" : "text-[2.85rem] sm:text-[3.35rem]";
   const charCount = label.length;
   const labelSize =
     charCount >= 2
       ? isHand
-        ? "text-[8px] leading-[1.1]"
-        : "text-[9px] leading-[1.15] sm:text-[10px]"
+        ? "text-[10px] leading-[1.15]"
+        : "text-[11px] leading-[1.2] sm:text-xs"
       : isHand
-        ? "text-[11px] leading-none"
-        : "text-sm leading-none sm:text-base";
+        ? "text-xs leading-none"
+        : "text-base leading-none sm:text-lg";
 
   return (
     <span
       className={`relative inline-flex shrink-0 items-center justify-center ${
-        isHand ? "h-9 w-7" : "h-11 w-9 sm:h-12 sm:w-10"
+        isHand ? "h-11 w-8" : "h-[3.25rem] w-11 sm:h-[3.75rem] sm:w-12"
       } ${player === 1 ? "rotate-180" : ""} ${className}`}
     >
       <span
-        className={`absolute select-none leading-none drop-shadow ${symbolSize}`}
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center select-none leading-none ${symbolSize}`}
         style={{ color: pieceColor }}
         aria-hidden
       >
-        {SHOGI_PIECE_SYMBOL[player]}
+        <span className="translate-y-[6%]">{KOMA_GLYPH}</span>
       </span>
       <span
-        className={`relative z-10 font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl] ${
-          isHand ? "rounded-sm bg-white/95 px-px shadow-sm" : ""
-        }`}
+        className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center`}
       >
-        {label}
+        <span
+          className={`translate-x-px translate-y-[10%] font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl]`}
+        >
+          {label}
+        </span>
       </span>
     </span>
   );

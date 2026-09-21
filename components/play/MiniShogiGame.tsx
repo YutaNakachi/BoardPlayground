@@ -254,7 +254,7 @@ export function MiniShogiGame() {
               key={index}
               type="button"
               onClick={() => onSquare(index)}
-              className={`relative flex aspect-square min-h-12 items-center justify-center rounded-sm bg-amber-100/90 sm:min-h-14 ${
+              className={`relative flex aspect-square min-h-[3.25rem] items-center justify-center rounded-sm bg-amber-100/90 sm:min-h-16 ${
                 isFrom ? "ring-2 ring-inset ring-accent" : ""
               } ${isDest ? "ring-2 ring-inset ring-lime-400" : ""}`}
               aria-label={piece ? miniShogiPieceLabel(piece) : isDest ? "移動先" : "空マス"}
