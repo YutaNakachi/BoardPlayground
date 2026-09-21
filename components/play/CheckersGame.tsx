@@ -192,7 +192,7 @@ export function CheckersGame() {
     setNotice(null);
     setWinner(null);
     setPlayMode({ mode: "local" });
-  }, [online, setPlayMode]);
+  }, [online.reset, setPlayMode]);
 
   const isSetupScreen =
     (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";

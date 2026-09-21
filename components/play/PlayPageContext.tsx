@@ -7,6 +7,8 @@ import {
   useMemo,
   useRef,
   useState,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import { useRecordPlay } from "@/hooks/useRecordPlay";
 import type { PlayMode } from "@/lib/online/types";
@@ -28,7 +30,7 @@ type PlayPageContextValue = {
   playMode: PlayModeInfo;
   setPlayMode: (info: PlayModeInfo) => void;
   setupNav: SetupNav;
-  setSetupNav: (nav: SetupNav) => void;
+  setSetupNav: Dispatch<SetStateAction<SetupNav>>;
   registerPlayExit: (handler: () => void) => () => void;
   exitPlayPage: () => void;
 };

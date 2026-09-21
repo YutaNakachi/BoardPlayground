@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
@@ -15,6 +15,8 @@ import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type OnlinePhase = "idle" | "waiting" | "playing" | "finished";
+
+const EMPTY_PLAYERS: RoomPlayer[] = [];
 
 export function useOnlineRoom(gameSlug: string) {
   const { registerPlayExit } = usePlayPage();
@@ -247,26 +249,49 @@ export function useOnlineRoom(gameSlug: string) {
 
   const isHost = room?.hostPlayerId === myPlayerId;
   const isMyTurn = currentPlayer === mySeat;
-  const players: RoomPlayer[] = room?.players ?? [];
+  const resolvedPlayerId = myPlayerId || getOrCreatePlayerId();
+  const players = room?.players ?? EMPTY_PLAYERS;
 
-  return {
-    phase,
-    room,
-    gameState,
-    version,
-    currentPlayer,
-    myPlayerId: myPlayerId || getOrCreatePlayerId(),
-    mySeat,
-    isHost,
-    isMyTurn,
-    players,
-    error,
-    loading,
-    handleCreate,
-    handleJoin,
-    handleStart,
-    handleMove,
-    reset,
-    refreshRoom,
-  };
+  return useMemo(
+    () => ({
+      phase,
+      room,
+      gameState,
+      version,
+      currentPlayer,
+      myPlayerId: resolvedPlayerId,
+      mySeat,
+      isHost,
+      isMyTurn,
+      players,
+      error,
+      loading,
+      handleCreate,
+      handleJoin,
+      handleStart,
+      handleMove,
+      reset,
+      refreshRoom,
+    }),
+    [
+      phase,
+      room,
+      gameState,
+      version,
+      currentPlayer,
+      resolvedPlayerId,
+      mySeat,
+      isHost,
+      isMyTurn,
+      players,
+      error,
+      loading,
+      handleCreate,
+      handleJoin,
+      handleStart,
+      handleMove,
+      reset,
+      refreshRoom,
+    ]
+  );
 }
