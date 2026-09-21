@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
@@ -53,6 +54,9 @@ export function SlidePuzzleGame() {
     [phase, board, size]
   );
 
+  const backToSetup = useCallback(() => setPhase("idle"), []);
+  usePlaySetupNavigation(phase === "idle", backToSetup);
+
   if (phase === "idle") {
     const lastTile = size * size - 1;
     return (
@@ -86,6 +90,20 @@ export function SlidePuzzleGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          solo
+          winners={[0]}
+          onReplay={() => setPhase("idle")}
+          details={
+            <p className="text-slate-400">
+              {size}×{size} を {moves} 手で完成しました。
+            </p>
+          }
+        />
+      )}
+
       <p className="text-center text-sm text-slate-400">
         {size}×{size} · 手数: {moves}
       </p>
@@ -110,18 +128,6 @@ export function SlidePuzzleGame() {
         ))}
       </div>
 
-      {isGameOver && (
-        <ResultPanel
-          variant="inline"
-          winners={[0]}
-          onReplay={() => setPhase("idle")}
-          details={
-            <p className="text-slate-400">
-              {size}×{size} を {moves} 手で完成しました。
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

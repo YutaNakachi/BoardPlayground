@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -60,6 +61,9 @@ export function MancalaGame() {
     return winnerIndices([pits[6], pits[13]]);
   }, [phase, pits]);
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -77,6 +81,20 @@ export function MancalaGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              <li>プレイヤー 1 の倉: {pits[6]} 個</li>
+              <li>プレイヤー 2 の倉: {pits[13]} 個</li>
+            </ul>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
@@ -110,19 +128,6 @@ export function MancalaGame() {
         ))}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <ul className="space-y-1 text-slate-400">
-              <li>プレイヤー 1 の倉: {pits[6]} 個</li>
-              <li>プレイヤー 2 の倉: {pits[13]} 個</li>
-            </ul>
-          }
-        />
-      )}
     </div>
   );
 }

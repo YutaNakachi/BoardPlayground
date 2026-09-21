@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -191,7 +192,11 @@ export function CheckersGame() {
     setNotice(null);
     setWinner(null);
     setPlayMode({ mode: "local" });
-  }, [online, setPlayMode]);
+  }, [online.reset, setPlayMode]);
+
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
@@ -239,6 +244,24 @@ export function CheckersGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline
+              ? formatWinnersWithNames(roomPlayers, winners)
+              : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              相手の駒がなくなったか、相手が動ける手がありませんでした。
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
@@ -305,23 +328,6 @@ export function CheckersGame() {
         })}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          winnersLabel={
-            isOnline
-              ? formatWinnersWithNames(roomPlayers, winners)
-              : undefined
-          }
-          onReplay={reset}
-          details={
-            <p className="text-slate-400">
-              相手の駒がなくなったか、相手が動ける手がありませんでした。
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

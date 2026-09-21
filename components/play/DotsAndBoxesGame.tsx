@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -83,6 +84,9 @@ export function DotsAndBoxesGame() {
     return edges;
   }, []);
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -100,6 +104,20 @@ export function DotsAndBoxesGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              <li>プレイヤー 1: {state.scores[0]} 箱</li>
+              <li>プレイヤー 2: {state.scores[1]} 箱</li>
+            </ul>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
@@ -208,19 +226,6 @@ export function DotsAndBoxesGame() {
         </svg>
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <ul className="space-y-1 text-slate-400">
-              <li>プレイヤー 1: {state.scores[0]} 箱</li>
-              <li>プレイヤー 2: {state.scores[1]} 箱</li>
-            </ul>
-          }
-        />
-      )}
     </div>
   );
 }

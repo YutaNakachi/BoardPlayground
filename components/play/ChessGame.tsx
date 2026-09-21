@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -99,6 +100,9 @@ export function ChessGame() {
     [phase, destinations, apply, state, moves]
   );
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -118,6 +122,15 @@ export function ChessGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && result && (
+        <ResultPanel
+          variant="inline"
+          winners={result.winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">{result.message}</p>}
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
@@ -163,14 +176,6 @@ export function ChessGame() {
         })}
       </div>
 
-      {isGameOver && result && (
-        <ResultPanel
-          variant="inline"
-          winners={result.winners}
-          onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">{result.message}</p>}
-        />
-      )}
     </div>
   );
 }

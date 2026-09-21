@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -110,7 +111,11 @@ export function TicTacToeGame() {
     setLocalPhase("setup");
     setMode("local");
     setPlayMode({ mode: "local" });
-  }, [online, setPlayMode]);
+  }, [online.reset, setPlayMode]);
+
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
@@ -158,6 +163,24 @@ export function TicTacToeGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          onReplay={reset}
+          details={
+            <p className="text-slate-400">
+              {activeWinner === "draw"
+                ? "盤が埋まり、3つ並びはありませんでした。"
+                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
@@ -188,23 +211,6 @@ export function TicTacToeGame() {
         ))}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          winnersLabel={
-            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
-          }
-          onReplay={reset}
-          details={
-            <p className="text-slate-400">
-              {activeWinner === "draw"
-                ? "盤が埋まり、3つ並びはありませんでした。"
-                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }
