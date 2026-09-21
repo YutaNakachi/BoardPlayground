@@ -1,7 +1,10 @@
+import { unstable_cache } from "next/cache";
 import { getAllGames } from "@/lib/games";
 import { jstToday, periodStartDate, type RankingPeriod } from "@/lib/stats/jst-date";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+
+const RANKING_CACHE_SECONDS = 60;
 
 export type RankingEntry = {
   rank: number;
@@ -65,4 +68,11 @@ export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[
       title: slugToTitle.get(slug) ?? slug,
       playCount,
     }));
+}
+
+export function fetchRankingCached(period: RankingPeriod): Promise<RankingEntry[]> {
+  return unstable_cache(() => fetchRanking(period), ["ranking", period], {
+    revalidate: RANKING_CACHE_SECONDS,
+    tags: [`ranking-${period}`],
+  })();
 }

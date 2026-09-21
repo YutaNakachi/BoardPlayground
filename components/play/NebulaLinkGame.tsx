@@ -5,217 +5,81 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-
-const SIZE = 5;
-const CORE = 12;
-const CORE_RING = [7, 11, 13, 17];
-const CORE_RING_WIN = 3;
-const PLAYER_STYLES = [
-  "bg-indigo-500 text-white",
-  "bg-rose-500 text-white",
-  "bg-emerald-500 text-white",
-  "bg-amber-500 text-black",
-];
+import { getPlayerTurnStyle, playerPieceClasses } from "@/lib/player-colors";
+import {
+  applyNebulaPass,
+  applyNebulaPlace,
+  initialNebulaLink,
+  legalNebulaMoves,
+  NEBULA_CORE,
+  NEBULA_CORE_RING,
+  NEBULA_CORE_RING_WIN,
+  nebulaCoreRingProgress,
+  nebulaTokensFor,
+  nebulaWinners,
+  type NebulaState,
+} from "@/lib/play/nebula-link";
 
 type Phase = "setup" | "playing" | "game-over";
-type Board = (number | null)[];
-
-function tokensFor(playerCount: number): number {
-  return 24 / playerCount;
-}
-
-function neighbors(index: number): number[] {
-  const r = Math.floor(index / SIZE);
-  const c = index % SIZE;
-  const out: number[] = [];
-  if (r > 0) out.push(index - SIZE);
-  if (r < SIZE - 1) out.push(index + SIZE);
-  if (c > 0) out.push(index - 1);
-  if (c < SIZE - 1) out.push(index + 1);
-  return out;
-}
-
-export function legalNebulaMoves(
-  board: Board,
-  player: number,
-  tokensLeft: number,
-  playerCount: number
-): number[] {
-  const moves: number[] = [];
-  const isFirst = tokensLeft === tokensFor(playerCount);
-
-  for (let i = 0; i < board.length; i++) {
-    if (i === CORE || board[i] !== null) continue;
-    if (isFirst) {
-      moves.push(i);
-      continue;
-    }
-    if (neighbors(i).some((n) => board[n] === player)) {
-      moves.push(i);
-    }
-  }
-
-  return moves;
-}
-
-function findNextPlayer(
-  board: Board,
-  remaining: number[],
-  fromPlayer: number,
-  playerCount: number
-): number | null {
-  for (let step = 1; step <= playerCount; step++) {
-    const player = (fromPlayer + step) % playerCount;
-    if (remaining[player] <= 0) continue;
-    if (legalNebulaMoves(board, player, remaining[player], playerCount).length > 0) {
-      return player;
-    }
-  }
-  return null;
-}
-
-/** 星核隣接マスを CORE_RING_WIN 個以上含む連結グループがあれば勝ち */
-export function nebulaVictoryPlayer(board: Board, playerCount: number): number | null {
-  const seen = new Set<number>();
-
-  for (let i = 0; i < board.length; i++) {
-    const owner = board[i];
-    if (owner === null || owner < 0 || owner >= playerCount || seen.has(i)) continue;
-
-    let coreCount = 0;
-    const stack = [i];
-    seen.add(i);
-
-    while (stack.length) {
-      const cur = stack.pop()!;
-      if (CORE_RING.includes(cur)) coreCount += 1;
-      for (const n of neighbors(cur)) {
-        if (board[n] === owner && !seen.has(n)) {
-          seen.add(n);
-          stack.push(n);
-        }
-      }
-    }
-
-    if (coreCount >= CORE_RING_WIN) return owner;
-  }
-
-  return null;
-}
-
-function coreRingProgress(board: Board, player: number): number {
-  const seen = new Set<number>();
-  let best = 0;
-
-  for (let i = 0; i < board.length; i++) {
-    if (board[i] !== player || seen.has(i)) continue;
-
-    let coreCount = 0;
-    const stack = [i];
-    seen.add(i);
-
-    while (stack.length) {
-      const cur = stack.pop()!;
-      if (CORE_RING.includes(cur)) coreCount += 1;
-      for (const n of neighbors(cur)) {
-        if (board[n] === player && !seen.has(n)) {
-          seen.add(n);
-          stack.push(n);
-        }
-      }
-    }
-
-    best = Math.max(best, coreCount);
-  }
-
-  return best;
-}
 
 export function NebulaLinkGame() {
   const { recordLocalPlay } = usePlayPage();
   const [playerCount, setPlayerCount] = useState(2);
   const [phase, setPhase] = useState<Phase>("setup");
-  const [currentPlayer, setCurrentPlayer] = useState(0);
-  const [board, setBoard] = useState<Board>(Array(SIZE * SIZE).fill(null));
-  const [remaining, setRemaining] = useState<number[]>([]);
+  const [game, setGame] = useState<NebulaState | null>(null);
   const [passNotice, setPassNotice] = useState<string | null>(null);
-  const [winners, setWinners] = useState<number[] | null>(null);
-  const [isDraw, setIsDraw] = useState(false);
 
   const startGame = useCallback(() => {
     recordLocalPlay();
-    const cells: Board = Array(SIZE * SIZE).fill(null);
-    cells[CORE] = -1;
-    setBoard(cells);
-    setRemaining(Array.from({ length: playerCount }, () => tokensFor(playerCount)));
-    setCurrentPlayer(0);
+    setGame(initialNebulaLink(playerCount));
     setPassNotice(null);
-    setWinners(null);
-    setIsDraw(false);
     setPhase("playing");
   }, [recordLocalPlay, playerCount]);
 
   const legalMoves = useMemo(() => {
-    if (phase !== "playing" || remaining[currentPlayer] <= 0) return [];
+    if (!game || phase !== "playing") return [];
+    const player = game.currentPlayer;
     return legalNebulaMoves(
-      board,
-      currentPlayer,
-      remaining[currentPlayer],
-      playerCount
+      game.board,
+      player,
+      game.remaining[player],
+      game.playerCount
     );
-  }, [phase, board, currentPlayer, remaining, playerCount]);
+  }, [game, phase]);
+
+  const progress = useMemo(() => {
+    if (!game) return [];
+    return Array.from({ length: game.playerCount }, (_, i) => ({
+      player: i,
+      core: nebulaCoreRingProgress(game.board, i),
+    }));
+  }, [game]);
 
   const place = useCallback(
     (index: number) => {
-      if (phase !== "playing") return;
-      if (!legalMoves.includes(index)) return;
-
-      const nextBoard = board.map((v, i) => (i === index ? currentPlayer : v));
-      const nextRemaining = remaining.map((n, i) =>
-        i === currentPlayer ? n - 1 : n
-      );
-
-      const victor = nebulaVictoryPlayer(nextBoard, playerCount);
-      if (victor !== null) {
-        setBoard(nextBoard);
-        setRemaining(nextRemaining);
-        setWinners([victor]);
-        setIsDraw(false);
-        setPhase("game-over");
-        return;
-      }
-
-      const nextPlayer = findNextPlayer(
-        nextBoard,
-        nextRemaining,
-        currentPlayer,
-        playerCount
-      );
-
-      setBoard(nextBoard);
-      setRemaining(nextRemaining);
+      if (!game || phase !== "playing") return;
+      const next = applyNebulaPlace(game, index);
+      if (!next) return;
       setPassNotice(null);
-
-      if (nextPlayer === null) {
-        setWinners([]);
-        setIsDraw(true);
-        setPhase("game-over");
-        return;
-      }
-
-      setCurrentPlayer(nextPlayer);
+      setGame(next);
+      if (next.gameOver) setPhase("game-over");
     },
-    [phase, legalMoves, board, remaining, currentPlayer, playerCount]
+    [phase, game]
   );
 
-  const progress = useMemo(
-    () =>
-      Array.from({ length: playerCount }, (_, i) => ({
-        player: i,
-        core: coreRingProgress(board, i),
-      })),
-    [board, playerCount]
-  );
+  const pass = useCallback(() => {
+    if (!game || phase !== "playing") return;
+    const next = applyNebulaPass(game);
+    if (!next) return;
+    setPassNotice(`プレイヤー ${game.currentPlayer + 1} がパス`);
+    setGame(next);
+    if (next.gameOver) setPhase("game-over");
+  }, [phase, game]);
+
+  const winner = useMemo(() => {
+    if (phase !== "game-over" || !game) return null;
+    return nebulaWinners(game);
+  }, [phase, game]);
 
   if (phase === "setup") {
     return (
@@ -227,27 +91,25 @@ export function NebulaLinkGame() {
         onStart={startGame}
         extra={
           <p className="mt-4 text-xs text-slate-500">
-            各 {tokensFor(playerCount)} 個のノード
+            各 {nebulaTokensFor(playerCount)} 個のノード
           </p>
         }
       />
     );
   }
 
-  const isGameOver = phase === "game-over";
+  if (!game) return null;
 
-  const mustPass =
-    phase === "playing" &&
-    remaining[currentPlayer] > 0 &&
-    legalMoves.length === 0;
+  const isGameOver = phase === "game-over" && winner !== null;
+  const mustPass = phase === "playing" && legalMoves.length === 0;
 
   return (
     <div className="space-y-6">
       {!isGameOver && (
         <TurnBanner
-          playerIndex={currentPlayer}
-          playerLabel={`プレイヤー ${currentPlayer + 1}`}
-          stats={`残り ${remaining[currentPlayer]} 個 · 星核隣接 ${progress[currentPlayer].core}/${CORE_RING_WIN}`}
+          playerIndex={game.currentPlayer}
+          playerLabel={`プレイヤー ${game.currentPlayer + 1}`}
+          stats={`残り ${game.remaining[game.currentPlayer]} 個 · 星核隣接 ${progress[game.currentPlayer]?.core ?? 0}/${NEBULA_CORE_RING_WIN}`}
           action={
             passNotice ??
             (mustPass
@@ -260,9 +122,9 @@ export function NebulaLinkGame() {
       )}
 
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1.5 sm:gap-2">
-        {board.map((owner, index) => {
-          const isCore = index === CORE;
-          const isCoreRing = CORE_RING.includes(index);
+        {game.board.map((owner, index) => {
+          const isCore = index === NEBULA_CORE;
+          const isCoreRing = NEBULA_CORE_RING.includes(index);
           const empty = owner === null;
           const canPlace = !isGameOver && legalMoves.includes(index);
           return (
@@ -282,7 +144,7 @@ export function NebulaLinkGame() {
                       : isCoreRing
                         ? "cursor-default bg-yellow-300/10 ring-1 ring-yellow-300/30 text-yellow-200/60"
                         : "cursor-default bg-surface-raised/60 ring-1 ring-surface-border text-slate-600"
-                    : PLAYER_STYLES[owner]
+                    : playerPieceClasses(owner)
               }`}
               aria-label={
                 isCore
@@ -305,23 +167,7 @@ export function NebulaLinkGame() {
       {mustPass ? (
         <button
           type="button"
-          onClick={() => {
-            const nextPlayer = findNextPlayer(
-              board,
-              remaining,
-              currentPlayer,
-              playerCount
-            );
-            if (nextPlayer === null) {
-              setWinners([]);
-              setIsDraw(true);
-              setPhase("game-over");
-              setPassNotice(null);
-              return;
-            }
-            setPassNotice(`プレイヤー ${currentPlayer + 1} がパス`);
-            setCurrentPlayer(nextPlayer);
-          }}
+          onClick={pass}
           className="w-full rounded-xl border border-surface-border bg-surface-raised px-4 py-3 text-sm font-medium text-white transition hover:border-accent/50"
         >
           パスする
@@ -329,37 +175,40 @@ export function NebulaLinkGame() {
       ) : null}
 
       <ul className="grid gap-2 sm:grid-cols-2">
-        {progress.map(({ player, core }) => (
-          <li
-            key={player}
-            className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm ${
-              currentPlayer === player && !isGameOver
-                ? "border-accent/60 bg-accent/5"
-                : "border-surface-border bg-surface-raised"
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <span className={`inline-block h-3 w-3 rounded-full ${PLAYER_STYLES[player]}`} />
-              プレイヤー {player + 1}
-            </span>
-            <span className="text-slate-400">
-              星核隣接 {core}/{CORE_RING_WIN} · 残り {remaining[player]}
-            </span>
-          </li>
-        ))}
+        {progress.map(({ player, core }) => {
+          const style = getPlayerTurnStyle(player);
+          return (
+            <li
+              key={player}
+              className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm ${
+                game.currentPlayer === player && !isGameOver
+                  ? `${style.sectionBorder} ${style.sectionBg}`
+                  : "border-surface-border bg-surface-raised"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span className={`inline-block h-3 w-3 rounded-full ${style.dot}`} />
+                プレイヤー {player + 1}
+              </span>
+              <span className="text-slate-400">
+                星核隣接 {core}/{NEBULA_CORE_RING_WIN} · 残り {game.remaining[player]}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
-      {isGameOver && winners && (
+      {isGameOver && winner && (
         <ResultPanel
           variant="inline"
-          winners={isDraw ? Array.from({ length: playerCount }, (_, i) => i) : winners}
-          winnersLabel={isDraw ? "引き分け" : undefined}
+          winners={winner}
+          winnersLabel={game.isDraw ? "引き分け" : undefined}
           onReplay={() => setPhase("setup")}
           details={
             <p className="text-slate-400">
-              {isDraw
+              {game.isDraw
                 ? "誰も勝利条件を満たさず、置ける手がなくなりました。"
-                : `星核に隣接するマスを ${CORE_RING_WIN} つ、1つの連結グループで占めました。`}
+                : `星核に隣接するマスを ${NEBULA_CORE_RING_WIN} つ、1つの連結グループで占めました。`}
             </p>
           }
         />

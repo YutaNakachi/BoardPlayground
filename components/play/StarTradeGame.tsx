@@ -6,64 +6,27 @@ import { HandoffGate } from "@/components/play/shared/HandoffGate";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { shuffle, winnerIndices } from "@/lib/game-engine";
+import { winnerIndices } from "@/lib/game-engine";
+import { dealStarTradeRound, scoreStarTradeCards } from "@/lib/play/star-trade";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 
-type Suit = "star" | "moon" | "sun" | "comet";
-
-type Card = {
-  id: string;
-  suit: Suit;
-  value: number;
-};
+type Card = import("@/lib/play/star-trade").StarTradeCard;
 
 type Phase = "setup" | "handoff" | "playing" | "round-end" | "game-over";
 type TurnStep = "draw" | "play";
 
-const SUITS: Suit[] = ["star", "moon", "sun", "comet"];
-const SUIT_LABEL: Record<Suit, string> = {
+const SUIT_LABEL: Record<Card["suit"], string> = {
   star: "星",
   moon: "月",
   sun: "太陽",
   comet: "彗星",
 };
-const SUIT_COLOR: Record<Suit, string> = {
+const SUIT_COLOR: Record<Card["suit"], string> = {
   star: "text-yellow-300",
   moon: "text-slate-200",
   sun: "text-orange-400",
   comet: "text-cyan-400",
 };
-
-function createDeck(): Card[] {
-  const deck: Card[] = [];
-  let id = 0;
-  for (const suit of SUITS) {
-    for (let value = 1; value <= 5; value++) {
-      deck.push({ id: `${suit}-${value}-${id++}`, suit, value });
-    }
-  }
-  return shuffle(deck);
-}
-
-function scoreCards(cards: Card[]): { total: number; base: number; bonus: number; suits: number } {
-  const base = cards.reduce((s, c) => s + c.value, 0);
-  const suits = new Set(cards.map((c) => c.suit)).size;
-  const bonus = suits >= 3 ? 5 : suits === 2 ? 2 : 0;
-  return { total: base + bonus, base, bonus, suits };
-}
-
-function dealRound(playerCount: number) {
-  const d = createDeck();
-  const h: Card[][] = Array.from({ length: playerCount }, () => []);
-  for (let i = 0; i < playerCount * 3; i++) {
-    h[i % playerCount].push(d.pop()!);
-  }
-  return {
-    deck: d,
-    hands: h,
-    markets: Array.from({ length: playerCount }, () => [] as Card[]),
-  };
-}
 
 export function StarTradeGame() {
   const { recordLocalPlay } = usePlayPage();
@@ -80,7 +43,7 @@ export function StarTradeGame() {
 
   const beginRound = useCallback(
     (nextRound: number, count: number, prevScores: number[]) => {
-      const dealt = dealRound(count);
+      const dealt = dealStarTradeRound(count);
       setDeck(dealt.deck);
       setHands(dealt.hands);
       setMarkets(dealt.markets);
@@ -101,7 +64,7 @@ export function StarTradeGame() {
   const finishRound = useCallback(
     (nextHands: Card[][], nextMarkets: Card[][]) => {
       const roundScores = nextHands.map((hand, i) =>
-        scoreCards([...hand, ...nextMarkets[i]]).total
+        scoreStarTradeCards([...hand, ...nextMarkets[i]]).total
       );
       const nextScores = scores.map((s, i) => s + roundScores[i]);
       setScores(nextScores);
@@ -228,7 +191,7 @@ export function StarTradeGame() {
       {hands.map((hand, playerIndex) => {
         const isCurrent = currentPlayer === playerIndex;
         const playerStyle = getPlayerTurnStyle(playerIndex);
-        const preview = scoreCards([...hand, ...markets[playerIndex]]);
+        const preview = scoreStarTradeCards([...hand, ...markets[playerIndex]]);
         return (
           <section
             key={playerIndex}

@@ -69,7 +69,7 @@ export function DominoesGame() {
     return (
       <SetupPanel
         title="ドミノ"
-        description="ダブルシックスの28枚。はじめに1枚出し、端の数字に合う牌を並べます。手札が先に空いた方が勝ち。"
+        description="ダブルシックスの28枚を各7枚ずつ配ります。端の数字に合う牌を並べ、手札が先に空いた方が勝ち。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -89,7 +89,6 @@ export function DominoesGame() {
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
-        stats={`手札 ${hand.length} · 山札 ${state.boneyard.length}`}
         action={plays.length === 0 ? "出せないときは山札から引く" : undefined}
       />
       )}

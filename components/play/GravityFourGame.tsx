@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import {
   dropGravityFour,
   emptyGravityFourBoard,
@@ -72,7 +73,7 @@ export function GravityFourGame() {
     return (
       <SetupPanel
         title="重力四目"
-        description="7列×6段の盤に、列を選んで石を落とします。縦・横・斜めで4つ並べた方が勝ちです。"
+        description="7列×6段の盤に、列を選んで石を落とします。縦・横・斜めで4つ以上並べた方が勝ちです。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -130,11 +131,7 @@ export function GravityFourGame() {
                 >
                   {cell === null ? null : (
                     <span
-                      className={`h-[78%] w-[78%] rounded-full ${
-                        cell === 0
-                          ? "bg-rose-500 ring-1 ring-rose-300/40"
-                          : "bg-amber-300 ring-1 ring-amber-100/40"
-                      }`}
+                      className={`h-[78%] w-[78%] rounded-full ${playerPieceClasses(cell)}`}
                     />
                   )}
                 </div>
@@ -153,7 +150,7 @@ export function GravityFourGame() {
             <p className="text-slate-400">
               {winner === "draw"
                 ? "盤が埋まり、4つ並びはありませんでした。"
-                : `プレイヤー ${Number(winner) + 1} が4つ並べました。`}
+                : `プレイヤー ${Number(winner) + 1} が4つ以上並べました。`}
             </p>
           }
         />

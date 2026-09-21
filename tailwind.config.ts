@@ -4,6 +4,7 @@ const config: Config = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -32,6 +33,16 @@ const config: Config = {
           "sans-serif",
         ],
         display: ["var(--font-display)", "system-ui", "sans-serif"],
+      },
+      keyframes: {
+        diceShake: {
+          "0%, 100%": { transform: "rotate(0deg) scale(1)" },
+          "25%": { transform: "rotate(-14deg) scale(1.04)" },
+          "75%": { transform: "rotate(14deg) scale(1.04)" },
+        },
+      },
+      animation: {
+        "dice-shake": "diceShake 0.12s ease-in-out infinite",
       },
     },
   },

@@ -5,6 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { CheckersState } from "@/lib/online/moves";
@@ -194,30 +195,26 @@ export function CheckersGame() {
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-        <h2 className="text-xl font-semibold">チェッカー</h2>
-        <p className="mt-2 text-sm text-[#a1a1a6]">
-          暗いマスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。
-        </p>
-        <div className="mt-6">
-          <OnlineSetupPanel
-            mode={mode}
-            onModeChange={setMode}
-            onlineSupported={onlineEnabled}
-            onCreateRoom={online.handleCreate}
-            onJoinRoom={online.handleJoin}
-            onStartLocal={startLocal}
-            loading={online.loading}
-            error={online.error}
-          />
-        </div>
-      </div>
+      <OnlineSetupPanel
+        title="チェッカー"
+        description="黒マスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+      />
     );
   }
 
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
+        title="チェッカー"
+        description="黒マスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
         mode="online"
         onModeChange={() => {}}
         onlineSupported={onlineEnabled}
@@ -246,11 +243,6 @@ export function CheckersGame() {
       <TurnBanner
         playerIndex={activeCurrent}
         playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
-        stats={
-          isOnline
-            ? `${getSeatDisplayName(roomPlayers, 0)} ${checkersPieceCount(activeBoard, 0)} · ${getSeatDisplayName(roomPlayers, 1)} ${checkersPieceCount(activeBoard, 1)}`
-            : `P1 ${checkersPieceCount(activeBoard, 0)} · P2 ${checkersPieceCount(activeBoard, 1)}`
-        }
         action={
           isOnline && !online.isMyTurn
             ? "相手の手番です"
@@ -287,19 +279,23 @@ export function CheckersGame() {
                   : isDest
                     ? "移動先"
                     : dark
-                      ? "暗いマス"
-                      : "明るいマス"
+                      ? "黒マス"
+                      : "白マス"
               }
             >
               {piece ? (
                 <span
-                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-[10px] font-bold sm:text-xs ${
-                    piece.player === 0
-                      ? "bg-indigo-500 text-white"
-                      : "bg-rose-200 text-rose-950"
-                  }`}
+                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full ${playerPieceClasses(piece.player)}`}
                 >
-                  {piece.king ? "K" : ""}
+                  {piece.king ? (
+                    <span className="flex size-full items-center justify-center" aria-hidden>
+                      <span
+                        className="select-none text-[1.45rem] leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] -translate-y-px sm:text-[1.8rem]"
+                      >
+                        👑
+                      </span>
+                    </span>
+                  ) : null}
                 </span>
               ) : isDest ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-lime-300/90" />

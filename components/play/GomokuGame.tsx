@@ -5,6 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { GomokuState } from "@/lib/online/moves";
@@ -102,16 +103,6 @@ export function GomokuGame() {
     return [activeWinner];
   }, [activePhase, activeWinner]);
 
-  const stones = useMemo(() => {
-    let black = 0;
-    let white = 0;
-    for (const cell of activeBoard) {
-      if (cell === 0) black += 1;
-      else if (cell === 1) white += 1;
-    }
-    return { black, white };
-  }, [activeBoard]);
-
   const roomPlayers = isOnline ? online.players : [];
 
   const reset = useCallback(() => {
@@ -123,30 +114,26 @@ export function GomokuGame() {
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-        <h2 className="text-xl font-semibold">五目並べ</h2>
-        <p className="mt-2 text-sm text-[#a1a1a6]">
-          13×13のマスに交互に置き、縦・横・斜めのいずれかで5つ並べると勝ちです。禁じ手はありません。
-        </p>
-        <div className="mt-6">
-          <OnlineSetupPanel
-            mode={mode}
-            onModeChange={setMode}
-            onlineSupported={onlineEnabled}
-            onCreateRoom={online.handleCreate}
-            onJoinRoom={online.handleJoin}
-            onStartLocal={startLocal}
-            loading={online.loading}
-            error={online.error}
-          />
-        </div>
-      </div>
+      <OnlineSetupPanel
+        title="五目並べ"
+        description="13×13のマスに交互に置き、縦・横・斜めのいずれかで5つ並べると勝ちです。禁じ手はありません。"
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+      />
     );
   }
 
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
+        title="五目並べ"
+        description="13×13のマスに交互に置き、縦・横・斜めのいずれかで5つ並べると勝ちです。禁じ手はありません。"
         mode="online"
         onModeChange={() => {}}
         onlineSupported={onlineEnabled}
@@ -174,12 +161,7 @@ export function GomokuGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(
-          roomPlayers,
-          activeCurrent,
-          activeCurrent === 0 ? "黒" : "白"
-        )}
-        stats={`黒 ${stones.black} · 白 ${stones.white}`}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
       )}
@@ -202,11 +184,7 @@ export function GomokuGame() {
             >
               {cell === null ? null : (
                 <span
-                  className={`h-[72%] w-[72%] rounded-full ${
-                    cell === 0
-                      ? "bg-zinc-900 ring-1 ring-black/50"
-                      : "bg-zinc-100 ring-1 ring-white/50"
-                  }`}
+                  className={`h-[72%] w-[72%] rounded-full ${playerPieceClasses(cell)}`}
                 />
               )}
             </button>

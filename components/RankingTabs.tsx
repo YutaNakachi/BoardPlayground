@@ -40,9 +40,7 @@ export function RankingTabs({
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/stats/ranking?period=${next}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(`/api/stats/ranking?period=${next}`);
       const data = (await res.json()) as { ranking?: RankingEntry[] };
       const nextRanking = data.ranking ?? [];
       cacheRef.current[next] = nextRanking;
@@ -57,7 +55,7 @@ export function RankingTabs({
   useEffect(() => {
     for (const { key } of PERIODS) {
       if (key === period || cacheRef.current[key]) continue;
-      void fetch(`/api/stats/ranking?period=${key}`, { cache: "no-store" })
+      void fetch(`/api/stats/ranking?period=${key}`)
         .then((res) => res.json())
         .then((data: { ranking?: RankingEntry[] }) => {
           cacheRef.current[key] = data.ranking ?? [];

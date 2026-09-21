@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { getPlayerFill } from "@/lib/player-colors";
 import {
   DB_BOX_COLS,
   DB_BOX_ROWS,
@@ -86,7 +87,7 @@ export function DotsAndBoxesGame() {
     return (
       <SetupPanel
         title="ドッツ・アンド・ボックス"
-        description="点を線でつないで箱を作ります。箱を完成させたプレイヤーが1点。点が多い方が勝ちです。"
+        description="点を線でつないで箱を作ります。箱を完成させたプレイヤーが1点。箱が多い方が勝ちです。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -103,7 +104,6 @@ export function DotsAndBoxesGame() {
       <TurnBanner
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
-        stats={`箱 P1 ${state.scores[0]} · P2 ${state.scores[1]}`}
         action="線を1本引く"
       />
       )}
@@ -137,7 +137,7 @@ export function DotsAndBoxesGame() {
                 dominantBaseline="central"
                 fontSize="7"
                 fontWeight="700"
-                fill={owner === 0 ? "#d4849a" : "#38bdf8"}
+                fill={getPlayerFill(owner)}
               >
                 {owner + 1}
               </text>

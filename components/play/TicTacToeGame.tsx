@@ -5,6 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { getPlayerTurnStyle } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { TttState } from "@/lib/online/moves";
@@ -113,30 +114,26 @@ export function TicTacToeGame() {
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-        <h2 className="text-xl font-semibold">三目並べ</h2>
-        <p className="mt-2 text-sm text-[#a1a1a6]">
-          3×3のマスに交互に置き、縦・横・斜めで3つ並べた方が勝ちです。
-        </p>
-        <div className="mt-6">
-          <OnlineSetupPanel
-            mode={mode}
-            onModeChange={setMode}
-            onlineSupported={onlineEnabled}
-            onCreateRoom={online.handleCreate}
-            onJoinRoom={online.handleJoin}
-            onStartLocal={startLocal}
-            loading={online.loading}
-            error={online.error}
-          />
-        </div>
-      </div>
+      <OnlineSetupPanel
+        title="三目並べ"
+        description="3×3のマスに交互に置き、縦・横・斜めで3つ並べた方が勝ちです。"
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+      />
     );
   }
 
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
+        title="三目並べ"
+        description="3×3のマスに交互に置き、縦・横・斜めで3つ並べた方が勝ちです。"
         mode="online"
         onModeChange={() => {}}
         onlineSupported={onlineEnabled}
@@ -164,11 +161,7 @@ export function TicTacToeGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(
-          roomPlayers,
-          activeCurrent,
-          activeCurrent === 0 ? "×" : "○"
-        )}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
       )}
@@ -183,7 +176,9 @@ export function TicTacToeGame() {
             type="button"
             disabled={!canInteract || cell !== null}
             onClick={() => place(index)}
-            className="flex aspect-square min-h-20 items-center justify-center bg-surface-raised text-3xl font-bold text-white disabled:cursor-default sm:min-h-24 sm:text-4xl"
+            className={`flex aspect-square min-h-20 items-center justify-center bg-surface-raised text-3xl font-bold disabled:cursor-default sm:min-h-24 sm:text-4xl ${
+              cell === null ? "text-white" : getPlayerTurnStyle(cell).label
+            }`}
             aria-label={
               cell === 0 ? "×" : cell === 1 ? "○" : `空マス ${index + 1}`
             }
@@ -204,7 +199,7 @@ export function TicTacToeGame() {
           details={
             <p className="text-slate-400">
               {activeWinner === "draw"
-                ? "引き分けです。"
+                ? "盤が埋まり、3つ並びはありませんでした。"
                 : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が3つ並べました。`}
             </p>
           }

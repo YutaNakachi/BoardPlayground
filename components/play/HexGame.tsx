@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import {
   emptyHexBoard,
   HEX_SIZE,
@@ -69,11 +70,7 @@ export function HexGame() {
       <TurnBanner
         playerIndex={current}
         playerLabel={`プレイヤー ${current + 1}`}
-        action={
-          current === 0
-            ? "上下の辺をつなぐ（ローズ）"
-            : "左右の辺をつなぐ（スカイ）"
-        }
+        action={current === 0 ? "上下の辺をつなぐ" : "左右の辺をつなぐ"}
       />
       )}
 
@@ -97,11 +94,9 @@ export function HexGame() {
               >
                 <span
                   className={`h-[70%] w-[70%] rounded-md ${
-                    cell === 0
-                      ? "bg-rose-500"
-                      : cell === 1
-                        ? "bg-sky-400"
-                        : "bg-emerald-900/50 ring-1 ring-emerald-700/50"
+                    cell === null
+                      ? "bg-emerald-900/50 ring-1 ring-emerald-700/50"
+                      : playerPieceClasses(cell)
                   }`}
                 />
               </button>
@@ -110,7 +105,7 @@ export function HexGame() {
         </div>
       </div>
       <p className="text-center text-xs text-slate-500">
-        プレイヤー1（ローズ）は上と下、プレイヤー2（スカイ）は左と右をつなぎます。
+        プレイヤー1は上と下、プレイヤー2は左と右をつなぎます。
       </p>
 
       {isGameOver && winners && (

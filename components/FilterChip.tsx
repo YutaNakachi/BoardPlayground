@@ -19,7 +19,7 @@ export function FilterChip({
       className={`min-h-10 text-sm transition ${
         layout === "stack"
           ? "w-full rounded-lg px-3 py-2 text-left"
-          : "rounded-full px-4"
+          : "shrink-0 rounded-full px-4"
       } ${
         active
           ? "bg-accent font-medium text-white"

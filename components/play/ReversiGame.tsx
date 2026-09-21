@@ -5,6 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import { winnerIndices } from "@/lib/game-engine";
@@ -131,30 +132,26 @@ export function ReversiGame() {
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
-        <h2 className="text-xl font-semibold">リバーシ</h2>
-        <p className="mt-2 text-sm text-[#a1a1a6]">
-          挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。
-        </p>
-        <div className="mt-6">
-          <OnlineSetupPanel
-            mode={mode}
-            onModeChange={setMode}
-            onlineSupported={onlineEnabled}
-            onCreateRoom={online.handleCreate}
-            onJoinRoom={online.handleJoin}
-            onStartLocal={startLocal}
-            loading={online.loading}
-            error={online.error}
-          />
-        </div>
-      </div>
+      <OnlineSetupPanel
+        title="リバーシ"
+        description="挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。"
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+      />
     );
   }
 
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
+        title="リバーシ"
+        description="挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。"
         mode="online"
         onModeChange={() => {}}
         onlineSupported={onlineEnabled}
@@ -182,12 +179,7 @@ export function ReversiGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(
-          roomPlayers,
-          activeCurrent,
-          activeCurrent === 0 ? "黒" : "白"
-        )}
-        stats={`黒 ${counts[0]} · 白 ${counts[1]}`}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
       )}
@@ -223,11 +215,7 @@ export function ReversiGame() {
                 ) : null
               ) : (
                 <span
-                  className={`h-[70%] w-[70%] rounded-full ${
-                    cell === 0
-                      ? "bg-zinc-900 ring-1 ring-black/40"
-                      : "bg-zinc-100 ring-1 ring-white/40"
-                  }`}
+                  className={`h-[70%] w-[70%] rounded-full ${playerPieceClasses(cell)}`}
                 />
               )}
             </button>
@@ -243,16 +231,6 @@ export function ReversiGame() {
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }
           onReplay={reset}
-          details={
-            <ul className="space-y-1 text-slate-400">
-              <li>
-                {formatSeatLabel(roomPlayers, 0, "黒")}: {counts[0]} 個
-              </li>
-              <li>
-                {formatSeatLabel(roomPlayers, 1, "白")}: {counts[1]} 個
-              </li>
-            </ul>
-          }
         />
       )}
     </div>

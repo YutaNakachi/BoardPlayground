@@ -65,7 +65,7 @@ export function MahjongSolitaireGame() {
       <div className="rounded-2xl border border-white/10 bg-surface-raised p-6 text-center sm:p-8">
         <h2 className="text-xl font-semibold">麻雀ソリティア</h2>
         <p className="mt-2 text-sm text-[#a1a1a6]">
-          左右どちらかが開い、上に牌がない牌だけ選べます。同じ種類のペアを取り除いて盤面を空にします。
+          左右どちらかが開き、上に牌がない牌だけ選べます。同じ種類のペアを取り除いて盤面を空にします。
         </p>
         <button type="button" onClick={startGame} className="btn-game mt-8">
           ゲーム開始

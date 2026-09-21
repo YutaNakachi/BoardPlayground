@@ -87,6 +87,25 @@ export function CatalogFilterPanel({ games, filters, onChange }: Props) {
 
   return (
     <div className="space-y-5" role="group" aria-label="条件で絞る">
+        <div>
+          <label
+            htmlFor="catalog-search"
+            className="mb-2 block text-xs font-medium text-slate-500"
+          >
+            キーワード
+          </label>
+          <input
+            id="catalog-search"
+            type="search"
+            value={filters.query}
+            onChange={(event) => patch({ query: event.target.value })}
+            placeholder="ゲーム名・説明で検索"
+            autoComplete="off"
+            enterKeyHint="search"
+            className="min-h-10 w-full rounded-lg border border-surface-border bg-surface-raised px-3 text-sm text-white placeholder:text-slate-500 focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/30"
+          />
+        </div>
+
         {origins.length > 0 ? (
           <FilterGroup label="系統">
             {origins.map((origin) => (

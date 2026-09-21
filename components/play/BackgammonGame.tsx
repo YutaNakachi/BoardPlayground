@@ -1,10 +1,12 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DiceFace } from "@/components/play/shared/DiceFace";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyBackgammonMove,
   backgammonMoves,
@@ -40,6 +42,40 @@ export function BackgammonGame() {
     if (selected == null) return [];
     return moves.filter((m) => m.from === selected);
   }, [moves, selected]);
+
+  const [diceFaces, setDiceFaces] = useState<[number, number]>([1, 1]);
+  const [isRolling, setIsRolling] = useState(false);
+  const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rollTimerRef.current) clearInterval(rollTimerRef.current);
+    };
+  }, []);
+
+  const onRoll = useCallback(() => {
+    if (isRolling || state.dice || state.winner != null) return;
+
+    setIsRolling(true);
+    let ticks = 0;
+    rollTimerRef.current = setInterval(() => {
+      ticks += 1;
+      setDiceFaces([
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+      ]);
+      if (ticks >= 10) {
+        if (rollTimerRef.current) clearInterval(rollTimerRef.current);
+        rollTimerRef.current = null;
+        setState((s) => {
+          const next = rollBackgammon(s);
+          if (next.dice) setDiceFaces([next.dice[0], next.dice[1]]);
+          setIsRolling(false);
+          return next;
+        });
+      }
+    }, 70);
+  }, [isRolling, state.dice, state.winner]);
 
   const apply = useCallback(
     (move: BackgammonMove) => {
@@ -95,7 +131,6 @@ export function BackgammonGame() {
       <TurnBanner
         playerIndex={player}
         playerLabel={`プレイヤー ${player + 1}`}
-        stats={`ベアオフ P1:${state.off[0]} P2:${state.off[1]} · バー P1:${state.bar[0]} P2:${state.bar[1]}`}
         action={state.dice ? `残りダイス: ${state.movesLeft.join(", ")}` : "サイコロを振る"}
       />
       )}
@@ -118,7 +153,11 @@ export function BackgammonGame() {
                 type="button"
                 onClick={() => onPoint(point)}
                 className={`flex min-h-16 flex-col items-center justify-between rounded-md border px-1 py-1 text-[10px] ${
-                  point < 6 ? "bg-indigo-950/50" : point > 17 ? "bg-rose-950/50" : "bg-white/5"
+                  point < 6
+                    ? getPlayerTurnStyle(0).surface
+                    : point > 17
+                      ? getPlayerTurnStyle(1).surface
+                      : "bg-white/5"
                 } ${isFrom ? "ring-2 ring-accent" : "border-surface-border"} ${
                   isDest ? "ring-2 ring-lime-300" : ""
                 }`}
@@ -126,10 +165,18 @@ export function BackgammonGame() {
                 <span className="text-slate-500">{point + 1}</span>
                 <div className="flex flex-col gap-0.5">
                   {p1 > 0 ? (
-                    <span className="rounded bg-rose-400 px-1 text-rose-950">{p1}</span>
+                    <span
+                      className={`rounded px-1 ${getPlayerTurnStyle(1).piece} ${getPlayerTurnStyle(1).pieceText}`}
+                    >
+                      {p1}
+                    </span>
                   ) : null}
                   {p0 > 0 ? (
-                    <span className="rounded bg-indigo-400 px-1 text-indigo-950">{p0}</span>
+                    <span
+                      className={`rounded px-1 ${getPlayerTurnStyle(0).piece} ${getPlayerTurnStyle(0).pieceText}`}
+                    >
+                      {p0}
+                    </span>
                   ) : null}
                 </div>
               </button>
@@ -164,13 +211,27 @@ export function BackgammonGame() {
         ) : null}
       </div>
 
-      {!state.dice && !isGameOver ? (
-        <div className="text-center">
-          <button type="button" onClick={() => setState((s) => rollBackgammon(s))} className="btn-game">
-            サイコロを振る
-          </button>
+      {!isGameOver ? (
+        <div className="flex flex-col items-center gap-3">
+          {(isRolling || state.dice) && (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-3">
+                <DiceFace value={diceFaces[0]} size="lg" rolling={isRolling} />
+                <DiceFace value={diceFaces[1]} size="lg" rolling={isRolling} />
+              </div>
+              {isRolling ? <p className="text-sm text-slate-400">振っています…</p> : null}
+            </div>
+          )}
+
+          {!state.dice && !isRolling ? (
+            <button type="button" onClick={onRoll} className="btn-game">
+              サイコロを振る
+            </button>
+          ) : null}
         </div>
-      ) : moves.length === 0 && !isGameOver ? (
+      ) : null}
+
+      {state.dice && moves.length === 0 && !isGameOver ? (
         <div className="text-center">
           <button
             type="button"
@@ -187,7 +248,7 @@ export function BackgammonGame() {
           variant="inline"
           winners={winners}
           onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">15枚すべてをベアオフしました。</p>}
+          details={<p className="text-slate-400">15個すべてをベアオフしました。</p>}
         />
       )}
     </div>

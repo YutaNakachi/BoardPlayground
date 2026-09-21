@@ -1,16 +1,38 @@
 import { BackToHomeLink } from "@/components/BackToHomeLink";
 import { PageContainer } from "@/components/PageContainer";
 import { RankingTabs } from "@/components/RankingTabs";
-import { fetchRanking, parseRankingPeriod } from "@/lib/stats/ranking-data";
-import { checkBackendHealth } from "@/lib/supabase/health";
+import {
+  fetchRankingCached,
+  parseRankingPeriod,
+} from "@/lib/stats/ranking-data";
+import { checkStatsHealth } from "@/lib/supabase/health";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 type Props = { searchParams: Promise<{ period?: string }> };
+
+export const revalidate = 60;
 
 export default async function RankingPage({ searchParams }: Props) {
   const { period: periodParam } = await searchParams;
   const period = parseRankingPeriod(periodParam);
-  const health = await checkBackendHealth();
-  const ranking = health.stats ? await fetchRanking(period) : [];
+
+  if (!isSupabaseConfigured()) {
+    return (
+      <PageContainer>
+        <BackToHomeLink />
+        <h1 className="mt-4 text-2xl font-bold">プレイ回数ランキング</h1>
+        <p className="mt-2 text-sm text-slate-400">
+          ゲーム開始時にカウントされます（JST 基準）
+        </p>
+        <RankingTabs initialPeriod={period} initialRanking={[]} statsEnabled={false} />
+      </PageContainer>
+    );
+  }
+
+  const [statsHealth, ranking] = await Promise.all([
+    checkStatsHealth(),
+    fetchRankingCached(period),
+  ]);
 
   return (
     <PageContainer>
@@ -22,8 +44,8 @@ export default async function RankingPage({ searchParams }: Props) {
 
       <RankingTabs
         initialPeriod={period}
-        initialRanking={ranking}
-        statsEnabled={health.stats}
+        initialRanking={statsHealth.stats ? ranking : []}
+        statsEnabled={statsHealth.stats}
       />
     </PageContainer>
   );
