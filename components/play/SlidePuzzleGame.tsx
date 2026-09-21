@@ -15,9 +15,10 @@ import {
 type Phase = "idle" | "playing" | "game-over";
 
 function tileLabelClass(size: SlideSize): string {
-  if (size <= 4) return "min-h-14 text-lg";
-  if (size === 5) return "min-h-11 text-base";
-  return "min-h-9 text-sm";
+  if (size === 3) return "min-h-14 text-2xl";
+  if (size === 4) return "min-h-14 text-xl";
+  if (size === 5) return "min-h-12 text-lg";
+  return "min-h-10 text-base";
 }
 
 function boardMaxWidth(size: SlideSize): string {
