@@ -86,6 +86,24 @@ export function ChronoSplitGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winner && (
+        <ResultPanel
+          variant="inline"
+          winners={winner}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-2 text-left text-sm text-slate-400">
+              {breakdown.map((b, i) => (
+                <li key={i}>
+                  プレイヤー {i + 1}: {b.total} 点（本体 {b.base} / 共鳴 {b.adjacent} /
+                  時代 {b.eraBonus} / 増加 {b.increaseBonus}）
+                </li>
+              ))}
+            </ul>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={game.currentPlayer}
@@ -170,23 +188,6 @@ export function ChronoSplitGame() {
         );
       })}
 
-      {isGameOver && winner && (
-        <ResultPanel
-          variant="inline"
-          winners={winner}
-          onReplay={() => setPhase("setup")}
-          details={
-            <ul className="space-y-2 text-left text-sm text-slate-400">
-              {breakdown.map((b, i) => (
-                <li key={i}>
-                  プレイヤー {i + 1}: {b.total} 点（本体 {b.base} / 共鳴 {b.adjacent} /
-                  時代 {b.eraBonus} / 増加 {b.increaseBonus}）
-                </li>
-              ))}
-            </ul>
-          }
-        />
-      )}
     </div>
   );
 }

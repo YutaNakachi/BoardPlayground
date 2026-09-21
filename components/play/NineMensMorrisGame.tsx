@@ -82,6 +82,19 @@ export function NineMensMorrisGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {state.notice ?? "相手の駒が足りないか、動けなくなりました。"}
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
@@ -146,18 +159,6 @@ export function NineMensMorrisGame() {
         })}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <p className="text-slate-400">
-              {state.notice ?? "相手の駒が足りないか、動けなくなりました。"}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

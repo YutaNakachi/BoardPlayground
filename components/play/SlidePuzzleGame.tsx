@@ -90,6 +90,20 @@ export function SlidePuzzleGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          solo
+          winners={[0]}
+          onReplay={() => setPhase("idle")}
+          details={
+            <p className="text-slate-400">
+              {size}×{size} を {moves} 手で完成しました。
+            </p>
+          }
+        />
+      )}
+
       <p className="text-center text-sm text-slate-400">
         {size}×{size} · 手数: {moves}
       </p>
@@ -114,18 +128,6 @@ export function SlidePuzzleGame() {
         ))}
       </div>
 
-      {isGameOver && (
-        <ResultPanel
-          variant="inline"
-          winners={[0]}
-          onReplay={() => setPhase("idle")}
-          details={
-            <p className="text-slate-400">
-              {size}×{size} を {moves} 手で完成しました。
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

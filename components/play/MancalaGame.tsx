@@ -81,6 +81,20 @@ export function MancalaGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              <li>プレイヤー 1 の倉: {pits[6]} 個</li>
+              <li>プレイヤー 2 の倉: {pits[13]} 個</li>
+            </ul>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
@@ -114,19 +128,6 @@ export function MancalaGame() {
         ))}
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <ul className="space-y-1 text-slate-400">
-              <li>プレイヤー 1 の倉: {pits[6]} 個</li>
-              <li>プレイヤー 2 の倉: {pits[13]} 個</li>
-            </ul>
-          }
-        />
-      )}
     </div>
   );
 }

@@ -98,6 +98,16 @@ export function SpiderGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && (
+        <ResultPanel
+          variant="inline"
+          solo
+          winners={[0]}
+          onReplay={() => setPhase("idle")}
+          details={<p className="text-slate-400">8組の完成列をすべて除去しました。</p>}
+        />
+      )}
+
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-slate-400">完成: {state.completed} / 8</p>
         <button
@@ -157,14 +167,6 @@ export function SpiderGame() {
         ))}
       </div>
 
-      {isGameOver && (
-        <ResultPanel
-          variant="inline"
-          winners={[0]}
-          onReplay={() => setPhase("idle")}
-          details={<p className="text-slate-400">8組の完成列をすべて除去しました。</p>}
-        />
-      )}
     </div>
   );
 }

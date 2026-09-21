@@ -81,6 +81,15 @@ export function ChineseCheckersGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">すべての駒を向かい側のエリアへ移動しました。</p>}
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
@@ -126,14 +135,6 @@ export function ChineseCheckersGame() {
         駒をタップして選択し、移動先（緑）をタップ。ジャンプは連続可能。
       </p>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">すべての駒を向かい側のエリアへ移動しました。</p>}
-        />
-      )}
     </div>
   );
 }

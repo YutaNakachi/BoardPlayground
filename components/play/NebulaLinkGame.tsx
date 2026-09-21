@@ -109,6 +109,22 @@ export function NebulaLinkGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winner && (
+        <ResultPanel
+          variant="inline"
+          winners={winner}
+          winnersLabel={game.isDraw ? "引き分け" : undefined}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {game.isDraw
+                ? "誰も勝利条件を満たさず、置ける手がなくなりました。"
+                : `星核に隣接するマスを ${NEBULA_CORE_RING_WIN} つ、1つの連結グループで占めました。`}
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
         <TurnBanner
           playerIndex={game.currentPlayer}
@@ -202,21 +218,6 @@ export function NebulaLinkGame() {
         })}
       </ul>
 
-      {isGameOver && winner && (
-        <ResultPanel
-          variant="inline"
-          winners={winner}
-          winnersLabel={game.isDraw ? "引き分け" : undefined}
-          onReplay={() => setPhase("setup")}
-          details={
-            <p className="text-slate-400">
-              {game.isDraw
-                ? "誰も勝利条件を満たさず、置ける手がなくなりました。"
-                : `星核に隣接するマスを ${NEBULA_CORE_RING_WIN} つ、1つの連結グループで占めました。`}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

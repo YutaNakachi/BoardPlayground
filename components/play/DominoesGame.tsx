@@ -89,6 +89,15 @@ export function DominoesGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">手札をすべて出し切りました。</p>}
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
@@ -150,14 +159,6 @@ export function DominoesGame() {
         相手の手札: {state.hands[state.current === 0 ? 1 : 0].length} 枚（伏せ）
       </p>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">手札をすべて出し切りました。</p>}
-        />
-      )}
     </div>
   );
 }

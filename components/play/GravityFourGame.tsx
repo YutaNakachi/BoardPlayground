@@ -90,6 +90,21 @@ export function GravityFourGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {winner === "draw"
+                ? "盤が埋まり、4つ並びはありませんでした。"
+                : `プレイヤー ${Number(winner) + 1} が4つ以上並べました。`}
+            </p>
+          }
+        />
+      )}
+
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
@@ -145,20 +160,6 @@ export function GravityFourGame() {
         </div>
       </div>
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={
-            <p className="text-slate-400">
-              {winner === "draw"
-                ? "盤が埋まり、4つ並びはありませんでした。"
-                : `プレイヤー ${Number(winner) + 1} が4つ以上並べました。`}
-            </p>
-          }
-        />
-      )}
     </div>
   );
 }

@@ -336,6 +336,15 @@ export function LudoGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={<p className="text-slate-400">4つのコマをすべてゴールしました。</p>}
+        />
+      )}
+
       {!isGameOver && (
         <TurnBanner
           playerIndex={LUDO_STYLE_INDEX[state.current]}
@@ -530,14 +539,6 @@ export function LudoGame() {
         </div>
       ) : null}
 
-      {isGameOver && winners && (
-        <ResultPanel
-          variant="inline"
-          winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">4つのコマをすべてゴールしました。</p>}
-        />
-      )}
     </div>
   );
 }
