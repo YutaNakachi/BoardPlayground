@@ -132,7 +132,7 @@ export function NineMensMorrisGame() {
               type="button"
               onClick={() => onPoint(index)}
               style={{ left: `${(x / 300) * 100}%`, top: `${(y / 300) * 100}%` }}
-              className={`absolute flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full sm:h-10 sm:w-10 ${
+              className={`absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
                 selected ? "ring-2 ring-accent" : ""
               } ${isDest || canRemove ? "ring-2 ring-lime-300" : ""}`}
               aria-label={
@@ -146,7 +146,7 @@ export function NineMensMorrisGame() {
               }
             >
               <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
+                className={`flex h-5 w-5 items-center justify-center rounded-full sm:h-6 sm:w-6 ${
                   owner === null
                     ? isDest
                       ? "bg-lime-300/80"
