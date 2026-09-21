@@ -10,12 +10,18 @@ export function usePlaySetupNavigation(
   const { setSetupNav } = usePlayPage();
 
   useEffect(() => {
-    setSetupNav({
-      isSetupScreen,
-      backToSetup: isSetupScreen ? null : backToSetup,
+    setSetupNav((previous) => {
+      const nextBackToSetup = isSetupScreen ? null : backToSetup;
+      if (
+        previous.isSetupScreen === isSetupScreen &&
+        previous.backToSetup === nextBackToSetup
+      ) {
+        return previous;
+      }
+      return {
+        isSetupScreen,
+        backToSetup: nextBackToSetup,
+      };
     });
-    return () => {
-      setSetupNav({ isSetupScreen: true, backToSetup: null });
-    };
   }, [isSetupScreen, backToSetup, setSetupNav]);
 }

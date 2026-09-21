@@ -111,7 +111,7 @@ export function GomokuGame() {
     setLocalPhase("setup");
     setMode("local");
     setPlayMode({ mode: "local" });
-  }, [online, setPlayMode]);
+  }, [online.reset, setPlayMode]);
 
   const isSetupScreen =
     (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
