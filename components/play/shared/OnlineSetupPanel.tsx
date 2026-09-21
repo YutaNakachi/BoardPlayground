@@ -6,6 +6,7 @@ import {
   PlaySetupCard,
   setupPillClass,
 } from "@/components/play/shared/PlaySetupCard";
+import { RoomCodeInput } from "@/components/play/shared/RoomCodeInput";
 import type { PlayMode } from "@/lib/online/types";
 
 type Props = {
@@ -142,15 +143,18 @@ export function OnlineSetupPanel({
                 onCreateRoom(displayName);
               }}
             >
-              <label className="block text-sm">
+              <label className="block text-sm" htmlFor="online-create-name">
                 <span className="text-slate-400">プレイヤー名</span>
                 <input
+                  id="online-create-name"
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   maxLength={20}
                   required
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white"
+                  autoComplete="nickname"
+                  enterKeyHint="done"
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-base text-white"
                   placeholder="プレイヤー1"
                 />
               </label>
@@ -166,27 +170,27 @@ export function OnlineSetupPanel({
                 onJoinRoom(joinCode, joinName);
               }}
             >
-              <label className="block text-sm">
+              <label className="block text-sm" htmlFor="online-room-code">
                 <span className="text-slate-400">部屋コード</span>
-                <input
-                  type="text"
+                <RoomCodeInput
+                  id="online-room-code"
                   value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  maxLength={6}
+                  onChange={setJoinCode}
                   required
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-mono uppercase text-white"
-                  placeholder="ABC123"
                 />
               </label>
-              <label className="block text-sm">
+              <label className="block text-sm" htmlFor="online-join-name">
                 <span className="text-slate-400">プレイヤー名</span>
                 <input
+                  id="online-join-name"
                   type="text"
                   value={joinName}
                   onChange={(e) => setJoinName(e.target.value)}
                   maxLength={20}
                   required
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white"
+                  autoComplete="nickname"
+                  enterKeyHint="done"
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-base text-white"
                 />
               </label>
               <button type="submit" disabled={loading} className="btn-game w-full">
