@@ -414,10 +414,16 @@ function checkSlidePuzzle() {
   const slide = shuffledSlide();
   assert(!isSlideSolved(slide), "slide puzzle starts unsolved");
   assert(isSlideSolvable(slide), "slide puzzle shuffled solvable");
+  assert(isSlideSolvable(solvedSlide()), "slide puzzle solved state is solvable");
   assert(isSlideSolved(solvedSlide()), "slide puzzle solved state");
+  const swapped = solvedSlide();
+  swapped[13] = 15;
+  swapped[14] = 14;
+  assert(!isSlideSolvable(swapped), "slide puzzle rejects classic unsolvable swap");
   const board = solvedSlide();
   const moved = slideMove(board, SLIDE_CELLS - 2);
   assert(moved !== null && !isSlideSolved(moved), "slide puzzle move works");
+  assert(isSlideSolvable(moved!), "slide puzzle one move from solved stays solvable");
   assert(slideMove(board, 0) === null, "slide puzzle rejects non-adjacent");
 }
 
