@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -59,6 +60,9 @@ export function MancalaGame() {
     if (phase !== "game-over") return null;
     return winnerIndices([pits[6], pits[13]]);
   }, [phase, pits]);
+
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
     return (

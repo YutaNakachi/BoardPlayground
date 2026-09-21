@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import {
@@ -83,6 +84,9 @@ export function KlondikeGame() {
     }
     return keys;
   }, [selected, state]);
+
+  const backToSetup = useCallback(() => setPhase("idle"), []);
+  usePlaySetupNavigation(phase === "idle", backToSetup);
 
   if (phase === "idle") {
     return (

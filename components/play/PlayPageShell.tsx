@@ -16,7 +16,7 @@ type Props = {
 
 function PlayPageShellInner({ game, rules, children }: Props) {
   const [rulesOpen, setRulesOpen] = useState(false);
-  const { playMode } = usePlayPage();
+  const { playMode, setupNav } = usePlayPage();
 
   return (
     <PageContainer padding="compact">
@@ -26,6 +26,15 @@ function PlayPageShellInner({ game, rules, children }: Props) {
           <h1 className="mt-2 text-2xl font-bold">{game.title}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {setupNav.backToSetup ? (
+            <button
+              type="button"
+              onClick={setupNav.backToSetup}
+              className="min-h-9 rounded-full border border-white/15 bg-white/5 px-4 text-sm font-medium text-[#e8e8ed] transition hover:border-white/25 hover:bg-white/10"
+            >
+              準備に戻る
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setRulesOpen(true)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { HandoffGate } from "@/components/play/shared/HandoffGate";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -129,6 +130,9 @@ export function StarTradeGame() {
     if (phase !== "game-over") return null;
     return winnerIndices(scores);
   }, [phase, scores]);
+
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
     return (
