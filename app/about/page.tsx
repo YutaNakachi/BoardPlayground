@@ -33,7 +33,7 @@ export default function AboutPage() {
       <h1 className="text-3xl font-bold">制作代行について</h1>
       <p className="mt-4 leading-relaxed text-slate-300">
         {SITE_NAME}
-        はオリジナル、許可あり、または商標を使わない伝統的な抽象ゲームをブラウザで公開・プレイする場です。アイデアのヒアリングからルール設計、Web化までを一貫して代行するサービスをココナラで提供します。受注・納品のやりとりはココナラ上で行い、このサイトは公開プレイと制作実績の置き場です。
+        はオリジナル、許可あり、または商標を使わない伝統的なボードゲームをブラウザで公開・プレイする場です。アイデアのヒアリングからルール設計、Web化までを一貫して代行するサービスをココナラで提供します。受注・納品のやりとりはココナラ上で行い、このサイトは公開プレイと制作実績の置き場です。
       </p>
 
       <section className="mt-10 space-y-3">
@@ -67,7 +67,7 @@ export default function AboutPage() {
       <section className="mt-10 space-y-3">
         <h2 className="text-xl font-semibold">公開ゲーム</h2>
         <p className="leading-relaxed text-slate-300">
-          サイト上のゲームは制作フローの実例と、クラシックの抽象ゲームです。遊んで雰囲気を確かめてからご相談ください。
+          サイト上のゲームは制作フローの実例と、クラシックです。遊んで雰囲気を確かめてからご相談ください。
         </p>
         {(["original", "classic"] as GameOrigin[]).map((origin) => {
           const group = games.filter((game) => game.origin === origin);
