@@ -1,6 +1,7 @@
 import { getPlayerFill } from "@/lib/player-colors";
 import type { Player } from "@/lib/play/mini-shogi";
 import { Shippori_Mincho } from "next/font/google";
+import type { CSSProperties } from "react";
 
 type Props = {
   label: string;
@@ -11,13 +12,27 @@ type Props = {
 };
 
 const shogiKomaFont = Shippori_Mincho({
-  weight: ["700", "800"],
+  weight: ["700"],
   subsets: ["latin"],
   display: "swap",
 });
 
 /** 塗りつぶし表示になる字形（先手・後手共通） */
 const KOMA_GLYPH = "☗";
+
+function komaNeonStyle(color: string): CSSProperties {
+  return {
+    color,
+    WebkitTextStroke: "1.25px rgba(15, 23, 42, 0.6)",
+    paintOrder: "stroke fill",
+    filter: [
+      `drop-shadow(0 0 1px ${color})`,
+      `drop-shadow(0 0 4px ${color})`,
+      `drop-shadow(0 0 10px ${color}e6)`,
+      `drop-shadow(0 0 18px ${color}80)`,
+    ].join(" "),
+  };
+}
 
 export function ShogiPieceTile({
   label,
@@ -46,13 +61,13 @@ export function ShogiPieceTile({
     >
       <span
         className={`pointer-events-none absolute inset-0 flex items-center justify-center select-none leading-none ${symbolSize}`}
-        style={{ color: pieceColor }}
+        style={komaNeonStyle(pieceColor)}
         aria-hidden
       >
         <span className="translate-y-[6%]">{KOMA_GLYPH}</span>
       </span>
       <span
-        className={`pointer-events-none absolute left-1/2 top-[57%] z-10 -translate-x-1/2 -translate-y-1/2 font-extrabold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl] ${shogiKomaFont.className}`}
+        className={`pointer-events-none absolute left-1/2 top-[57%] z-10 -translate-x-1/2 -translate-y-1/2 font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl] ${shogiKomaFont.className}`}
       >
         {label}
       </span>
