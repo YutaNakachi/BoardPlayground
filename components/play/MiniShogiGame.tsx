@@ -181,14 +181,19 @@ export function MiniShogiGame() {
         return;
       }
 
-      if (dropPiece) return;
       const piece = state.board[index];
-      if (!piece || piece.player !== state.current) {
-        setSelected(null);
+      if (piece && piece.player === state.current) {
+        if (moves.some((m) => m.kind === "move" && m.from === index)) {
+          setDropPiece(null);
+          setPendingPromotion(null);
+          setSelected(index);
+        }
         return;
       }
-      if (!moves.some((m) => m.kind === "move" && m.from === index)) return;
-      setSelected(index);
+
+      setSelected(null);
+      setDropPiece(null);
+      setPendingPromotion(null);
     },
     [phase, pendingPromotion, dropPiece, destinations, selected, moves, apply, state]
   );
