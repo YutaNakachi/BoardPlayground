@@ -116,7 +116,7 @@ const games: GameMeta[] = [
     slug: "reversi",
     title: "リバーシ",
     description:
-      "8×8の盤で相手の石を挟んで裏返す、2人用の抽象ゲーム。終局時に石が多い方が勝ち。",
+      "8×8の盤で相手の石を挟んで裏返す、2人用ゲーム。終局時に石が多い方が勝ち。",
     origin: "classic",
     players: "2",
     playersMin: 2,
@@ -319,7 +319,7 @@ const games: GameMeta[] = [
     slug: "hex",
     title: "ヘックス",
     description:
-      "六角形のマスに石を置き、向かい側の辺をつなぐ2人用の抽象ゲーム。",
+      "六角形のマスに石を置き、向かい側の辺をつなぐ2人用ゲーム。",
     origin: "classic",
     players: "2",
     playersMin: 2,
