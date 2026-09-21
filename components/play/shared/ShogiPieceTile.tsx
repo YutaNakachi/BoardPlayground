@@ -1,5 +1,6 @@
 import { getPlayerFill } from "@/lib/player-colors";
 import type { Player } from "@/lib/play/mini-shogi";
+import { Shippori_Mincho } from "next/font/google";
 
 type Props = {
   label: string;
@@ -8,6 +9,12 @@ type Props = {
   size?: "board" | "hand";
   className?: string;
 };
+
+const shogiKomaFont = Shippori_Mincho({
+  weight: ["700", "800"],
+  subsets: ["latin"],
+  display: "swap",
+});
 
 /** 塗りつぶし表示になる字形（先手・後手共通） */
 const KOMA_GLYPH = "☗";
@@ -45,10 +52,10 @@ export function ShogiPieceTile({
         <span className="translate-y-[6%]">{KOMA_GLYPH}</span>
       </span>
       <span
-        className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center`}
+        className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center ${shogiKomaFont.className}`}
       >
         <span
-          className={`translate-x-px translate-y-[10%] font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl]`}
+          className={`-translate-x-[3px] translate-y-[10%] font-extrabold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl]`}
         >
           {label}
         </span>
