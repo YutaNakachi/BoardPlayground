@@ -23,7 +23,6 @@ import {
   emptyTttHistories,
   TTT_SIZE,
   tttBoardFull,
-  tttRotatingOldest,
   tttWinner,
   type Board,
   type Player,
@@ -119,11 +118,6 @@ export function TicTacToeGame() {
         : localPhase === "playing"
           ? "playing"
           : "setup";
-
-  const fadingIndex =
-    !isOnline && gameMode === "rotating" && localPhase === "playing"
-      ? tttRotatingOldest(histories, current)
-      : null;
 
   const place = useCallback(
     (index: number) => {
@@ -278,7 +272,7 @@ export function TicTacToeGame() {
             onClick={() => place(index)}
             className={`flex aspect-square min-h-20 items-center justify-center bg-surface-raised text-5xl font-bold leading-none disabled:cursor-default sm:min-h-24 sm:text-6xl ${
               cell === null ? "text-white" : getPlayerTurnStyle(cell).label
-            } ${fadingIndex === index ? "ring-2 ring-inset ring-amber-400/70" : ""}`}
+            }`}
             aria-label={
               cell === 0 ? "×" : cell === 1 ? "○" : `空マス ${index + 1}`
             }
