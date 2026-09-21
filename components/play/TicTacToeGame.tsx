@@ -176,7 +176,7 @@ export function TicTacToeGame() {
             type="button"
             disabled={!canInteract || cell !== null}
             onClick={() => place(index)}
-            className={`flex aspect-square min-h-20 items-center justify-center bg-surface-raised text-3xl font-bold disabled:cursor-default sm:min-h-24 sm:text-4xl ${
+            className={`flex aspect-square min-h-20 items-center justify-center bg-surface-raised text-5xl font-bold leading-none disabled:cursor-default sm:min-h-24 sm:text-6xl ${
               cell === null ? "text-white" : getPlayerTurnStyle(cell).label
             }`}
             aria-label={
