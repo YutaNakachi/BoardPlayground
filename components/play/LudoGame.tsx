@@ -26,6 +26,7 @@ import {
 } from "@/lib/play/ludo-board";
 import {
   applyLudoMove,
+  endLudoTurn,
   initialLudo,
   isLudoTokenFinished,
   ludoMoveAnimationSteps,
@@ -310,15 +311,7 @@ export function LudoGame() {
 
   const passTurn = useCallback(() => {
     if (isAnimating) return;
-    setState((s) => {
-      const turnIndex = s.activePlayers.indexOf(s.current);
-      return {
-        ...s,
-        current: s.activePlayers[(turnIndex + 1) % s.activePlayers.length],
-        lastRoll: null,
-        extraTurn: false,
-      };
-    });
+    setState((s) => endLudoTurn(s));
   }, [isAnimating]);
 
   if (phase === "setup") {
@@ -347,7 +340,9 @@ export function LudoGame() {
             state.lastRoll == null
               ? "サイコロを振る"
               : moves.length === 0
-                ? "出せるコマがありません"
+                ? state.extraTurn
+                  ? "出せるコマがありません（もう一度振れます）"
+                  : "出せるコマがありません"
                 : "コマを選ぶ"
           }
         />
@@ -526,7 +521,7 @@ export function LudoGame() {
             onClick={passTurn}
             className="rounded-lg border border-white/20 px-4 py-2 text-sm"
           >
-            手番を終える
+            {state.extraTurn ? "もう一度振る" : "手番を終える"}
           </button>
         </div>
       ) : null}

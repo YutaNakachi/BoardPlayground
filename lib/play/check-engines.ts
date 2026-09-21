@@ -49,6 +49,7 @@ import { initialKlondike } from "./klondike";
 import {
   initialLudo,
   applyLudoMove,
+  endLudoTurn,
   isLudoTokenFinished,
   ludoDeepestFinishSlot,
   ludoGoalCount,
@@ -610,6 +611,34 @@ function checkLudo() {
       trackSteps[0].steps === 6 &&
       trackSteps[2].steps === 8,
     "ludo track anim steps one pip at a time"
+  );
+
+  const sixNoMove = initialLudo(4);
+  sixNoMove.current = 1;
+  sixNoMove.lastRoll = 6;
+  sixNoMove.extraTurn = true;
+  for (let i = 4; i <= 7; i++) {
+    sixNoMove.tokens[i] = { player: 1, index: i - 4, zone: "home", steps: 1 };
+  }
+  sixNoMove.tokens[5] = { player: 1, index: 1, zone: "home", steps: 2 };
+  sixNoMove.tokens[6] = { player: 1, index: 2, zone: "home", steps: 4 };
+  assert(ludoMoves(sixNoMove).length === 0, "ludo six with blocked home has no moves");
+  const afterSixPass = endLudoTurn(sixNoMove);
+  assert(
+    afterSixPass.current === 1 && afterSixPass.lastRoll === null && !afterSixPass.extraTurn,
+    "ludo six bonus allows reroll when no legal move"
+  );
+
+  const threeNoMove = initialLudo(2);
+  threeNoMove.lastRoll = 3;
+  threeNoMove.extraTurn = false;
+  for (const i of [0, 1, 2, 3]) {
+    threeNoMove.tokens[i] = { player: 0, index: i, zone: "yard", steps: 0 };
+  }
+  const afterThreePass = endLudoTurn(threeNoMove);
+  assert(
+    afterThreePass.current === 2 && afterThreePass.lastRoll === null,
+    "ludo non-six pass advances turn"
   );
 }
 

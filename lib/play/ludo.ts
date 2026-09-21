@@ -234,6 +234,24 @@ export function mustMoveLudo(state: LudoState): boolean {
   return state.lastRoll != null && ludoMoves(state).length > 0;
 }
 
+/** 動かせるコマがないときに手番を進める。6のボーナス中は同プレイヤーが再振りできる。 */
+export function endLudoTurn(state: LudoState): LudoState {
+  if (state.lastRoll == null || state.winner != null) return state;
+  if (ludoMoves(state).length > 0) return state;
+
+  if (state.extraTurn) {
+    return { ...state, lastRoll: null, extraTurn: false };
+  }
+
+  const turnIndex = state.activePlayers.indexOf(state.current);
+  return {
+    ...state,
+    current: state.activePlayers[(turnIndex + 1) % state.activePlayers.length],
+    lastRoll: null,
+    extraTurn: false,
+  };
+}
+
 export function ludoTokenPathIndex(token: LudoToken): number | null {
   if (token.zone !== "track") return null;
   return pathIndexForSteps(token.player, token.steps);
