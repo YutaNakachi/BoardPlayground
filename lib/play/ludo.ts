@@ -208,12 +208,6 @@ export function applyLudoMove(state: LudoState, move: LudoMove): LudoState | nul
     tokens.splice(0, tokens.length, ...captured);
   } else {
     tokens[move.tokenIndex] = advanced;
-    // ゴール列に入る際、入口（slot0）を通過したらそこで取る
-    if (token.zone === "track" && token.steps < LUDO_TRACK_STEPS) {
-      const entryPathIndex = pathIndexForSteps(player, LUDO_TRACK_STEPS);
-      const captured = captureAt(tokens, player, entryPathIndex, move.tokenIndex);
-      tokens.splice(0, tokens.length, ...captured);
-    }
   }
 
   const allFinished = tokens.every(

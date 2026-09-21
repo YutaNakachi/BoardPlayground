@@ -549,16 +549,28 @@ function checkLudo() {
     "ludo approach roll 2 reaches slot1"
   );
 
+  const homeEntryNoCapture = initialLudo(2);
+  homeEntryNoCapture.lastRoll = 2;
+  homeEntryNoCapture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 42 };
+  homeEntryNoCapture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 21 };
+  const homeEntryNoCaptureMove = ludoMoves(homeEntryNoCapture).find((m) => m.tokenIndex === 0);
+  assert(homeEntryNoCaptureMove != null, "ludo can enter home past entry");
+  const afterHomeEntryNoCapture = applyLudoMove(homeEntryNoCapture, homeEntryNoCaptureMove!);
+  assert(
+    afterHomeEntryNoCapture !== null && afterHomeEntryNoCapture.tokens[4].zone === "track",
+    "ludo does not capture on home entry when overshooting past slot0"
+  );
+
   const homeEntryCapture = initialLudo(2);
-  homeEntryCapture.lastRoll = 2;
+  homeEntryCapture.lastRoll = 1;
   homeEntryCapture.tokens[0] = { player: 0, index: 0, zone: "track", steps: 42 };
   homeEntryCapture.tokens[4] = { player: 2, index: 0, zone: "track", steps: 21 };
   const homeEntryCaptureMove = ludoMoves(homeEntryCapture).find((m) => m.tokenIndex === 0);
-  assert(homeEntryCaptureMove != null, "ludo can enter home past entry");
+  assert(homeEntryCaptureMove != null, "ludo can land on home entry");
   const afterHomeEntryCapture = applyLudoMove(homeEntryCapture, homeEntryCaptureMove!);
   assert(
     afterHomeEntryCapture !== null && afterHomeEntryCapture.tokens[4].zone === "yard",
-    "ludo captures enemy on home entry when passing through"
+    "ludo captures enemy when stopping exactly on home entry"
   );
 
   const blockedHome = initialLudo(2);
