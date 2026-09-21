@@ -129,10 +129,8 @@ export function FoxHoundsGame() {
           猟犬の停滞 {stallTurns}/{10} 手（10手でウサギの勝ち）
         </p>
       )}
-
-      {/* PageContainer の padding / max-width を抜けて画面幅いっぱいに表示 */}
-      <section
-        className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 px-3 sm:px-5"
+      <div
+        className="relative mx-auto w-full max-w-[min(100%,22rem)] sm:max-w-md"
         aria-label="ウサギと猟犬の盤面"
       >
         <svg
@@ -221,7 +219,7 @@ export function FoxHoundsGame() {
             );
           })}
         </svg>
-      </section>
+      </div>
 
       <p className="text-center text-xs text-slate-500">
         プレイヤー1＝猟犬（先手）／プレイヤー2＝ウサギ
