@@ -27,7 +27,9 @@ export function isSlideSolvable(board: number[]): boolean {
   const inv = countInversions(board);
   const blankRow = Math.floor(board.indexOf(0) / SLIDE_SIZE);
   const blankFromBottom = SLIDE_SIZE - blankRow;
-  return (inv + blankFromBottom) % 2 === 0;
+  // 偶数幅: (逆転数 + 空きマスの下からの行) が奇数なら解ける
+  if (SLIDE_SIZE % 2 === 1) return inv % 2 === 0;
+  return (inv + blankFromBottom) % 2 === 1;
 }
 
 export function shuffledSlide(): number[] {
