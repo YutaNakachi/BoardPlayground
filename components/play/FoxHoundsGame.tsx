@@ -129,7 +129,7 @@ export function FoxHoundsGame() {
         </p>
       )}
 
-      <div className="relative mx-auto aspect-[5/3] w-full max-w-2xl px-2">
+      <div className="relative mx-auto aspect-[2/1] w-full max-w-4xl">
         <svg viewBox="0 0 100 100" className="h-full w-full" aria-label="ウサギと猟犬の盤">
           <rect width="100" height="100" rx="8" fill="#0f172a" opacity="0.35" />
 
