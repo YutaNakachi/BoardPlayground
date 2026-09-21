@@ -15,6 +15,7 @@ export type RoomInfo = {
   status: RoomStatus;
   players: RoomPlayer[];
   hostPlayerId: string;
+  gameOptions: Record<string, unknown>;
 };
 
 export type RoomGameState = {

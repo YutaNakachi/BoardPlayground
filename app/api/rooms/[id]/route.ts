@@ -12,7 +12,7 @@ export async function GET(_request: Request, { params }: Params) {
 
   const { data: room } = await db
     .from("rooms")
-    .select("id, code, game_slug, status, host_player_id, expires_at")
+    .select("id, code, game_slug, status, host_player_id, expires_at, game_options")
     .eq("id", id)
     .maybeSingle();
 
@@ -43,6 +43,7 @@ export async function GET(_request: Request, { params }: Params) {
       gameSlug: room.game_slug,
       status: room.status,
       hostPlayerId: room.host_player_id,
+      gameOptions: (room.game_options as Record<string, unknown> | null) ?? {},
       players: (players ?? []).map((p) => ({
         playerId: p.player_id,
         seatIndex: p.seat_index,

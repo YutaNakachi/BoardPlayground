@@ -22,11 +22,16 @@ import {
   type Board as ReversiBoard,
 } from "@/lib/play/reversi";
 import {
+  applyTttPlace,
   emptyTttBoard,
+  emptyTttHistories,
   tttBoardFull,
   tttWinner,
   type Board as TttBoard,
+  type TttHistories,
+  type TttMode,
 } from "@/lib/play/tic-tac-toe";
+import { parseTicTacToeGameOptions } from "./game-options";
 import type { OnlineGameSlug } from "./types";
 
 export type ReversiState = {
@@ -42,6 +47,8 @@ export type TttState = {
   current: Player;
   phase: "playing" | "game-over";
   winner: Player | "draw" | null;
+  mode: TttMode;
+  histories: TttHistories;
 };
 
 export type GomokuState = {
@@ -66,7 +73,10 @@ export type MovePayload =
   | { type: "place"; index: number }
   | { type: "checkers"; move: CheckersMove };
 
-export function createInitialState(slug: OnlineGameSlug): GameState {
+export function createInitialState(
+  slug: OnlineGameSlug,
+  gameOptions?: unknown
+): GameState {
   switch (slug) {
     case "reversi":
       return {
@@ -75,13 +85,17 @@ export function createInitialState(slug: OnlineGameSlug): GameState {
         passNotice: null,
         phase: "playing",
       };
-    case "tic-tac-toe":
+    case "tic-tac-toe": {
+      const { mode } = parseTicTacToeGameOptions(gameOptions);
       return {
         board: emptyTttBoard(),
         current: 0,
         phase: "playing",
         winner: null,
+        mode,
+        histories: emptyTttHistories(),
       };
+    }
     case "gomoku":
       return {
         board: emptyGomokuBoard(),
@@ -162,27 +176,49 @@ export function applyMove(
 
     case "tic-tac-toe": {
       const s = state as TttState;
+      const mode = s.mode ?? "classic";
+      const histories = s.histories ?? emptyTttHistories();
       if (move.type !== "place") return { error: "Invalid move type" };
-      if (s.board[move.index] !== null) return { error: "Cell occupied" };
-      const next = s.board.map((cell, i) =>
-        i === move.index ? s.current : cell
-      );
+      const placed = applyTttPlace(s.board, histories, move.index, s.current, mode);
+      if (!placed) return { error: "Illegal move" };
+      const { board: next, histories: nextHistories } = placed;
       const won = tttWinner(next);
       if (won !== null) {
         return {
-          state: { board: next, current: s.current, phase: "game-over", winner: won },
+          state: {
+            board: next,
+            current: s.current,
+            phase: "game-over",
+            winner: won,
+            mode,
+            histories: nextHistories,
+          },
           currentPlayer: null,
         };
       }
-      if (tttBoardFull(next)) {
+      if (mode === "classic" && tttBoardFull(next)) {
         return {
-          state: { board: next, current: s.current, phase: "game-over", winner: "draw" },
+          state: {
+            board: next,
+            current: s.current,
+            phase: "game-over",
+            winner: "draw",
+            mode,
+            histories: nextHistories,
+          },
           currentPlayer: null,
         };
       }
       const nextPlayer: Player = s.current === 0 ? 1 : 0;
       return {
-        state: { board: next, current: nextPlayer, phase: "playing", winner: null },
+        state: {
+          board: next,
+          current: nextPlayer,
+          phase: "playing",
+          winner: null,
+          mode,
+          histories: nextHistories,
+        },
         currentPlayer: nextPlayer,
       };
     }

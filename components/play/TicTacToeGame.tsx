@@ -10,6 +10,7 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import { parseTicTacToeGameOptions } from "@/lib/online/game-options";
 import type { TttState } from "@/lib/online/moves";
 import {
   formatSeatLabel,
@@ -48,24 +49,29 @@ const TTT_MODE_OPTIONS: { value: TttMode; label: string; description: string }[]
 
 function modeSetupExtra(
   gameMode: TttMode,
-  onGameModeChange: (mode: TttMode) => void
+  onGameModeChange: (mode: TttMode) => void,
+  readOnly = false
 ) {
   const selected = TTT_MODE_OPTIONS.find((o) => o.value === gameMode)!;
   return (
     <div className="mt-6 space-y-2">
       <p className="text-center text-xs text-slate-400">ルール</p>
-      <div className="flex flex-wrap justify-center gap-2">
-        {TTT_MODE_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onGameModeChange(option.value)}
-            className={`min-w-20 px-4 py-2 ${setupPillClass(gameMode === option.value)}`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      {readOnly ? (
+        <p className="text-center text-sm font-medium text-white">{selected.label}</p>
+      ) : (
+        <div className="flex flex-wrap justify-center gap-2">
+          {TTT_MODE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onGameModeChange(option.value)}
+              className={`min-w-20 px-4 py-2 ${setupPillClass(gameMode === option.value)}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
       <p className="text-center text-xs text-slate-500">{selected.description}</p>
     </div>
   );
@@ -176,10 +182,10 @@ export function TicTacToeGame() {
     (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
   usePlaySetupNavigation(isSetupScreen, reset);
 
-  const ruleExtra =
-    mode === "local" || !onlineEnabled
-      ? modeSetupExtra(gameMode, setGameMode)
-      : undefined;
+  const ruleExtra = modeSetupExtra(gameMode, setGameMode);
+  const waitingGameMode = online.room
+    ? parseTicTacToeGameOptions(online.room.gameOptions).mode
+    : gameMode;
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
@@ -189,7 +195,9 @@ export function TicTacToeGame() {
         mode={mode}
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
-        onCreateRoom={online.handleCreate}
+        onCreateRoom={(displayName) =>
+          online.handleCreate(displayName, { mode: gameMode })
+        }
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
@@ -218,11 +226,16 @@ export function TicTacToeGame() {
           isHost: online.isHost,
           onStart: online.handleStart,
           canStart: online.players.length >= 2,
+          extra: modeSetupExtra(waitingGameMode, () => {}, true),
         }}
       />
     );
   }
 
+  const activeGameMode =
+    isOnline && onlineState
+      ? onlineState.mode ?? "classic"
+      : gameMode;
   const isGameOver = activePhase === "game-over" && winners !== null;
   const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
 
@@ -253,7 +266,7 @@ export function TicTacToeGame() {
           action={
             isOnline && !online.isMyTurn
               ? "相手の手番です"
-              : !isOnline && gameMode === "rotating"
+              : activeGameMode === "rotating"
                 ? "ローテモード"
                 : undefined
           }

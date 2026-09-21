@@ -28,7 +28,7 @@ export async function POST(request: Request, { params }: Params) {
 
   const { data: room } = await db
     .from("rooms")
-    .select("id, game_slug, status, host_player_id")
+    .select("id, game_slug, status, host_player_id, game_options")
     .eq("id", id)
     .maybeSingle();
 
@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Unsupported game" }, { status: 400 });
   }
 
-  const initialState = createInitialState(room.game_slug);
+  const initialState = createInitialState(room.game_slug, room.game_options);
 
   const { error: stateError } = await db.from("room_state").insert({
     room_id: id,

@@ -3,8 +3,9 @@ import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
 import { getGameBySlug } from "@/lib/games";
 import { ROOM_PASSPHRASE_PLACEHOLDER } from "@/lib/online/room-auth";
+import { validateGameOptions } from "@/lib/online/game-options";
 import { generateRoomCode } from "@/lib/online/room-code";
-import { isOnlineGame } from "@/lib/online/types";
+import { isOnlineGame, type OnlineGameSlug } from "@/lib/online/types";
 
 export async function POST(request: Request) {
   const backend = await requireOnlineBackend();
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
     gameSlug?: string;
     displayName?: string;
     playerId?: string;
+    gameOptions?: unknown;
   };
   try {
     body = await request.json();
@@ -22,13 +24,18 @@ export async function POST(request: Request) {
     return apiError(API_ERROR.INVALID_JSON, 400);
   }
 
-  const { gameSlug, displayName, playerId } = body;
+  const { gameSlug, displayName, playerId, gameOptions } = body;
   if (!gameSlug || !displayName || !playerId) {
     return apiError(API_ERROR.MISSING_FIELDS, 400);
   }
 
   if (!isOnlineGame(gameSlug)) {
     return NextResponse.json({ error: "Game does not support online play" }, { status: 400 });
+  }
+
+  const validatedOptions = validateGameOptions(gameSlug as OnlineGameSlug, gameOptions);
+  if (validatedOptions === null) {
+    return NextResponse.json({ error: "Invalid game options" }, { status: 400 });
   }
 
   const game = getGameBySlug(gameSlug);
@@ -58,6 +65,7 @@ export async function POST(request: Request) {
       passphrase_hash: ROOM_PASSPHRASE_PLACEHOLDER,
       status: "waiting",
       host_player_id: playerId,
+      game_options: validatedOptions,
     })
     .select("id, code")
     .single();
