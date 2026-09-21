@@ -6,70 +6,84 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { playerPieceClasses } from "@/lib/player-colors";
 import {
   applyFoxHoundsMove,
-  FH_SIZE,
+  FH_NEIGHBORS,
+  FH_NODE_POS,
+  foxHoundsHareDestinations,
   foxHoundsHoundDestinations,
-  foxHoundsMoves,
+  foxHoundsWinMessage,
   foxHoundsWinner,
   initialFoxHounds,
-  type Board,
+  type FoxHoundsState,
+  type FoxHoundsWinReason,
   type Player,
 } from "@/lib/play/fox-hounds";
 
 type Phase = "setup" | "playing" | "game-over";
 
+const PLAYER_LABELS = ["猟犬", "ウサギ"] as const;
+
+function uniqueEdges(): [number, number][] {
+  const edges: [number, number][] = [];
+  for (let from = 0; from < FH_NEIGHBORS.length; from++) {
+    for (const to of FH_NEIGHBORS[from]) {
+      if (from < to) edges.push([from, to]);
+    }
+  }
+  return edges;
+}
+
+const BOARD_EDGES = uniqueEdges();
+
 export function FoxHoundsGame() {
   const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
-  const [board, setBoard] = useState<Board>(initialFoxHounds);
-  const [current, setCurrent] = useState<Player>(0);
+  const [state, setState] = useState<FoxHoundsState>(() => initialFoxHounds());
   const [selected, setSelected] = useState<number | null>(null);
   const [winner, setWinner] = useState<Player | null>(null);
+  const [winReason, setWinReason] = useState<FoxHoundsWinReason | null>(null);
 
   const startGame = useCallback(() => {
     recordLocalPlay();
-    setBoard(initialFoxHounds());
-    setCurrent(0);
+    setState(initialFoxHounds());
     setSelected(null);
     setWinner(null);
+    setWinReason(null);
     setPhase("playing");
   }, [recordLocalPlay]);
 
-  const moves = useMemo(
-    () => (phase === "playing" ? foxHoundsMoves(board, current) : []),
-    [phase, board, current]
-  );
+  const { board, current, stallTurns } = state;
 
   const destinations = useMemo(() => {
-    if (selected === null) return [];
-    if (current === 0 && selected === board.indexOf(0)) {
-      return foxHoundsMoves(board, 0);
+    if (phase !== "playing") return [];
+    if (current === 1) {
+      return foxHoundsHareDestinations(board);
     }
-    if (current === 1 && board[selected] === 1) {
-      return foxHoundsHoundDestinations(board, selected);
-    }
-    return [];
-  }, [selected, board, current]);
+    if (selected === null || board[selected] !== 0) return [];
+    return foxHoundsHoundDestinations(board, selected);
+  }, [phase, board, current, selected]);
 
-  const onCell = useCallback(
+  const onNode = useCallback(
     (index: number) => {
       if (phase !== "playing") return;
-      if (destinations.includes(index) && selected !== null) {
-        const next = applyFoxHoundsMove(board, current, selected, index);
+
+      const from =
+        current === 1 ? board.indexOf(1) : selected;
+      if (destinations.includes(index) && from !== null && from >= 0) {
+        const next = applyFoxHoundsMove(state, from, index);
         if (!next) return;
-        setBoard(next);
+        setState(next);
         setSelected(null);
-        const won = foxHoundsWinner(next, current === 0 ? 1 : 0);
-        if (won !== null) {
-          setWinner(won);
+        const outcome = foxHoundsWinner(next, next.current);
+        if (outcome) {
+          setWinner(outcome.winner);
+          setWinReason(outcome.reason);
           setPhase("game-over");
-          return;
         }
-        setCurrent(current === 0 ? 1 : 0);
         return;
       }
+
       const piece = board[index];
       if (piece !== current) {
         setSelected(null);
@@ -77,8 +91,10 @@ export function FoxHoundsGame() {
       }
       setSelected(index);
     },
-    [phase, destinations, selected, board, current]
+    [phase, destinations, selected, state, board, current]
   );
+
+  const hareFrom = board.indexOf(1);
 
   const backToSetup = useCallback(() => setPhase("setup"), []);
   usePlaySetupNavigation(phase === "setup", backToSetup);
@@ -87,7 +103,7 @@ export function FoxHoundsGame() {
     return (
       <SetupPanel
         title="ウサギと猟犬"
-        description="プレイヤー1はウサギ、プレイヤー2は猟犬4匹。ウサギは最上段へ到達すれば勝ち、猟犬は囲めば勝ちです。"
+        description="11点の専用盤で、猟犬3匹がウサギ1匹を囲い、ウサギは左端の列を目指します。猟犬が先手です。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -97,67 +113,112 @@ export function FoxHoundsGame() {
   }
 
   const isGameOver = phase === "game-over" && winner !== null;
-  const winners = isGameOver ? [winner!] : null;
 
   return (
     <div className="space-y-6">
-      {isGameOver && winners && (
+      {isGameOver && winner !== null && (
         <ResultPanel
           variant="inline"
-          winners={winners}
+          winners={[winner]}
           onReplay={() => setPhase("setup")}
           details={
             <p className="text-slate-400">
-              {winner === 0
-                ? "ウサギが最上段に着いたか、猟犬が動けなくなりました。"
-                : "猟犬がウサギを囲みました。"}
+              {winReason ? foxHoundsWinMessage(winReason) : null}
             </p>
           }
         />
       )}
 
       {!isGameOver && (
-      <TurnBanner
-        playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}`}
-      />
+        <TurnBanner
+          playerIndex={current}
+          playerLabel={`プレイヤー ${current + 1}（${PLAYER_LABELS[current]}）`}
+        />
       )}
 
-      <div className="mx-auto grid max-w-md grid-cols-8 gap-0.5">
-        {board.map((cell, index) => {
-          const isDest = destinations.includes(index);
-          const isSel = selected === index;
-          return (
-            <button
-              key={index}
-              type="button"
-              onClick={() => onCell(index)}
-              className={`flex aspect-square min-h-10 items-center justify-center rounded-md bg-emerald-950/80 ${
-                isSel ? "ring-2 ring-accent" : ""
-              } ${isDest ? "ring-2 ring-lime-300" : ""}`}
-            >
-              {cell === 0 ? (
-                <span
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xl ${playerPieceClasses(0)}`}
-                  aria-hidden
-                >
-                  🐇
-                </span>
-              ) : cell === 1 ? (
-                <span
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-lg ${playerPieceClasses(1)}`}
-                  aria-hidden
-                >
-                  🐕
-                </span>
-              ) : isDest ? (
-                <span className="h-2 w-2 rounded-full bg-lime-300" />
-              ) : null}
-            </button>
-          );
-        })}
+      {!isGameOver && current === 0 && stallTurns > 0 && (
+        <p className="text-center text-xs text-amber-300/90">
+          猟犬の停滞 {stallTurns}/{10} 手（10手でウサギの勝ち）
+        </p>
+      )}
+
+      <div className="relative mx-auto aspect-[5/4] w-full max-w-md">
+        <svg viewBox="0 0 100 100" className="h-full w-full">
+          <rect width="100" height="100" rx="8" fill="#0f172a" opacity="0.35" />
+
+          {BOARD_EDGES.map(([from, to]) => {
+            const a = FH_NODE_POS[from];
+            const b = FH_NODE_POS[to];
+            return (
+              <line
+                key={`${from}-${to}`}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke="#64748b"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            );
+          })}
+
+          {FH_NODE_POS.map((pos, index) => {
+            const piece = board[index];
+            const isDest = destinations.includes(index);
+            const isSel =
+              selected === index || (current === 1 && index === hareFrom);
+            const isHare = piece === 1;
+            const isHound = piece === 0;
+
+            return (
+              <g key={index}>
+                <circle
+                  cx={pos.x}
+                  cy={pos.y}
+                  r={isSel ? 7.5 : 6.5}
+                  fill="#1e293b"
+                  stroke={isSel ? "#a5b4fc" : isDest ? "#bef264" : "#94a3b8"}
+                  strokeWidth={isSel || isDest ? 2 : 1.5}
+                  className="cursor-pointer"
+                  onClick={() => onNode(index)}
+                />
+                {isDest && piece === null ? (
+                  <circle cx={pos.x} cy={pos.y} r="2.2" fill="#bef264" />
+                ) : null}
+                {isHare ? (
+                  <text
+                    x={pos.x}
+                    y={pos.y}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize="9"
+                    className="pointer-events-none select-none"
+                  >
+                    🐇
+                  </text>
+                ) : null}
+                {isHound ? (
+                  <text
+                    x={pos.x}
+                    y={pos.y}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize="8"
+                    className="pointer-events-none select-none"
+                  >
+                    🐕
+                  </text>
+                ) : null}
+              </g>
+            );
+          })}
+        </svg>
       </div>
 
+      <p className="text-center text-xs text-slate-500">
+        プレイヤー1＝猟犬（先手）／プレイヤー2＝ウサギ
+      </p>
     </div>
   );
 }

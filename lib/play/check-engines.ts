@@ -38,11 +38,14 @@ import {
 } from "./gravity-four";
 import { emptyHexBoard, HEX_SIZE, hexWinner } from "./hex";
 import {
+  applyFoxHoundsMove,
+  FH_HARE_START,
+  FH_HOUND_START,
+  FH_LEFT_NODES,
+  foxHoundsHoundDestinations,
   foxHoundsMoves,
   foxHoundsWinner,
   initialFoxHounds,
-  FH_SIZE,
-  type Board as FoxHoundsBoard,
 } from "./fox-hounds";
 import { gomokuWinner } from "./gomoku";
 import { initialKlondike } from "./klondike";
@@ -367,44 +370,36 @@ function checkHex() {
 }
 
 function checkFoxHounds() {
-  const fox = initialFoxHounds();
-  assert(foxHoundsMoves(fox, 0).length > 0, "fox opening moves");
-  assert(foxHoundsWinner(fox, 0) === null, "fox-hounds no early winner");
-  const rabbitStart = fox.indexOf(0);
-  assert(rabbitStart === 7 * FH_SIZE + 3, `fox-hounds rabbit starts bottom center ${rabbitStart}`);
+  const start = initialFoxHounds();
+  assert(start.current === 0, "fox-hounds hounds move first");
+  assert(start.board[FH_HARE_START] === 1, "fox-hounds hare at right tip");
   assert(
-    !foxHoundsMoves(fox, 1).includes(1 * FH_SIZE + 0),
-    "fox-hounds hounds cannot move diagonally down from opening"
+    FH_HOUND_START.every((node) => start.board[node] === 0),
+    "fox-hounds hounds on left column"
   );
-  const afterRabbit = fox.slice();
-  const rabbitMove = foxHoundsMoves(afterRabbit, 0)[0];
-  afterRabbit[rabbitStart] = null;
-  afterRabbit[rabbitMove] = 0;
+  assert(foxHoundsMoves(start, 0).length > 0, "fox-hounds opening hound moves");
+  assert(foxHoundsWinner(start, 0) === null, "fox-hounds no early winner");
+
   assert(
-    foxHoundsWinner(afterRabbit, 1) === null,
-    "fox-hounds no false rabbit win after one move"
-  );
-  const advancedHound = Array(FH_SIZE * FH_SIZE).fill(null) as FoxHoundsBoard;
-  advancedHound[2 * FH_SIZE + 4] = 1;
-  const upMoves = foxHoundsMoves(advancedHound, 1);
-  assert(upMoves.includes(1 * FH_SIZE + 3), "fox-hounds hound advances diagonally up");
-  assert(
-    !upMoves.some((to) => Math.floor(to / FH_SIZE) > 2),
-    "fox-hounds hounds never move down"
+    !foxHoundsHoundDestinations(start.board, 2).includes(0),
+    "fox-hounds hounds cannot move backward to tip"
   );
 
-  const winBoard = initialFoxHounds();
-  const foxIdx = winBoard.indexOf(0);
-  winBoard[foxIdx] = null;
-  winBoard[3] = 0;
-  assert(foxHoundsWinner(winBoard, 1) === 0, "fox-hounds rabbit reaches top");
+  const houndMove = foxHoundsMoves(start, 0)[0];
+  const afterHound = applyFoxHoundsMove(start, houndMove.from, houndMove.to)!;
+  assert(afterHound.current === 1, "fox-hounds hare turn after hound");
 
-  const trapped = initialFoxHounds();
-  const tIdx = trapped.indexOf(0);
-  trapped[tIdx] = null;
-  trapped[tIdx - FH_SIZE] = 0;
-  for (const m of foxHoundsMoves(trapped, 0)) trapped[m] = 1;
-  assert(foxHoundsWinner(trapped, 0) === 1, "fox-hounds rabbit trapped");
+  const breakthrough = initialFoxHounds();
+  breakthrough.board[FH_HARE_START] = null;
+  breakthrough.board[FH_LEFT_NODES[1]] = 1;
+  const won = foxHoundsWinner(breakthrough, 0);
+  assert(won?.winner === 1 && won.reason === "hare-breakthrough", "fox-hounds hare breakthrough");
+
+  const stalled = { ...initialFoxHounds(), stallTurns: 10 };
+  assert(
+    foxHoundsWinner(stalled, 0)?.reason === "hounds-stalling",
+    "fox-hounds stalling limit"
+  );
 }
 
 function checkMahjong() {

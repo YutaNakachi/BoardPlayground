@@ -354,35 +354,66 @@ function HexPreview() {
 }
 
 function FoxHoundsPreview() {
-  const board = Array(64).fill(null) as (0 | 1 | null)[];
-  board[63] = 0;
-  [1, 3, 5, 7].forEach((col) => {
-    board[col] = 1;
-  });
+  const nodes = [
+    [10, 60],
+    [30, 18],
+    [30, 60],
+    [30, 102],
+    [60, 18],
+    [60, 60],
+    [60, 102],
+    [90, 18],
+    [90, 60],
+    [90, 102],
+    [110, 60],
+  ];
+  const edges = [
+    [0, 1],
+    [0, 2],
+    [0, 3],
+    [1, 2],
+    [2, 3],
+    [1, 4],
+    [2, 4],
+    [2, 5],
+    [3, 5],
+    [4, 5],
+    [5, 6],
+    [4, 7],
+    [5, 8],
+    [6, 9],
+    [7, 8],
+    [8, 9],
+    [7, 10],
+    [8, 10],
+    [9, 10],
+  ];
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="10" fill="#422006" />
-      {board.map((cell, index) => {
-        const row = Math.floor(index / 8);
-        const col = index % 8;
-        const x = 8 + col * 13;
-        const y = 8 + row * 13;
+      <rect width="120" height="120" rx="10" fill="#0f172a" />
+      {edges.map(([from, to], index) => {
+        const [x1, y1] = nodes[from];
+        const [x2, y2] = nodes[to];
         return (
-          <rect
+          <line
             key={index}
-            x={x}
-            y={y}
-            width="12"
-            height="12"
-            fill={(row + col) % 2 === 0 ? "#78350f" : "#92400e"}
-            rx="1"
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="#64748b"
+            strokeWidth="3"
+            strokeLinecap="round"
           />
         );
       })}
-      <circle cx={8 + 7 * 13 + 6} cy={8 + 7 * 13 + 6} r="4.5" fill="#f97316" />
-      {[1, 3, 5, 7].map((col) => (
-        <circle key={col} cx={8 + col * 13 + 6} cy={8 + 6} r="4" fill="#64748b" />
+      {nodes.map(([cx, cy], index) => (
+        <circle key={index} cx={cx} cy={cy} r="5" fill="#1e293b" stroke="#94a3b8" strokeWidth="1.5" />
       ))}
+      {[1, 2, 3].map((index) => (
+        <circle key={`hound-${index}`} cx={nodes[index][0]} cy={nodes[index][1]} r="3.5" fill="#64748b" />
+      ))}
+      <circle cx={nodes[10][0]} cy={nodes[10][1]} r="4" fill="#f97316" />
     </svg>
   );
 }
