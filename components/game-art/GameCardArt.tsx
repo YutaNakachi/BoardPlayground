@@ -938,6 +938,32 @@ function GravityFourPreview() {
 }
 
 function DotsBoxesPreview() {
+  const dot = (row: number, col: number) => ({
+    cx: 24 + col * 36,
+    cy: 24 + row * 36,
+  });
+
+  const edge = (
+    from: { cx: number; cy: number },
+    to: { cx: number; cy: number },
+    color = "#e2e8f0"
+  ) => (
+    <line
+      key={`${from.cx}-${from.cy}-${to.cx}-${to.cy}`}
+      x1={from.cx}
+      y1={from.cy}
+      x2={to.cx}
+      y2={to.cy}
+      stroke={color}
+      strokeWidth="3"
+    />
+  );
+
+  const topLeft = dot(0, 0);
+  const topMid = dot(0, 1);
+  const midLeft = dot(1, 0);
+  const midMid = dot(1, 1);
+
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
       <rect width="120" height="120" rx="10" fill="#0f172a" />
@@ -945,15 +971,19 @@ function DotsBoxesPreview() {
         [0, 1, 2].map((col) => (
           <circle
             key={`${row}-${col}`}
-            cx={24 + col * 36}
-            cy={24 + row * 36}
+            cx={dot(row, col).cx}
+            cy={dot(row, col).cy}
             r="4"
             fill="#94a3b8"
           />
         ))
       )}
-      <line x1="24" y1="24" x2="60" y2="24" stroke="#e2e8f0" strokeWidth="3" />
-      <line x1="60" y1="24" x2="60" y2="60" stroke="#e2e8f0" strokeWidth="3" />
+      {edge(topLeft, topMid)}
+      {edge(topMid, midMid)}
+      {edge(midMid, midLeft)}
+      {edge(midLeft, topLeft)}
+      {edge(topMid, dot(0, 2), "#64748b")}
+      {edge(midMid, dot(1, 2), "#64748b")}
       <text x="42" y="48" textAnchor="middle" fontSize="14" fill="#d4849a" fontWeight="700">
         1
       </text>
