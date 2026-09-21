@@ -93,11 +93,12 @@ import {
 import { initialShogiState, shogiMoves } from "./shogi";
 import {
   isSlideSolved,
+  isSlideSolvable,
   shuffledSlide,
+  slideCells,
   slideMove,
   solvedSlide,
-  isSlideSolvable,
-  SLIDE_CELLS,
+  SLIDE_SIZE_OPTIONS,
 } from "./slide-puzzle";
 import {
   canDealSpider,
@@ -411,20 +412,25 @@ function checkKlondike() {
 }
 
 function checkSlidePuzzle() {
-  const slide = shuffledSlide();
-  assert(!isSlideSolved(slide), "slide puzzle starts unsolved");
-  assert(isSlideSolvable(slide), "slide puzzle shuffled solvable");
-  assert(isSlideSolvable(solvedSlide()), "slide puzzle solved state is solvable");
-  assert(isSlideSolved(solvedSlide()), "slide puzzle solved state");
-  const swapped = solvedSlide();
-  swapped[13] = 15;
-  swapped[14] = 14;
-  assert(!isSlideSolvable(swapped), "slide puzzle rejects classic unsolvable swap");
-  const board = solvedSlide();
-  const moved = slideMove(board, SLIDE_CELLS - 2);
-  assert(moved !== null && !isSlideSolved(moved), "slide puzzle move works");
-  assert(isSlideSolvable(moved!), "slide puzzle one move from solved stays solvable");
-  assert(slideMove(board, 0) === null, "slide puzzle rejects non-adjacent");
+  for (const size of SLIDE_SIZE_OPTIONS) {
+    const slide = shuffledSlide(size);
+    assert(!isSlideSolved(slide, size), `slide ${size}x${size} starts unsolved`);
+    assert(isSlideSolvable(slide, size), `slide ${size}x${size} shuffled solvable`);
+    assert(isSlideSolvable(solvedSlide(size), size), `slide ${size}x${size} solved is solvable`);
+    assert(isSlideSolved(solvedSlide(size), size), `slide ${size}x${size} solved state`);
+
+    const swapped = solvedSlide(size);
+    const cells = slideCells(size);
+    swapped[cells - 3] = cells - 1;
+    swapped[cells - 2] = cells - 2;
+    assert(!isSlideSolvable(swapped, size), `slide ${size}x${size} rejects unsolvable swap`);
+
+    const board = solvedSlide(size);
+    const moved = slideMove(board, cells - 2, size);
+    assert(moved !== null && !isSlideSolved(moved, size), `slide ${size}x${size} move works`);
+    assert(isSlideSolvable(moved!, size), `slide ${size}x${size} one move stays solvable`);
+    assert(slideMove(board, 0, size) === null, `slide ${size}x${size} rejects non-adjacent`);
+  }
 }
 
 function checkDominoes() {
