@@ -467,8 +467,8 @@ export function miniShogiPieceLabel(piece: MiniPiece): string {
     const promoted: Partial<Record<MiniPieceType, string>> = {
       P: "と",
       S: "成銀",
-      B: "馬",
-      R: "竜",
+      B: "竜馬",
+      R: "竜王",
     };
     return promoted[piece.type] ?? piece.type;
   }

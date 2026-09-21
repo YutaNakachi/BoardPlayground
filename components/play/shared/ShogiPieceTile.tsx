@@ -9,45 +9,48 @@ type Props = {
   className?: string;
 };
 
-const SHOGI_PIECE_SYMBOL: Record<Player, string> = {
-  0: "☖",
-  1: "☗",
-};
+/** 将棋駒形（上向き）。後手は外枠で 180° 回転 */
+const KOMA_POINTS = "20,1 37,16 32,45 8,45 3,16";
 
 export function ShogiPieceTile({
   label,
   player,
-  promoted = false,
   size = "board",
   className = "",
 }: Props) {
   const isHand = size === "hand";
   const pieceColor = getPlayerFill(player);
-  const symbolSize = isHand ? "text-2xl" : "text-[2.25rem] sm:text-[2.75rem]";
+  const charCount = label.length;
   const labelSize =
-    label.length >= 2
+    charCount >= 2
       ? isHand
-        ? "text-[9px]"
-        : "text-[10px] sm:text-xs"
+        ? "text-[8px] leading-[1.1]"
+        : "text-[9px] leading-[1.15] sm:text-[10px]"
       : isHand
-        ? "text-xs"
-        : "text-sm sm:text-base";
+        ? "text-[11px] leading-none"
+        : "text-sm leading-none sm:text-base";
 
   return (
     <span
-      className={`relative inline-flex items-center justify-center ${
+      className={`relative inline-flex shrink-0 items-center justify-center ${
         isHand ? "h-9 w-7" : "h-11 w-9 sm:h-12 sm:w-10"
       } ${player === 1 ? "rotate-180" : ""} ${className}`}
     >
-      <span
-        className={`absolute select-none leading-none drop-shadow ${symbolSize}`}
-        style={{ color: pieceColor }}
+      <svg
+        viewBox="0 0 40 48"
+        className="absolute inset-0 h-full w-full drop-shadow-sm"
         aria-hidden
       >
-        {SHOGI_PIECE_SYMBOL[player]}
-      </span>
+        <polygon
+          points={KOMA_POINTS}
+          fill={pieceColor}
+          stroke="rgba(15, 23, 42, 0.35)"
+          strokeWidth="1.2"
+          strokeLinejoin="round"
+        />
+      </svg>
       <span
-        className={`relative z-10 font-bold leading-none text-slate-900 ${labelSize}`}
+        className={`relative z-10 max-h-[70%] overflow-hidden font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl]`}
       >
         {label}
       </span>
