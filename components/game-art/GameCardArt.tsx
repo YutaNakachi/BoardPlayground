@@ -354,18 +354,20 @@ function HexPreview() {
 }
 
 function FoxHoundsPreview() {
+  const colX = [4, 30, 60, 90, 116];
+  const rowY = [16, 60, 104];
   const nodes = [
-    [8, 60],
-    [28, 16],
-    [28, 60],
-    [28, 104],
-    [48, 16],
-    [48, 60],
-    [48, 104],
-    [68, 16],
-    [68, 60],
-    [68, 104],
-    [108, 60],
+    [colX[0], rowY[1]],
+    [colX[1], rowY[0]],
+    [colX[1], rowY[1]],
+    [colX[1], rowY[2]],
+    [colX[2], rowY[0]],
+    [colX[2], rowY[1]],
+    [colX[2], rowY[2]],
+    [colX[3], rowY[0]],
+    [colX[3], rowY[1]],
+    [colX[3], rowY[2]],
+    [colX[4], rowY[1]],
   ];
   const edges = [
     [0, 2],

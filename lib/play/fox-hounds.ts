@@ -55,19 +55,23 @@ export const FH_NEIGHBORS: readonly number[][] = [
   [7, 8, 9], // 10 右端
 ];
 
-/** 描画用の点座標（viewBox 0–100） */
+/** 5列の X 座標（0・123・456・789・10 を等間隔） */
+export const FH_COLUMN_X = [0, 25, 50, 75, 100] as const;
+const FH_ROW_Y = [10, 50, 90] as const;
+
+/** 描画用の点座標 */
 export const FH_NODE_POS: readonly { x: number; y: number }[] = [
-  { x: 2, y: 50 },
-  { x: 20, y: 10 },
-  { x: 20, y: 50 },
-  { x: 20, y: 90 },
-  { x: 50, y: 10 },
-  { x: 50, y: 50 },
-  { x: 50, y: 90 },
-  { x: 80, y: 10 },
-  { x: 80, y: 50 },
-  { x: 80, y: 90 },
-  { x: 98, y: 50 },
+  { x: FH_COLUMN_X[0], y: FH_ROW_Y[1] },
+  { x: FH_COLUMN_X[1], y: FH_ROW_Y[0] },
+  { x: FH_COLUMN_X[1], y: FH_ROW_Y[1] },
+  { x: FH_COLUMN_X[1], y: FH_ROW_Y[2] },
+  { x: FH_COLUMN_X[2], y: FH_ROW_Y[0] },
+  { x: FH_COLUMN_X[2], y: FH_ROW_Y[1] },
+  { x: FH_COLUMN_X[2], y: FH_ROW_Y[2] },
+  { x: FH_COLUMN_X[3], y: FH_ROW_Y[0] },
+  { x: FH_COLUMN_X[3], y: FH_ROW_Y[1] },
+  { x: FH_COLUMN_X[3], y: FH_ROW_Y[2] },
+  { x: FH_COLUMN_X[4], y: FH_ROW_Y[1] },
 ];
 
 /** 盤面の線（表示用）。参照画像どおりに描画 */
