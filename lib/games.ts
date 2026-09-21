@@ -381,7 +381,7 @@ const games: GameMeta[] = [
       "手札を先に出し切ったプレイヤーの勝ち。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "chinese-checkers",
@@ -404,7 +404,7 @@ const games: GameMeta[] = [
       "1つの穴に駒は1個だけ。重ねられない。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "ludo",
@@ -473,7 +473,7 @@ const games: GameMeta[] = [
       "チェックメイトで勝ち。ステイルメイトは引き分け（共同勝利）。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "shogi",
@@ -496,7 +496,7 @@ const games: GameMeta[] = [
       "打ち歩詰め・千日手などの競技ルールは採用しない。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "mini-shogi",
@@ -542,7 +542,7 @@ const games: GameMeta[] = [
       "4つの組札をすべて完成させれば勝ち。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "spider",
@@ -565,7 +565,7 @@ const games: GameMeta[] = [
       "8組すべて完成すれば勝ち。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "mahjong-solitaire",
@@ -588,7 +588,7 @@ const games: GameMeta[] = [
       "盤上の牌をすべて取り除けば勝ち。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "slide-puzzle",
