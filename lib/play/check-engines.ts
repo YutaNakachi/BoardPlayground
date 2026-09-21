@@ -346,6 +346,10 @@ function checkDotsBoxes() {
   assert(boxed !== null && boxed.scores[0] === 1, "dots-and-boxes capture");
   assert(boxed!.current === 0, "dots-and-boxes extra turn on capture");
   assert(dotsBoxesWinners([8, 8]).length === 2, "dots-and-boxes tie");
+  assert(db.edgeOwners["h:0:0"] === 0, "dots-and-boxes edge owner");
+
+  const small = initialDotsBoxes(3);
+  assert(small.rows === 3 && small.owners.length === 9, "dots-and-boxes 3x3");
 }
 
 function checkNim() {
