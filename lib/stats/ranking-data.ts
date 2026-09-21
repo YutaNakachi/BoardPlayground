@@ -25,17 +25,46 @@ export function parseRankingPeriod(value?: string): RankingPeriod {
 function listedSlugTitleMap(): {
   slugToTitle: Map<string, string>;
   listedSlugs: Set<string>;
+  listedSlugList: string[];
+  catalogKey: string;
 } {
   const listed = getAllGames();
+  const listedSlugList = listed.map((g) => g.slug).sort();
   return {
     slugToTitle: new Map(listed.map((g) => [g.slug, g.title])),
-    listedSlugs: new Set(listed.map((g) => g.slug)),
+    listedSlugs: new Set(listedSlugList),
+    listedSlugList,
+    catalogKey: listedSlugList.join(","),
   };
 }
 
-export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[]> {
-  const { slugToTitle, listedSlugs } = listedSlugTitleMap();
+export function aggregateListedPeriodRanking(
+  rows: { game_slug: string; play_count: number }[],
+  listedSlugs: ReadonlySet<string>,
+  slugToTitle: ReadonlyMap<string, string>,
+  limit = 50
+): RankingEntry[] {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    if (!listedSlugs.has(row.game_slug)) continue;
+    totals.set(row.game_slug, (totals.get(row.game_slug) ?? 0) + row.play_count);
+  }
 
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([slug, playCount], i) => ({
+      rank: i + 1,
+      slug,
+      title: slugToTitle.get(slug)!,
+      playCount,
+    }));
+}
+
+export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[]> {
+  const { slugToTitle, listedSlugs, listedSlugList } = listedSlugTitleMap();
+
+  if (listedSlugList.length === 0) return [];
   if (!isSupabaseConfigured()) return [];
 
   const db = getSupabaseAdmin();
@@ -45,17 +74,16 @@ export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[
     const { data } = await db
       .from("game_stats_total")
       .select("game_slug, play_count")
+      .in("game_slug", listedSlugList)
       .order("play_count", { ascending: false })
       .limit(50);
 
-    return (data ?? [])
-      .filter((row) => listedSlugs.has(row.game_slug))
-      .map((row, i) => ({
-        rank: i + 1,
-        slug: row.game_slug,
-        title: slugToTitle.get(row.game_slug)!,
-        playCount: row.play_count,
-      }));
+    return (data ?? []).map((row, i) => ({
+      rank: i + 1,
+      slug: row.game_slug,
+      title: slugToTitle.get(row.game_slug)!,
+      playCount: row.play_count,
+    }));
   }
 
   const startDate = periodStartDate(period)!;
@@ -64,28 +92,16 @@ export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[
   const { data } = await db
     .from("game_stats_daily")
     .select("game_slug, play_count")
+    .in("game_slug", listedSlugList)
     .gte("play_date", startDate)
     .lte("play_date", endDate);
 
-  const totals = new Map<string, number>();
-  for (const row of data ?? []) {
-    totals.set(row.game_slug, (totals.get(row.game_slug) ?? 0) + row.play_count);
-  }
-
-  return [...totals.entries()]
-    .filter(([slug]) => listedSlugs.has(slug))
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 50)
-    .map(([slug, playCount], i) => ({
-      rank: i + 1,
-      slug,
-      title: slugToTitle.get(slug)!,
-      playCount,
-    }));
+  return aggregateListedPeriodRanking(data ?? [], listedSlugs, slugToTitle);
 }
 
 export function fetchRankingCached(period: RankingPeriod): Promise<RankingEntry[]> {
-  return unstable_cache(() => fetchRanking(period), ["ranking", period], {
+  const { catalogKey } = listedSlugTitleMap();
+  return unstable_cache(() => fetchRanking(period), ["ranking", period, catalogKey], {
     revalidate: RANKING_CACHE_SECONDS,
     tags: [`ranking-${period}`],
   })();
