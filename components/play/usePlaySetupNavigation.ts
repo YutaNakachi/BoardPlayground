@@ -14,8 +14,5 @@ export function usePlaySetupNavigation(
       isSetupScreen,
       backToSetup: isSetupScreen ? null : backToSetup,
     });
-    return () => {
-      setSetupNav({ isSetupScreen: true, backToSetup: null });
-    };
   }, [isSetupScreen, backToSetup, setSetupNav]);
 }

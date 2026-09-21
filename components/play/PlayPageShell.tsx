@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { BackToHomeLink } from "@/components/BackToHomeLink";
 import { PageContainer } from "@/components/PageContainer";
+import { PlayCatalogLink } from "@/components/play/PlayCatalogLink";
 import { PlayPageProvider, usePlayPage } from "@/components/play/PlayPageContext";
 import { GameRulesOverlay } from "@/components/rules/GameRulesOverlay";
 import type { GameRulesDocument } from "@/lib/game-rules";
@@ -22,7 +22,7 @@ function PlayPageShellInner({ game, rules, children }: Props) {
     <PageContainer padding="compact">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <BackToHomeLink />
+          <PlayCatalogLink />
           <h1 className="mt-2 text-2xl font-bold">{game.title}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">

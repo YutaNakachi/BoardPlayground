@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRecordPlay } from "@/hooks/useRecordPlay";
 import type { PlayMode } from "@/lib/online/types";
 
@@ -22,6 +29,8 @@ type PlayPageContextValue = {
   setPlayMode: (info: PlayModeInfo) => void;
   setupNav: SetupNav;
   setSetupNav: (nav: SetupNav) => void;
+  registerPlayExit: (handler: () => void) => () => void;
+  exitPlayPage: () => void;
 };
 
 const PlayPageContext = createContext<PlayPageContextValue | null>(null);
@@ -39,6 +48,18 @@ export function PlayPageProvider({
     isSetupScreen: true,
     backToSetup: null,
   });
+  const exitHandlersRef = useRef(new Set<() => void>());
+
+  const registerPlayExit = useCallback((handler: () => void) => {
+    exitHandlersRef.current.add(handler);
+    return () => {
+      exitHandlersRef.current.delete(handler);
+    };
+  }, []);
+
+  const exitPlayPage = useCallback(() => {
+    exitHandlersRef.current.forEach((handler) => handler());
+  }, []);
 
   const recordLocalPlay = useCallback(() => recordPlay("local"), [recordPlay]);
   const recordOnlinePlay = useCallback(() => recordPlay("online"), [recordPlay]);
@@ -52,8 +73,18 @@ export function PlayPageProvider({
       setPlayMode,
       setupNav,
       setSetupNav,
+      registerPlayExit,
+      exitPlayPage,
     }),
-    [gameSlug, recordLocalPlay, recordOnlinePlay, playMode, setupNav]
+    [
+      gameSlug,
+      recordLocalPlay,
+      recordOnlinePlay,
+      playMode,
+      setupNav,
+      registerPlayExit,
+      exitPlayPage,
+    ]
   );
 
   return (
@@ -72,6 +103,8 @@ export function usePlayPage(): PlayPageContextValue {
       setPlayMode: () => {},
       setupNav: { isSetupScreen: true, backToSetup: null },
       setSetupNav: () => {},
+      registerPlayExit: () => () => {},
+      exitPlayPage: () => {},
     };
   }
   return ctx;

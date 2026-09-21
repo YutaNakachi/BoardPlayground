@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePlayPage } from "@/components/play/PlayPageContext";
 import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
 import {
@@ -16,6 +17,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 type OnlinePhase = "idle" | "waiting" | "playing" | "finished";
 
 export function useOnlineRoom(gameSlug: string) {
+  const { registerPlayExit } = usePlayPage();
   const [phase, setPhase] = useState<OnlinePhase>("idle");
   const [room, setRoom] = useState<RoomInfo | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -26,8 +28,19 @@ export function useOnlineRoom(gameSlug: string) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const realtimeCleanupRef = useRef<(() => void) | undefined>(undefined);
   const versionRef = useRef(0);
   const pendingMoveRef = useRef(false);
+
+  const clearRealtime = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    realtimeCleanupRef.current?.();
+    realtimeCleanupRef.current = undefined;
+    pendingMoveRef.current = false;
+  }, []);
 
   useEffect(() => {
     versionRef.current = version;
@@ -101,22 +114,28 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
+    return registerPlayExit(clearRealtime);
+  }, [registerPlayExit, clearRealtime]);
+
+  useEffect(() => {
+    return clearRealtime;
+  }, [clearRealtime]);
 
   const setupRoom = useCallback(
     (roomId: string, playerId: string, seatIndex: number, roomInfo: RoomInfo) => {
+      clearRealtime();
       setMyPlayerId(playerId);
       setMySeat(seatIndex);
       setRoom(roomInfo);
       setPhase(roomInfo.status === "waiting" ? "waiting" : "playing");
       const cleanup = subscribeRealtime(roomId);
+      if (cleanup) {
+        realtimeCleanupRef.current = cleanup;
+      }
       void refreshRoom(roomId);
       return cleanup;
     },
-    [refreshRoom, subscribeRealtime]
+    [clearRealtime, refreshRoom, subscribeRealtime]
   );
 
   const handleCreate = useCallback(
@@ -215,8 +234,7 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const reset = useCallback(() => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pendingMoveRef.current = false;
+    clearRealtime();
     setPhase("idle");
     setRoom(null);
     setGameState(null);
@@ -225,7 +243,7 @@ export function useOnlineRoom(gameSlug: string) {
     setMyPlayerId("");
     setMySeat(-1);
     setError(null);
-  }, []);
+  }, [clearRealtime]);
 
   const isHost = room?.hostPlayerId === myPlayerId;
   const isMyTurn = currentPlayer === mySeat;
