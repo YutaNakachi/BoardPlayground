@@ -62,7 +62,18 @@ import {
   removeMahjongPair,
 } from "./mahjong-solitaire";
 import { initialMancala, sowMancala } from "./mancala";
-import { miniShogiMoves, initialMiniShogiState } from "./mini-shogi";
+import {
+  applyMiniShogiMove,
+  canChoosePromotion,
+  enemyBackRank,
+  initialMiniShogiState,
+  miniShogiIndex,
+  miniShogiMoves,
+  miniShogiPositionKey,
+  miniShogiStatus,
+  mustPromote,
+  repetitionCount,
+} from "./mini-shogi";
 import {
   applyNebulaPass,
   applyNebulaPlace,
@@ -732,12 +743,79 @@ function checkShogi() {
   assert(shogiMoves(shogi).length > 0, "shogi opening moves");
   const mini = initialMiniShogiState();
   assert(miniShogiMoves(mini).length > 0, "mini-shogi opening moves");
+  assert(mini.board[miniShogiIndex(0, 0)]?.type === "R", "mini-shogi gote rook at 5一");
+  assert(mini.board[miniShogiIndex(4, 4)]?.type === "R", "mini-shogi sente rook at 1五");
+  assert(mini.hands[0].G === 0 && mini.hands[1].G === 0, "mini-shogi no initial hand");
   assert(
     !miniShogiMoves(mini).some(
-      (m) => m.kind === "drop" && m.piece === "P" && m.to === 0
+      (m) => m.kind === "drop" && m.piece === "P" && m.to === enemyBackRank(0)
     ),
     "mini-shogi no pawn drop on last rank"
   );
+
+  const sentePawn = mini.board[miniShogiIndex(3, 0)]!;
+  assert(
+    mustPromote(sentePawn, miniShogiIndex(0, 0)),
+    "mini-shogi pawn must promote on enemy back rank"
+  );
+  const senteSilver = mini.board[miniShogiIndex(4, 2)]!;
+  assert(
+    canChoosePromotion(senteSilver, miniShogiIndex(1, 2), miniShogiIndex(0, 2)),
+    "mini-shogi silver can promote when entering enemy back rank"
+  );
+  assert(
+    !canChoosePromotion(senteSilver, miniShogiIndex(4, 2), miniShogiIndex(3, 2)),
+    "mini-shogi silver no promotion on own territory"
+  );
+
+  const promoState: ReturnType<typeof initialMiniShogiState> = {
+    board: Array(25).fill(null),
+    hands: [
+      { G: 0, S: 0, B: 0, R: 0, P: 0 },
+      { G: 0, S: 0, B: 0, R: 0, P: 0 },
+    ],
+    current: 0,
+    positionCounts: {},
+  };
+  promoState.board[miniShogiIndex(1, 2)] = { type: "S", player: 0, promoted: false };
+  promoState.board[miniShogiIndex(4, 0)] = { type: "K", player: 0, promoted: false };
+  promoState.positionCounts[miniShogiPositionKey(promoState)] = 1;
+  const promoChoice = miniShogiMoves(promoState).filter(
+    (m) =>
+      m.kind === "move" &&
+      m.from === miniShogiIndex(1, 2) &&
+      m.to === miniShogiIndex(0, 2)
+  );
+  assert(promoChoice.length === 2, "mini-shogi promotion choice when entering enemy back rank");
+
+  const kingCapture: ReturnType<typeof initialMiniShogiState> = {
+    board: Array(25).fill(null),
+    hands: [
+      { G: 0, S: 0, B: 0, R: 0, P: 0 },
+      { G: 0, S: 0, B: 0, R: 0, P: 0 },
+    ],
+    current: 0,
+    positionCounts: {},
+  };
+  kingCapture.board[miniShogiIndex(0, 2)] = { type: "K", player: 1, promoted: false };
+  kingCapture.board[miniShogiIndex(4, 2)] = { type: "R", player: 0, promoted: false };
+  kingCapture.positionCounts[miniShogiPositionKey(kingCapture)] = 1;
+  const capturedKing = applyMiniShogiMove(kingCapture, {
+    kind: "move",
+    from: miniShogiIndex(4, 2),
+    to: miniShogiIndex(0, 2),
+    promote: false,
+  });
+  assert(
+    miniShogiStatus(capturedKing).kind === "king-captured",
+    "mini-shogi king capture wins"
+  );
+
+  const rep = initialMiniShogiState();
+  assert(repetitionCount(rep) === 1, "mini-shogi initial position counted once");
+  const repKey = miniShogiPositionKey(rep);
+  rep.positionCounts[repKey] = 4;
+  assert(miniShogiStatus(rep).kind === "repetition", "mini-shogi repetition gote wins");
 }
 
 function checkSpider() {
