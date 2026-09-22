@@ -9,18 +9,16 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
   applyHexSwap,
   declineHexSwap,
-  HEX_BORDER_COLORS,
+  HEX_BORDER_STROKE,
+  HEX_BORDER_STROKE_WIDTH,
   HEX_CELL_FILL,
   HEX_CELL_FILL_WIN,
   HEX_GRID_STROKE,
   HEX_GRID_STROKE_WIDTH,
   HEX_STONE_COLORS,
-  hexBoardBorders,
-  hexBorderPolyline,
+  hexBoardEdges,
   hexCenter,
   hexCoord,
-  hexCornerMarkers,
-  hexGridEdges,
   hexPolygonPoints,
   hexViewBox,
   initialHexState,
@@ -93,9 +91,7 @@ export function HexGame() {
   const backToSetup = useCallback(() => setPhase("setup"), []);
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
-  const boardBorders = useMemo(() => hexBoardBorders(), []);
-  const gridEdges = useMemo(() => hexGridEdges(), []);
-  const cornerMarkers = useMemo(() => hexCornerMarkers(), []);
+  const boardEdges = useMemo(() => hexBoardEdges(), []);
 
   const winPathSet = useMemo(
     () => new Set(winResult?.path ?? []),
@@ -177,13 +173,7 @@ export function HexGame() {
         >
           <defs>
             <filter id="hex-win-glow" x="-80%" y="-80%" width="260%" height="260%">
-              <feDropShadow dx="0" dy="0" stdDeviation="0.12" floodColor="#fbbf24" />
-            </filter>
-            <filter id="hex-border-glow-red" x="-40%" y="-40%" width="180%" height="180%">
-              <feDropShadow dx="0" dy="0" stdDeviation="0.1" floodColor="#ef4444" />
-            </filter>
-            <filter id="hex-border-glow-blue" x="-40%" y="-40%" width="180%" height="180%">
-              <feDropShadow dx="0" dy="0" stdDeviation="0.1" floodColor="#3b82f6" />
+              <feDropShadow dx="0" dy="0" stdDeviation="0.1" floodColor="#fbbf24" />
             </filter>
           </defs>
 
@@ -192,9 +182,55 @@ export function HexGame() {
             y={VIEW_BOX.y}
             width={VIEW_BOX.width}
             height={VIEW_BOX.height}
-            fill="#0a101c"
+            fill="#0b1220"
             rx="0.5"
           />
+
+          {game.board.map((cell, index) => {
+            const { row, col } = hexCoord(index);
+            const points = hexPolygonPoints(row, col);
+
+            return (
+              <polygon
+                key={`fill-${index}`}
+                points={points}
+                fill={winPathSet.has(index) ? HEX_CELL_FILL_WIN : HEX_CELL_FILL}
+                className={
+                  cell === null && !isGameOver && !game.swapPending
+                    ? "cursor-pointer"
+                    : ""
+                }
+                onMouseEnter={() => {
+                  if (cell === null && !isGameOver && !game.swapPending) {
+                    setHoverIndex(index);
+                  }
+                }}
+                onClick={() => handlePlace(index)}
+              />
+            );
+          })}
+
+          {boardEdges.map((edge, i) => (
+            <line
+              key={i}
+              x1={edge.a.x}
+              y1={edge.a.y}
+              x2={edge.b.x}
+              y2={edge.b.y}
+              stroke={
+                edge.border === "red"
+                  ? HEX_BORDER_STROKE.red
+                  : edge.border === "blue"
+                    ? HEX_BORDER_STROKE.blue
+                    : HEX_GRID_STROKE
+              }
+              strokeWidth={
+                edge.border ? HEX_BORDER_STROKE_WIDTH : HEX_GRID_STROKE_WIDTH
+              }
+              strokeLinecap="round"
+              className="pointer-events-none"
+            />
+          ))}
 
           {game.board.map((cell, index) => {
             const { row, col } = hexCoord(index);
@@ -203,31 +239,14 @@ export function HexGame() {
             const isHover =
               hoverIndex === index && cell === null && !isGameOver && !game.swapPending;
             const isLast = lastPlaced === index;
-            const stone = cell;
 
             return (
-              <g key={index}>
-                <polygon
-                  points={points}
-                  fill={isWinCell ? HEX_CELL_FILL_WIN : HEX_CELL_FILL}
-                  className={
-                    cell === null && !isGameOver && !game.swapPending
-                      ? "cursor-pointer"
-                      : ""
-                  }
-                  onMouseEnter={() => {
-                    if (cell === null && !isGameOver && !game.swapPending) {
-                      setHoverIndex(index);
-                    }
-                  }}
-                  onClick={() => handlePlace(index)}
-                />
+              <g key={`piece-${index}`} className="pointer-events-none">
                 {isHover && (
                   <polygon
                     points={points}
                     fill={HEX_STONE_COLORS[currentStone].fill}
                     opacity={0.32}
-                    className="pointer-events-none"
                   />
                 )}
                 {isWinCell && (
@@ -235,84 +254,26 @@ export function HexGame() {
                     points={points}
                     fill="none"
                     stroke="#fbbf24"
-                    strokeWidth={0.1}
-                    opacity={0.85}
-                    className="pointer-events-none"
+                    strokeWidth={0.09}
+                    opacity={0.9}
                     filter="url(#hex-win-glow)"
                   />
                 )}
-                {stone !== null && (
+                {cell !== null && (
                   <circle
                     cx={hexCenter(row, col).x}
                     cy={hexCenter(row, col).y}
                     r={isLast ? 0.44 : 0.4}
-                    fill={HEX_STONE_COLORS[stone].fill}
-                    stroke={HEX_STONE_COLORS[stone].stroke}
+                    fill={HEX_STONE_COLORS[cell].fill}
+                    stroke={HEX_STONE_COLORS[cell].stroke}
                     strokeWidth={0.05}
-                    className="pointer-events-none transition-all duration-200"
+                    className="transition-all duration-200"
                     filter={isWinCell ? "url(#hex-win-glow)" : undefined}
                   />
                 )}
               </g>
             );
           })}
-
-          <g stroke={HEX_GRID_STROKE} strokeWidth={HEX_GRID_STROKE_WIDTH} strokeLinecap="round">
-            {gridEdges.map(([a, b], i) => (
-              <line
-                key={i}
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                className="pointer-events-none"
-              />
-            ))}
-          </g>
-
-          {boardBorders.map((border) => {
-            const colors = HEX_BORDER_COLORS[border.color];
-            const filterId =
-              border.color === "red"
-                ? "url(#hex-border-glow-red)"
-                : "url(#hex-border-glow-blue)";
-            const polylinePoints = hexBorderPolyline(border);
-            return (
-              <g key={border.side} filter={filterId}>
-                <polyline
-                  points={polylinePoints}
-                  fill="none"
-                  stroke="rgba(0,0,0,0.45)"
-                  strokeWidth={0.34}
-                  strokeLinejoin="miter"
-                  strokeLinecap="butt"
-                  className="pointer-events-none"
-                />
-                <polyline
-                  points={polylinePoints}
-                  fill="none"
-                  stroke={colors.stroke}
-                  strokeWidth={0.2}
-                  strokeLinejoin="miter"
-                  strokeLinecap="butt"
-                  className="pointer-events-none"
-                />
-              </g>
-            );
-          })}
-
-          {cornerMarkers.map((marker, i) => (
-            <circle
-              key={i}
-              cx={marker.point.x}
-              cy={marker.point.y}
-              r={0.16}
-              fill="#cbd5e1"
-              stroke="#0f172a"
-              strokeWidth={0.04}
-              className="pointer-events-none"
-            />
-          ))}
         </svg>
       </div>
 

@@ -108,104 +108,79 @@ export function hexPolygonPoints(row: number, col: number): string {
 
 export type HexPoint = { x: number; y: number };
 
-export type HexBoardBorder = {
-  side: "north" | "south" | "east" | "west";
-  color: "red" | "blue";
-  points: HexPoint[];
+/** 各辺がどの隣接マスに接続するか（side 0〜5） */
+const HEX_SIDE_NEIGHBOR = [
+  { dr: -1, dc: 0 },
+  { dr: -1, dc: 1 },
+  { dr: 0, dc: 1 },
+  { dr: 1, dc: 0 },
+  { dr: 1, dc: -1 },
+  { dr: 0, dc: -1 },
+] as const;
+
+function edgeKey(a: HexPoint, b: HexPoint): string {
+  return [
+    `${a.x.toFixed(4)},${a.y.toFixed(4)}`,
+    `${b.x.toFixed(4)},${b.y.toFixed(4)}`,
+  ]
+    .sort()
+    .join("|");
+}
+
+/** 盤外周の辺の色（斜め外周も含む） */
+function outerEdgeColor(side: number, row: number, col: number): "red" | "blue" {
+  const last = HEX_SIZE - 1;
+  if (side === 0 || side === 3) return "red";
+  if (side === 2 || side === 5) return "blue";
+  if (side === 1) return row === 0 ? "red" : "blue";
+  return col === 0 ? "blue" : "red";
+}
+
+export type HexBoardEdge = {
+  a: HexPoint;
+  b: HexPoint;
+  border: "red" | "blue" | null;
 };
 
-function pointsToPolyline(points: HexPoint[]): string {
-  return points.map((p) => `${p.x},${p.y}`).join(" ");
-}
-
-/** 盤外周の4辺（角で重ならない連続パス。赤=南北、青=東西） */
-export function hexBoardBorders(): HexBoardBorder[] {
-  const last = HEX_SIZE - 1;
-  const topLeft = hexCorner(0, 0, 3);
-  const topRight = hexCorner(0, last, 5);
-  const bottomRight = hexCorner(last, last, 1);
-  const bottomLeft = hexCorner(last, 0, 2);
-
-  const north: HexPoint[] = [topLeft];
-  for (let col = 0; col < HEX_SIZE; col++) north.push(hexCorner(0, col, 4));
-  north.push(topRight);
-
-  const east: HexPoint[] = [topRight];
-  for (let row = 0; row < HEX_SIZE; row++) east.push(hexCorner(row, last, 0));
-  east.push(bottomRight);
-
-  const south: HexPoint[] = [bottomRight];
-  for (let col = last; col >= 0; col--) south.push(hexCorner(last, col, 1));
-  south.push(bottomLeft);
-
-  const west: HexPoint[] = [bottomLeft];
-  for (let row = last; row >= 0; row--) west.push(hexCorner(row, 0, 3));
-
-  return [
-    { side: "north", color: "red", points: north },
-    { side: "east", color: "blue", points: east },
-    { side: "south", color: "red", points: south },
-    { side: "west", color: "blue", points: west },
-  ];
-}
-
-export function hexBorderPolyline(border: HexBoardBorder): string {
-  return pointsToPolyline(border.points);
-}
-
-/** 四隅の陣地表示（赤・青が接する角） */
-export function hexCornerMarkers(): {
-  point: HexPoint;
-  red: boolean;
-  blue: boolean;
-}[] {
-  const last = HEX_SIZE - 1;
-  return [
-    { point: hexCorner(0, 0, 3), red: true, blue: true },
-    { point: hexCorner(0, last, 5), red: true, blue: true },
-    { point: hexCorner(last, 0, 2), red: true, blue: true },
-    { point: hexCorner(last, last, 1), red: true, blue: true },
-  ];
-}
-
-/** グリッド線を二重描画しないよう、辺を一意化して返す */
-export function hexGridEdges(): [HexPoint, HexPoint][] {
-  const seen = new Set<string>();
-  const edges: [HexPoint, HexPoint][] = [];
-
-  const addEdge = (a: HexPoint, b: HexPoint) => {
-    const key = [
-      `${a.x.toFixed(4)},${a.y.toFixed(4)}`,
-      `${b.x.toFixed(4)},${b.y.toFixed(4)}`,
-    ]
-      .sort()
-      .join("|");
-    if (seen.has(key)) return;
-    seen.add(key);
-    edges.push([a, b]);
-  };
+/** グリッド辺を一意化。外周は赤/青、内部は null */
+export function hexBoardEdges(): HexBoardEdge[] {
+  const seen = new Map<string, HexBoardEdge>();
 
   for (let row = 0; row < HEX_SIZE; row++) {
     for (let col = 0; col < HEX_SIZE; col++) {
-      for (let i = 0; i < 6; i++) {
-        const a = hexCorner(row, col, i as 0 | 1 | 2 | 3 | 4 | 5);
-        const b = hexCorner(row, col, ((i + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5);
-        addEdge(a, b);
+      for (let side = 0; side < 6; side++) {
+        const a = hexCorner(row, col, side as 0 | 1 | 2 | 3 | 4 | 5);
+        const b = hexCorner(row, col, ((side + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5);
+        const key = edgeKey(a, b);
+        if (seen.has(key)) continue;
+
+        const { dr, dc } = HEX_SIDE_NEIGHBOR[side];
+        const nr = row + dr;
+        const nc = col + dc;
+        const hasNeighbor =
+          nr >= 0 && nr < HEX_SIZE && nc >= 0 && nc < HEX_SIZE;
+
+        seen.set(key, {
+          a,
+          b,
+          border: hasNeighbor ? null : outerEdgeColor(side, row, col),
+        });
       }
     }
   }
 
-  return edges;
+  return Array.from(seen.values());
 }
 
-export const HEX_GRID_STROKE = "#334155";
-export const HEX_GRID_STROKE_WIDTH = 0.045;
+export const HEX_GRID_STROKE = "#3d4f63";
+export const HEX_GRID_STROKE_WIDTH = 0.05;
 export const HEX_CELL_FILL = "#1a2332";
-export const HEX_CELL_FILL_WIN = "#252018";
-export const HEX_BORDER_COLORS = {
-  red: { stroke: "#f87171", glow: "rgba(248,113,113,0.35)" },
-  blue: { stroke: "#60a5fa", glow: "rgba(96,165,250,0.35)" },
+export const HEX_CELL_FILL_WIN = "#2a2418";
+export const HEX_BORDER_STROKE = {
+  red: "#f87171",
+  blue: "#60a5fa",
 } as const;
+export const HEX_BORDER_STROKE_WIDTH = 0.1;
 
 function isStartCell(stone: Stone, row: number, col: number): boolean {
   return stone === 0 ? row === 0 : col === 0;
