@@ -2,7 +2,7 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -37,21 +37,19 @@ export function MancalaGame() {
   const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [pits, setPits] = useState<number[]>(initialMancala);
-  const [displayPits, setDisplayPits] = useState<number[]>(initialMancala);
+  const [animatedPits, setAnimatedPits] = useState<number[]>(initialMancala);
   const [current, setCurrent] = useState<Player>(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [pulseIndex, setPulseIndex] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!isAnimating) setDisplayPits(pits);
-  }, [pits, isAnimating]);
+  const visiblePits = isAnimating ? animatedPits : pits;
 
   const startGame = useCallback(() => {
     recordLocalPlay();
     const initial = initialMancala();
     setPits(initial);
-    setDisplayPits(initial);
+    setAnimatedPits(initial);
     setCurrent(0);
     setNotice(null);
     setPulseIndex(null);
@@ -70,16 +68,17 @@ export function MancalaGame() {
       setIsAnimating(true);
       setNotice(null);
 
+      setAnimatedPits(frames[0]);
+
       for (let i = 1; i < frames.length; i++) {
         await sleep(SOW_STEP_MS);
-        setDisplayPits(frames[i]);
+        setAnimatedPits(frames[i]);
         setPulseIndex(findIncreasedPit(frames[i - 1], frames[i]));
       }
 
       await sleep(120);
       setPulseIndex(null);
       setPits(result.pits);
-      setDisplayPits(result.pits);
 
       if (result.over) {
         setPhase("game-over");
@@ -153,7 +152,7 @@ export function MancalaGame() {
 
       <div className="mx-auto grid max-w-xl grid-cols-8 gap-1.5 sm:gap-2">
         <Store
-          count={displayPits[13]}
+          count={visiblePits[13]}
           label="P2 ゴール"
           playerIndex={1}
           active={current === 1}
@@ -162,7 +161,7 @@ export function MancalaGame() {
         {P2_PITS.map((pitIndex) => (
           <PitButton
             key={pitIndex}
-            count={displayPits[pitIndex]}
+            count={visiblePits[pitIndex]}
             label="P2 穴"
             playerIndex={1}
             playable={
@@ -173,7 +172,7 @@ export function MancalaGame() {
           />
         ))}
         <Store
-          count={displayPits[6]}
+          count={visiblePits[6]}
           label="P1 ゴール"
           playerIndex={0}
           active={current === 0}
@@ -182,7 +181,7 @@ export function MancalaGame() {
         {P1_PITS.map((pitIndex) => (
           <PitButton
             key={pitIndex}
-            count={displayPits[pitIndex]}
+            count={visiblePits[pitIndex]}
             label="P1 穴"
             playerIndex={0}
             playable={
