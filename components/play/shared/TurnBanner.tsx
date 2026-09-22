@@ -10,25 +10,6 @@ type Props = {
   notice?: string;
 };
 
-function BannerLine({
-  text,
-  className,
-  first,
-}: {
-  text?: string;
-  className: string;
-  first?: boolean;
-}) {
-  const visible = Boolean(text);
-  return (
-    <p
-      className={`${first ? "mt-2" : "mt-1"} min-h-[1.25rem] pl-7 text-sm ${visible ? className : "invisible"}`}
-    >
-      {text || "\u00A0"}
-    </p>
-  );
-}
-
 export function TurnBanner({
   playerIndex,
   playerLabel,
@@ -37,6 +18,7 @@ export function TurnBanner({
   notice,
 }: Props) {
   const style = getPlayerTurnStyle(playerIndex);
+  const hasSubtitle = Boolean(stats || action || notice);
 
   return (
     <div
@@ -52,9 +34,22 @@ export function TurnBanner({
           <span className="text-slate-200">の手番</span>
         </p>
       </div>
-      <BannerLine text={stats} className="text-slate-400" first />
-      <BannerLine text={action} className={`font-medium ${style.label}`} />
-      <BannerLine text={notice} className="text-amber-200" />
+      <p
+        className={`mt-2 min-h-[1.25rem] pl-7 text-sm ${hasSubtitle ? "" : "invisible"}`}
+      >
+        {stats ? <span className="text-slate-400">{stats}</span> : null}
+        {stats && (action || notice) ? (
+          <span className="text-slate-500"> · </span>
+        ) : null}
+        {action ? (
+          <span className={`font-medium ${style.label}`}>{action}</span>
+        ) : null}
+        {(stats || action) && notice ? (
+          <span className="text-slate-500"> · </span>
+        ) : null}
+        {notice ? <span className="text-amber-200">{notice}</span> : null}
+        {!hasSubtitle ? "\u00A0" : null}
+      </p>
     </div>
   );
 }
