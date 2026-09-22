@@ -55,8 +55,19 @@ alwaysApply: false
 
 `docs/future-online-lobby.md` — 常設ロビー、再接続、プレゼンス、再戦・別ゲーム。1 PR で全部やらず、再戦 → 再接続 → プレゼンス → ロビー化の順を推奨。
 
+## DB マイグレーション（Cloud Agent）
+
+環境シークレットが設定済みなら Agent が実行可能:
+
+```bash
+npm run db:migrate   # supabase/migrations を適用
+npm run db:check     # 接続・主要テーブル確認
+```
+
+設定手順: `docs/cloud-agent-supabase.md`
+
 ## 出力
 
 - 変更概要と影響範囲（API / DB / クライアント）
-- マイグレーションがある場合は Supabase への適用手順
+- マイグレーションがある場合は `npm run db:migrate` 実行結果または手動 SQL 手順
 - 2ブラウザ手動テスト手順

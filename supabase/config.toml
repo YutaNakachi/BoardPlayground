@@ -1,0 +1,5 @@
+# Used by `npm run db:migrate` (supabase db push --db-url).
+# Remote project is selected via SUPABASE_DB_URL in Cloud Agent secrets.
+
+[db]
+major_version = 15
