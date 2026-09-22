@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "ホストのみ開始できます" }, { status: 403 });
   }
 
-  if (room.status !== "waiting") {
+  if (room.status !== "waiting" && room.status !== "finished") {
     return NextResponse.json({ error: "既に開始されています" }, { status: 409 });
   }
 
@@ -59,12 +59,22 @@ export async function POST(request: Request, { params }: Params) {
 
   const initialState = createInitialState(room.game_slug, room.game_options);
 
-  const { error: stateError } = await db.from("room_state").insert({
-    room_id: id,
+  const { data: existingState } = await db
+    .from("room_state")
+    .select("room_id")
+    .eq("room_id", id)
+    .maybeSingle();
+
+  const statePayload = {
     state: initialState,
     version: 1,
     current_player: 0,
-  });
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: stateError } = existingState
+    ? await db.from("room_state").update(statePayload).eq("room_id", id)
+    : await db.from("room_state").insert({ room_id: id, ...statePayload });
 
   if (stateError) {
     return NextResponse.json({ error: "Failed to start game" }, { status: 500 });

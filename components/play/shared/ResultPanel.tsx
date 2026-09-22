@@ -6,7 +6,9 @@ import { formatWinners } from "@/lib/game-engine";
 type Props = {
   winners: number[];
   details?: ReactNode;
-  onReplay: () => void;
+  onReplay?: () => void;
+  replayLabel?: string;
+  replayHint?: string;
   /** オンライン対局など、席番号以外の勝者表示名を使う場合 */
   winnersLabel?: string;
   /** 1人用ゲームなど、勝者行を出さない場合 */
@@ -19,6 +21,8 @@ export function ResultPanel({
   winners,
   details,
   onReplay,
+  replayLabel = "もう一度",
+  replayHint,
   winnersLabel,
   solo = false,
   variant = "default",
@@ -42,13 +46,19 @@ export function ResultPanel({
         </p>
       ) : null}
       {details ? <div className={inline ? "mt-2" : "mt-4"}>{details}</div> : null}
-      <button
-        type="button"
-        onClick={onReplay}
-        className={inline ? "btn-game mt-4" : "btn-game mt-8"}
-      >
-        もう一度
-      </button>
+      {onReplay ? (
+        <button
+          type="button"
+          onClick={onReplay}
+          className={inline ? "btn-game mt-4" : "btn-game mt-8"}
+        >
+          {replayLabel}
+        </button>
+      ) : replayHint ? (
+        <p className={inline ? "mt-4 text-sm text-slate-400" : "mt-8 text-sm text-slate-400"}>
+          {replayHint}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import type { GomokuState } from "@/lib/online/moves";
 import {
   formatSeatLabel,
@@ -160,6 +161,12 @@ export function GomokuGame() {
 
   const isGameOver = activePhase === "game-over" && winners !== null;
   const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    online.handleRematch,
+    reset
+  );
 
   return (
     <div className="space-y-6">
@@ -170,7 +177,7 @@ export function GomokuGame() {
           winnersLabel={
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }
-          onReplay={reset}
+          {...replayProps}
           details={
             <p className="text-slate-400">
               {activeWinner === "draw"

@@ -9,6 +9,7 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import type { CheckersState } from "@/lib/online/moves";
 import {
   formatSeatLabel,
@@ -241,6 +242,12 @@ export function CheckersGame() {
 
   const isGameOver = activePhase === "game-over" && activeWinner !== null;
   const winners = isGameOver ? [activeWinner] : null;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    online.handleRematch,
+    reset
+  );
 
   return (
     <div className="space-y-6">
@@ -253,7 +260,7 @@ export function CheckersGame() {
               ? formatWinnersWithNames(roomPlayers, winners)
               : undefined
           }
-          onReplay={reset}
+          {...replayProps}
           details={
             <p className="text-slate-400">
               相手の駒がなくなったか、相手が動ける手がありませんでした。
