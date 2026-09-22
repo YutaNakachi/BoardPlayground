@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
 import { isValidPlayerId } from "@/lib/online/player-id";
+import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 
 export async function POST(request: Request) {
   const backend = await requireOnlineBackend();
@@ -29,11 +30,26 @@ export async function POST(request: Request) {
 
   const normalizedCode = code.trim().toUpperCase();
 
-  const { data: room } = await db
+  const roomSelectWithOptions = await db
     .from("rooms")
-    .select("id, code, game_slug, status, host_player_id, expires_at")
+    .select("id, code, game_slug, status, host_player_id, expires_at, game_options")
     .eq("code", normalizedCode)
     .maybeSingle();
+
+  let room = roomSelectWithOptions.data;
+  if (roomSelectWithOptions.error && isMissingGameOptionsColumn(roomSelectWithOptions.error)) {
+    const roomSelectBase = await db
+      .from("rooms")
+      .select("id, code, game_slug, status, host_player_id, expires_at")
+      .eq("code", normalizedCode)
+      .maybeSingle();
+    room = roomSelectBase.data
+      ? { ...roomSelectBase.data, game_options: {} }
+      : null;
+  } else if (roomSelectWithOptions.error) {
+    console.error("[rooms/join]", roomSelectWithOptions.error.message);
+    return NextResponse.json({ error: "部屋情報の取得に失敗しました" }, { status: 500 });
+  }
 
   if (!room) {
     return NextResponse.json({ error: "部屋が見つかりません" }, { status: 404 });
@@ -85,6 +101,7 @@ export async function POST(request: Request) {
     status: room.status,
     gameSlug: room.game_slug,
     hostPlayerId: room.host_player_id,
+    gameOptions: (room.game_options as Record<string, unknown> | null) ?? {},
     players: (players ?? []).map((p) => ({
       playerId: p.player_id,
       seatIndex: p.seat_index,

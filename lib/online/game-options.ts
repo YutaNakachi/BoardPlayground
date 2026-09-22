@@ -40,3 +40,16 @@ export function parseStoredGameOptions(
 ): OnlineGameOptions {
   return validateGameOptions(slug, raw) ?? {};
 }
+
+/** デフォルト以外のオプション（DB に game_options 列が必要） */
+export function hasNonDefaultGameOptions(
+  slug: OnlineGameSlug,
+  options: OnlineGameOptions
+): boolean {
+  switch (slug) {
+    case "tic-tac-toe":
+      return (options as TicTacToeGameOptions).mode !== "classic";
+    default:
+      return Object.keys(options).length > 0;
+  }
+}
