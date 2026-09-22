@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
+import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import { parseTicTacToeGameOptions } from "@/lib/online/game-options";
 import type { TttState } from "@/lib/online/moves";
@@ -82,6 +84,7 @@ export function TicTacToeGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const { onlineEnabled } = usePlayStats();
   const online = useOnlineRoom("tic-tac-toe");
+  const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
   const [mode, setMode] = useState<PlayMode>("local");
   const [gameMode, setGameMode] = useState<TttMode>("classic");
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
@@ -187,6 +190,16 @@ export function TicTacToeGame() {
   const waitingGameMode = online.room
     ? parseTicTacToeGameOptions(online.room.gameOptions).mode
     : gameMode;
+  const onlineSetupExtra = (
+    <>
+      {ruleExtra}
+      <OnlineFirstPlayerPicker
+        players={online.players}
+        value={firstPlayer}
+        onChange={onFirstPlayerChange}
+      />
+    </>
+  );
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
@@ -197,13 +210,16 @@ export function TicTacToeGame() {
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
         onCreateRoom={(displayName) =>
-          online.handleCreate(displayName, { mode: gameMode })
+          online.handleCreate(displayName, {
+            mode: gameMode,
+            ...(firstPlayer === 1 ? { firstPlayer: 1 } : {}),
+          })
         }
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
         error={online.error}
-        extra={ruleExtra}
+        extra={mode === "online" ? onlineSetupExtra : ruleExtra}
       />
     );
   }
@@ -225,9 +241,19 @@ export function TicTacToeGame() {
           code: online.room.code,
           players: online.players,
           isHost: online.isHost,
-          onStart: online.handleStart,
+          onStart: () => online.handleStart(firstPlayer),
           canStart: online.players.length >= 2,
-          extra: modeSetupExtra(waitingGameMode, () => {}, true),
+          extra: (
+            <>
+              {modeSetupExtra(waitingGameMode, () => {}, true)}
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                onChange={online.isHost ? onFirstPlayerChange : undefined}
+                readOnly={!online.isHost}
+              />
+            </>
+          ),
         }}
       />
     );
@@ -242,7 +268,7 @@ export function TicTacToeGame() {
   const replayProps = getOnlineResultReplayProps(
     isOnline,
     online.isHost,
-    online.handleRematch,
+    () => online.handleRematch(firstPlayer),
     reset
   );
 
@@ -256,6 +282,15 @@ export function TicTacToeGame() {
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }
           {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                onChange={onFirstPlayerChange}
+              />
+            ) : undefined
+          }
           details={
             <p className="text-slate-400">
               {activeWinner === "draw"

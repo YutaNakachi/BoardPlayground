@@ -1,20 +1,58 @@
 import type { TttMode } from "@/lib/play/tic-tac-toe";
 import type { OnlineGameSlug } from "./types";
 
-export type TicTacToeGameOptions = {
-  mode: TttMode;
+export type FirstPlayerSeat = 0 | 1;
+
+export type CommonGameOptions = {
+  firstPlayer?: FirstPlayerSeat;
 };
 
-export type OnlineGameOptions = TicTacToeGameOptions | Record<string, never>;
+export type TicTacToeGameOptions = {
+  mode: TttMode;
+  firstPlayer?: FirstPlayerSeat;
+};
 
-export function parseTicTacToeGameOptions(raw: unknown): TicTacToeGameOptions {
-  if (raw && typeof raw === "object" && "mode" in raw) {
-    const mode = (raw as { mode: unknown }).mode;
-    if (mode === "classic" || mode === "rotating") {
-      return { mode };
+export type OnlineGameOptions = TicTacToeGameOptions | CommonGameOptions;
+
+export function parseFirstPlayer(raw: unknown): FirstPlayerSeat {
+  if (raw && typeof raw === "object" && "firstPlayer" in raw) {
+    const firstPlayer = (raw as { firstPlayer: unknown }).firstPlayer;
+    if (firstPlayer === 0 || firstPlayer === 1) {
+      return firstPlayer;
     }
   }
-  return { mode: "classic" };
+  return 0;
+}
+
+function normalizeFirstPlayer(
+  options: { firstPlayer?: FirstPlayerSeat }
+): CommonGameOptions {
+  return options.firstPlayer === 1 ? { firstPlayer: 1 } : {};
+}
+
+export function parseTicTacToeGameOptions(raw: unknown): TicTacToeGameOptions {
+  const mode =
+    raw &&
+    typeof raw === "object" &&
+    "mode" in raw &&
+    (raw as { mode: unknown }).mode === "rotating"
+      ? "rotating"
+      : "classic";
+  const firstPlayer = parseFirstPlayer(raw);
+  if (firstPlayer === 1) {
+    return { mode, firstPlayer: 1 };
+  }
+  return { mode };
+}
+
+function parseCommonGameOptions(raw: unknown): CommonGameOptions | null {
+  if (raw == null) return {};
+  if (typeof raw !== "object") return null;
+  const keys = Object.keys(raw as object);
+  if (keys.length === 0) return {};
+  if (!keys.every((key) => key === "firstPlayer")) return null;
+  const firstPlayer = parseFirstPlayer(raw);
+  return normalizeFirstPlayer({ firstPlayer });
 }
 
 export function validateGameOptions(
@@ -22,16 +60,39 @@ export function validateGameOptions(
   raw: unknown
 ): OnlineGameOptions | null {
   switch (slug) {
-    case "tic-tac-toe":
-      return parseTicTacToeGameOptions(raw);
+    case "tic-tac-toe": {
+      if (raw == null) return { mode: "classic" };
+      if (typeof raw !== "object") return null;
+      const keys = Object.keys(raw as object);
+      if (!keys.every((key) => key === "mode" || key === "firstPlayer")) {
+        return null;
+      }
+      const parsed = parseTicTacToeGameOptions(raw);
+      if (
+        "mode" in (raw as object) &&
+        (raw as { mode: unknown }).mode !== "classic" &&
+        (raw as { mode: unknown }).mode !== "rotating"
+      ) {
+        return null;
+      }
+      return parsed;
+    }
     case "reversi":
     case "gomoku":
     case "checkers":
-      if (raw == null || (typeof raw === "object" && Object.keys(raw).length === 0)) {
-        return {};
-      }
-      return null;
+      return parseCommonGameOptions(raw);
   }
+}
+
+export function mergeGameOptions(
+  slug: OnlineGameSlug,
+  stored: unknown,
+  partial: Record<string, unknown>
+): OnlineGameOptions | null {
+  const base = validateGameOptions(slug, stored);
+  if (base === null && stored != null) return null;
+  const merged = { ...(base ?? {}), ...partial };
+  return validateGameOptions(slug, merged);
 }
 
 export function parseStoredGameOptions(
@@ -46,6 +107,7 @@ export function hasNonDefaultGameOptions(
   slug: OnlineGameSlug,
   options: OnlineGameOptions
 ): boolean {
+  if (parseFirstPlayer(options) === 1) return true;
   switch (slug) {
     case "tic-tac-toe":
       return (options as TicTacToeGameOptions).mode !== "classic";

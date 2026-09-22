@@ -9,6 +9,8 @@ type Props = {
   onReplay?: () => void;
   replayLabel?: string;
   replayHint?: string;
+  /** 再戦ボタンの直前に表示（先手選択など） */
+  replayExtra?: ReactNode;
   /** オンライン対局など、席番号以外の勝者表示名を使う場合 */
   winnersLabel?: string;
   /** 1人用ゲームなど、勝者行を出さない場合 */
@@ -23,6 +25,7 @@ export function ResultPanel({
   onReplay,
   replayLabel = "もう一度",
   replayHint,
+  replayExtra,
   winnersLabel,
   solo = false,
   variant = "default",
@@ -46,6 +49,7 @@ export function ResultPanel({
         </p>
       ) : null}
       {details ? <div className={inline ? "mt-2" : "mt-4"}>{details}</div> : null}
+      {replayExtra ? <div className={inline ? "mt-4" : "mt-6"}>{replayExtra}</div> : null}
       {onReplay ? (
         <button
           type="button"

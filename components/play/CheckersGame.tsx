@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
+import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { playerPieceClasses } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import type { CheckersState } from "@/lib/online/moves";
@@ -34,6 +36,7 @@ export function CheckersGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const { onlineEnabled } = usePlayStats();
   const online = useOnlineRoom("checkers");
+  const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
   const [mode, setMode] = useState<PlayMode>("local");
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [board, setBoard] = useState<Board>(initialCheckersBoard);
@@ -207,11 +210,25 @@ export function CheckersGame() {
         mode={mode}
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
-        onCreateRoom={online.handleCreate}
+        onCreateRoom={(displayName) =>
+          online.handleCreate(
+            displayName,
+            firstPlayer === 1 ? { firstPlayer: 1 } : undefined
+          )
+        }
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
         error={online.error}
+        extra={
+          mode === "online" ? (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              onChange={onFirstPlayerChange}
+            />
+          ) : undefined
+        }
       />
     );
   }
@@ -233,8 +250,16 @@ export function CheckersGame() {
           code: online.room.code,
           players: online.players,
           isHost: online.isHost,
-          onStart: online.handleStart,
+          onStart: () => online.handleStart(firstPlayer),
           canStart: online.players.length >= 2,
+          extra: (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              onChange={online.isHost ? onFirstPlayerChange : undefined}
+              readOnly={!online.isHost}
+            />
+          ),
         }}
       />
     );
@@ -245,7 +270,7 @@ export function CheckersGame() {
   const replayProps = getOnlineResultReplayProps(
     isOnline,
     online.isHost,
-    online.handleRematch,
+    () => online.handleRematch(firstPlayer),
     reset
   );
 
@@ -261,6 +286,15 @@ export function CheckersGame() {
               : undefined
           }
           {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                onChange={onFirstPlayerChange}
+              />
+            ) : undefined
+          }
           details={
             <p className="text-slate-400">
               相手の駒がなくなったか、相手が動ける手がありませんでした。
