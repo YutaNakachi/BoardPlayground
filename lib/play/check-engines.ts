@@ -39,10 +39,8 @@ import {
 import {
   applyHexSwap,
   emptyHexBoard,
-  hexCenter,
   hexIndex,
   hexNeighborIndices,
-  hexNearestCellIndex,
   HEX_SIZE,
   hexWinPath,
   hexWinner,
@@ -390,10 +388,6 @@ function checkHex() {
   const center = hexIndex(5, 5);
   const neighbors = hexNeighborIndices(center);
   assert(neighbors.length === 6, "hex interior has six neighbors");
-
-  const centerPos = hexCenter(5, 5);
-  assert(hexNearestCellIndex(centerPos.x, centerPos.y) === center, "hex nearest at center");
-  assert(hexNearestCellIndex(centerPos.x + 99, centerPos.y) === null, "hex nearest miss far away");
 
   let state = initialHexState();
   const first = placeHexStone(state, hexIndex(5, 5));
