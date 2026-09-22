@@ -2,7 +2,7 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -11,6 +11,7 @@ import { winnerIndices } from "@/lib/game-engine";
 import {
   initialMancala,
   isMancalaPit,
+  mancalaSowFrames,
   sowMancala,
   type Player,
 } from "@/lib/play/mancala";
@@ -19,41 +20,85 @@ type Phase = "setup" | "playing" | "game-over";
 
 const P1_PITS = [0, 1, 2, 3, 4, 5];
 const P2_PITS = [12, 11, 10, 9, 8, 7];
+const SOW_STEP_MS = 280;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function findIncreasedPit(prev: number[], curr: number[]): number {
+  for (let i = 0; i < prev.length; i++) {
+    if (curr[i] > prev[i]) return i;
+  }
+  return -1;
+}
 
 export function MancalaGame() {
   const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [pits, setPits] = useState<number[]>(initialMancala);
+  const [displayPits, setDisplayPits] = useState<number[]>(initialMancala);
   const [current, setCurrent] = useState<Player>(0);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [pulseIndex, setPulseIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isAnimating) setDisplayPits(pits);
+  }, [pits, isAnimating]);
 
   const startGame = useCallback(() => {
     recordLocalPlay();
-    setPits(initialMancala());
+    const initial = initialMancala();
+    setPits(initial);
+    setDisplayPits(initial);
     setCurrent(0);
     setNotice(null);
+    setPulseIndex(null);
+    setIsAnimating(false);
     setPhase("playing");
   }, [recordLocalPlay]);
 
   const playPit = useCallback(
-    (index: number) => {
-      if (phase !== "playing") return;
+    async (index: number) => {
+      if (phase !== "playing" || isAnimating) return;
+
+      const frames = mancalaSowFrames(pits, current, index);
       const result = sowMancala(pits, current, index);
-      if (!result) return;
+      if (!frames || !result) return;
+
+      setIsAnimating(true);
+      setNotice(null);
+
+      for (let i = 1; i < frames.length; i++) {
+        await sleep(SOW_STEP_MS);
+        setDisplayPits(frames[i]);
+        setPulseIndex(findIncreasedPit(frames[i - 1], frames[i]));
+      }
+
+      await sleep(120);
+      setPulseIndex(null);
       setPits(result.pits);
+      setDisplayPits(result.pits);
+
       if (result.over) {
         setPhase("game-over");
         setNotice(null);
+        setIsAnimating(false);
         return;
       }
+
       if (result.extraTurn) {
-        setNotice("最後の種が自分の倉に入ったので、もう一度");
+        setNotice("最後の石が自分のゴールに入ったので、もう一度");
+        setIsAnimating(false);
         return;
       }
-      setNotice(result.captured ? "向かいの種を取りました" : null);
+
+      setNotice(result.captured ? "向かいの石を取りました" : null);
       setCurrent(current === 0 ? 1 : 0);
+      setIsAnimating(false);
     },
-    [phase, pits, current]
+    [phase, pits, current, isAnimating]
   );
 
   const winners = useMemo(() => {
@@ -68,7 +113,7 @@ export function MancalaGame() {
     return (
       <SetupPanel
         title="マンカラ・カラハ"
-        description="自分の穴の種を反時計回りにまきます。最後が倉ならもう一度、自分側の空き穴なら向かいの種も取れます。"
+        description="自分の穴の石を反時計回りにまきます。最後がゴールならもう一度、自分側の空き穴なら向かいの石も取れます。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -78,6 +123,7 @@ export function MancalaGame() {
   }
 
   const isGameOver = phase === "game-over" && winners !== null;
+  const canPlay = phase === "playing" && !isAnimating;
 
   return (
     <div className="space-y-6">
@@ -88,46 +134,65 @@ export function MancalaGame() {
           onReplay={() => setPhase("setup")}
           details={
             <ul className="space-y-1 text-slate-400">
-              <li>プレイヤー 1 の倉: {pits[6]} 個</li>
-              <li>プレイヤー 2 の倉: {pits[13]} 個</li>
+              <li>プレイヤー 1 のゴール: {pits[6]} 個</li>
+              <li>プレイヤー 2 のゴール: {pits[13]} 個</li>
             </ul>
           }
         />
       )}
 
       {!isGameOver && (
-      <TurnBanner
-        playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}`}
-      />
+        <TurnBanner
+          playerIndex={current}
+          playerLabel={`プレイヤー ${current + 1}`}
+        />
       )}
-      {notice && !isGameOver ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
+      {notice && !isGameOver ? (
+        <p className="text-center text-sm text-amber-200">{notice}</p>
+      ) : null}
 
       <div className="mx-auto grid max-w-xl grid-cols-8 gap-1.5 sm:gap-2">
-        <Store count={pits[13]} label="P2 倉" playerIndex={1} active={current === 1} />
-        {P2_PITS.map((index) => (
+        <Store
+          count={displayPits[13]}
+          label="P2 ゴール"
+          playerIndex={1}
+          active={current === 1}
+          pulsing={pulseIndex === 13}
+        />
+        {P2_PITS.map((pitIndex) => (
           <PitButton
-            key={index}
-            count={pits[index]}
-            label={`P2 穴`}
+            key={pitIndex}
+            count={displayPits[pitIndex]}
+            label="P2 穴"
             playerIndex={1}
-            playable={phase === "playing" && current === 1 && isMancalaPit(1, index) && pits[index] > 0}
-            onClick={() => playPit(index)}
+            playable={
+              canPlay && current === 1 && isMancalaPit(1, pitIndex) && pits[pitIndex] > 0
+            }
+            pulsing={pulseIndex === pitIndex}
+            onClick={() => playPit(pitIndex)}
           />
         ))}
-        <Store count={pits[6]} label="P1 倉" playerIndex={0} active={current === 0} />
-        {P1_PITS.map((index) => (
+        <Store
+          count={displayPits[6]}
+          label="P1 ゴール"
+          playerIndex={0}
+          active={current === 0}
+          pulsing={pulseIndex === 6}
+        />
+        {P1_PITS.map((pitIndex) => (
           <PitButton
-            key={index}
-            count={pits[index]}
-            label={`P1 穴`}
+            key={pitIndex}
+            count={displayPits[pitIndex]}
+            label="P1 穴"
             playerIndex={0}
-            playable={phase === "playing" && current === 0 && isMancalaPit(0, index) && pits[index] > 0}
-            onClick={() => playPit(index)}
+            playable={
+              canPlay && current === 0 && isMancalaPit(0, pitIndex) && pits[pitIndex] > 0
+            }
+            pulsing={pulseIndex === pitIndex}
+            onClick={() => playPit(pitIndex)}
           />
         ))}
       </div>
-
     </div>
   );
 }
@@ -137,23 +202,27 @@ function Store({
   label,
   playerIndex,
   active,
+  pulsing,
 }: {
   count: number;
   label: string;
   playerIndex: number;
   active: boolean;
+  pulsing: boolean;
 }) {
   const style = getPlayerTurnStyle(playerIndex);
   return (
     <div
-      className={`row-span-2 flex min-h-28 flex-col items-center justify-center rounded-2xl border text-lg font-semibold sm:min-h-32 ${
+      className={`row-span-2 flex min-h-28 flex-col items-center justify-center rounded-2xl border text-lg font-semibold transition-transform duration-150 sm:min-h-32 ${
+        pulsing ? "scale-105 ring-2 ring-amber-300/90" : ""
+      } ${
         active
           ? `${style.sectionBorder} ${style.sectionBg}`
           : "border-surface-border bg-surface-raised"
       }`}
     >
       <span className="text-[10px] font-medium text-slate-500">{label}</span>
-      <span className="text-2xl">{count}</span>
+      <span className="text-2xl tabular-nums">{count}</span>
     </div>
   );
 }
@@ -163,12 +232,14 @@ function PitButton({
   label,
   playerIndex,
   playable,
+  pulsing,
   onClick,
 }: {
   count: number;
   label: string;
   playerIndex: number;
   playable: boolean;
+  pulsing: boolean;
   onClick: () => void;
 }) {
   const style = getPlayerTurnStyle(playerIndex);
@@ -178,13 +249,15 @@ function PitButton({
       disabled={!playable}
       onClick={onClick}
       aria-label={`${label} ${count}個`}
-      className={`flex min-h-16 flex-col items-center justify-center rounded-2xl border text-lg font-semibold transition sm:min-h-20 ${
+      className={`flex min-h-16 flex-col items-center justify-center rounded-2xl border text-lg font-semibold transition duration-150 sm:min-h-20 ${
+        pulsing ? "scale-105 ring-2 ring-amber-300/90" : ""
+      } ${
         playable
           ? `${style.sectionBorder} ${style.bg} text-white hover:brightness-110`
           : `${style.surfaceBorder} ${style.surface} ${style.surfaceText}`
       } disabled:cursor-default`}
     >
-      {count}
+      <span className="tabular-nums">{count}</span>
     </button>
   );
 }
