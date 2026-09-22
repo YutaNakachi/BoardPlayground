@@ -316,11 +316,9 @@ export function CheckersGame() {
                 ? "ジャンプ必須"
                 : undefined
         }
+        notice={activeNotice ?? undefined}
       />
       )}
-      {activeNotice ? (
-        <p className="text-center text-sm text-amber-200">{activeNotice}</p>
-      ) : null}
 
       <div className="mx-auto grid max-w-md grid-cols-8 overflow-hidden rounded-xl border border-surface-border">
         {activeBoard.map((piece, index) => {

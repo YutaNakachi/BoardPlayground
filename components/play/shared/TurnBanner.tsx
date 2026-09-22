@@ -7,9 +7,35 @@ type Props = {
   playerLabel: string;
   stats?: string;
   action?: string;
+  notice?: string;
 };
 
-export function TurnBanner({ playerIndex, playerLabel, stats, action }: Props) {
+function BannerLine({
+  text,
+  className,
+  first,
+}: {
+  text?: string;
+  className: string;
+  first?: boolean;
+}) {
+  const visible = Boolean(text);
+  return (
+    <p
+      className={`${first ? "mt-2" : "mt-1"} min-h-[1.25rem] pl-7 text-sm ${visible ? className : "invisible"}`}
+    >
+      {text || "\u00A0"}
+    </p>
+  );
+}
+
+export function TurnBanner({
+  playerIndex,
+  playerLabel,
+  stats,
+  action,
+  notice,
+}: Props) {
   const style = getPlayerTurnStyle(playerIndex);
 
   return (
@@ -26,10 +52,9 @@ export function TurnBanner({ playerIndex, playerLabel, stats, action }: Props) {
           <span className="text-slate-200">の手番</span>
         </p>
       </div>
-      {stats ? <p className="mt-2 pl-7 text-sm text-slate-400">{stats}</p> : null}
-      {action ? (
-        <p className={`mt-1 pl-7 text-sm font-medium ${style.label}`}>{action}</p>
-      ) : null}
+      <BannerLine text={stats} className="text-slate-400" first />
+      <BannerLine text={action} className={`font-medium ${style.label}`} />
+      <BannerLine text={notice} className="text-amber-200" />
     </div>
   );
 }

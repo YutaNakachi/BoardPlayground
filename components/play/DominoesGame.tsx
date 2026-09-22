@@ -103,9 +103,9 @@ export function DominoesGame() {
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
         action={plays.length === 0 ? "出せないときは山札から引く" : undefined}
+        notice={notice ?? undefined}
       />
       )}
-      {notice && !isGameOver ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
 
       <div className="rounded-xl border border-surface-border bg-surface-raised p-4">
         <p className="mb-2 text-center text-xs text-slate-500">

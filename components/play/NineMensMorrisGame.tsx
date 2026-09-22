@@ -100,11 +100,9 @@ export function NineMensMorrisGame() {
         playerIndex={state.current}
         playerLabel={`プレイヤー ${state.current + 1}`}
         action={right}
+        notice={state.notice ?? undefined}
       />
       )}
-      {state.notice && !isGameOver ? (
-        <p className="text-center text-sm text-amber-200">{state.notice}</p>
-      ) : null}
 
       <div className="relative mx-auto aspect-square w-full max-w-md">
         <svg viewBox="0 0 300 300" className="h-full w-full text-slate-500">

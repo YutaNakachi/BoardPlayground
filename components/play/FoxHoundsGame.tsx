@@ -151,14 +151,14 @@ export function FoxHoundsGame() {
         <TurnBanner
           playerIndex={current}
           playerLabel={`プレイヤー ${current + 1}（${PLAYER_LABELS[current]}）`}
+          stats={
+            current === 0 && stallTurns > 0
+              ? `猟犬の停滞 ${stallTurns}/10 手（10手でウサギの勝ち）`
+              : undefined
+          }
         />
       )}
 
-      {!isGameOver && current === 0 && stallTurns > 0 && (
-        <p className="text-center text-xs text-amber-300/90">
-          猟犬の停滞 {stallTurns}/{10} 手（10手でウサギの勝ち）
-        </p>
-      )}
       <div
         className="relative mx-auto w-full max-w-xl sm:max-w-2xl"
         aria-label="ウサギと猟犬の盤面"
