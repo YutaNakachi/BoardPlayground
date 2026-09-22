@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { HexBoardPreview } from "@/components/game-art/HexBoardPreview";
 import { LudoBoardPreview } from "@/components/game-art/LudoBoardPreview";
 import type { GameMeta } from "@/lib/games";
 import { MORRIS_LINES, MORRIS_XY } from "@/lib/play/nine-mens-morris";
@@ -324,33 +325,7 @@ function MorrisPreview() {
 }
 
 function HexPreview() {
-  const stones: Record<string, 0 | 1> = {
-    "2,5": 0,
-    "3,4": 1,
-    "3,5": 0,
-    "4,5": 1,
-    "4,6": 0,
-    "5,5": 1,
-  };
-  return (
-    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="12" fill="#1e1b4b" />
-      {Object.entries(stones).map(([key, player]) => {
-        const [row, col] = key.split(",").map(Number);
-        const x = 20 + col * 8 + (row % 2) * 4;
-        const y = 18 + row * 7;
-        return (
-          <circle
-            key={key}
-            cx={x}
-            cy={y}
-            r="4"
-            fill={player === 0 ? "#fb7185" : "#38bdf8"}
-          />
-        );
-      })}
-    </svg>
-  );
+  return <HexBoardPreview />;
 }
 
 function FoxHoundsPreview() {
