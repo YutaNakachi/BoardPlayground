@@ -36,7 +36,17 @@ import {
   GF_ROWS,
   type Board as GravityBoard,
 } from "./gravity-four";
-import { emptyHexBoard, HEX_SIZE, hexWinner } from "./hex";
+import {
+  applyHexSwap,
+  emptyHexBoard,
+  hexIndex,
+  hexNeighborIndices,
+  HEX_SIZE,
+  hexWinPath,
+  hexWinner,
+  initialHexState,
+  placeHexStone,
+} from "./hex";
 import {
   applyFoxHoundsMove,
   FH_HARE_START,
@@ -365,12 +375,26 @@ function checkNim() {
 }
 
 function checkHex() {
-  const hex = emptyHexBoard();
-  for (let r = 0; r < HEX_SIZE; r++) hex[r * HEX_SIZE] = 0;
-  assert(hexWinner(hex) === 0, "hex top-bottom win");
+  const red = emptyHexBoard();
+  for (let r = 0; r < HEX_SIZE; r++) red[hexIndex(r, 0)] = 0;
+  assert(hexWinner(red) === 0, "hex red connects r0 to r10");
+  const redPath = hexWinPath(red, 0);
+  assert(redPath !== null && redPath.length >= HEX_SIZE, "hex red win path");
 
-  const hex2 = emptyHexBoard().fill(1) as typeof hex;
-  assert(hexWinner(hex2) === 1, "hex left-right win");
+  const blue = emptyHexBoard();
+  for (let c = 0; c < HEX_SIZE; c++) blue[hexIndex(0, c)] = 1;
+  assert(hexWinner(blue) === 1, "hex blue connects c0 to c10");
+
+  const center = hexIndex(5, 5);
+  const neighbors = hexNeighborIndices(center);
+  assert(neighbors.length === 6, "hex interior has six neighbors");
+
+  let state = initialHexState();
+  const first = placeHexStone(state, hexIndex(5, 5));
+  assert(first?.next.swapPending === true, "hex swap offered after opening");
+  state = applyHexSwap(first!.next);
+  assert(state.playerStone[0] === 1 && state.playerStone[1] === 0, "hex swap flips colors");
+  assert(state.board[hexIndex(5, 5)] === 1, "hex swapped opening stone is blue");
 }
 
 function checkFoxHounds() {
