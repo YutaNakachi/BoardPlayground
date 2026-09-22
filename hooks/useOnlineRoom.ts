@@ -156,11 +156,11 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const handleCreate = useCallback(
-    async (displayName: string) => {
+    async (displayName: string, gameOptions?: Record<string, unknown>) => {
       setLoading(true);
       setError(null);
       try {
-        const result = await createRoom(gameSlug, displayName);
+        const result = await createRoom(gameSlug, displayName, gameOptions);
         const data = await fetchRoom(result.roomId);
         setupRoom(result.roomId, result.playerId, result.seatIndex, data.room);
       } catch (e) {

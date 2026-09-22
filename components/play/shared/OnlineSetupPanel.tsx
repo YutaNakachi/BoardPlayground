@@ -29,6 +29,7 @@ type Props = {
     isHost: boolean;
     onStart: () => void;
     canStart: boolean;
+    extra?: ReactNode;
   };
 };
 
@@ -60,6 +61,7 @@ export function OnlineSetupPanel({
         <p className="font-mono text-3xl font-bold tracking-widest text-accent">
           {waiting.code}
         </p>
+        {waiting.extra}
         <ul className="mt-6 space-y-2 text-sm text-slate-300">
           {waiting.players.map((p) => (
             <li key={p.seatIndex}>
@@ -143,6 +145,7 @@ export function OnlineSetupPanel({
                 onCreateRoom(displayName);
               }}
             >
+              {extra}
               <label className="block text-sm" htmlFor="online-create-name">
                 <span className="text-slate-400">プレイヤー名</span>
                 <input
