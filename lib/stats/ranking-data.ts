@@ -1,0 +1,108 @@
+import { unstable_cache } from "next/cache";
+import { getAllGames } from "@/lib/games";
+import { jstToday, periodStartDate, type RankingPeriod } from "@/lib/stats/jst-date";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+
+const RANKING_CACHE_SECONDS = 60;
+
+export type RankingEntry = {
+  rank: number;
+  slug: string;
+  title: string;
+  playCount: number;
+};
+
+const VALID_PERIODS: RankingPeriod[] = ["day", "week", "month", "all"];
+
+export function parseRankingPeriod(value?: string): RankingPeriod {
+  if (value && VALID_PERIODS.includes(value as RankingPeriod)) {
+    return value as RankingPeriod;
+  }
+  return "all";
+}
+
+function listedSlugTitleMap(): {
+  slugToTitle: Map<string, string>;
+  listedSlugs: Set<string>;
+  listedSlugList: string[];
+  catalogKey: string;
+} {
+  const listed = getAllGames();
+  const listedSlugList = listed.map((g) => g.slug).sort();
+  return {
+    slugToTitle: new Map(listed.map((g) => [g.slug, g.title])),
+    listedSlugs: new Set(listedSlugList),
+    listedSlugList,
+    catalogKey: listedSlugList.join(","),
+  };
+}
+
+export function aggregateListedPeriodRanking(
+  rows: { game_slug: string; play_count: number }[],
+  listedSlugs: ReadonlySet<string>,
+  slugToTitle: ReadonlyMap<string, string>,
+  limit = 50
+): RankingEntry[] {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    if (!listedSlugs.has(row.game_slug)) continue;
+    totals.set(row.game_slug, (totals.get(row.game_slug) ?? 0) + row.play_count);
+  }
+
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([slug, playCount], i) => ({
+      rank: i + 1,
+      slug,
+      title: slugToTitle.get(slug)!,
+      playCount,
+    }));
+}
+
+export async function fetchRanking(period: RankingPeriod): Promise<RankingEntry[]> {
+  const { slugToTitle, listedSlugs, listedSlugList } = listedSlugTitleMap();
+
+  if (listedSlugList.length === 0) return [];
+  if (!isSupabaseConfigured()) return [];
+
+  const db = getSupabaseAdmin();
+  if (!db) return [];
+
+  if (period === "all") {
+    const { data } = await db
+      .from("game_stats_total")
+      .select("game_slug, play_count")
+      .in("game_slug", listedSlugList)
+      .order("play_count", { ascending: false })
+      .limit(50);
+
+    return (data ?? []).map((row, i) => ({
+      rank: i + 1,
+      slug: row.game_slug,
+      title: slugToTitle.get(row.game_slug)!,
+      playCount: row.play_count,
+    }));
+  }
+
+  const startDate = periodStartDate(period)!;
+  const endDate = jstToday();
+
+  const { data } = await db
+    .from("game_stats_daily")
+    .select("game_slug, play_count")
+    .in("game_slug", listedSlugList)
+    .gte("play_date", startDate)
+    .lte("play_date", endDate);
+
+  return aggregateListedPeriodRanking(data ?? [], listedSlugs, slugToTitle);
+}
+
+export function fetchRankingCached(period: RankingPeriod): Promise<RankingEntry[]> {
+  const { catalogKey } = listedSlugTitleMap();
+  return unstable_cache(() => fetchRanking(period), ["ranking", period, catalogKey], {
+    revalidate: RANKING_CACHE_SECONDS,
+    tags: [`ranking-${period}`],
+  })();
+}

@@ -1,210 +1,223 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { winnerIndices } from "@/lib/game-engine";
-
-const SIZE = 5;
-const CORE = 12; // index of center cell
-const PLAYER_STYLES = [
-  "bg-indigo-500 text-white",
-  "bg-rose-500 text-white",
-  "bg-emerald-500 text-white",
-  "bg-amber-500 text-black",
-];
+import { getPlayerTurnStyle, playerPieceClasses } from "@/lib/player-colors";
+import {
+  applyNebulaPass,
+  applyNebulaPlace,
+  initialNebulaLink,
+  legalNebulaMoves,
+  NEBULA_CORE,
+  NEBULA_CORE_RING,
+  NEBULA_CORE_RING_WIN,
+  nebulaCoreRingProgress,
+  nebulaTokensFor,
+  nebulaWinners,
+  type NebulaState,
+} from "@/lib/play/nebula-link";
 
 type Phase = "setup" | "playing" | "game-over";
 
-function tokensFor(playerCount: number): number {
-  return 24 / playerCount;
-}
-
-function neighbors(index: number): number[] {
-  const r = Math.floor(index / SIZE);
-  const c = index % SIZE;
-  const out: number[] = [];
-  if (r > 0) out.push(index - SIZE);
-  if (r < SIZE - 1) out.push(index + SIZE);
-  if (c > 0) out.push(index - 1);
-  if (c < SIZE - 1) out.push(index + 1);
-  return out;
-}
-
-function largestGroup(board: (number | null)[], player: number): number {
-  const seen = new Set<number>();
-  let best = 0;
-  for (let i = 0; i < board.length; i++) {
-    if (board[i] !== player || seen.has(i)) continue;
-    let size = 0;
-    const stack = [i];
-    seen.add(i);
-    while (stack.length) {
-      const cur = stack.pop()!;
-      size += 1;
-      for (const n of neighbors(cur)) {
-        if (board[n] === player && !seen.has(n)) {
-          seen.add(n);
-          stack.push(n);
-        }
-      }
-    }
-    best = Math.max(best, size);
-  }
-  return best;
-}
-
-function coreAdjacent(board: (number | null)[], player: number): number {
-  return neighbors(CORE).filter((i) => board[i] === player).length;
-}
-
-function scorePlayer(board: (number | null)[], player: number) {
-  const group = largestGroup(board, player);
-  const adj = coreAdjacent(board, player);
-  return { total: group * 2 + adj, group, adj };
-}
-
 export function NebulaLinkGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [playerCount, setPlayerCount] = useState(2);
   const [phase, setPhase] = useState<Phase>("setup");
-  const [currentPlayer, setCurrentPlayer] = useState(0);
-  const [board, setBoard] = useState<(number | null)[]>(Array(SIZE * SIZE).fill(null));
-  const [remaining, setRemaining] = useState<number[]>([]);
+  const [game, setGame] = useState<NebulaState | null>(null);
+  const [passNotice, setPassNotice] = useState<string | null>(null);
 
   const startGame = useCallback(() => {
-    const cells = Array(SIZE * SIZE).fill(null);
-    cells[CORE] = -1;
-    setBoard(cells);
-    setRemaining(Array.from({ length: playerCount }, () => tokensFor(playerCount)));
-    setCurrentPlayer(0);
+    recordLocalPlay();
+    setGame(initialNebulaLink(playerCount));
+    setPassNotice(null);
     setPhase("playing");
-  }, [playerCount]);
+  }, [recordLocalPlay, playerCount]);
+
+  const legalMoves = useMemo(() => {
+    if (!game || phase !== "playing") return [];
+    const player = game.currentPlayer;
+    return legalNebulaMoves(
+      game.board,
+      player,
+      game.remaining[player],
+      game.playerCount
+    );
+  }, [game, phase]);
+
+  const progress = useMemo(() => {
+    if (!game) return [];
+    return Array.from({ length: game.playerCount }, (_, i) => ({
+      player: i,
+      core: nebulaCoreRingProgress(game.board, i),
+    }));
+  }, [game]);
 
   const place = useCallback(
     (index: number) => {
-      if (phase !== "playing") return;
-      if (index === CORE || board[index] !== null) return;
-      if (remaining[currentPlayer] <= 0) return;
-
-      const nextBoard = board.map((v, i) => (i === index ? currentPlayer : v));
-      const nextRemaining = remaining.map((n, i) =>
-        i === currentPlayer ? n - 1 : n
-      );
-      setBoard(nextBoard);
-      setRemaining(nextRemaining);
-
-      if (nextRemaining.every((n) => n === 0)) {
-        setPhase("game-over");
-        return;
-      }
-
-      setCurrentPlayer((currentPlayer + 1) % playerCount);
+      if (!game || phase !== "playing") return;
+      const next = applyNebulaPlace(game, index);
+      if (!next) return;
+      setPassNotice(null);
+      setGame(next);
+      if (next.gameOver) setPhase("game-over");
     },
-    [phase, board, remaining, currentPlayer, playerCount]
+    [phase, game]
   );
 
-  const breakdown = useMemo(
-    () => Array.from({ length: playerCount }, (_, i) => scorePlayer(board, i)),
-    [board, playerCount]
-  );
+  const pass = useCallback(() => {
+    if (!game || phase !== "playing") return;
+    const next = applyNebulaPass(game);
+    if (!next) return;
+    setPassNotice(`プレイヤー ${game.currentPlayer + 1} がパス`);
+    setGame(next);
+    if (next.gameOver) setPhase("game-over");
+  }, [phase, game]);
 
   const winner = useMemo(() => {
-    if (phase !== "game-over") return null;
-    return winnerIndices(breakdown.map((b) => b.total));
-  }, [phase, breakdown]);
+    if (phase !== "game-over" || !game) return null;
+    return nebulaWinners(game);
+  }, [phase, game]);
+
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
     return (
       <SetupPanel
         title="ネビュラ・リンク"
-        description="中央の星核には置けません。空マスをタップしてノードを置きます。"
+        description="星核の周り4マスのうち3つを、自分の連結したノードで占めたら勝ち。最初の1個はどこでも、2個目以降は自分のノードに隣接して置きます。"
         playerCount={playerCount}
         onPlayerCount={setPlayerCount}
         onStart={startGame}
         extra={
           <p className="mt-4 text-xs text-slate-500">
-            各 {tokensFor(playerCount)} 個のノード
+            各 {nebulaTokensFor(playerCount)} 個のノード
           </p>
         }
       />
     );
   }
 
-  if (phase === "game-over" && winner) {
-    return (
-      <ResultPanel
-        winners={winner}
-        onReplay={() => setPhase("setup")}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            {breakdown.map((b, i) => (
-              <li key={i}>
-                プレイヤー {i + 1}: {b.total} 点（連結 {b.group}×2 + 星核隣接 {b.adj}）
-              </li>
-            ))}
-          </ul>
-        }
-      />
-    );
-  }
+  if (!game) return null;
+
+  const isGameOver = phase === "game-over" && winner !== null;
+  const mustPass = phase === "playing" && legalMoves.length === 0;
 
   return (
     <div className="space-y-6">
-      <TurnBanner
-        left={`残り ${remaining.reduce((a, b) => a + b, 0)} 個`}
-        right={`プレイヤー ${currentPlayer + 1} の番`}
-      />
+      {isGameOver && winner && (
+        <ResultPanel
+          variant="inline"
+          winners={winner}
+          winnersLabel={game.isDraw ? "引き分け" : undefined}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {game.isDraw
+                ? "誰も勝利条件を満たさず、置ける手がなくなりました。"
+                : `星核に隣接するマスを ${NEBULA_CORE_RING_WIN} つ、1つの連結グループで占めました。`}
+            </p>
+          }
+        />
+      )}
+
+      {!isGameOver && (
+        <TurnBanner
+          playerIndex={game.currentPlayer}
+          playerLabel={`プレイヤー ${game.currentPlayer + 1}`}
+          stats={`残り ${game.remaining[game.currentPlayer]} 個 · 星核隣接 ${progress[game.currentPlayer]?.core ?? 0}/${NEBULA_CORE_RING_WIN}`}
+          action={
+            passNotice ??
+            (mustPass
+              ? "置ける場所がないためパスします"
+              : legalMoves.length > 0
+                ? `置けるマス ${legalMoves.length} か所`
+                : undefined)
+          }
+        />
+      )}
 
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1.5 sm:gap-2">
-        {board.map((owner, index) => {
-          const isCore = index === CORE;
+        {game.board.map((owner, index) => {
+          const isCore = index === NEBULA_CORE;
+          const isCoreRing = NEBULA_CORE_RING.includes(index);
           const empty = owner === null;
+          const canPlace = !isGameOver && legalMoves.includes(index);
           return (
             <button
               key={index}
               type="button"
-              disabled={isCore || !empty}
+              disabled={isCore || !empty || isGameOver || !canPlace}
               onClick={() => place(index)}
               className={`aspect-square min-h-11 rounded-lg text-xs font-semibold transition sm:text-sm ${
                 isCore
                   ? "cursor-default bg-yellow-300/20 text-yellow-200 ring-1 ring-yellow-300/40"
                   : empty
-                    ? "bg-surface-raised ring-1 ring-surface-border hover:ring-accent"
-                    : PLAYER_STYLES[owner]
+                    ? canPlace
+                      ? isCoreRing
+                        ? "bg-accent/15 ring-2 ring-accent hover:bg-accent/25"
+                        : "bg-surface-raised ring-2 ring-accent hover:bg-accent/10"
+                      : isCoreRing
+                        ? "cursor-default bg-yellow-300/10 ring-1 ring-yellow-300/30 text-yellow-200/60"
+                        : "cursor-default bg-surface-raised/60 ring-1 ring-surface-border text-slate-600"
+                    : playerPieceClasses(owner)
               }`}
               aria-label={
                 isCore
                   ? "星核"
-                  : empty
-                    ? `空マス ${index + 1}`
-                    : `プレイヤー ${owner + 1} のノード`
+                  : isCoreRing && empty
+                    ? "星核に隣接するマス"
+                    : empty
+                      ? canPlace
+                        ? `置ける空マス ${index + 1}`
+                        : `置けない空マス ${index + 1}`
+                      : `プレイヤー ${owner + 1} のノード`
               }
             >
-              {isCore ? "核" : empty ? "" : owner + 1}
+              {isCore ? "核" : empty ? (isCoreRing ? "★" : "") : owner + 1}
             </button>
           );
         })}
       </div>
 
+      {mustPass ? (
+        <button
+          type="button"
+          onClick={pass}
+          className="w-full rounded-xl border border-surface-border bg-surface-raised px-4 py-3 text-sm font-medium text-white transition hover:border-accent/50"
+        >
+          パスする
+        </button>
+      ) : null}
+
       <ul className="grid gap-2 sm:grid-cols-2">
-        {remaining.map((n, i) => (
-          <li
-            key={i}
-            className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm ${
-              currentPlayer === i
-                ? "border-accent/60 bg-accent/5"
-                : "border-surface-border bg-surface-raised"
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <span className={`inline-block h-3 w-3 rounded-full ${PLAYER_STYLES[i]}`} />
-              プレイヤー {i + 1}
-            </span>
-            <span className="text-slate-400">残り {n}</span>
-          </li>
-        ))}
+        {progress.map(({ player, core }) => {
+          const style = getPlayerTurnStyle(player);
+          return (
+            <li
+              key={player}
+              className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm ${
+                game.currentPlayer === player && !isGameOver
+                  ? `${style.sectionBorder} ${style.sectionBg}`
+                  : "border-surface-border bg-surface-raised"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span className={`inline-block h-3 w-3 rounded-full ${style.dot}`} />
+                プレイヤー {player + 1}
+              </span>
+              <span className="text-slate-400">
+                星核隣接 {core}/{NEBULA_CORE_RING_WIN} · 残り {game.remaining[player]}
+              </span>
+            </li>
+          );
+        })}
       </ul>
+
     </div>
   );
 }

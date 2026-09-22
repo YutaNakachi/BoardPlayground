@@ -1,16 +1,18 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
 import {
   clickMorris,
   initialMorrisState,
   MORRIS_LINES,
   MORRIS_XY,
   morrisCanMove,
-  morrisCount,
   morrisIsFlying,
   morrisLegalDestinations,
   morrisRemovable,
@@ -20,13 +22,15 @@ import {
 type Phase = "setup" | "playing";
 
 export function NineMensMorrisGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<MorrisState>(initialMorrisState);
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     setState(initialMorrisState());
     setPhase("playing");
-  }, []);
+  }, [recordLocalPlay]);
 
   const dests = useMemo(() => {
     if (state.selected == null || state.removing) return [];
@@ -47,6 +51,9 @@ export function NineMensMorrisGame() {
     [phase, state.over]
   );
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -60,19 +67,8 @@ export function NineMensMorrisGame() {
     );
   }
 
-  if (state.over) {
-    return (
-      <ResultPanel
-        winners={state.winners}
-        onReplay={() => setPhase("setup")}
-        details={
-          <p className="text-slate-400">
-            {state.notice ?? "相手の駒が足りないか、動けなくなりました。"}
-          </p>
-        }
-      />
-    );
-  }
+  const isGameOver = state.over;
+  const winners = isGameOver ? state.winners : null;
 
   const placing = state.toPlace[state.current] > 0;
   const flying = morrisIsFlying(state, state.current);
@@ -86,11 +82,27 @@ export function NineMensMorrisGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          onReplay={() => setPhase("setup")}
+          details={
+            <p className="text-slate-400">
+              {state.notice ?? "相手の駒が足りないか、動けなくなりました。"}
+            </p>
+          }
+        />
+      )}
+
+      {!isGameOver && (
       <TurnBanner
-        left={`手持ち P1 ${state.toPlace[0]} · P2 ${state.toPlace[1]} ／ 盤上 P1 ${morrisCount(state.board, 0)} · P2 ${morrisCount(state.board, 1)}`}
-        right={`プレイヤー ${state.current + 1} · ${right}`}
+        playerIndex={state.current}
+        playerLabel={`プレイヤー ${state.current + 1}`}
+        action={right}
       />
-      {state.notice ? (
+      )}
+      {state.notice && !isGameOver ? (
         <p className="text-center text-sm text-amber-200">{state.notice}</p>
       ) : null}
 
@@ -120,7 +132,7 @@ export function NineMensMorrisGame() {
               type="button"
               onClick={() => onPoint(index)}
               style={{ left: `${(x / 300) * 100}%`, top: `${(y / 300) * 100}%` }}
-              className={`absolute flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full sm:h-10 sm:w-10 ${
+              className={`absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
                 selected ? "ring-2 ring-accent" : ""
               } ${isDest || canRemove ? "ring-2 ring-lime-300" : ""}`}
               aria-label={
@@ -134,14 +146,12 @@ export function NineMensMorrisGame() {
               }
             >
               <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8 ${
-                  owner === 0
-                    ? "bg-indigo-500"
-                    : owner === 1
-                      ? "bg-rose-500"
-                      : isDest
-                        ? "bg-lime-300/80"
-                        : "bg-surface-raised ring-1 ring-surface-border"
+                className={`flex h-5 w-5 items-center justify-center rounded-full sm:h-6 sm:w-6 ${
+                  owner === null
+                    ? isDest
+                      ? "bg-lime-300/80"
+                      : "bg-surface-raised ring-1 ring-surface-border"
+                    : playerPieceClasses(owner)
                 }`}
               />
             </button>
@@ -149,16 +159,6 @@ export function NineMensMorrisGame() {
         })}
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        {placing
-          ? "空いている点をタップして駒を置きます。"
-          : flying
-            ? "駒が3個なので、選んだ駒は空点ならどこへでも飛べます。"
-            : "自分の駒を選んでから、線でつながった空点へ動かします。"}
-        {!morrisCanMove(state, state.current) && !state.removing
-          ? " 動ける手がありません。"
-          : ""}
-      </p>
     </div>
   );
 }

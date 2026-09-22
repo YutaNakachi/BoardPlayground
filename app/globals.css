@@ -3,23 +3,82 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0e14;
-  --foreground: #e8edf4;
+  --background: #0e0c14;
+  --foreground: #f4f0f8;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(255, 92, 138, 0.14), transparent),
+    radial-gradient(ellipse 55% 45% at 100% 0%, rgba(255, 179, 71, 0.09), transparent),
+    radial-gradient(ellipse 40% 35% at 0% 100%, rgba(129, 140, 248, 0.06), transparent);
   min-height: 100vh;
 }
 
 :focus-visible {
-  outline: 2px solid #818cf8;
+  outline: 2px solid #ff7aa3;
   outline-offset: 2px;
 }
 
 @layer utilities {
+  .clip-triangle-tl {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
+  .clip-triangle-tr {
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+
+  .clip-triangle-br {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+
+  .clip-triangle-bl {
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+  }
+
   .text-balance {
     text-wrap: balance;
+  }
+
+  .hero-glow {
+    background-image: linear-gradient(
+      135deg,
+      rgba(255, 92, 138, 0.12) 0%,
+      rgba(255, 179, 71, 0.08) 50%,
+      rgba(129, 140, 248, 0.06) 100%
+    );
+  }
+
+  .btn-play {
+    @apply rounded-2xl font-bold text-white shadow-lg shadow-accent/25;
+    background-image: linear-gradient(135deg, #ff5c8a 0%, #ff8a5c 100%);
+  }
+
+  .btn-play:hover {
+    background-image: linear-gradient(135deg, #ff7aa3 0%, #ff9f70 100%);
+  }
+
+  .btn-game {
+    @apply min-h-12 rounded-2xl px-8 py-3 font-bold text-white shadow-lg shadow-accent/25;
+    background-image: linear-gradient(135deg, #ff5c8a 0%, #ff8a5c 100%);
+  }
+
+  .btn-game:hover {
+    background-image: linear-gradient(135deg, #ff7aa3 0%, #ff9f70 100%);
+  }
+
+  .badge-muted {
+    @apply rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-[#c7c7cc] ring-1 ring-white/15;
+  }
+
+  .badge-local {
+    @apply rounded-full bg-violet-500/20 px-3 py-1 text-xs font-medium text-violet-200 ring-1 ring-violet-400/35;
+  }
+
+  .badge-online {
+    @apply rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-200 ring-1 ring-emerald-400/35;
   }
 }

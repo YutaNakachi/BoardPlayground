@@ -1,9 +1,22 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
+import type { CheckersState } from "@/lib/online/moves";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  getSeatDisplayName,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
 import {
   applyCheckersMove,
   checkersMoves,
@@ -15,36 +28,81 @@ import {
   type Player,
 } from "@/lib/play/checkers";
 
-type Phase = "setup" | "playing" | "game-over";
+type LocalPhase = "setup" | "playing" | "game-over";
 
 export function CheckersGame() {
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("checkers");
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [board, setBoard] = useState<Board>(initialCheckersBoard);
   const [current, setCurrent] = useState<Player>(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [lockFrom, setLockFrom] = useState<number | null>(null);
+  const [localSelected, setLocalSelected] = useState<number | null>(null);
   const [winner, setWinner] = useState<Player | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const startGame = useCallback(() => {
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (mode === "local") {
+      setPlayMode({ mode: "local" });
+    }
+  }, [online.room?.code, online.phase, mode, setPlayMode]);
+
+  const startLocal = useCallback(() => {
+    recordLocalPlay();
     setBoard(initialCheckersBoard());
     setCurrent(0);
     setSelected(null);
+    setLocalSelected(null);
     setLockFrom(null);
     setWinner(null);
     setNotice(null);
-    setPhase("playing");
-  }, []);
+    setLocalPhase("playing");
+  }, [recordLocalPlay]);
+
+  const isOnline =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as CheckersState | null;
+
+  const activeBoard = isOnline && onlineState ? onlineState.board : board;
+  const activeCurrent = isOnline && onlineState ? onlineState.current : current;
+  const activeLockFrom = isOnline && onlineState ? onlineState.lockFrom : lockFrom;
+  const activeWinner = isOnline && onlineState ? onlineState.winner : winner;
+  const activeNotice = isOnline && onlineState ? onlineState.notice : notice;
+  const activePhase =
+    isOnline && onlineState
+      ? onlineState.phase
+      : localPhase === "game-over"
+        ? "game-over"
+        : localPhase === "playing"
+          ? "playing"
+          : "setup";
+
+  const activeSelected = isOnline
+    ? onlineState?.lockFrom ?? selected
+    : lockFrom ?? localSelected;
 
   const moves = useMemo(
-    () => (phase === "playing" ? checkersMoves(board, current, lockFrom) : []),
-    [phase, board, current, lockFrom]
+    () =>
+      activePhase === "playing"
+        ? checkersMoves(activeBoard, activeCurrent, activeLockFrom)
+        : [],
+    [activePhase, activeBoard, activeCurrent, activeLockFrom]
   );
 
+  const jumpFrom = activeLockFrom ?? activeSelected;
+
   const destinations = useMemo(() => {
-    if (selected == null) return [];
-    return moves.filter((m) => m.from === selected);
-  }, [moves, selected]);
+    if (jumpFrom == null) return [];
+    return moves.filter((m) => m.from === jumpFrom);
+  }, [moves, jumpFrom]);
 
   const mustCapture = moves.some((m) => m.capture != null);
 
@@ -55,7 +113,7 @@ export function CheckersGame() {
         checkersMoves(nextBoard, nextPlayer).length === 0
       ) {
         setWinner(nextPlayer === 0 ? 1 : 0);
-        setPhase("game-over");
+        setLocalPhase("game-over");
         return true;
       }
       return false;
@@ -63,19 +121,19 @@ export function CheckersGame() {
     []
   );
 
-  const apply = useCallback(
+  const applyLocal = useCallback(
     (move: CheckersMove) => {
       const { board: nextBoard, continueFrom } = applyCheckersMove(board, move);
       setBoard(nextBoard);
       if (continueFrom != null) {
         setLockFrom(continueFrom);
-        setSelected(continueFrom);
+        setLocalSelected(continueFrom);
         setNotice("同じ駒でジャンプを続けてください");
         return;
       }
       const nextPlayer: Player = current === 0 ? 1 : 0;
       setLockFrom(null);
-      setSelected(null);
+      setLocalSelected(null);
       setNotice(null);
       if (!finishIfNeeded(nextBoard, nextPlayer)) {
         setCurrent(nextPlayer);
@@ -86,64 +144,155 @@ export function CheckersGame() {
 
   const onSquare = useCallback(
     (index: number) => {
-      if (phase !== "playing") return;
+      if (activePhase !== "playing") return;
+      if (isOnline && !online.isMyTurn) return;
+
       const dest = destinations.find((m) => m.to === index);
       if (dest) {
-        apply(dest);
+        if (isOnline) {
+          void online.handleMove({ type: "checkers", move: dest });
+          setSelected(null);
+        } else {
+          applyLocal(dest);
+        }
         return;
       }
-      if (lockFrom != null) return;
-      const piece = board[index];
-      if (!piece || piece.player !== current) {
-        setSelected(null);
+      if (activeLockFrom != null) return;
+      const piece = activeBoard[index];
+      if (!piece || piece.player !== activeCurrent) {
+        if (isOnline) setSelected(null);
+        else setLocalSelected(null);
         return;
       }
       if (!moves.some((m) => m.from === index)) return;
-      setSelected(index);
+      if (isOnline) setSelected(index);
+      else setLocalSelected(index);
     },
-    [phase, destinations, apply, lockFrom, board, current, moves]
+    [
+      activePhase,
+      isOnline,
+      online,
+      destinations,
+      activeLockFrom,
+      activeBoard,
+      activeCurrent,
+      moves,
+      applyLocal,
+    ]
   );
 
-  if (phase === "setup") {
+  const roomPlayers = isOnline ? online.players : [];
+
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setSelected(null);
+    setLocalSelected(null);
+    setLockFrom(null);
+    setNotice(null);
+    setWinner(null);
+    setPlayMode({ mode: "local" });
+  }, [online.reset, setPlayMode]);
+
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="チェッカー"
-        description="暗いマスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
+        description="黒マスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
       />
     );
   }
 
-  if (phase === "game-over" && winner !== null) {
+  if (online.phase === "waiting" && online.room) {
     return (
-      <ResultPanel
-        winners={[winner]}
-        onReplay={() => setPhase("setup")}
-        details={
-          <p className="text-slate-400">
-            相手の駒がなくなったか、相手が動ける手がありませんでした。
-          </p>
-        }
+      <OnlineSetupPanel
+        title="チェッカー"
+        description="黒マスだけを使います。斜めに進み、隣の相手を飛び越えて取ります。取れるときは必ず取ってください。"
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          isHost: online.isHost,
+          onStart: online.handleStart,
+          canStart: online.players.length >= 2,
+        }}
       />
     );
   }
+
+  const isGameOver = activePhase === "game-over" && activeWinner !== null;
+  const winners = isGameOver ? [activeWinner] : null;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    online.handleRematch,
+    reset
+  );
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline
+              ? formatWinnersWithNames(roomPlayers, winners)
+              : undefined
+          }
+          {...replayProps}
+          details={
+            <p className="text-slate-400">
+              相手の駒がなくなったか、相手が動ける手がありませんでした。
+            </p>
+          }
+        />
+      )}
+
+      {!isGameOver && (
       <TurnBanner
-        left={`P1 ${checkersPieceCount(board, 0)} · P2 ${checkersPieceCount(board, 1)}`}
-        right={`プレイヤー ${current + 1}${mustCapture ? " · ジャンプ必須" : ""}`}
+        playerIndex={activeCurrent}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+        action={
+          isOnline && !online.isMyTurn
+            ? "相手の手番です"
+            : activeLockFrom != null
+              ? "ジャンプ継続"
+              : mustCapture
+                ? "ジャンプ必須"
+                : undefined
+        }
       />
-      {notice ? <p className="text-center text-sm text-amber-200">{notice}</p> : null}
+      )}
+      {activeNotice ? (
+        <p className="text-center text-sm text-amber-200">{activeNotice}</p>
+      ) : null}
 
       <div className="mx-auto grid max-w-md grid-cols-8 overflow-hidden rounded-xl border border-surface-border">
-        {board.map((piece, index) => {
+        {activeBoard.map((piece, index) => {
           const dark = isDarkSquare(index);
           const isDest = destinations.some((m) => m.to === index);
-          const isFrom = selected === index;
+          const isFrom = jumpFrom === index;
           return (
             <button
               key={index}
@@ -156,23 +305,27 @@ export function CheckersGame() {
               }`}
               aria-label={
                 piece
-                  ? `プレイヤー ${piece.player + 1}${piece.king ? " キング" : ""}`
+                  ? `${getSeatDisplayName(roomPlayers, piece.player)}${piece.king ? " キング" : ""}`
                   : isDest
                     ? "移動先"
                     : dark
-                      ? "暗いマス"
-                      : "明るいマス"
+                      ? "黒マス"
+                      : "白マス"
               }
             >
               {piece ? (
                 <span
-                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full text-[10px] font-bold sm:text-xs ${
-                    piece.player === 0
-                      ? "bg-indigo-500 text-white"
-                      : "bg-rose-200 text-rose-950"
-                  }`}
+                  className={`flex h-[72%] w-[72%] items-center justify-center rounded-full ${playerPieceClasses(piece.player)}`}
                 >
-                  {piece.king ? "K" : ""}
+                  {piece.king ? (
+                    <span className="flex size-full items-center justify-center" aria-hidden>
+                      <span
+                        className="select-none text-[1.45rem] leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] -translate-y-px sm:text-[1.8rem]"
+                      >
+                        👑
+                      </span>
+                    </span>
+                  ) : null}
                 </span>
               ) : isDest ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-lime-300/90" />
@@ -182,9 +335,6 @@ export function CheckersGame() {
         })}
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        自分の駒を選んでから移動先をタップ。一番奥の段に着くとキングになり、前後どちらにも進めます。
-      </p>
     </div>
   );
 }

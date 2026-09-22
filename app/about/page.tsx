@@ -1,22 +1,39 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllGames } from "@/lib/games";
+import { notFound } from "next/navigation";
+import { PageContainer } from "@/components/PageContainer";
+import {
+  ORIGIN_LABEL,
+  getAllGames,
+  type GameOrigin,
+} from "@/lib/games";
+import { SHOW_ABOUT_PAGE, SITE_NAME } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "制作代行について",
-  description:
-    "オリジナルボードゲームのルール設計からブラウザ実装までのオーダーメイド制作代行。",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  if (!SHOW_ABOUT_PAGE) {
+    return { title: "ページが見つかりません" };
+  }
+
+  return {
+    title: "制作代行について",
+    description:
+      "オリジナルボードゲームのルール設計からブラウザ実装までのオーダーメイド制作代行。",
+  };
+}
 
 export default function AboutPage() {
+  if (!SHOW_ABOUT_PAGE) {
+    notFound();
+  }
+
   const games = getAllGames();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <PageContainer>
       <h1 className="text-3xl font-bold">制作代行について</h1>
       <p className="mt-4 leading-relaxed text-slate-300">
-        Board Playground
-        はオリジナル、許可あり、または商標を使わない伝統的な抽象ゲームをブラウザで公開・プレイする場です。アイデアのヒアリングからルール設計、Web化までを一貫して代行するサービスをココナラで提供します。受注・納品のやりとりはココナラ上で行い、このサイトは公開プレイと制作実績の置き場です。
+        {SITE_NAME}
+        はオリジナル、許可あり、または商標を使わない伝統的なボードゲームをブラウザで公開・プレイする場です。アイデアのヒアリングからルール設計、Web化までを一貫して代行するサービスをココナラで提供します。受注・納品のやりとりはココナラ上で行い、このサイトは公開プレイと制作実績の置き場です。
       </p>
 
       <section className="mt-10 space-y-3">
@@ -50,28 +67,39 @@ export default function AboutPage() {
       <section className="mt-10 space-y-3">
         <h2 className="text-xl font-semibold">公開ゲーム</h2>
         <p className="leading-relaxed text-slate-300">
-          サイト上のゲームは制作フローの実例です。いま掲載しているのは、お互いが同じ盤面を見て対戦するゲームです。遊んで雰囲気を確かめてからご相談ください。
+          サイト上のゲームは制作フローの実例と、クラシックです。遊んで雰囲気を確かめてからご相談ください。
         </p>
-        <ul className="space-y-2">
-          {games.map((game) => (
-            <li key={game.slug}>
-              <Link
-                href={`/games/${game.slug}`}
-                className="text-accent transition hover:text-accent-hover"
-              >
-                {game.title}
-              </Link>
-              <span className="text-sm text-slate-500">
-                {" "}
-                — {game.players}人 · 約{game.durationMinutes}分
-              </span>
-            </li>
-          ))}
-        </ul>
+        {(["original", "classic"] as GameOrigin[]).map((origin) => {
+          const group = games.filter((game) => game.origin === origin);
+          if (group.length === 0) return null;
+          return (
+            <div key={origin} className="space-y-2">
+              <h3 className="text-sm font-medium text-slate-400">
+                {ORIGIN_LABEL[origin]}
+              </h3>
+              <ul className="space-y-2">
+                {group.map((game) => (
+                  <li key={game.slug}>
+                    <Link
+                      href={`/games/${game.slug}`}
+                      className="text-accent transition hover:text-accent-hover"
+                    >
+                      {game.title}
+                    </Link>
+                    <span className="text-sm text-slate-500">
+                      {" "}
+                      — {game.players}人 · 約{game.durationMinutes}分
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
         <Link href="/" className="inline-flex text-sm text-slate-400 transition hover:text-white">
           ゲーム一覧を見る
         </Link>
       </section>
-    </div>
+    </PageContainer>
   );
 }

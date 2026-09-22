@@ -1,69 +1,36 @@
 "use client";
 
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { HandoffGate } from "@/components/play/shared/HandoffGate";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { shuffle, winnerIndices } from "@/lib/game-engine";
+import { winnerIndices } from "@/lib/game-engine";
+import { dealStarTradeRound, scoreStarTradeCards } from "@/lib/play/star-trade";
+import { getPlayerTurnStyle } from "@/lib/player-colors";
 
-type Suit = "star" | "moon" | "sun" | "comet";
-
-type Card = {
-  id: string;
-  suit: Suit;
-  value: number;
-};
+type Card = import("@/lib/play/star-trade").StarTradeCard;
 
 type Phase = "setup" | "handoff" | "playing" | "round-end" | "game-over";
 type TurnStep = "draw" | "play";
 
-const SUITS: Suit[] = ["star", "moon", "sun", "comet"];
-const SUIT_LABEL: Record<Suit, string> = {
+const SUIT_LABEL: Record<Card["suit"], string> = {
   star: "星",
   moon: "月",
   sun: "太陽",
   comet: "彗星",
 };
-const SUIT_COLOR: Record<Suit, string> = {
+const SUIT_COLOR: Record<Card["suit"], string> = {
   star: "text-yellow-300",
   moon: "text-slate-200",
   sun: "text-orange-400",
   comet: "text-cyan-400",
 };
 
-function createDeck(): Card[] {
-  const deck: Card[] = [];
-  let id = 0;
-  for (const suit of SUITS) {
-    for (let value = 1; value <= 5; value++) {
-      deck.push({ id: `${suit}-${value}-${id++}`, suit, value });
-    }
-  }
-  return shuffle(deck);
-}
-
-function scoreCards(cards: Card[]): { total: number; base: number; bonus: number; suits: number } {
-  const base = cards.reduce((s, c) => s + c.value, 0);
-  const suits = new Set(cards.map((c) => c.suit)).size;
-  const bonus = suits >= 3 ? 5 : suits === 2 ? 2 : 0;
-  return { total: base + bonus, base, bonus, suits };
-}
-
-function dealRound(playerCount: number) {
-  const d = createDeck();
-  const h: Card[][] = Array.from({ length: playerCount }, () => []);
-  for (let i = 0; i < playerCount * 3; i++) {
-    h[i % playerCount].push(d.pop()!);
-  }
-  return {
-    deck: d,
-    hands: h,
-    markets: Array.from({ length: playerCount }, () => [] as Card[]),
-  };
-}
-
 export function StarTradeGame() {
+  const { recordLocalPlay } = usePlayPage();
   const [playerCount, setPlayerCount] = useState(2);
   const [phase, setPhase] = useState<Phase>("setup");
   const [turnStep, setTurnStep] = useState<TurnStep>("draw");
@@ -77,7 +44,7 @@ export function StarTradeGame() {
 
   const beginRound = useCallback(
     (nextRound: number, count: number, prevScores: number[]) => {
-      const dealt = dealRound(count);
+      const dealt = dealStarTradeRound(count);
       setDeck(dealt.deck);
       setHands(dealt.hands);
       setMarkets(dealt.markets);
@@ -91,13 +58,14 @@ export function StarTradeGame() {
   );
 
   const startGame = useCallback(() => {
+    recordLocalPlay();
     beginRound(1, playerCount, Array(playerCount).fill(0));
-  }, [beginRound, playerCount]);
+  }, [recordLocalPlay, beginRound, playerCount]);
 
   const finishRound = useCallback(
     (nextHands: Card[][], nextMarkets: Card[][]) => {
       const roundScores = nextHands.map((hand, i) =>
-        scoreCards([...hand, ...nextMarkets[i]]).total
+        scoreStarTradeCards([...hand, ...nextMarkets[i]]).total
       );
       const nextScores = scores.map((s, i) => s + roundScores[i]);
       setScores(nextScores);
@@ -163,6 +131,9 @@ export function StarTradeGame() {
     return winnerIndices(scores);
   }, [phase, scores]);
 
+  const backToSetup = useCallback(() => setPhase("setup"), []);
+  usePlaySetupNavigation(phase === "setup", backToSetup);
+
   if (phase === "setup") {
     return (
       <SetupPanel
@@ -186,23 +157,7 @@ export function StarTradeGame() {
     );
   }
 
-  if (phase === "game-over" && winner) {
-    return (
-      <ResultPanel
-        winners={winner}
-        onReplay={() => setPhase("setup")}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            {scores.map((s, i) => (
-              <li key={i}>
-                プレイヤー {i + 1}: {s} 点
-              </li>
-            ))}
-          </ul>
-        }
-      />
-    );
-  }
+  const isGameOver = phase === "game-over" && winner !== null;
 
   if (phase === "round-end") {
     return (
@@ -218,7 +173,7 @@ export function StarTradeGame() {
         <button
           type="button"
           onClick={nextRound}
-          className="mt-8 min-h-12 rounded-xl bg-accent px-8 py-3 font-semibold text-white transition hover:bg-accent-hover"
+          className="btn-game mt-8"
         >
           ラウンド {round + 1} を開始
         </button>
@@ -228,27 +183,49 @@ export function StarTradeGame() {
 
   return (
     <div className="space-y-6">
+      {isGameOver && winner && (
+        <ResultPanel
+          variant="inline"
+          winners={winner}
+          onReplay={() => setPhase("setup")}
+          details={
+            <ul className="space-y-1 text-slate-400">
+              {scores.map((s, i) => (
+                <li key={i}>
+                  プレイヤー {i + 1}: {s} 点
+                </li>
+              ))}
+            </ul>
+          }
+        />
+      )}
+
+      {!isGameOver && (
       <TurnBanner
-        left={`ラウンド ${round} / 3 · 山札 ${deck.length} 枚`}
-        right={`プレイヤー ${currentPlayer + 1} · ${
-          turnStep === "draw" ? "山札から引く" : "手札を1枚出す"
-        }`}
+        playerIndex={currentPlayer}
+        playerLabel={`プレイヤー ${currentPlayer + 1}`}
+        stats={`ラウンド ${round} / 3 · 山札 ${deck.length} 枚`}
+        action={turnStep === "draw" ? "山札から引く" : "手札を1枚出す"}
       />
+      )}
 
       {hands.map((hand, playerIndex) => {
         const isCurrent = currentPlayer === playerIndex;
-        const preview = scoreCards([...hand, ...markets[playerIndex]]);
+        const playerStyle = getPlayerTurnStyle(playerIndex);
+        const preview = scoreStarTradeCards([...hand, ...markets[playerIndex]]);
         return (
           <section
             key={playerIndex}
             className={`rounded-2xl border p-4 transition ${
               isCurrent
-                ? "border-accent/60 bg-accent/5 ring-1 ring-accent/30"
+                ? `${playerStyle.sectionBorder} ${playerStyle.sectionBg} ring-1 ${playerStyle.sectionRing}`
                 : "border-surface-border bg-surface-raised"
             }`}
           >
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="font-semibold">プレイヤー {playerIndex + 1}</h3>
+              <h3 className={`font-semibold ${isCurrent ? playerStyle.label : ""}`}>
+                プレイヤー {playerIndex + 1}
+              </h3>
               <span className="text-sm text-slate-500">
                 累計 {scores[playerIndex]} 点
                 {isCurrent ? ` · 見込み ${preview.total} 点` : ""}
@@ -272,7 +249,7 @@ export function StarTradeGame() {
                     <button
                       key={card.id}
                       type="button"
-                      disabled={turnStep !== "play" || markets[playerIndex].length >= 3}
+                      disabled={isGameOver || turnStep !== "play" || markets[playerIndex].length >= 3}
                       onClick={() => playToMarket(card.id)}
                       className="disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -288,7 +265,7 @@ export function StarTradeGame() {
               <button
                 type="button"
                 onClick={drawCard}
-                disabled={turnStep !== "draw"}
+                disabled={isGameOver || turnStep !== "draw"}
                 className="mt-4 min-h-11 rounded-lg border border-accent/50 px-4 py-2 text-sm text-accent transition hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 山札から1枚引く
@@ -298,9 +275,6 @@ export function StarTradeGame() {
         );
       })}
 
-      <p className="text-center text-xs text-slate-500">
-        手順: 山札から引く → 手札から1枚を公開エリアに出す → 次のプレイヤーへ端末を渡す
-      </p>
     </div>
   );
 }

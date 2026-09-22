@@ -1,10 +1,23 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { playerPieceClasses } from "@/lib/player-colors";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import { winnerIndices } from "@/lib/game-engine";
+import type { ReversiState } from "@/lib/online/moves";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  localizePlayerNotice,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
 import {
   initialReversiBoard,
   playReversiMove,
@@ -15,37 +28,81 @@ import {
   type Player,
 } from "@/lib/play/reversi";
 
-type Phase = "setup" | "playing" | "game-over";
+type LocalPhase = "setup" | "playing" | "game-over";
 
 export function ReversiGame() {
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("reversi");
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [board, setBoard] = useState<Board>(initialReversiBoard);
   const [current, setCurrent] = useState<Player>(0);
   const [passNotice, setPassNotice] = useState<string | null>(null);
 
-  const startGame = useCallback(() => {
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (mode === "local") {
+      setPlayMode({ mode: "local" });
+    }
+  }, [online.room?.code, online.phase, mode, setPlayMode]);
+
+  const startLocal = useCallback(() => {
+    recordLocalPlay();
     setBoard(initialReversiBoard());
     setCurrent(0);
     setPassNotice(null);
-    setPhase("playing");
-  }, []);
+    setLocalPhase("playing");
+  }, [recordLocalPlay]);
+
+  const isOnline =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as ReversiState | null;
+
+  const activeBoard = isOnline && onlineState ? onlineState.board : board;
+  const activeCurrent = isOnline && onlineState ? onlineState.current : current;
+  const activePassNotice =
+    isOnline && onlineState ? onlineState.passNotice : passNotice;
+  const activePhase =
+    isOnline && onlineState
+      ? onlineState.phase
+      : localPhase === "game-over"
+        ? "game-over"
+        : localPhase === "playing"
+          ? "playing"
+          : "setup";
 
   const legal = useMemo(
-    () => (phase === "playing" ? reversiLegalMoves(board, current) : []),
-    [phase, board, current]
+    () =>
+      activePhase === "playing"
+        ? reversiLegalMoves(activeBoard, activeCurrent)
+        : [],
+    [activePhase, activeBoard, activeCurrent]
   );
 
-  const counts = useMemo(() => reversiCounts(board), [board]);
+  const counts = useMemo(() => {
+    if (isOnline && onlineState?.counts) return onlineState.counts;
+    return reversiCounts(activeBoard);
+  }, [isOnline, onlineState, activeBoard]);
 
   const place = useCallback(
     (index: number) => {
-      if (phase !== "playing") return;
+      if (isOnline) {
+        if (!online.isMyTurn || activePhase !== "playing") return;
+        void online.handleMove({ type: "place", index });
+        return;
+      }
+      if (localPhase !== "playing") return;
       const nextBoard = playReversiMove(board, index, current);
       if (!nextBoard) return;
       const nextPlayer = reversiNextPlayer(nextBoard, current);
       setBoard(nextBoard);
       if (nextPlayer === null) {
-        setPhase("game-over");
+        setLocalPhase("game-over");
         setPassNotice(null);
         return;
       }
@@ -57,55 +114,105 @@ export function ReversiGame() {
       }
       setCurrent(nextPlayer);
     },
-    [phase, board, current]
+    [isOnline, online, activePhase, localPhase, board, current]
   );
 
   const winners = useMemo(() => {
-    if (phase !== "game-over") return null;
+    if (activePhase !== "game-over") return null;
     return winnerIndices(counts);
-  }, [phase, counts]);
+  }, [activePhase, counts]);
 
-  if (phase === "setup") {
+  const roomPlayers = isOnline ? online.players : [];
+  const displayPassNotice = localizePlayerNotice(activePassNotice, roomPlayers);
+
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setPlayMode({ mode: "local" });
+  }, [online.reset, setPlayMode]);
+
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="リバーシ"
         description="挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={online.handleCreate}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
       />
     );
   }
 
-  if (phase === "game-over" && winners) {
+  if (online.phase === "waiting" && online.room) {
     return (
-      <ResultPanel
-        winners={winners}
-        onReplay={() => setPhase("setup")}
-        details={
-          <ul className="space-y-1 text-slate-400">
-            <li>プレイヤー 1（黒）: {counts[0]} 個</li>
-            <li>プレイヤー 2（白）: {counts[1]} 個</li>
-          </ul>
-        }
+      <OnlineSetupPanel
+        title="リバーシ"
+        description="挟んだ相手の石を裏返します。置ける場所がないときは自動でパスします。"
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          isHost: online.isHost,
+          onStart: online.handleStart,
+          canStart: online.players.length >= 2,
+        }}
       />
     );
   }
+
+  const isGameOver = activePhase === "game-over" && winners !== null;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    online.handleRematch,
+    reset
+  );
 
   return (
     <div className="space-y-6">
+      {isGameOver && winners && (
+        <ResultPanel
+          variant="inline"
+          winners={winners}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          {...replayProps}
+        />
+      )}
+
+      {!isGameOver && (
       <TurnBanner
-        left={`黒 ${counts[0]} · 白 ${counts[1]}`}
-        right={`プレイヤー ${current + 1}（${current === 0 ? "黒" : "白"}）`}
+        playerIndex={activeCurrent}
+        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+        action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
       />
-      {passNotice ? (
-        <p className="text-center text-sm text-amber-200">{passNotice}</p>
+      )}
+      {displayPassNotice ? (
+        <p className="text-center text-sm text-amber-200">{displayPassNotice}</p>
       ) : null}
 
       <div className="mx-auto grid max-w-md grid-cols-8 gap-0.5 rounded-xl bg-emerald-950 p-1.5 sm:p-2">
-        {board.map((cell, index) => {
-          const canPlace = legal.includes(index);
+        {activeBoard.map((cell, index) => {
+          const canPlace = canInteract && legal.includes(index);
           return (
             <button
               key={index}
@@ -131,9 +238,7 @@ export function ReversiGame() {
                 ) : null
               ) : (
                 <span
-                  className={`h-[70%] w-[70%] rounded-full ${
-                    cell === 0 ? "bg-zinc-900 ring-1 ring-black/40" : "bg-zinc-100 ring-1 ring-white/40"
-                  }`}
+                  className={`h-[70%] w-[70%] rounded-full ${playerPieceClasses(cell)}`}
                 />
               )}
             </button>
@@ -141,9 +246,6 @@ export function ReversiGame() {
         })}
       </div>
 
-      <p className="text-center text-xs text-slate-500">
-        点のついたマスに置きます。8方向のいずれかで相手を挟める場所だけが合法手です。
-      </p>
     </div>
   );
 }

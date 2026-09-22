@@ -23,7 +23,7 @@ export function HandoffGate({
       <button
         type="button"
         onClick={onContinue}
-        className="mt-8 min-h-12 w-full rounded-xl bg-accent px-8 py-3 font-semibold text-white transition hover:bg-accent-hover sm:w-auto"
+        className="btn-game mt-8 w-full sm:w-auto"
       >
         {continueLabel}
       </button>
