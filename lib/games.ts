@@ -452,7 +452,7 @@ const games: GameMeta[] = [
       "先に15個すべてをベアオフしたプレイヤーの勝ち。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "chess",
