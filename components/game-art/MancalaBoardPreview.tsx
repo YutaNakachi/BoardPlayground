@@ -30,22 +30,23 @@ const P2 = {
   playableBg: "rgba(56, 189, 248, 0.15)",
 };
 
+/** 全14マス合計が 48（= 6穴×4石×2人）になる中盤局面 */
 function defaultPreviewPits(): number[] {
   const pits = initialMancala();
-  pits[0] = 4;
+  pits[0] = 3;
   pits[1] = 2;
   pits[2] = 5;
-  pits[3] = 3;
+  pits[3] = 1;
   pits[4] = 4;
-  pits[5] = 5;
-  pits[P1_STORE] = 7;
-  pits[7] = 3;
-  pits[8] = 5;
+  pits[5] = 2;
+  pits[P1_STORE] = 8;
+  pits[7] = 4;
+  pits[8] = 3;
   pits[9] = 2;
-  pits[10] = 4;
-  pits[11] = 6;
-  pits[12] = 1;
-  pits[P2_STORE] = 9;
+  pits[10] = 5;
+  pits[11] = 1;
+  pits[12] = 3;
+  pits[P2_STORE] = 5;
   return pits;
 }
 
