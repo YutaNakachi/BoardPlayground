@@ -1,12 +1,24 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useState } from "react";
+import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { playerPieceClasses } from "@/lib/player-colors";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import type { HexState } from "@/lib/online/moves";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  getSeatDisplayName,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
 import {
   emptyHexBoard,
   HEX_SIZE,
@@ -15,58 +27,164 @@ import {
   type Player,
 } from "@/lib/play/hex";
 
-type Phase = "setup" | "playing" | "game-over";
+type LocalPhase = "setup" | "playing" | "game-over";
 
 export function HexGame() {
-  const { recordLocalPlay } = usePlayPage();
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("hex");
+  const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [board, setBoard] = useState<Board>(emptyHexBoard);
   const [current, setCurrent] = useState<Player>(0);
   const [winner, setWinner] = useState<Player | null>(null);
 
-  const startGame = useCallback(() => {
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (mode === "local") {
+      setPlayMode({ mode: "local" });
+    }
+  }, [online.room?.code, online.phase, mode, setPlayMode]);
+
+  const startLocal = useCallback(() => {
     recordLocalPlay();
     setBoard(emptyHexBoard());
     setCurrent(0);
     setWinner(null);
-    setPhase("playing");
+    setLocalPhase("playing");
   }, [recordLocalPlay]);
+
+  const isOnline =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as HexState | null;
+
+  const activeBoard = isOnline && onlineState ? onlineState.board : board;
+  const activeCurrent = isOnline && onlineState ? onlineState.current : current;
+  const activeWinner = isOnline && onlineState ? onlineState.winner : winner;
+  const activePhase =
+    isOnline && onlineState
+      ? onlineState.phase
+      : localPhase === "game-over"
+        ? "game-over"
+        : localPhase === "playing"
+          ? "playing"
+          : "setup";
 
   const place = useCallback(
     (index: number) => {
-      if (phase !== "playing" || board[index] !== null) return;
+      if (isOnline) {
+        if (!online.isMyTurn || activePhase !== "playing") return;
+        void online.handleMove({ type: "place", index });
+        return;
+      }
+      if (localPhase !== "playing" || board[index] !== null) return;
       const next = board.map((cell, i) => (i === index ? current : cell));
       setBoard(next);
       const won = hexWinner(next);
       if (won !== null) {
         setWinner(won);
-        setPhase("game-over");
+        setLocalPhase("game-over");
         return;
       }
       setCurrent(current === 0 ? 1 : 0);
     },
-    [phase, board, current]
+    [isOnline, online, activePhase, localPhase, board, current]
   );
 
-  const winners = useMemo(() => (winner === null ? null : [winner]), [winner]);
+  const winners = useMemo(() => {
+    if (activePhase !== "game-over" || activeWinner === null) return null;
+    return [activeWinner];
+  }, [activePhase, activeWinner]);
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
-  usePlaySetupNavigation(phase === "setup", backToSetup);
+  const roomPlayers = isOnline ? online.players : [];
 
-  if (phase === "setup") {
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setPlayMode({ mode: "local" });
+  }, [online.reset, setPlayMode]);
+
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="ヘックス"
         description="11×11の六角マスに石を置き、向かい側の辺を自分の色でつなげた方が勝ちです。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={(displayName) =>
+          online.handleCreate(
+            displayName,
+            firstPlayer === 1 ? { firstPlayer: 1 } : undefined
+          )
+        }
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+        extra={
+          mode === "online" ? (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              onChange={onFirstPlayerChange}
+            />
+          ) : undefined
+        }
       />
     );
   }
 
-  const isGameOver = phase === "game-over" && winners !== null;
+  if (online.phase === "waiting" && online.room) {
+    return (
+      <OnlineSetupPanel
+        title="ヘックス"
+        description="11×11の六角マスに石を置き、向かい側の辺を自分の色でつなげた方が勝ちです。"
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          isHost: online.isHost,
+          onStart: () => online.handleStart(firstPlayer),
+          canStart: online.players.length >= 2,
+          extra: (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              onChange={online.isHost ? onFirstPlayerChange : undefined}
+              readOnly={!online.isHost}
+            />
+          ),
+        }}
+      />
+    );
+  }
+
+  const isGameOver = activePhase === "game-over" && winners !== null;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    () => online.handleRematch(firstPlayer),
+    reset
+  );
 
   return (
     <div className="space-y-6">
@@ -74,21 +192,39 @@ export function HexGame() {
         <ResultPanel
           variant="inline"
           winners={winners}
-          onReplay={() => setPhase("setup")}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                onChange={onFirstPlayerChange}
+              />
+            ) : undefined
+          }
           details={
             <p className="text-slate-400">
-              プレイヤー {winner! + 1} が両端をつなぎました。
+              {getSeatDisplayName(roomPlayers, Number(activeWinner))} が両端をつなぎました。
             </p>
           }
         />
       )}
 
       {!isGameOver && (
-      <TurnBanner
-        playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}`}
-        action={current === 0 ? "上下の辺をつなぐ" : "左右の辺をつなぐ"}
-      />
+        <TurnBanner
+          playerIndex={activeCurrent}
+          playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+          action={
+            isOnline && !online.isMyTurn
+              ? "相手の手番です"
+              : activeCurrent === 0
+                ? "上下の辺をつなぐ"
+                : "左右の辺をつなぐ"
+          }
+        />
       )}
 
       <div className="-mx-4 overflow-x-auto px-4">
@@ -96,15 +232,14 @@ export function HexGame() {
           className="mx-auto grid min-w-[20rem] max-w-xl gap-0.5"
           style={{ gridTemplateColumns: `repeat(${HEX_SIZE}, minmax(0, 1fr))` }}
         >
-          {board.map((cell, index) => {
+          {activeBoard.map((cell, index) => {
             const row = Math.floor(index / HEX_SIZE);
-            const col = index % HEX_SIZE;
             const offset = row % 2 === 1 ? "translate-x-1/4" : "";
             return (
               <button
                 key={index}
                 type="button"
-                disabled={cell !== null || isGameOver}
+                disabled={!canInteract || cell !== null}
                 onClick={() => place(index)}
                 className={`flex aspect-[1.15] min-h-7 items-center justify-center ${offset}`}
                 aria-label={cell === null ? "空マス" : `プレイヤー ${cell + 1}`}
@@ -124,7 +259,6 @@ export function HexGame() {
       <p className="text-center text-xs text-slate-500">
         プレイヤー1は上と下、プレイヤー2は左と右をつなぎます。
       </p>
-
     </div>
   );
 }

@@ -8,11 +8,24 @@ import {
   type Player,
 } from "@/lib/play/checkers";
 import {
+  dropGravityFour,
+  emptyGravityFourBoard,
+  gravityFourBoardFull,
+  gravityFourWinner,
+  type Board as GravityFourBoard,
+} from "@/lib/play/gravity-four";
+import {
   emptyGomokuBoard,
   gomokuBoardFull,
   gomokuWinner,
   type Board as GomokuBoard,
 } from "@/lib/play/gomoku";
+import {
+  emptyHexBoard,
+  hexWinner,
+  type Board as HexBoard,
+} from "@/lib/play/hex";
+import { initialNim, nimOver, takeNim } from "@/lib/play/nim";
 import {
   initialReversiBoard,
   playReversiMove,
@@ -67,10 +80,40 @@ export type CheckersState = {
   notice: string | null;
 };
 
-export type GameState = ReversiState | TttState | GomokuState | CheckersState;
+export type GravityFourState = {
+  board: GravityFourBoard;
+  current: Player;
+  phase: "playing" | "game-over";
+  winner: Player | "draw" | null;
+};
+
+export type NimState = {
+  heaps: number[];
+  current: Player;
+  phase: "playing" | "game-over";
+  winner: Player | null;
+};
+
+export type HexState = {
+  board: HexBoard;
+  current: Player;
+  phase: "playing" | "game-over";
+  winner: Player | null;
+};
+
+export type GameState =
+  | ReversiState
+  | TttState
+  | GomokuState
+  | CheckersState
+  | GravityFourState
+  | NimState
+  | HexState;
 
 export type MovePayload =
   | { type: "place"; index: number }
+  | { type: "drop"; col: number }
+  | { type: "nim"; heapIndex: number; count: number }
   | { type: "checkers"; move: CheckersMove };
 
 export function createInitialState(
@@ -113,6 +156,27 @@ export function createInitialState(
         phase: "playing",
         winner: null,
         notice: null,
+      };
+    case "gravity-four":
+      return {
+        board: emptyGravityFourBoard(),
+        current: firstPlayer,
+        phase: "playing",
+        winner: null,
+      };
+    case "nim":
+      return {
+        heaps: initialNim(),
+        current: firstPlayer,
+        phase: "playing",
+        winner: null,
+      };
+    case "hex":
+      return {
+        board: emptyHexBoard(),
+        current: firstPlayer,
+        phase: "playing",
+        winner: null,
       };
   }
 }
@@ -304,6 +368,73 @@ export function applyMove(
           winner: null,
           notice: null,
         },
+        currentPlayer: nextPlayer,
+      };
+    }
+
+    case "gravity-four": {
+      const s = state as GravityFourState;
+      if (move.type !== "drop") return { error: "Invalid move type" };
+      const next = dropGravityFour(s.board, move.col, s.current);
+      if (!next) return { error: "Illegal move" };
+      const won = gravityFourWinner(next);
+      if (won !== null) {
+        return {
+          state: { board: next, current: s.current, phase: "game-over", winner: won },
+          currentPlayer: null,
+        };
+      }
+      if (gravityFourBoardFull(next)) {
+        return {
+          state: { board: next, current: s.current, phase: "game-over", winner: "draw" },
+          currentPlayer: null,
+        };
+      }
+      const nextPlayer: Player = s.current === 0 ? 1 : 0;
+      return {
+        state: { board: next, current: nextPlayer, phase: "playing", winner: null },
+        currentPlayer: nextPlayer,
+      };
+    }
+
+    case "nim": {
+      const s = state as NimState;
+      if (move.type !== "nim") return { error: "Invalid move type" };
+      const next = takeNim(s.heaps, move.heapIndex, move.count);
+      if (!next) return { error: "Illegal move" };
+      if (nimOver(next)) {
+        return {
+          state: {
+            heaps: next,
+            current: s.current,
+            phase: "game-over",
+            winner: s.current,
+          },
+          currentPlayer: null,
+        };
+      }
+      const nextPlayer: Player = s.current === 0 ? 1 : 0;
+      return {
+        state: { heaps: next, current: nextPlayer, phase: "playing", winner: null },
+        currentPlayer: nextPlayer,
+      };
+    }
+
+    case "hex": {
+      const s = state as HexState;
+      if (move.type !== "place") return { error: "Invalid move type" };
+      if (s.board[move.index] !== null) return { error: "Cell occupied" };
+      const next = s.board.map((cell, i) => (i === move.index ? s.current : cell));
+      const won = hexWinner(next);
+      if (won !== null) {
+        return {
+          state: { board: next, current: s.current, phase: "game-over", winner: won },
+          currentPlayer: null,
+        };
+      }
+      const nextPlayer: Player = s.current === 0 ? 1 : 0;
+      return {
+        state: { board: next, current: nextPlayer, phase: "playing", winner: null },
         currentPlayer: nextPlayer,
       };
     }
