@@ -9,7 +9,8 @@ import { usePlayStats } from "@/components/PlayStatsProvider";
 export function SiteSidebar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const { open, closeSidebar, filters, setFilters, games } = useCatalogSidebar();
+  const { open, closeSidebar, filters, setFilters, clearFilters, games } =
+    useCatalogSidebar();
   const { onlineEnabled } = usePlayStats();
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export function SiteSidebar() {
             games={games}
             filters={filters}
             onChange={setFilters}
+            onClear={clearFilters}
             onlineEnabled={onlineEnabled}
           />
         </div>
