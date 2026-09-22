@@ -144,11 +144,9 @@ export function MancalaGame() {
         <TurnBanner
           playerIndex={current}
           playerLabel={`プレイヤー ${current + 1}`}
+          notice={notice ?? undefined}
         />
       )}
-      {notice && !isGameOver ? (
-        <p className="text-center text-sm text-amber-200">{notice}</p>
-      ) : null}
 
       <div className="mx-auto grid max-w-xl grid-cols-8 gap-1.5 sm:gap-2">
         <Store

@@ -425,36 +425,6 @@ export function HexGame() {
         />
       )}
 
-      {!isOnline && game.swapPending && !isGameOver && (
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={handleSwap}
-            className="rounded-full border border-sky-400/50 bg-sky-500/15 px-4 py-2 text-sm font-medium text-sky-200 transition hover:bg-sky-500/25"
-          >
-            スワップ（先手の石を自分の色にする）
-          </button>
-          <button
-            type="button"
-            onClick={handleDeclineSwap}
-            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-          >
-            そのまま打る
-          </button>
-        </div>
-      )}
-
-      <HexBoard
-        board={activeBoard}
-        winPath={winPath}
-        hoverIndex={hoverIndex}
-        lastPlaced={isOnline ? null : lastPlaced}
-        previewStone={previewStone}
-        canPlace={canPlace}
-        onHover={setHoverIndex}
-        onPlace={place}
-      />
-
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm bg-[#ff7d9e]" />
@@ -474,6 +444,36 @@ export function HexGame() {
           </button>
         )}
       </div>
+
+      <HexBoard
+        board={activeBoard}
+        winPath={winPath}
+        hoverIndex={hoverIndex}
+        lastPlaced={isOnline ? null : lastPlaced}
+        previewStone={previewStone}
+        canPlace={canPlace}
+        onHover={setHoverIndex}
+        onPlace={place}
+      />
+
+      {!isOnline && game.swapPending && !isGameOver && (
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={handleSwap}
+            className="rounded-full border border-sky-400/50 bg-sky-500/15 px-4 py-2 text-sm font-medium text-sky-200 transition hover:bg-sky-500/25"
+          >
+            スワップ（先手の石を自分の色にする）
+          </button>
+          <button
+            type="button"
+            onClick={handleDeclineSwap}
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+          >
+            そのまま打る
+          </button>
+        </div>
+      )}
     </div>
   );
 }

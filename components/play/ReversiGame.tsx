@@ -238,11 +238,9 @@ export function ReversiGame() {
         playerIndex={activeCurrent}
         playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
         action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
+        notice={displayPassNotice ?? undefined}
       />
       )}
-      {displayPassNotice ? (
-        <p className="text-center text-sm text-amber-200">{displayPassNotice}</p>
-      ) : null}
 
       <div className="mx-auto grid max-w-md grid-cols-8 gap-0.5 rounded-xl bg-emerald-950 p-1.5 sm:p-2">
         {activeBoard.map((cell, index) => {
