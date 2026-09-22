@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
 import { createInitialState } from "@/lib/online/moves";
+import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 import { isOnlineGame } from "@/lib/online/types";
 import { incrementPlayCount } from "@/lib/stats/record-play";
 
@@ -26,11 +27,26 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "playerId is required" }, { status: 400 });
   }
 
-  const { data: room } = await db
+  const roomSelectWithOptions = await db
     .from("rooms")
     .select("id, game_slug, status, host_player_id, game_options")
     .eq("id", id)
     .maybeSingle();
+
+  let room = roomSelectWithOptions.data;
+  if (roomSelectWithOptions.error && isMissingGameOptionsColumn(roomSelectWithOptions.error)) {
+    const roomSelectBase = await db
+      .from("rooms")
+      .select("id, game_slug, status, host_player_id")
+      .eq("id", id)
+      .maybeSingle();
+    room = roomSelectBase.data
+      ? { ...roomSelectBase.data, game_options: {} }
+      : null;
+  } else if (roomSelectWithOptions.error) {
+    console.error("[rooms/start]", roomSelectWithOptions.error.message);
+    return NextResponse.json({ error: "部屋情報の取得に失敗しました" }, { status: 500 });
+  }
 
   if (!room) {
     return NextResponse.json({ error: "部屋が見つかりません" }, { status: 404 });

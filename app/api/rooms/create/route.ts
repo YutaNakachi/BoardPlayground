@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
 import { getGameBySlug } from "@/lib/games";
+import { isValidPlayerId } from "@/lib/online/player-id";
 import { ROOM_PASSPHRASE_PLACEHOLDER } from "@/lib/online/room-auth";
 import { validateGameOptions } from "@/lib/online/game-options";
+import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 import { generateRoomCode } from "@/lib/online/room-code";
 import { isOnlineGame, type OnlineGameSlug } from "@/lib/online/types";
 
@@ -27,6 +29,9 @@ export async function POST(request: Request) {
   const { gameSlug, displayName, playerId, gameOptions } = body;
   if (!gameSlug || !displayName || !playerId) {
     return apiError(API_ERROR.MISSING_FIELDS, 400);
+  }
+  if (!isValidPlayerId(playerId)) {
+    return NextResponse.json({ error: "プレイヤー ID が不正です。ページを再読み込みしてください。" }, { status: 400 });
   }
 
   if (!isOnlineGame(gameSlug)) {
@@ -57,21 +62,35 @@ export async function POST(request: Request) {
     attempts++;
   }
 
-  const { data: room, error: roomError } = await db
+  const baseRoomInsert = {
+    code,
+    game_slug: gameSlug,
+    passphrase_hash: ROOM_PASSPHRASE_PLACEHOLDER,
+    status: "waiting",
+    host_player_id: playerId,
+  };
+
+  let roomInsert = await db
     .from("rooms")
-    .insert({
-      code,
-      game_slug: gameSlug,
-      passphrase_hash: ROOM_PASSPHRASE_PLACEHOLDER,
-      status: "waiting",
-      host_player_id: playerId,
-      game_options: validatedOptions,
-    })
+    .insert({ ...baseRoomInsert, game_options: validatedOptions })
     .select("id, code")
     .single();
 
+  if (roomInsert.error && isMissingGameOptionsColumn(roomInsert.error)) {
+    roomInsert = await db
+      .from("rooms")
+      .insert(baseRoomInsert)
+      .select("id, code")
+      .single();
+  }
+
+  const { data: room, error: roomError } = roomInsert;
+
   if (roomError || !room) {
     console.error("[rooms/create]", roomError?.message);
+    if (isMissingGameOptionsColumn(roomError)) {
+      return apiError(API_ERROR.DB_UNAVAILABLE, 503);
+    }
     return apiError(API_ERROR.CREATE_ROOM_FAILED, 500);
   }
 

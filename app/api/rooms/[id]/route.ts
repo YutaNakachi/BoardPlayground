@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireOnlineBackend } from "@/lib/api/require-online";
+import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,11 +11,26 @@ export async function GET(_request: Request, { params }: Params) {
 
   const { id } = await params;
 
-  const { data: room } = await db
+  const roomSelectWithOptions = await db
     .from("rooms")
     .select("id, code, game_slug, status, host_player_id, expires_at, game_options")
     .eq("id", id)
     .maybeSingle();
+
+  let room = roomSelectWithOptions.data;
+  if (roomSelectWithOptions.error && isMissingGameOptionsColumn(roomSelectWithOptions.error)) {
+    const roomSelectBase = await db
+      .from("rooms")
+      .select("id, code, game_slug, status, host_player_id, expires_at")
+      .eq("id", id)
+      .maybeSingle();
+    room = roomSelectBase.data
+      ? { ...roomSelectBase.data, game_options: {} }
+      : null;
+  } else if (roomSelectWithOptions.error) {
+    console.error("[rooms/get]", roomSelectWithOptions.error.message);
+    return NextResponse.json({ error: "部屋情報の取得に失敗しました" }, { status: 500 });
+  }
 
   if (!room) {
     return NextResponse.json({ error: "部屋が見つかりません" }, { status: 404 });

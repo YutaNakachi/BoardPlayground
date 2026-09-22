@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
+import { isValidPlayerId } from "@/lib/online/player-id";
 
 export async function POST(request: Request) {
   const backend = await requireOnlineBackend();
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
   const { code, displayName, playerId } = body;
   if (!code || !displayName || !playerId) {
     return apiError(API_ERROR.MISSING_FIELDS, 400);
+  }
+  if (!isValidPlayerId(playerId)) {
+    return NextResponse.json({ error: "プレイヤー ID が不正です。ページを再読み込みしてください。" }, { status: 400 });
   }
 
   const normalizedCode = code.trim().toUpperCase();
