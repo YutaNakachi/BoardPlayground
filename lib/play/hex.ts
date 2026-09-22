@@ -147,9 +147,9 @@ export const HEX_GRID_STROKE_WIDTH = 0.048;
 export const HEX_CELL_FILL = "#9ca3af";
 export const HEX_CELL_FILL_WIN = "#a8a29e";
 export const HEX_EDGE_CELL_FILL = {
-  red: "#f0b4b4",
-  blue: "#a8c4f0",
-  corner: "#d8c8e8",
+  red: "#ff7d9e",
+  blue: "#62b4ff",
+  corner: "#c98cff",
 } as const;
 
 /** 外周マスの塗り。角は紫、南北は薄赤、東西は薄青 */

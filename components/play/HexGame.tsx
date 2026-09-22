@@ -268,11 +268,11 @@ export function HexGame() {
 
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-red-500/80" />
+          <span className="h-2.5 w-2.5 rounded-sm bg-[#ff7d9e]" />
           赤: 南北
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-blue-500/80" />
+          <span className="h-2.5 w-2.5 rounded-sm bg-[#62b4ff]" />
           青: 東西
         </span>
         {!isGameOver && (
