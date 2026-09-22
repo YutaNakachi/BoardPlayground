@@ -9,8 +9,8 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
   applyHexSwap,
   declineHexSwap,
-  HEX_SIZE,
   HEX_STONE_COLORS,
+  hexBorderPolyline,
   hexCenter,
   hexCoord,
   hexEdgeCells,
@@ -21,7 +21,6 @@ import {
   stoneForPlayer,
   type HexState,
   type HexWinResult,
-  type Stone,
 } from "@/lib/play/hex";
 
 type Phase = "setup" | "playing" | "game-over";
@@ -109,7 +108,7 @@ export function HexGame() {
     return (
       <SetupPanel
         title="ヘックス"
-        description="11×11の菱形グリッドに石を置き、北西—南東（赤）または南西—北東（青）の辺をつなげた方が勝ちです。"
+        description="11×11の菱形グリッドに石を置き、南北（赤）または東西（青）の辺をつなげた方が勝ちです。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -143,8 +142,8 @@ export function HexGame() {
             game.swapPending
               ? "スワップするか、そのまま打ってください"
               : currentStone === 0
-                ? "北西—南東の辺をつなぐ"
-                : "南西—北東の辺をつなぐ"
+                ? "南北の辺をつなぐ"
+                : "東西の辺をつなぐ"
           }
         />
       )}
@@ -168,7 +167,7 @@ export function HexGame() {
         </div>
       )}
 
-      <div className="relative mx-auto w-full max-w-3xl">
+      <div className="relative mx-auto w-full max-w-4xl">
         <svg
           viewBox={`${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.width} ${VIEW_BOX.height}`}
           className="block h-auto w-full touch-manipulation"
@@ -270,22 +269,36 @@ export function HexGame() {
             );
           })}
 
-          {/* 外周の色付き境界帯（赤: NW / SE、青: SW / NE） */}
-          {drawEdgeBand("red-start", edgeSets.redStart)}
-          {drawEdgeBand("red-goal", edgeSets.redGoal)}
-          {drawEdgeBand("blue-start", edgeSets.blueStart)}
-          {drawEdgeBand("blue-goal", edgeSets.blueGoal)}
+          {/* 外周の色付き境界帯（赤: 南北、青: 東西） */}
+          {(["red-start", "red-goal", "blue-start", "blue-goal"] as const).map(
+            (edge) => (
+              <polyline
+                key={edge}
+                points={hexBorderPolyline(edge)}
+                fill="none"
+                stroke={
+                  edge.startsWith("red")
+                    ? "rgba(239,68,68,0.7)"
+                    : "rgba(59,130,246,0.7)"
+                }
+                strokeWidth={0.28}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="pointer-events-none"
+              />
+            )
+          )}
         </svg>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm bg-red-500/80" />
-          赤: 北西—南東
+          赤: 南北
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm bg-blue-500/80" />
-          青: 南西—北東
+          青: 東西
         </span>
         {!isGameOver && (
           <button
@@ -298,36 +311,5 @@ export function HexGame() {
         )}
       </div>
     </div>
-  );
-}
-
-function drawEdgeBand(
-  kind: "red-start" | "red-goal" | "blue-start" | "blue-goal",
-  cells: Set<number>
-) {
-  const color =
-    kind.startsWith("red") ? "rgba(239,68,68,0.55)" : "rgba(59,130,246,0.55)";
-  const indices = Array.from(cells).sort((a, b) => a - b);
-  if (indices.length === 0) return null;
-
-  const points = indices
-    .map((index) => {
-      const { row, col } = hexCoord(index);
-      const { x, y } = hexCenter(row, col);
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return (
-    <polyline
-      key={kind}
-      points={points}
-      fill="none"
-      stroke={color}
-      strokeWidth={0.22}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="pointer-events-none"
-    />
   );
 }

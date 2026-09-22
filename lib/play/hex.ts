@@ -75,24 +75,62 @@ export function hexNeighborIndices(index: number): number[] {
   return hexNeighbors(row, col).map((pos) => hexIndex(pos.row, pos.col));
 }
 
-/** flat-top 六角形の中心座標（菱形グリッド） */
+/** pointy-top 六角形の中心座標（ハニカム菱形グリッド） */
 export function hexCenter(row: number, col: number): { x: number; y: number } {
-  const x = 1.5 * col * HEX_RADIUS;
-  const y = HEX_SQRT3 * (row + col / 2) * HEX_RADIUS;
+  const x = HEX_SQRT3 * (col + row * 0.5) * HEX_RADIUS;
+  const y = row * 1.5 * HEX_RADIUS;
   return { x, y };
 }
 
-/** flat-top 六角形の頂点 */
-export function hexPolygonPoints(row: number, col: number): string {
+/** pointy-top 六角形の頂点（i=0 が右上、時計回り） */
+export function hexCorner(
+  row: number,
+  col: number,
+  corner: 0 | 1 | 2 | 3 | 4 | 5
+): { x: number; y: number } {
   const { x, y } = hexCenter(row, col);
+  const angle = (Math.PI / 3) * corner + Math.PI / 6;
+  return {
+    x: x + HEX_RADIUS * Math.cos(angle),
+    y: y + HEX_RADIUS * Math.sin(angle),
+  };
+}
+
+/** pointy-top 六角形の SVG ポリゴン座標 */
+export function hexPolygonPoints(row: number, col: number): string {
   const points: string[] = [];
   for (let i = 0; i < 6; i++) {
-    const angle = ((60 * i - 30) * Math.PI) / 180;
-    points.push(
-      `${x + HEX_RADIUS * Math.cos(angle)},${y + HEX_RADIUS * Math.sin(angle)}`
-    );
+    const { x, y } = hexCorner(row, col, i as 0 | 1 | 2 | 3 | 4 | 5);
+    points.push(`${x},${y}`);
   }
   return points.join(" ");
+}
+
+/** 盤外周の色付き境界線（赤=南北、青=東西） */
+export function hexBorderPolyline(
+  edge: "red-start" | "red-goal" | "blue-start" | "blue-goal"
+): string {
+  const pts: { x: number; y: number }[] = [];
+
+  if (edge === "red-start") {
+    pts.push(hexCorner(0, 0, 3));
+    for (let col = 0; col < HEX_SIZE; col++) pts.push(hexCorner(0, col, 4));
+    pts.push(hexCorner(0, HEX_SIZE - 1, 5));
+  } else if (edge === "red-goal") {
+    pts.push(hexCorner(HEX_SIZE - 1, 0, 2));
+    for (let col = 0; col < HEX_SIZE; col++) pts.push(hexCorner(HEX_SIZE - 1, col, 1));
+    pts.push(hexCorner(HEX_SIZE - 1, HEX_SIZE - 1, 0));
+  } else if (edge === "blue-start") {
+    pts.push(hexCorner(0, 0, 3));
+    for (let row = 0; row < HEX_SIZE; row++) pts.push(hexCorner(row, 0, 2));
+    pts.push(hexCorner(HEX_SIZE - 1, 0, 1));
+  } else {
+    pts.push(hexCorner(0, HEX_SIZE - 1, 5));
+    for (let row = 0; row < HEX_SIZE; row++) pts.push(hexCorner(row, HEX_SIZE - 1, 0));
+    pts.push(hexCorner(HEX_SIZE - 1, HEX_SIZE - 1, 1));
+  }
+
+  return pts.map((p) => `${p.x},${p.y}`).join(" ");
 }
 
 function isStartCell(stone: Stone, row: number, col: number): boolean {
@@ -103,7 +141,7 @@ function isGoalCell(stone: Stone, row: number, col: number): boolean {
   return stone === 0 ? row === HEX_SIZE - 1 : col === HEX_SIZE - 1;
 }
 
-/** BFS で勝利経路を探索。赤=r0→r10、青=c0→c10 */
+/** BFS で勝利経路を探索。赤=北(r0)→南(r10)、青=西(c0)→東(c10) */
 export function hexWinPath(board: Board, stone: Stone): number[] | null {
   const visited = new Set<number>();
   const parent = new Map<number, number | null>();
@@ -257,7 +295,7 @@ export function hexViewBox(padding = 1.2): {
   };
 }
 
-/** 赤辺（r=0 / r=10）・青辺（c=0 / c=10）の外周セル */
+/** 赤辺（北 r=0 / 南 r=10）・青辺（西 c=0 / 東 c=10）の外周セル */
 export function hexEdgeCells(
   edge: "red-start" | "red-goal" | "blue-start" | "blue-goal"
 ): number[] {
