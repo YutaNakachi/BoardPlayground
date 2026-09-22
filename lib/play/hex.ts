@@ -179,7 +179,8 @@ export const HEX_BORDER_FILL = {
   red: "#dc2626",
   blue: "#2563eb",
 } as const;
-export const HEX_BORDER_STROKE_WIDTH = 0.14;
+/** 外周辺を外側へ押し出す幅（盤面内にはみ出さない） */
+export const HEX_BORDER_BAND_DEPTH = 0.4;
 
 function isStartCell(stone: Stone, row: number, col: number): boolean {
   return stone === 0 ? row === 0 : col === 0;
@@ -313,6 +314,90 @@ export function placeHexStone(
   return { next, win };
 }
 
+function boardCenter(): HexPoint {
+  let sx = 0;
+  let sy = 0;
+  for (let row = 0; row < HEX_SIZE; row++) {
+    for (let col = 0; col < HEX_SIZE; col++) {
+      const { x, y } = hexCenter(row, col);
+      sx += x;
+      sy += y;
+    }
+  }
+  const n = HEX_SIZE * HEX_SIZE;
+  return { x: sx / n, y: sy / n };
+}
+
+function outwardNormal(
+  a: HexPoint,
+  b: HexPoint,
+  cx: number,
+  cy: number
+): { nx: number; ny: number } {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  let nx = -dy / len;
+  let ny = dx / len;
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const vx = mx - cx;
+  const vy = my - cy;
+  if (nx * vx + ny * vy < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  return { nx, ny };
+}
+
+function extrudeEdgePath(
+  a: HexPoint,
+  b: HexPoint,
+  depth: number,
+  cx: number,
+  cy: number
+): string {
+  const { nx, ny } = outwardNormal(a, b, cx, cy);
+  const a2 = { x: a.x + nx * depth, y: a.y + ny * depth };
+  const b2 = { x: b.x + nx * depth, y: b.y + ny * depth };
+  return `${a2.x},${a2.y} ${b2.x},${b2.y} ${b.x},${b.y} ${a.x},${a.y}`;
+}
+
+export type HexBorderSegment = {
+  color: "red" | "blue";
+  path: string;
+};
+
+/** 外周辺を外側だけへ押し出した色帯 */
+export function hexBorderSegments(): HexBorderSegment[] {
+  const depth = HEX_BORDER_BAND_DEPTH;
+  const center = boardCenter();
+  const segments: HexBorderSegment[] = [];
+
+  for (let row = 0; row < HEX_SIZE; row++) {
+    for (let col = 0; col < HEX_SIZE; col++) {
+      for (let side = 0; side < 6; side++) {
+        const { dr, dc } = HEX_SIDE_NEIGHBOR[side];
+        const nr = row + dr;
+        const nc = col + dc;
+        if (nr >= 0 && nr < HEX_SIZE && nc >= 0 && nc < HEX_SIZE) continue;
+
+        const cornerA = side as 0 | 1 | 2 | 3 | 4 | 5;
+        const cornerB = ((side + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5;
+        const a = hexCorner(row, col, cornerA);
+        const b = hexCorner(row, col, cornerB);
+
+        segments.push({
+          color: outerEdgeColor(side, row, col),
+          path: extrudeEdgePath(a, b, depth, center.x, center.y),
+        });
+      }
+    }
+  }
+
+  return segments;
+}
+
 /** viewBox 計算用: 全セルのバウンディングボックス */
 export function hexViewBox(padding = 2.2): {
   x: number;
@@ -335,11 +420,12 @@ export function hexViewBox(padding = 2.2): {
     }
   }
 
+  const margin = padding + HEX_BORDER_BAND_DEPTH;
   return {
-    x: minX - padding,
-    y: minY - padding,
-    width: maxX - minX + padding * 2,
-    height: maxY - minY + padding * 2,
+    x: minX - margin,
+    y: minY - margin,
+    width: maxX - minX + margin * 2,
+    height: maxY - minY + margin * 2,
   };
 }
 

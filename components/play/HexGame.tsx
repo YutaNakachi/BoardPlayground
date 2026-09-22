@@ -10,13 +10,13 @@ import {
   applyHexSwap,
   declineHexSwap,
   HEX_BORDER_FILL,
-  HEX_BORDER_STROKE_WIDTH,
   HEX_CELL_FILL,
   HEX_CELL_FILL_WIN,
   HEX_GRID_STROKE,
   HEX_GRID_STROKE_WIDTH,
   HEX_STONE_COLORS,
   hexBoardEdges,
+  hexBorderSegments,
   hexCenter,
   hexCoord,
   hexPolygonPoints,
@@ -92,6 +92,7 @@ export function HexGame() {
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
   const boardEdges = useMemo(() => hexBoardEdges(), []);
+  const borderSegments = useMemo(() => hexBorderSegments(), []);
 
   const winPathSet = useMemo(
     () => new Set(winResult?.path ?? []),
@@ -226,21 +227,18 @@ export function HexGame() {
               />
             ))}
 
-          {boardEdges
-            .filter((edge) => edge.border !== null)
-            .map((edge, i) => (
-              <line
-                key={`outer-${i}`}
-                x1={edge.a.x}
-                y1={edge.a.y}
-                x2={edge.b.x}
-                y2={edge.b.y}
-                stroke={HEX_BORDER_FILL[edge.border!]}
-                strokeWidth={HEX_BORDER_STROKE_WIDTH}
-                strokeLinecap="round"
-                className="pointer-events-none"
-              />
-            ))}
+          {(["blue", "red"] as const).flatMap((color) =>
+            borderSegments
+              .filter((segment) => segment.color === color)
+              .map((segment, i) => (
+                <polygon
+                  key={`border-${color}-${i}`}
+                  points={segment.path}
+                  fill={HEX_BORDER_FILL[color]}
+                  className="pointer-events-none"
+                />
+              ))
+          )}
 
           {game.board.map((cell, index) => {
             const { row, col } = hexCoord(index);
