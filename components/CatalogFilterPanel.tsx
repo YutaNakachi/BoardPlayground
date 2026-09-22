@@ -14,6 +14,7 @@ import {
   getCatalogDurationBuckets,
   getCatalogOrigins,
   getCatalogPlayerBuckets,
+  countCatalogFilters,
   type CatalogFilters,
   type DurationBucket,
   type GameMeta,
@@ -25,6 +26,7 @@ type Props = {
   games: GameMeta[];
   filters: CatalogFilters;
   onChange: (filters: CatalogFilters) => void;
+  onClear?: () => void;
   onlineEnabled?: boolean;
 };
 
@@ -47,8 +49,10 @@ export function CatalogFilterPanel({
   games,
   filters,
   onChange,
+  onClear,
   onlineEnabled = false,
 }: Props) {
+  const activeCount = countCatalogFilters(filters);
   const origins = getCatalogOrigins(games);
   const complexities = getCatalogComplexities(games);
   const playerBuckets = getCatalogPlayerBuckets(games);
@@ -95,6 +99,16 @@ export function CatalogFilterPanel({
 
   return (
     <div className="space-y-5" role="group" aria-label="条件で絞る">
+        {onClear && activeCount > 0 ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="min-h-10 w-full rounded-lg border border-surface-border bg-surface-raised px-3 text-sm text-slate-300 transition hover:border-white/20 hover:text-white"
+          >
+            条件をクリア（{activeCount}）
+          </button>
+        ) : null}
+
         <div>
           <label
             htmlFor="catalog-search"
