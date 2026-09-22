@@ -4,7 +4,10 @@ import { requireOnlineBackend } from "@/lib/api/require-online";
 import { getGameBySlug } from "@/lib/games";
 import { isValidPlayerId } from "@/lib/online/player-id";
 import { ROOM_PASSPHRASE_PLACEHOLDER } from "@/lib/online/room-auth";
-import { validateGameOptions } from "@/lib/online/game-options";
+import {
+  hasNonDefaultGameOptions,
+  validateGameOptions,
+} from "@/lib/online/game-options";
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 import { generateRoomCode } from "@/lib/online/room-code";
 import { isOnlineGame, type OnlineGameSlug } from "@/lib/online/types";
@@ -77,6 +80,15 @@ export async function POST(request: Request) {
     .single();
 
   if (roomInsert.error && isMissingGameOptionsColumn(roomInsert.error)) {
+    if (hasNonDefaultGameOptions(gameSlug as OnlineGameSlug, validatedOptions)) {
+      return NextResponse.json(
+        {
+          error:
+            "モード選択を保存できません。データベースのマイグレーション（game_options）が未適用の可能性があります。",
+        },
+        { status: 503 }
+      );
+    }
     roomInsert = await db
       .from("rooms")
       .insert(baseRoomInsert)

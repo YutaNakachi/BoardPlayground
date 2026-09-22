@@ -111,13 +111,12 @@ export function OnlineSetupPanel({
         </div>
       ) : null}
 
+      {extra ? <div className={onlineSupported ? "mt-8" : "mt-0"}>{extra}</div> : null}
+
       {mode === "local" || !onlineSupported ? (
-        <>
-          {extra}
-          <button type="button" onClick={onStartLocal} className="btn-game mt-8">
-            ゲーム開始
-          </button>
-        </>
+        <button type="button" onClick={onStartLocal} className="btn-game mt-8">
+          ゲーム開始
+        </button>
       ) : (
         <div className="mt-8 space-y-6">
           <div className="flex justify-center gap-2">
@@ -145,7 +144,6 @@ export function OnlineSetupPanel({
                 onCreateRoom(displayName);
               }}
             >
-              {extra}
               <label className="block text-sm" htmlFor="online-create-name">
                 <span className="text-slate-400">プレイヤー名</span>
                 <input
