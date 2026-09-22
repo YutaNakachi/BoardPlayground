@@ -74,7 +74,7 @@ import {
   isMahjongTileFree,
   removeMahjongPair,
 } from "./mahjong-solitaire";
-import { initialMancala, sowMancala } from "./mancala";
+import { initialMancala, mancalaSowFrames, sowMancala } from "./mancala";
 import {
   applyMiniShogiMove,
   canChoosePromotion,
@@ -212,6 +212,11 @@ function checkMancala() {
   );
 
   assert(sowMancala(initialMancala(), 0, 6) === null, "mancala illegal opponent pit");
+
+  const frames = mancalaSowFrames(initialMancala(), 0, 0);
+  assert(frames !== null && frames.length === 5, "mancala sow frames count");
+  assert(frames![0][0] === 0, "mancala sow empties source pit first");
+  assert(frames![4][4] === 5, "mancala sow ends on fourth pit counter-clockwise");
 }
 
 function checkGomoku() {
