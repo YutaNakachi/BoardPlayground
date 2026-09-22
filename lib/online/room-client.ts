@@ -66,15 +66,35 @@ export async function fetchRoom(roomId: string): Promise<{
   return res.json();
 }
 
-export async function startRoomGame(roomId: string, playerId: string): Promise<void> {
+export async function startRoomGame(
+  roomId: string,
+  playerId: string,
+  firstPlayer?: 0 | 1
+): Promise<void> {
   const res = await fetch(`/api/rooms/${roomId}/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ playerId }),
+    body: JSON.stringify({ playerId, firstPlayer }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error ?? "ゲームの開始に失敗しました");
+  }
+}
+
+export async function updateRoomGameOptions(
+  roomId: string,
+  playerId: string,
+  gameOptions: Record<string, unknown>
+): Promise<void> {
+  const res = await fetch(`/api/rooms/${roomId}/options`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ playerId, gameOptions }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? "設定の保存に失敗しました");
   }
 }
 

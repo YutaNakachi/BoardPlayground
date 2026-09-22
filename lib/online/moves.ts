@@ -31,7 +31,7 @@ import {
   type TttHistories,
   type TttMode,
 } from "@/lib/play/tic-tac-toe";
-import { parseTicTacToeGameOptions } from "./game-options";
+import { parseFirstPlayer, parseTicTacToeGameOptions } from "./game-options";
 import type { OnlineGameSlug } from "./types";
 
 export type ReversiState = {
@@ -77,11 +77,13 @@ export function createInitialState(
   slug: OnlineGameSlug,
   gameOptions?: unknown
 ): GameState {
+  const firstPlayer = parseFirstPlayer(gameOptions);
+
   switch (slug) {
     case "reversi":
       return {
         board: initialReversiBoard(),
-        current: 0,
+        current: firstPlayer,
         passNotice: null,
         phase: "playing",
       };
@@ -89,7 +91,7 @@ export function createInitialState(
       const { mode } = parseTicTacToeGameOptions(gameOptions);
       return {
         board: emptyTttBoard(),
-        current: 0,
+        current: firstPlayer,
         phase: "playing",
         winner: null,
         mode,
@@ -99,14 +101,14 @@ export function createInitialState(
     case "gomoku":
       return {
         board: emptyGomokuBoard(),
-        current: 0,
+        current: firstPlayer,
         phase: "playing",
         winner: null,
       };
     case "checkers":
       return {
         board: initialCheckersBoard(),
-        current: 0,
+        current: firstPlayer,
         lockFrom: null,
         phase: "playing",
         winner: null,

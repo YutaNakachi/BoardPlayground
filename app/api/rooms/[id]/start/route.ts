@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
+import { mergeGameOptions, parseFirstPlayer } from "@/lib/online/game-options";
 import { createInitialState } from "@/lib/online/moves";
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 import { isOnlineGame } from "@/lib/online/types";
@@ -15,14 +16,14 @@ export async function POST(request: Request, { params }: Params) {
 
   const { id } = await params;
 
-  let body: { playerId?: string };
+  let body: { playerId?: string; firstPlayer?: number };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { playerId } = body;
+  const { playerId, firstPlayer: requestedFirstPlayer } = body;
   if (!playerId) {
     return NextResponse.json({ error: "playerId is required" }, { status: 400 });
   }
@@ -73,7 +74,27 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Unsupported game" }, { status: 400 });
   }
 
-  const initialState = createInitialState(room.game_slug, room.game_options);
+  if (
+    requestedFirstPlayer !== undefined &&
+    requestedFirstPlayer !== 0 &&
+    requestedFirstPlayer !== 1
+  ) {
+    return NextResponse.json({ error: "Invalid firstPlayer" }, { status: 400 });
+  }
+
+  const gameOptions =
+    requestedFirstPlayer !== undefined
+      ? mergeGameOptions(room.game_slug, room.game_options, {
+          firstPlayer: requestedFirstPlayer,
+        })
+      : mergeGameOptions(room.game_slug, room.game_options, {});
+
+  if (gameOptions === null) {
+    return NextResponse.json({ error: "Invalid game options" }, { status: 400 });
+  }
+
+  const firstPlayer = parseFirstPlayer(gameOptions);
+  const initialState = createInitialState(room.game_slug, gameOptions);
 
   const { data: existingState } = await db
     .from("room_state")
@@ -84,7 +105,7 @@ export async function POST(request: Request, { params }: Params) {
   const statePayload = {
     state: initialState,
     version: 1,
-    current_player: 0,
+    current_player: firstPlayer,
     updated_at: new Date().toISOString(),
   };
 
@@ -96,7 +117,10 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Failed to start game" }, { status: 500 });
   }
 
-  await db.from("rooms").update({ status: "playing" }).eq("id", id);
+  await db
+    .from("rooms")
+    .update({ status: "playing", game_options: gameOptions })
+    .eq("id", id);
   const countResult = await incrementPlayCount(db, room.game_slug);
   if (!countResult.ok) {
     console.error("[rooms/start] stats", countResult.message);

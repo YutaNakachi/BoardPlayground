@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
+import type { FirstPlayerSeat } from "@/lib/online/game-options";
 import {
   createRoom,
   fetchRoom,
   joinRoom,
   sendRoomMove,
   startRoomGame,
+  updateRoomGameOptions,
 } from "@/lib/online/room-client";
 import { shouldApplyRemoteGameVersion } from "@/lib/online/sync-game-state";
 import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
@@ -214,27 +216,47 @@ export function useOnlineRoom(gameSlug: string) {
     [setupRoom]
   );
 
-  const handleStart = useCallback(async () => {
-    if (!room) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await startRoomGame(room.id, myPlayerId);
-      pendingMoveRef.current = false;
-      versionRef.current = 0;
-      await refreshRoom(room.id);
-      setPhase("playing");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "開始に失敗しました");
-    } finally {
-      setLoading(false);
-    }
-  }, [room, myPlayerId, refreshRoom]);
+  const handleUpdateGameOptions = useCallback(
+    async (partial: Record<string, unknown>) => {
+      if (!room || room.hostPlayerId !== myPlayerId) return;
+      setError(null);
+      try {
+        await updateRoomGameOptions(room.id, myPlayerId, partial);
+        await refreshRoom(room.id);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "設定の保存に失敗しました");
+      }
+    },
+    [room, myPlayerId, refreshRoom]
+  );
 
-  const handleRematch = useCallback(async () => {
-    if (!room || phase !== "finished") return;
-    await handleStart();
-  }, [room, phase, handleStart]);
+  const handleStart = useCallback(
+    async (firstPlayer?: FirstPlayerSeat) => {
+      if (!room) return;
+      setLoading(true);
+      setError(null);
+      try {
+        await startRoomGame(room.id, myPlayerId, firstPlayer);
+        pendingMoveRef.current = false;
+        versionRef.current = 0;
+        await refreshRoom(room.id);
+        setPhase("playing");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "開始に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [room, myPlayerId, refreshRoom]
+  );
+
+  const handleRematch = useCallback(
+    async (firstPlayer?: FirstPlayerSeat) => {
+      if (!room || phase !== "finished") return;
+      await handleStart(firstPlayer);
+    },
+    [room, phase, handleStart]
+  );
 
   const handleMove = useCallback(
     (move: MovePayload) => {
@@ -319,6 +341,7 @@ export function useOnlineRoom(gameSlug: string) {
       loading,
       handleCreate,
       handleJoin,
+      handleUpdateGameOptions,
       handleStart,
       handleRematch,
       handleMove,
@@ -340,6 +363,7 @@ export function useOnlineRoom(gameSlug: string) {
       loading,
       handleCreate,
       handleJoin,
+      handleUpdateGameOptions,
       handleStart,
       handleRematch,
       handleMove,
