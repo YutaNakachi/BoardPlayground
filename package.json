@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "catalog:doc": "npx tsx scripts/generate-game-catalog.mjs"
+    "catalog:doc": "npx tsx scripts/generate-game-catalog.mjs",
+    "db:migrate": "bash scripts/apply-supabase-migrations.sh",
+    "db:check": "node scripts/check-supabase.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

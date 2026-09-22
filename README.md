@@ -49,15 +49,16 @@ npm run dev
 ### Supabase セットアップ
 
 1. [Supabase](https://supabase.com/) でプロジェクトを作成
-2. SQL Editor で以下を **順番に** 実行
-   - `supabase/migrations/001_stats.sql`
-   - `supabase/migrations/002_rooms.sql`
-   - `supabase/migrations/003_increment_rpc.sql`
-3. Vercel の **Settings → Environment Variables** に上記3つの変数を追加（Production / Preview / Development すべて）
+2. マイグレーションを適用（いずれか）
+   - **CLI（推奨）**: `SUPABASE_DB_URL` を設定して `npm run db:migrate`
+   - **手動**: SQL Editor で `supabase/migrations/` 内の SQL を番号順に実行
+3. Vercel の **Settings → Environment Variables** に `.env.example` の3変数を追加（Production / Preview / Development すべて）
 4. **Redeploy** して反映（環境変数追加後は再デプロイが必要）
 5. 動作確認: `https://<your-domain>/api/status` が `{ "stats": true, "online": true }` を返すこと
 
 未設定のときはローカルプレイのみ利用でき、オンラインタブとプレイ回数は非表示になります。
+
+**Cloud Agent** からマイグレーションを実行する設定: [docs/cloud-agent-supabase.md](docs/cloud-agent-supabase.md)
 
 ## ゲーム
 
