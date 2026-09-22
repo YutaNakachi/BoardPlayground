@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { HexBoardPreview } from "@/components/game-art/HexBoardPreview";
 import { LudoBoardPreview } from "@/components/game-art/LudoBoardPreview";
+import { MancalaBoardPreview } from "@/components/game-art/MancalaBoardPreview";
 import type { GameMeta } from "@/lib/games";
 import { MORRIS_LINES, MORRIS_XY } from "@/lib/play/nine-mens-morris";
 
@@ -117,44 +118,7 @@ function GomokuPreview() {
 }
 
 function MancalaPreview() {
-  const pits = [4, 5, 3, 6, 2, 4, 8, 3, 5, 4, 6, 2];
-  const stores = [12, 9];
-
-  return (
-    <svg viewBox="0 0 160 88" className="h-full w-full max-h-24 max-w-[9.5rem] drop-shadow-lg">
-      <rect width="160" height="88" rx="12" fill="#1e293b" />
-      <rect x="6" y="10" width="22" height="68" rx="10" fill="#312e81" opacity="0.55" />
-      <rect x="132" y="10" width="22" height="68" rx="10" fill="#312e81" opacity="0.55" />
-      <text x="17" y="48" fill="#e0e7ff" fontSize="11" fontWeight="700">
-        {stores[0]}
-      </text>
-      <text x="143" y="48" fill="#e0e7ff" fontSize="11" fontWeight="700">
-        {stores[1]}
-      </text>
-      {pits.map((count, index) => {
-        const row = index < 6 ? 0 : 1;
-        const col = index < 6 ? index : 11 - index;
-        const x = 34 + col * 16;
-        const y = row === 0 ? 16 : 48;
-        return (
-          <g key={index}>
-            <rect
-              x={x}
-              y={y}
-              width="14"
-              height="24"
-              rx="7"
-              fill={row === 0 ? "#4c1d95" : "#831843"}
-              opacity="0.75"
-            />
-            <text x={x + 7} y={y + 15} textAnchor="middle" fill="#f8fafc" fontSize="9" fontWeight="700">
-              {count}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
+  return <MancalaBoardPreview />;
 }
 
 function CheckersPreview() {
