@@ -324,31 +324,69 @@ function MorrisPreview() {
 }
 
 function HexPreview() {
+  const cols = 7;
+  const rows = 7;
+  const cellW = 13;
+  const cellH = 15;
+  const padX = 9;
+  const padY = 14;
   const stones: Record<string, 0 | 1> = {
-    "2,5": 0,
+    "1,2": 0,
+    "2,2": 0,
+    "2,3": 1,
+    "3,2": 0,
+    "3,3": 1,
     "3,4": 1,
-    "3,5": 0,
-    "4,5": 1,
-    "4,6": 0,
-    "5,5": 1,
+    "4,3": 0,
+    "4,4": 1,
+    "5,4": 1,
   };
+
+  const cells = Array.from({ length: rows * cols }, (_, index) => {
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+    const x = padX + col * cellW + (row % 2 === 1 ? cellW * 0.25 : 0);
+    const y = padY + row * (cellH - 1);
+    const key = `${row},${col}`;
+    const stone = stones[key];
+    const pieceW = cellW * 0.7;
+    const pieceH = cellH * 0.7;
+    const pieceX = x + (cellW - pieceW) / 2;
+    const pieceY = y + (cellH - pieceH) / 2;
+
+    return (
+      <g key={key}>
+        {stone === undefined ? (
+          <rect
+            x={x}
+            y={y}
+            width={cellW}
+            height={cellH}
+            rx="2.5"
+            fill="#064e3b"
+            fillOpacity="0.5"
+            stroke="#047857"
+            strokeOpacity="0.5"
+            strokeWidth="0.8"
+          />
+        ) : (
+          <rect
+            x={pieceX}
+            y={pieceY}
+            width={pieceW}
+            height={pieceH}
+            rx="2.5"
+            fill={stone === 0 ? "#ff5c8a" : "#38bdf8"}
+          />
+        )}
+      </g>
+    );
+  });
+
   return (
     <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="12" fill="#1e1b4b" />
-      {Object.entries(stones).map(([key, player]) => {
-        const [row, col] = key.split(",").map(Number);
-        const x = 20 + col * 8 + (row % 2) * 4;
-        const y = 18 + row * 7;
-        return (
-          <circle
-            key={key}
-            cx={x}
-            cy={y}
-            r="4"
-            fill={player === 0 ? "#fb7185" : "#38bdf8"}
-          />
-        );
-      })}
+      <rect width="120" height="120" rx="12" fill="#0a0e14" />
+      {cells}
     </svg>
   );
 }
