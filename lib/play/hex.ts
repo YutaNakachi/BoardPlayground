@@ -314,98 +314,105 @@ export function placeHexStone(
   return { next, win };
 }
 
-function bandPolygon(inner: HexPoint[], offsetFn: (p: HexPoint) => HexPoint): string {
-  const outer = inner.map(offsetFn);
-  return [...outer, ...inner.slice().reverse()]
-    .map((p) => `${p.x},${p.y}`)
-    .join(" ");
+function boardCenter(): HexPoint {
+  let sx = 0;
+  let sy = 0;
+  for (let row = 0; row < HEX_SIZE; row++) {
+    for (let col = 0; col < HEX_SIZE; col++) {
+      const { x, y } = hexCenter(row, col);
+      sx += x;
+      sy += y;
+    }
+  }
+  const n = HEX_SIZE * HEX_SIZE;
+  return { x: sx / n, y: sy / n };
 }
 
-/** 色付き境界帯（参考図の太い赤/青フレーム） */
-export function hexBorderBands(): { color: "red" | "blue"; path: string }[] {
-  const last = HEX_SIZE - 1;
-  const d = HEX_BORDER_BAND_DEPTH;
-
-  const northInner: HexPoint[] = [hexCorner(0, 0, 3)];
-  for (let col = 0; col < HEX_SIZE; col++) northInner.push(hexCorner(0, col, 4));
-  northInner.push(hexCorner(0, last, 5));
-
-  const southInner: HexPoint[] = [hexCorner(last, 0, 2)];
-  for (let col = 0; col < HEX_SIZE; col++) southInner.push(hexCorner(last, col, 1));
-  southInner.push(hexCorner(last, last, 0));
-
-  const westInner: HexPoint[] = [hexCorner(0, 0, 3)];
-  for (let row = 0; row < HEX_SIZE; row++) westInner.push(hexCorner(row, 0, 2));
-  westInner.push(hexCorner(last, 0, 1));
-
-  const eastInner: HexPoint[] = [hexCorner(0, last, 5)];
-  for (let row = 0; row < HEX_SIZE; row++) eastInner.push(hexCorner(row, last, 0));
-  eastInner.push(hexCorner(last, last, 1));
-
-  return [
-    {
-      color: "blue",
-      path: bandPolygon(westInner, (p) => ({ x: p.x - d, y: p.y })),
-    },
-    {
-      color: "blue",
-      path: bandPolygon(eastInner, (p) => ({ x: p.x + d, y: p.y })),
-    },
-    {
-      color: "red",
-      path: bandPolygon(northInner, (p) => ({ x: p.x, y: p.y - d })),
-    },
-    {
-      color: "red",
-      path: bandPolygon(southInner, (p) => ({ x: p.x, y: p.y + d })),
-    },
-  ];
+function outwardNormal(
+  a: HexPoint,
+  b: HexPoint,
+  cx: number,
+  cy: number
+): { nx: number; ny: number } {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  let nx = -dy / len;
+  let ny = dx / len;
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const dot = (mx + nx - cx) * nx + (my + ny - cy) * ny;
+  if (dot < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  return { nx, ny };
 }
 
-export type HexAxisLabel = {
-  text: string;
-  x: number;
-  y: number;
+function extrudeEdgePath(
+  a: HexPoint,
+  b: HexPoint,
+  depth: number,
+  cx: number,
+  cy: number
+): string {
+  const { nx, ny } = outwardNormal(a, b, cx, cy);
+  const a2 = { x: a.x + nx * depth, y: a.y + ny * depth };
+  const b2 = { x: b.x + nx * depth, y: b.y + ny * depth };
+  return `${a2.x},${a2.y} ${b2.x},${b2.y} ${b.x},${b.y} ${a.x},${a.y}`;
+}
+
+export type HexBorderSegment = {
   color: "red" | "blue";
+  path: string;
+  label?: { text: string; x: number; y: number };
 };
 
-/** 列 A–K（赤辺）・行 1–11（青辺）のラベル位置 */
-export function hexAxisLabels(): HexAxisLabel[] {
+/** 外周の各辺を法線方向に押し出した均一幅の台形セグメント */
+export function hexBorderSegments(): HexBorderSegment[] {
   const last = HEX_SIZE - 1;
-  const d = HEX_BORDER_BAND_DEPTH;
-  const labels: HexAxisLabel[] = [];
-
-  for (let col = 0; col < HEX_SIZE; col++) {
-    labels.push({
-      text: HEX_COLUMN_LABELS[col],
-      x: hexCenter(0, col).x,
-      y: hexCorner(0, col, 4).y - d * 0.52,
-      color: "red",
-    });
-    labels.push({
-      text: HEX_COLUMN_LABELS[col],
-      x: hexCenter(last, col).x,
-      y: hexCorner(last, col, 1).y + d * 0.52,
-      color: "red",
-    });
-  }
+  const depth = HEX_BORDER_BAND_DEPTH;
+  const center = boardCenter();
+  const segments: HexBorderSegment[] = [];
 
   for (let row = 0; row < HEX_SIZE; row++) {
-    labels.push({
-      text: String(row + 1),
-      x: hexCorner(row, 0, 3).x - d * 0.52,
-      y: hexCenter(row, 0).y,
-      color: "blue",
-    });
-    labels.push({
-      text: String(row + 1),
-      x: hexCorner(row, last, 0).x + d * 0.52,
-      y: hexCenter(row, last).y,
-      color: "blue",
-    });
+    for (let col = 0; col < HEX_SIZE; col++) {
+      for (let side = 0; side < 6; side++) {
+        const { dr, dc } = HEX_SIDE_NEIGHBOR[side];
+        const nr = row + dr;
+        const nc = col + dc;
+        if (nr >= 0 && nr < HEX_SIZE && nc >= 0 && nc < HEX_SIZE) continue;
+
+        const cornerA = side as 0 | 1 | 2 | 3 | 4 | 5;
+        const cornerB = ((side + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5;
+        const a = hexCorner(row, col, cornerA);
+        const b = hexCorner(row, col, cornerB);
+        const color = outerEdgeColor(side, row, col);
+        const { nx, ny } = outwardNormal(a, b, center.x, center.y);
+        const mx = (a.x + b.x) / 2 + nx * depth * 0.5;
+        const my = (a.y + b.y) / 2 + ny * depth * 0.5;
+
+        let label: HexBorderSegment["label"];
+        if (color === "red" && row === 0 && side === 0) {
+          label = { text: HEX_COLUMN_LABELS[col], x: mx, y: my };
+        } else if (color === "red" && row === last && side === 3) {
+          label = { text: HEX_COLUMN_LABELS[col], x: mx, y: my };
+        } else if (color === "blue" && col === 0 && side === 5) {
+          label = { text: String(row + 1), x: mx, y: my };
+        } else if (color === "blue" && col === last && side === 2) {
+          label = { text: String(row + 1), x: mx, y: my };
+        }
+
+        segments.push({
+          color,
+          path: extrudeEdgePath(a, b, depth, center.x, center.y),
+          label,
+        });
+      }
+    }
   }
 
-  return labels;
+  return segments;
 }
 
 /** viewBox 計算用: 全セルのバウンディングボックス */
