@@ -1,3 +1,5 @@
+import { isOnlineGame } from "@/lib/online/types";
+
 export const GAME_TAGS = [
   "ボード",
   "カード",
@@ -718,6 +720,10 @@ export function catalogHasTeam(list: GameMeta[] = getAllGames()): boolean {
   return list.some((game) => game.team);
 }
 
+export function catalogHasOnline(list: GameMeta[] = getAllGames()): boolean {
+  return list.some((game) => isOnlineGame(game.slug));
+}
+
 export type CatalogFilters = {
   query: string;
   origins: GameOrigin[];
@@ -726,6 +732,7 @@ export type CatalogFilters = {
   durationBuckets: DurationBucket[];
   cpu: boolean;
   team: boolean;
+  online: boolean;
   tags: GameTag[];
 };
 
@@ -737,6 +744,7 @@ export const EMPTY_CATALOG_FILTERS: CatalogFilters = {
   durationBuckets: [],
   cpu: false,
   team: false,
+  online: false,
   tags: [],
 };
 
@@ -772,7 +780,8 @@ export function countSidebarFilters(filters: CatalogFilters): number {
     filters.playerBuckets.length +
     filters.durationBuckets.length +
     (filters.cpu ? 1 : 0) +
-    (filters.team ? 1 : 0)
+    (filters.team ? 1 : 0) +
+    (filters.online ? 1 : 0)
   );
 }
 
@@ -805,6 +814,7 @@ export function matchesCatalogFilters(game: GameMeta, filters: CatalogFilters): 
   }
   if (filters.cpu && !game.cpu) return false;
   if (filters.team && !game.team) return false;
+  if (filters.online && !isOnlineGame(game.slug)) return false;
   if (!filters.tags.every((tag) => game.tags.includes(tag))) return false;
   return true;
 }

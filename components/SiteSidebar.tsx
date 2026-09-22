@@ -4,11 +4,13 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { CatalogFilterPanel } from "@/components/CatalogFilterPanel";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
+import { usePlayStats } from "@/components/PlayStatsProvider";
 
 export function SiteSidebar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const { open, closeSidebar, filters, setFilters, games } = useCatalogSidebar();
+  const { onlineEnabled } = usePlayStats();
 
   useEffect(() => {
     closeSidebar();
@@ -69,6 +71,7 @@ export function SiteSidebar() {
             games={games}
             filters={filters}
             onChange={setFilters}
+            onlineEnabled={onlineEnabled}
           />
         </div>
       </aside>

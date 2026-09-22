@@ -8,6 +8,7 @@ import {
   ORIGIN_LABEL,
   PLAYER_BUCKET_LABEL,
   catalogHasCpu,
+  catalogHasOnline,
   catalogHasTeam,
   getCatalogComplexities,
   getCatalogDurationBuckets,
@@ -24,6 +25,7 @@ type Props = {
   games: GameMeta[];
   filters: CatalogFilters;
   onChange: (filters: CatalogFilters) => void;
+  onlineEnabled?: boolean;
 };
 
 function FilterGroup({
@@ -41,13 +43,19 @@ function FilterGroup({
   );
 }
 
-export function CatalogFilterPanel({ games, filters, onChange }: Props) {
+export function CatalogFilterPanel({
+  games,
+  filters,
+  onChange,
+  onlineEnabled = false,
+}: Props) {
   const origins = getCatalogOrigins(games);
   const complexities = getCatalogComplexities(games);
   const playerBuckets = getCatalogPlayerBuckets(games);
   const durationBuckets = getCatalogDurationBuckets(games);
   const hasCpu = catalogHasCpu(games);
   const hasTeam = catalogHasTeam(games);
+  const hasOnline = onlineEnabled && catalogHasOnline(games);
 
   function patch(partial: Partial<CatalogFilters>) {
     onChange({ ...filters, ...partial });
@@ -162,8 +170,16 @@ export function CatalogFilterPanel({ games, filters, onChange }: Props) {
           </FilterGroup>
         ) : null}
 
-        {hasCpu || hasTeam ? (
+        {hasCpu || hasTeam || hasOnline ? (
           <FilterGroup label="その他">
+            {hasOnline ? (
+              <FilterChip
+                label="オンライン可"
+                active={filters.online}
+                onClick={() => patch({ online: !filters.online })}
+                layout="stack"
+              />
+            ) : null}
             {hasCpu ? (
               <FilterChip
                 label="CPUあり"
