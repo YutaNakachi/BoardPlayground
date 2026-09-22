@@ -11,6 +11,7 @@ import {
   sendRoomMove,
   startRoomGame,
 } from "@/lib/online/room-client";
+import { shouldApplyRemoteGameVersion } from "@/lib/online/sync-game-state";
 import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -55,11 +56,20 @@ export function useOnlineRoom(gameSlug: string) {
       remoteCurrentPlayer: number | null
     ) => {
       if (pendingMoveRef.current) return;
-      if (remoteVersion < versionRef.current) return;
+      if (
+        !shouldApplyRemoteGameVersion(remoteVersion, versionRef.current, state)
+      ) {
+        return;
+      }
       setGameState(state);
       setVersion(remoteVersion);
       versionRef.current = remoteVersion;
       setCurrentPlayer(remoteCurrentPlayer);
+      if (state.phase === "playing") {
+        setPhase("playing");
+      } else if (state.phase === "game-over") {
+        setPhase("finished");
+      }
     },
     []
   );
@@ -107,6 +117,21 @@ export function useOnlineRoom(gameSlug: string) {
               current_player: number | null;
             };
             applyRemoteGameState(row.state, row.version, row.current_player);
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "rooms",
+            filter: `id=eq.${roomId}`,
+          },
+          (payload) => {
+            const row = payload.new as { status: RoomInfo["status"] };
+            if (row.status === "playing") setPhase("playing");
+            if (row.status === "finished") setPhase("finished");
+            if (row.status === "waiting") setPhase("waiting");
           }
         )
         .on(
@@ -195,6 +220,8 @@ export function useOnlineRoom(gameSlug: string) {
     setError(null);
     try {
       await startRoomGame(room.id, myPlayerId);
+      pendingMoveRef.current = false;
+      versionRef.current = 0;
       await refreshRoom(room.id);
       setPhase("playing");
     } catch (e) {
@@ -203,6 +230,11 @@ export function useOnlineRoom(gameSlug: string) {
       setLoading(false);
     }
   }, [room, myPlayerId, refreshRoom]);
+
+  const handleRematch = useCallback(async () => {
+    if (!room || phase !== "finished") return;
+    await handleStart();
+  }, [room, phase, handleStart]);
 
   const handleMove = useCallback(
     (move: MovePayload) => {
@@ -288,6 +320,7 @@ export function useOnlineRoom(gameSlug: string) {
       handleCreate,
       handleJoin,
       handleStart,
+      handleRematch,
       handleMove,
       reset,
       refreshRoom,
@@ -308,6 +341,7 @@ export function useOnlineRoom(gameSlug: string) {
       handleCreate,
       handleJoin,
       handleStart,
+      handleRematch,
       handleMove,
       reset,
       refreshRoom,

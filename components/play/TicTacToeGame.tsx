@@ -11,6 +11,7 @@ import { getPlayerTurnStyle } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { TttState } from "@/lib/online/moves";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import {
   formatSeatLabel,
   formatWinnersWithNames,
@@ -225,6 +226,12 @@ export function TicTacToeGame() {
 
   const isGameOver = activePhase === "game-over" && winners !== null;
   const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    online.handleRematch,
+    reset
+  );
 
   return (
     <div className="space-y-6">
@@ -235,7 +242,7 @@ export function TicTacToeGame() {
           winnersLabel={
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }
-          onReplay={reset}
+          {...replayProps}
           details={
             <p className="text-slate-400">
               {activeWinner === "draw"
