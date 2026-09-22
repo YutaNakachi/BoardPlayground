@@ -9,11 +9,18 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
   applyHexSwap,
   declineHexSwap,
+  HEX_BORDER_COLORS,
+  HEX_CELL_FILL,
+  HEX_CELL_FILL_WIN,
+  HEX_GRID_STROKE,
+  HEX_GRID_STROKE_WIDTH,
   HEX_STONE_COLORS,
+  hexBoardBorders,
   hexBorderPolyline,
   hexCenter,
   hexCoord,
-  hexEdgeCells,
+  hexCornerMarkers,
+  hexGridEdges,
   hexPolygonPoints,
   hexViewBox,
   initialHexState,
@@ -86,15 +93,9 @@ export function HexGame() {
   const backToSetup = useCallback(() => setPhase("setup"), []);
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
-  const edgeSets = useMemo(
-    () => ({
-      redStart: new Set(hexEdgeCells("red-start")),
-      redGoal: new Set(hexEdgeCells("red-goal")),
-      blueStart: new Set(hexEdgeCells("blue-start")),
-      blueGoal: new Set(hexEdgeCells("blue-goal")),
-    }),
-    []
-  );
+  const boardBorders = useMemo(() => hexBoardBorders(), []);
+  const gridEdges = useMemo(() => hexGridEdges(), []);
+  const cornerMarkers = useMemo(() => hexCornerMarkers(), []);
 
   const winPathSet = useMemo(
     () => new Set(winResult?.path ?? []),
@@ -175,68 +176,44 @@ export function HexGame() {
           onMouseLeave={() => setHoverIndex(null)}
         >
           <defs>
-            <filter id="hex-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="0" stdDeviation="0.15" floodColor="#fbbf24" />
+            <filter id="hex-win-glow" x="-80%" y="-80%" width="260%" height="260%">
+              <feDropShadow dx="0" dy="0" stdDeviation="0.12" floodColor="#fbbf24" />
+            </filter>
+            <filter id="hex-border-glow-red" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="0" stdDeviation="0.1" floodColor="#ef4444" />
+            </filter>
+            <filter id="hex-border-glow-blue" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="0" stdDeviation="0.1" floodColor="#3b82f6" />
             </filter>
           </defs>
 
-          {/* 背景 */}
           <rect
             x={VIEW_BOX.x}
             y={VIEW_BOX.y}
             width={VIEW_BOX.width}
             height={VIEW_BOX.height}
-            fill="#0b1220"
-            rx="0.6"
+            fill="#0a101c"
+            rx="0.5"
           />
 
-          {/* 六角形マス */}
           {game.board.map((cell, index) => {
             const { row, col } = hexCoord(index);
             const points = hexPolygonPoints(row, col);
-            const onRedEdge =
-              edgeSets.redStart.has(index) || edgeSets.redGoal.has(index);
-            const onBlueEdge =
-              edgeSets.blueStart.has(index) || edgeSets.blueGoal.has(index);
             const isWinCell = winPathSet.has(index);
             const isHover =
               hoverIndex === index && cell === null && !isGameOver && !game.swapPending;
             const isLast = lastPlaced === index;
             const stone = cell;
 
-            let stroke = "#334155";
-            let strokeWidth = 0.06;
-            if (onRedEdge && onBlueEdge) {
-              stroke = "#c084fc";
-              strokeWidth = 0.14;
-            } else if (onRedEdge) {
-              stroke = "#f87171";
-              strokeWidth = 0.12;
-            } else if (onBlueEdge) {
-              stroke = "#60a5fa";
-              strokeWidth = 0.12;
-            }
-            if (isWinCell) {
-              stroke = "#fbbf24";
-              strokeWidth = 0.16;
-            }
-
             return (
               <g key={index}>
                 <polygon
                   points={points}
-                  fill={isWinCell ? "#292524" : "#1e293b"}
-                  stroke={stroke}
-                  strokeWidth={strokeWidth}
+                  fill={isWinCell ? HEX_CELL_FILL_WIN : HEX_CELL_FILL}
                   className={
                     cell === null && !isGameOver && !game.swapPending
-                      ? "cursor-pointer transition-[fill] duration-150"
+                      ? "cursor-pointer"
                       : ""
-                  }
-                  style={
-                    isLast
-                      ? { filter: "drop-shadow(0 0 0.25rem rgba(255,255,255,0.45))" }
-                      : undefined
                   }
                   onMouseEnter={() => {
                     if (cell === null && !isGameOver && !game.swapPending) {
@@ -249,45 +226,93 @@ export function HexGame() {
                   <polygon
                     points={points}
                     fill={HEX_STONE_COLORS[currentStone].fill}
-                    opacity={0.35}
+                    opacity={0.32}
                     className="pointer-events-none"
+                  />
+                )}
+                {isWinCell && (
+                  <polygon
+                    points={points}
+                    fill="none"
+                    stroke="#fbbf24"
+                    strokeWidth={0.1}
+                    opacity={0.85}
+                    className="pointer-events-none"
+                    filter="url(#hex-win-glow)"
                   />
                 )}
                 {stone !== null && (
                   <circle
                     cx={hexCenter(row, col).x}
                     cy={hexCenter(row, col).y}
-                    r={0.42}
+                    r={isLast ? 0.44 : 0.4}
                     fill={HEX_STONE_COLORS[stone].fill}
                     stroke={HEX_STONE_COLORS[stone].stroke}
-                    strokeWidth={0.06}
-                    className="pointer-events-none"
-                    filter={isWinCell ? "url(#hex-glow)" : undefined}
+                    strokeWidth={0.05}
+                    className="pointer-events-none transition-all duration-200"
+                    filter={isWinCell ? "url(#hex-win-glow)" : undefined}
                   />
                 )}
               </g>
             );
           })}
 
-          {/* 外周の色付き境界帯（赤: 南北、青: 東西） */}
-          {(["red-start", "red-goal", "blue-start", "blue-goal"] as const).map(
-            (edge) => (
-              <polyline
-                key={edge}
-                points={hexBorderPolyline(edge)}
-                fill="none"
-                stroke={
-                  edge.startsWith("red")
-                    ? "rgba(239,68,68,0.7)"
-                    : "rgba(59,130,246,0.7)"
-                }
-                strokeWidth={0.28}
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          <g stroke={HEX_GRID_STROKE} strokeWidth={HEX_GRID_STROKE_WIDTH} strokeLinecap="round">
+            {gridEdges.map(([a, b], i) => (
+              <line
+                key={i}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
                 className="pointer-events-none"
               />
-            )
-          )}
+            ))}
+          </g>
+
+          {boardBorders.map((border) => {
+            const colors = HEX_BORDER_COLORS[border.color];
+            const filterId =
+              border.color === "red"
+                ? "url(#hex-border-glow-red)"
+                : "url(#hex-border-glow-blue)";
+            const polylinePoints = hexBorderPolyline(border);
+            return (
+              <g key={border.side} filter={filterId}>
+                <polyline
+                  points={polylinePoints}
+                  fill="none"
+                  stroke="rgba(0,0,0,0.45)"
+                  strokeWidth={0.34}
+                  strokeLinejoin="miter"
+                  strokeLinecap="butt"
+                  className="pointer-events-none"
+                />
+                <polyline
+                  points={polylinePoints}
+                  fill="none"
+                  stroke={colors.stroke}
+                  strokeWidth={0.2}
+                  strokeLinejoin="miter"
+                  strokeLinecap="butt"
+                  className="pointer-events-none"
+                />
+              </g>
+            );
+          })}
+
+          {cornerMarkers.map((marker, i) => (
+            <circle
+              key={i}
+              cx={marker.point.x}
+              cy={marker.point.y}
+              r={0.16}
+              fill="#cbd5e1"
+              stroke="#0f172a"
+              strokeWidth={0.04}
+              className="pointer-events-none"
+            />
+          ))}
         </svg>
       </div>
 
