@@ -30,6 +30,9 @@ export const ONLINE_GAME_SLUGS = [
   "tic-tac-toe",
   "gomoku",
   "checkers",
+  "gravity-four",
+  "nim",
+  "hex",
 ] as const;
 
 export type OnlineGameSlug = (typeof ONLINE_GAME_SLUGS)[number];

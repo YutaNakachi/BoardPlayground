@@ -80,6 +80,9 @@ export function validateGameOptions(
     case "reversi":
     case "gomoku":
     case "checkers":
+    case "gravity-four":
+    case "nim":
+    case "hex":
       return parseCommonGameOptions(raw);
   }
 }

@@ -1,12 +1,24 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useState } from "react";
+import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { playerPieceClasses } from "@/lib/player-colors";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import type { GravityFourState } from "@/lib/online/moves";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  getSeatDisplayName,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
 import {
   dropGravityFour,
   emptyGravityFourBoard,
@@ -20,73 +32,176 @@ import {
   type Player,
 } from "@/lib/play/gravity-four";
 
-type Phase = "setup" | "playing" | "game-over";
+type LocalPhase = "setup" | "playing" | "game-over";
 
 export function GravityFourGame() {
-  const { recordLocalPlay } = usePlayPage();
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("gravity-four");
+  const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [board, setBoard] = useState<Board>(emptyGravityFourBoard);
   const [current, setCurrent] = useState<Player>(0);
   const [winner, setWinner] = useState<Player | "draw" | null>(null);
 
-  const startGame = useCallback(() => {
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (mode === "local") {
+      setPlayMode({ mode: "local" });
+    }
+  }, [online.room?.code, online.phase, mode, setPlayMode]);
+
+  const startLocal = useCallback(() => {
     recordLocalPlay();
     setBoard(emptyGravityFourBoard());
     setCurrent(0);
     setWinner(null);
-    setPhase("playing");
+    setLocalPhase("playing");
   }, [recordLocalPlay]);
+
+  const isOnline =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as GravityFourState | null;
+
+  const activeBoard = isOnline && onlineState ? onlineState.board : board;
+  const activeCurrent = isOnline && onlineState ? onlineState.current : current;
+  const activeWinner = isOnline && onlineState ? onlineState.winner : winner;
+  const activePhase =
+    isOnline && onlineState
+      ? onlineState.phase
+      : localPhase === "game-over"
+        ? "game-over"
+        : localPhase === "playing"
+          ? "playing"
+          : "setup";
 
   const drop = useCallback(
     (col: number) => {
-      if (phase !== "playing") return;
+      if (isOnline) {
+        if (!online.isMyTurn || activePhase !== "playing") return;
+        void online.handleMove({ type: "drop", col });
+        return;
+      }
+      if (localPhase !== "playing") return;
       const next = dropGravityFour(board, col, current);
       if (!next) return;
       setBoard(next);
       const won = gravityFourWinner(next);
       if (won !== null) {
         setWinner(won);
-        setPhase("game-over");
+        setLocalPhase("game-over");
         return;
       }
       if (gravityFourBoardFull(next)) {
         setWinner("draw");
-        setPhase("game-over");
+        setLocalPhase("game-over");
         return;
       }
       setCurrent(current === 0 ? 1 : 0);
     },
-    [phase, board, current]
+    [isOnline, online, activePhase, localPhase, board, current]
   );
 
   const winners = useMemo(() => {
-    if (phase !== "game-over" || winner === null) return null;
-    if (winner === "draw") return [0, 1];
-    return [winner];
-  }, [phase, winner]);
+    if (activePhase !== "game-over" || activeWinner === null) return null;
+    if (activeWinner === "draw") return [0, 1];
+    return [activeWinner];
+  }, [activePhase, activeWinner]);
 
   const legal = useMemo(
-    () => (phase === "playing" ? gfLegalColumns(board) : []),
-    [phase, board]
+    () => (activePhase === "playing" ? gfLegalColumns(activeBoard) : []),
+    [activePhase, activeBoard]
   );
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
-  usePlaySetupNavigation(phase === "setup", backToSetup);
+  const roomPlayers = isOnline ? online.players : [];
 
-  if (phase === "setup") {
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setPlayMode({ mode: "local" });
+  }, [online.reset, setPlayMode]);
+
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="重力四目"
         description="7列×6段の盤に、列を選んで石を落とします。縦・横・斜めで4つ以上並べた方が勝ちです。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={(displayName) =>
+          online.handleCreate(
+            displayName,
+            firstPlayer === 1 ? { firstPlayer: 1 } : undefined
+          )
+        }
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
+        extra={
+          mode === "online" ? (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              onChange={onFirstPlayerChange}
+            />
+          ) : undefined
+        }
       />
     );
   }
 
-  const isGameOver = phase === "game-over" && winners !== null;
+  if (online.phase === "waiting" && online.room) {
+    return (
+      <OnlineSetupPanel
+        title="重力四目"
+        description="7列×6段の盤に、列を選んで石を落とします。縦・横・斜めで4つ以上並べた方が勝ちです。"
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          isHost: online.isHost,
+          onStart: () => online.handleStart(firstPlayer),
+          canStart: online.players.length >= 2,
+          extra: (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              onChange={online.isHost ? onFirstPlayerChange : undefined}
+              readOnly={!online.isHost}
+            />
+          ),
+        }}
+      />
+    );
+  }
+
+  const isGameOver = activePhase === "game-over" && winners !== null;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    () => online.handleRematch(firstPlayer),
+    reset
+  );
 
   return (
     <div className="space-y-6">
@@ -94,23 +209,39 @@ export function GravityFourGame() {
         <ResultPanel
           variant="inline"
           winners={winners}
-          onReplay={() => setPhase("setup")}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                onChange={onFirstPlayerChange}
+              />
+            ) : undefined
+          }
           details={
             <p className="text-slate-400">
-              {winner === "draw"
+              {activeWinner === "draw"
                 ? "盤が埋まり、4つ並びはありませんでした。"
-                : `プレイヤー ${Number(winner) + 1} が4つ以上並べました。`}
+                : `${getSeatDisplayName(roomPlayers, Number(activeWinner))} が4つ以上並べました。`}
             </p>
           }
         />
       )}
 
       {!isGameOver && (
-      <TurnBanner
-        playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}`}
-        action="列をタップして石を落とす"
-      />
+        <TurnBanner
+          playerIndex={activeCurrent}
+          playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+          action={
+            isOnline && !online.isMyTurn
+              ? "相手の手番です"
+              : "列をタップして石を落とす"
+          }
+        />
       )}
 
       <div className="mx-auto max-w-md">
@@ -119,7 +250,7 @@ export function GravityFourGame() {
             <button
               key={col}
               type="button"
-              disabled={!legal.includes(col)}
+              disabled={!canInteract || !legal.includes(col)}
               onClick={() => drop(col)}
               className="min-h-9 rounded-md text-xs text-slate-500 transition enabled:hover:bg-white/10 enabled:hover:text-white disabled:cursor-default"
               aria-label={`${col + 1}列目に落とす`}
@@ -135,7 +266,7 @@ export function GravityFourGame() {
         >
           {Array.from({ length: GF_ROWS }, (_, row) =>
             Array.from({ length: GF_COLS }, (_, col) => {
-              const cell = board[gfIndex(row, col)];
+              const cell = activeBoard[gfIndex(row, col)];
               return (
                 <div
                   key={`${row}-${col}`}
@@ -159,7 +290,6 @@ export function GravityFourGame() {
           )}
         </div>
       </div>
-
     </div>
   );
 }
