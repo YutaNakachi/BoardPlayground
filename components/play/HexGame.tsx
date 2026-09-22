@@ -27,7 +27,7 @@ import {
 
 type Phase = "setup" | "playing" | "game-over";
 
-const VIEW_BOX = hexViewBox(2.2);
+const VIEW_BOX = hexViewBox(1.6);
 
 function stoneLabel(state: HexState, player: 0 | 1): string {
   const stone = state.playerStone[player];
@@ -161,7 +161,7 @@ export function HexGame() {
         </div>
       )}
 
-      <div className="relative mx-auto w-full max-w-4xl">
+      <div className="relative -mx-4 w-[calc(100%+2rem)] sm:mx-auto sm:w-full sm:max-w-4xl">
         <svg
           viewBox={`${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.width} ${VIEW_BOX.height}`}
           className="block h-auto w-full touch-manipulation"
