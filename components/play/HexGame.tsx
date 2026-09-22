@@ -9,14 +9,15 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
   applyHexSwap,
   declineHexSwap,
-  HEX_BORDER_STROKE,
-  HEX_BORDER_STROKE_WIDTH,
+  HEX_BORDER_FILL,
   HEX_CELL_FILL,
   HEX_CELL_FILL_WIN,
   HEX_GRID_STROKE,
   HEX_GRID_STROKE_WIDTH,
   HEX_STONE_COLORS,
+  hexAxisLabels,
   hexBoardEdges,
+  hexBorderBands,
   hexCenter,
   hexCoord,
   hexPolygonPoints,
@@ -30,7 +31,7 @@ import {
 
 type Phase = "setup" | "playing" | "game-over";
 
-const VIEW_BOX = hexViewBox(1.4);
+const VIEW_BOX = hexViewBox(2.2);
 
 function stoneLabel(state: HexState, player: 0 | 1): string {
   const stone = state.playerStone[player];
@@ -92,6 +93,8 @@ export function HexGame() {
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
   const boardEdges = useMemo(() => hexBoardEdges(), []);
+  const borderBands = useMemo(() => hexBorderBands(), []);
+  const axisLabels = useMemo(() => hexAxisLabels(), []);
 
   const winPathSet = useMemo(
     () => new Set(winResult?.path ?? []),
@@ -182,9 +185,34 @@ export function HexGame() {
             y={VIEW_BOX.y}
             width={VIEW_BOX.width}
             height={VIEW_BOX.height}
-            fill="#0b1220"
-            rx="0.5"
+            fill="#111827"
+            rx="0.4"
           />
+
+          {borderBands.map((band, i) => (
+            <polygon
+              key={`band-${band.color}-${i}`}
+              points={band.path}
+              fill={HEX_BORDER_FILL[band.color]}
+              className="pointer-events-none"
+            />
+          ))}
+
+          {axisLabels.map((label, i) => (
+            <text
+              key={i}
+              x={label.x}
+              y={label.y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#f8fafc"
+              fontSize="0.42"
+              fontWeight="600"
+              className="pointer-events-none select-none"
+            >
+              {label.text}
+            </text>
+          ))}
 
           {game.board.map((cell, index) => {
             const { row, col } = hexCoord(index);
@@ -210,27 +238,37 @@ export function HexGame() {
             );
           })}
 
-          {boardEdges.map((edge, i) => (
-            <line
-              key={i}
-              x1={edge.a.x}
-              y1={edge.a.y}
-              x2={edge.b.x}
-              y2={edge.b.y}
-              stroke={
-                edge.border === "red"
-                  ? HEX_BORDER_STROKE.red
-                  : edge.border === "blue"
-                    ? HEX_BORDER_STROKE.blue
-                    : HEX_GRID_STROKE
-              }
-              strokeWidth={
-                edge.border ? HEX_BORDER_STROKE_WIDTH : HEX_GRID_STROKE_WIDTH
-              }
-              strokeLinecap="round"
-              className="pointer-events-none"
-            />
-          ))}
+          {boardEdges
+            .filter((edge) => edge.border === null)
+            .map((edge, i) => (
+              <line
+                key={i}
+                x1={edge.a.x}
+                y1={edge.a.y}
+                x2={edge.b.x}
+                y2={edge.b.y}
+                stroke={HEX_GRID_STROKE}
+                strokeWidth={HEX_GRID_STROKE_WIDTH}
+                strokeLinecap="round"
+                className="pointer-events-none"
+              />
+            ))}
+
+          {boardEdges
+            .filter((edge) => edge.border !== null)
+            .map((edge, i) => (
+              <line
+                key={`outer-${i}`}
+                x1={edge.a.x}
+                y1={edge.a.y}
+                x2={edge.b.x}
+                y2={edge.b.y}
+                stroke="#1f2937"
+                strokeWidth={HEX_GRID_STROKE_WIDTH}
+                strokeLinecap="round"
+                className="pointer-events-none"
+              />
+            ))}
 
           {game.board.map((cell, index) => {
             const { row, col } = hexCoord(index);

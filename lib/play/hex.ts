@@ -75,14 +75,14 @@ export function hexNeighborIndices(index: number): number[] {
   return hexNeighbors(row, col).map((pos) => hexIndex(pos.row, pos.col));
 }
 
-/** pointy-top 六角形の中心座標（ハニカム菱形グリッド） */
+/** pointy-top 六角形の中心座標（ゲームロジックと一致する axial 配置） */
 export function hexCenter(row: number, col: number): { x: number; y: number } {
   const x = HEX_SQRT3 * (col + row * 0.5) * HEX_RADIUS;
   const y = row * 1.5 * HEX_RADIUS;
   return { x, y };
 }
 
-/** pointy-top 六角形の頂点（i=0 が右上、時計回り） */
+/** pointy-top 六角形の頂点 */
 export function hexCorner(
   row: number,
   col: number,
@@ -127,9 +127,8 @@ function edgeKey(a: HexPoint, b: HexPoint): string {
     .join("|");
 }
 
-/** 盤外周の辺の色（斜め外周も含む） */
+/** pointy-top: 辺0=上(N), 1=右上(NE), 2=右(E), 3=下(S), 4=左下(SW), 5=左(W) */
 function outerEdgeColor(side: number, row: number, col: number): "red" | "blue" {
-  const last = HEX_SIZE - 1;
   if (side === 0 || side === 3) return "red";
   if (side === 2 || side === 5) return "blue";
   if (side === 1) return row === 0 ? "red" : "blue";
@@ -172,15 +171,16 @@ export function hexBoardEdges(): HexBoardEdge[] {
   return Array.from(seen.values());
 }
 
-export const HEX_GRID_STROKE = "#3d4f63";
-export const HEX_GRID_STROKE_WIDTH = 0.05;
-export const HEX_CELL_FILL = "#1a2332";
-export const HEX_CELL_FILL_WIN = "#2a2418";
-export const HEX_BORDER_STROKE = {
-  red: "#f87171",
-  blue: "#60a5fa",
+export const HEX_GRID_STROKE = "#374151";
+export const HEX_GRID_STROKE_WIDTH = 0.048;
+export const HEX_CELL_FILL = "#9ca3af";
+export const HEX_CELL_FILL_WIN = "#a8a29e";
+export const HEX_BORDER_FILL = {
+  red: "#dc2626",
+  blue: "#2563eb",
 } as const;
-export const HEX_BORDER_STROKE_WIDTH = 0.1;
+export const HEX_BORDER_BAND_DEPTH = 0.62;
+export const HEX_COLUMN_LABELS = "ABCDEFGHIJK".split("");
 
 function isStartCell(stone: Stone, row: number, col: number): boolean {
   return stone === 0 ? row === 0 : col === 0;
@@ -314,8 +314,102 @@ export function placeHexStone(
   return { next, win };
 }
 
+function bandPolygon(inner: HexPoint[], offsetFn: (p: HexPoint) => HexPoint): string {
+  const outer = inner.map(offsetFn);
+  return [...outer, ...inner.slice().reverse()]
+    .map((p) => `${p.x},${p.y}`)
+    .join(" ");
+}
+
+/** 色付き境界帯（参考図の太い赤/青フレーム） */
+export function hexBorderBands(): { color: "red" | "blue"; path: string }[] {
+  const last = HEX_SIZE - 1;
+  const d = HEX_BORDER_BAND_DEPTH;
+
+  const northInner: HexPoint[] = [hexCorner(0, 0, 3)];
+  for (let col = 0; col < HEX_SIZE; col++) northInner.push(hexCorner(0, col, 4));
+  northInner.push(hexCorner(0, last, 5));
+
+  const southInner: HexPoint[] = [hexCorner(last, 0, 2)];
+  for (let col = 0; col < HEX_SIZE; col++) southInner.push(hexCorner(last, col, 1));
+  southInner.push(hexCorner(last, last, 0));
+
+  const westInner: HexPoint[] = [hexCorner(0, 0, 3)];
+  for (let row = 0; row < HEX_SIZE; row++) westInner.push(hexCorner(row, 0, 2));
+  westInner.push(hexCorner(last, 0, 1));
+
+  const eastInner: HexPoint[] = [hexCorner(0, last, 5)];
+  for (let row = 0; row < HEX_SIZE; row++) eastInner.push(hexCorner(row, last, 0));
+  eastInner.push(hexCorner(last, last, 1));
+
+  return [
+    {
+      color: "blue",
+      path: bandPolygon(westInner, (p) => ({ x: p.x - d, y: p.y })),
+    },
+    {
+      color: "blue",
+      path: bandPolygon(eastInner, (p) => ({ x: p.x + d, y: p.y })),
+    },
+    {
+      color: "red",
+      path: bandPolygon(northInner, (p) => ({ x: p.x, y: p.y - d })),
+    },
+    {
+      color: "red",
+      path: bandPolygon(southInner, (p) => ({ x: p.x, y: p.y + d })),
+    },
+  ];
+}
+
+export type HexAxisLabel = {
+  text: string;
+  x: number;
+  y: number;
+  color: "red" | "blue";
+};
+
+/** 列 A–K（赤辺）・行 1–11（青辺）のラベル位置 */
+export function hexAxisLabels(): HexAxisLabel[] {
+  const last = HEX_SIZE - 1;
+  const d = HEX_BORDER_BAND_DEPTH;
+  const labels: HexAxisLabel[] = [];
+
+  for (let col = 0; col < HEX_SIZE; col++) {
+    labels.push({
+      text: HEX_COLUMN_LABELS[col],
+      x: hexCenter(0, col).x,
+      y: hexCorner(0, col, 4).y - d * 0.52,
+      color: "red",
+    });
+    labels.push({
+      text: HEX_COLUMN_LABELS[col],
+      x: hexCenter(last, col).x,
+      y: hexCorner(last, col, 1).y + d * 0.52,
+      color: "red",
+    });
+  }
+
+  for (let row = 0; row < HEX_SIZE; row++) {
+    labels.push({
+      text: String(row + 1),
+      x: hexCorner(row, 0, 3).x - d * 0.52,
+      y: hexCenter(row, 0).y,
+      color: "blue",
+    });
+    labels.push({
+      text: String(row + 1),
+      x: hexCorner(row, last, 0).x + d * 0.52,
+      y: hexCenter(row, last).y,
+      color: "blue",
+    });
+  }
+
+  return labels;
+}
+
 /** viewBox 計算用: 全セルのバウンディングボックス */
-export function hexViewBox(padding = 1.2): {
+export function hexViewBox(padding = 2.2): {
   x: number;
   y: number;
   width: number;
