@@ -187,38 +187,6 @@ export function HexGame() {
             rx="0.4"
           />
 
-          {(["blue", "red"] as const).flatMap((color) =>
-            borderSegments
-              .filter((segment) => segment.color === color)
-              .map((segment, i) => (
-                <polygon
-                  key={`border-${color}-${i}`}
-                  points={segment.path}
-                  fill={HEX_BORDER_FILL[color]}
-                  className="pointer-events-none"
-                />
-              ))
-          )}
-
-          {borderSegments.map(
-            (segment, i) =>
-              segment.label && (
-                <text
-                  key={`label-${i}`}
-                  x={segment.label.x}
-                  y={segment.label.y}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fill="#f8fafc"
-                  fontSize="0.4"
-                  fontWeight="600"
-                  className="pointer-events-none select-none"
-                >
-                  {segment.label.text}
-                </text>
-              )
-          )}
-
           {game.board.map((cell, index) => {
             const { row, col } = hexCoord(index);
             const points = hexPolygonPoints(row, col);
@@ -258,6 +226,54 @@ export function HexGame() {
                 className="pointer-events-none"
               />
             ))}
+
+          {(["blue", "red"] as const).flatMap((color) =>
+            borderSegments
+              .filter((segment) => segment.color === color)
+              .map((segment, i) => (
+                <polygon
+                  key={`border-${color}-${i}`}
+                  points={segment.path}
+                  fill={HEX_BORDER_FILL[color]}
+                  className="pointer-events-none"
+                />
+              ))
+          )}
+
+          {boardEdges
+            .filter((edge) => edge.border !== null)
+            .map((edge, i) => (
+              <line
+                key={`outer-${i}`}
+                x1={edge.a.x}
+                y1={edge.a.y}
+                x2={edge.b.x}
+                y2={edge.b.y}
+                stroke={HEX_BORDER_FILL[edge.border!]}
+                strokeWidth={HEX_GRID_STROKE_WIDTH}
+                strokeLinecap="round"
+                className="pointer-events-none"
+              />
+            ))}
+
+          {borderSegments.map(
+            (segment, i) =>
+              segment.label && (
+                <text
+                  key={`label-${i}`}
+                  x={segment.label.x}
+                  y={segment.label.y}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill="#f8fafc"
+                  fontSize="0.4"
+                  fontWeight="600"
+                  className="pointer-events-none select-none"
+                >
+                  {segment.label.text}
+                </text>
+              )
+          )}
 
           {game.board.map((cell, index) => {
             const { row, col } = hexCoord(index);

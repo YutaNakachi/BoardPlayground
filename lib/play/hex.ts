@@ -341,8 +341,9 @@ function outwardNormal(
   let ny = dx / len;
   const mx = (a.x + b.x) / 2;
   const my = (a.y + b.y) / 2;
-  const dot = (mx + nx - cx) * nx + (my + ny - cy) * ny;
-  if (dot < 0) {
+  const vx = mx - cx;
+  const vy = my - cy;
+  if (nx * vx + ny * vy < 0) {
     nx = -nx;
     ny = -ny;
   }
@@ -437,11 +438,12 @@ export function hexViewBox(padding = 2.2): {
     }
   }
 
+  const margin = padding + HEX_BORDER_BAND_DEPTH;
   return {
-    x: minX - padding,
-    y: minY - padding,
-    width: maxX - minX + padding * 2,
-    height: maxY - minY + padding * 2,
+    x: minX - margin,
+    y: minY - margin,
+    width: maxX - minX + margin * 2,
+    height: maxY - minY + margin * 2,
   };
 }
 
