@@ -82,6 +82,29 @@ export function hexCenter(row: number, col: number): { x: number; y: number } {
   return { x, y };
 }
 
+/** タップ位置から最も近いマスを返す（viewBox 座標） */
+export const HEX_HIT_RADIUS = 1.2;
+
+export function hexNearestCellIndex(x: number, y: number): number | null {
+  let nearest = -1;
+  let nearestDist = HEX_HIT_RADIUS * HEX_HIT_RADIUS;
+
+  for (let row = 0; row < HEX_SIZE; row++) {
+    for (let col = 0; col < HEX_SIZE; col++) {
+      const center = hexCenter(row, col);
+      const dx = center.x - x;
+      const dy = center.y - y;
+      const dist = dx * dx + dy * dy;
+      if (dist <= nearestDist) {
+        nearestDist = dist;
+        nearest = hexIndex(row, col);
+      }
+    }
+  }
+
+  return nearest >= 0 ? nearest : null;
+}
+
 /** pointy-top 六角形の頂点 */
 export function hexCorner(
   row: number,

@@ -2,7 +2,7 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -16,6 +16,7 @@ import {
   hexCellFill,
   hexCenter,
   hexCoord,
+  hexNearestCellIndex,
   hexPolygonPoints,
   hexViewBox,
   initialHexState,
@@ -28,6 +29,18 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 const VIEW_BOX = hexViewBox(2.2);
+
+function svgPointFromPointer(
+  svg: SVGSVGElement,
+  event: ReactPointerEvent<SVGSVGElement>
+): { x: number; y: number } | null {
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  const point = svg.createSVGPoint();
+  point.x = event.clientX;
+  point.y = event.clientY;
+  return point.matrixTransform(ctm.inverse());
+}
 
 function stoneLabel(state: HexState, player: 0 | 1): string {
   const stone = state.playerStone[player];
@@ -87,6 +100,35 @@ export function HexGame() {
 
   const backToSetup = useCallback(() => setPhase("setup"), []);
   usePlaySetupNavigation(phase === "setup", backToSetup);
+
+  const updateHoverFromPointer = useCallback(
+    (event: ReactPointerEvent<SVGSVGElement>) => {
+      if (phase !== "playing" || game.swapPending) {
+        setHoverIndex(null);
+        return;
+      }
+      const point = svgPointFromPointer(event.currentTarget, event);
+      if (!point) return;
+      const index = hexNearestCellIndex(point.x, point.y);
+      if (index === null || game.board[index] !== null) {
+        setHoverIndex(null);
+        return;
+      }
+      setHoverIndex(index);
+    },
+    [phase, game.board, game.swapPending]
+  );
+
+  const onBoardPointerDown = useCallback(
+    (event: ReactPointerEvent<SVGSVGElement>) => {
+      if (phase !== "playing" || game.swapPending) return;
+      const point = svgPointFromPointer(event.currentTarget, event);
+      if (!point) return;
+      const index = hexNearestCellIndex(point.x, point.y);
+      if (index !== null) handlePlace(index);
+    },
+    [phase, game.swapPending, handlePlace]
+  );
 
   const boardEdges = useMemo(() => hexBoardEdges(), []);
 
@@ -164,9 +206,11 @@ export function HexGame() {
       <div className="relative mx-auto w-full max-w-4xl">
         <svg
           viewBox={`${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.width} ${VIEW_BOX.height}`}
-          className="block h-auto w-full touch-manipulation"
+          className="block h-auto w-full cursor-pointer touch-manipulation"
           aria-label="ヘックスの盤"
-          onMouseLeave={() => setHoverIndex(null)}
+          onPointerDown={onBoardPointerDown}
+          onPointerMove={updateHoverFromPointer}
+          onPointerLeave={() => setHoverIndex(null)}
         >
           <defs>
             <filter id="hex-win-glow" x="-80%" y="-80%" width="260%" height="260%">
@@ -192,17 +236,7 @@ export function HexGame() {
                 key={`fill-${index}`}
                 points={points}
                 fill={hexCellFill(row, col, winPathSet.has(index))}
-                className={
-                  cell === null && !isGameOver && !game.swapPending
-                    ? "cursor-pointer"
-                    : ""
-                }
-                onMouseEnter={() => {
-                  if (cell === null && !isGameOver && !game.swapPending) {
-                    setHoverIndex(index);
-                  }
-                }}
-                onClick={() => handlePlace(index)}
+                className="pointer-events-none"
               />
             );
           })}
