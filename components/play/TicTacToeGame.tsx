@@ -190,6 +190,17 @@ export function TicTacToeGame() {
   const waitingGameMode = online.room
     ? parseTicTacToeGameOptions(online.room.gameOptions).mode
     : gameMode;
+
+  const handleWaitingModeChange = useCallback(
+    (next: TttMode) => {
+      setGameMode(next);
+      if (online.isHost) {
+        void online.handleUpdateGameOptions({ mode: next });
+      }
+    },
+    [online.isHost, online.handleUpdateGameOptions]
+  );
+
   if (localPhase === "setup" && online.phase === "idle") {
     return (
       <OnlineSetupPanel
@@ -232,13 +243,19 @@ export function TicTacToeGame() {
           canStart: online.players.length >= 2,
           extra: (
             <>
-              {modeSetupExtra(waitingGameMode, () => {}, true)}
-              <OnlineFirstPlayerPicker
-                players={online.players}
-                value={firstPlayer}
-                onChange={online.isHost ? onFirstPlayerChange : undefined}
-                readOnly={!online.isHost}
-              />
+              {modeSetupExtra(
+                waitingGameMode,
+                online.isHost ? handleWaitingModeChange : () => {},
+                !online.isHost
+              )}
+              <div className="mt-6">
+                <OnlineFirstPlayerPicker
+                  players={online.players}
+                  value={firstPlayer}
+                  onChange={online.isHost ? onFirstPlayerChange : undefined}
+                  readOnly={!online.isHost}
+                />
+              </div>
             </>
           ),
         }}
