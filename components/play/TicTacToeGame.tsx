@@ -190,15 +190,15 @@ export function TicTacToeGame() {
   const waitingGameMode = online.room
     ? parseTicTacToeGameOptions(online.room.gameOptions).mode
     : gameMode;
-  const onlineSetupExtra = (
-    <>
-      {ruleExtra}
-      <OnlineFirstPlayerPicker
-        players={online.players}
-        value={firstPlayer}
-        onChange={onFirstPlayerChange}
-      />
-    </>
+
+  const handleWaitingModeChange = useCallback(
+    (next: TttMode) => {
+      setGameMode(next);
+      if (online.isHost) {
+        void online.handleUpdateGameOptions({ mode: next });
+      }
+    },
+    [online.isHost, online.handleUpdateGameOptions]
   );
 
   if (localPhase === "setup" && online.phase === "idle") {
@@ -210,16 +210,14 @@ export function TicTacToeGame() {
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
         onCreateRoom={(displayName) =>
-          online.handleCreate(displayName, {
-            mode: gameMode,
-            ...(firstPlayer === 1 ? { firstPlayer: 1 } : {}),
-          })
+          online.handleCreate(displayName, { mode: gameMode })
         }
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
         error={online.error}
-        extra={mode === "online" ? onlineSetupExtra : ruleExtra}
+        extra={mode === "local" ? ruleExtra : undefined}
+        createExtra={mode === "online" ? ruleExtra : undefined}
       />
     );
   }
@@ -245,13 +243,19 @@ export function TicTacToeGame() {
           canStart: online.players.length >= 2,
           extra: (
             <>
-              {modeSetupExtra(waitingGameMode, () => {}, true)}
-              <OnlineFirstPlayerPicker
-                players={online.players}
-                value={firstPlayer}
-                onChange={online.isHost ? onFirstPlayerChange : undefined}
-                readOnly={!online.isHost}
-              />
+              {modeSetupExtra(
+                waitingGameMode,
+                online.isHost ? handleWaitingModeChange : () => {},
+                !online.isHost
+              )}
+              <div className="mt-6">
+                <OnlineFirstPlayerPicker
+                  players={online.players}
+                  value={firstPlayer}
+                  onChange={online.isHost ? onFirstPlayerChange : undefined}
+                  readOnly={!online.isHost}
+                />
+              </div>
             </>
           ),
         }}

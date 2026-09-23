@@ -149,15 +149,6 @@ export function GravityFourGame() {
         onStartLocal={startLocal}
         loading={online.loading}
         error={online.error}
-        extra={
-          mode === "online" ? (
-            <OnlineFirstPlayerPicker
-              players={online.players}
-              value={firstPlayer}
-              onChange={onFirstPlayerChange}
-            />
-          ) : undefined
-        }
       />
     );
   }
