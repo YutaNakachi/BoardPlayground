@@ -16,10 +16,17 @@ import {
 import { shouldApplyRemoteGameVersion } from "@/lib/online/sync-game-state";
 import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type OnlinePhase = "idle" | "waiting" | "playing" | "finished";
 
 const EMPTY_PLAYERS: RoomPlayer[] = [];
+
+type RoomStateBroadcast = {
+  state: GameState;
+  version: number;
+  currentPlayer: number | null;
+};
 
 export function useOnlineRoom(gameSlug: string) {
   const { registerPlayExit } = usePlayPage();
@@ -34,8 +41,22 @@ export function useOnlineRoom(gameSlug: string) {
   const [loading, setLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const realtimeCleanupRef = useRef<(() => void) | undefined>(undefined);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const versionRef = useRef(0);
   const pendingMoveRef = useRef(false);
+
+  const broadcastGameState = useCallback(
+    (state: GameState, remoteVersion: number, remoteCurrentPlayer: number | null) => {
+      const channel = channelRef.current;
+      if (!channel) return;
+      void channel.send({
+        type: "broadcast",
+        event: "room_state",
+        payload: { state, version: remoteVersion, currentPlayer: remoteCurrentPlayer },
+      });
+    },
+    []
+  );
 
   const clearRealtime = useCallback(() => {
     if (pollRef.current) {
@@ -44,6 +65,7 @@ export function useOnlineRoom(gameSlug: string) {
     }
     realtimeCleanupRef.current?.();
     realtimeCleanupRef.current = undefined;
+    channelRef.current = null;
     pendingMoveRef.current = false;
   }, []);
 
@@ -90,6 +112,7 @@ export function useOnlineRoom(gameSlug: string) {
     } else if (data.room.status === "waiting") {
       setPhase("waiting");
     }
+    return data;
   }, [applyRemoteGameState]);
 
   const startPoll = useCallback(
@@ -97,7 +120,7 @@ export function useOnlineRoom(gameSlug: string) {
       if (pollRef.current) return;
       pollRef.current = setInterval(() => {
         void refreshRoom(roomId);
-      }, 2000);
+      }, 1000);
     },
     [refreshRoom]
   );
@@ -111,9 +134,41 @@ export function useOnlineRoom(gameSlug: string) {
       }
 
       // room_state only: it is the sole table in supabase_realtime publication.
-      // Subscribing to unpublished tables (rooms, room_players) destabilizes the channel.
+      // Broadcast is the fast path; postgres_changes reconciles after DB replication.
+      const applyRow = (row: {
+        state: GameState;
+        version: number;
+        current_player: number | null;
+      }) => {
+        applyRemoteGameState(row.state, row.version, row.current_player);
+      };
+
       const channel = supabase
-        .channel(`room-${roomId}`)
+        .channel(`room-${roomId}`, {
+          config: { broadcast: { ack: false, self: false } },
+        })
+        .on("broadcast", { event: "room_state" }, ({ payload }) => {
+          const row = payload as RoomStateBroadcast;
+          applyRemoteGameState(row.state, row.version, row.currentPlayer);
+        })
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "room_state",
+            filter: `room_id=eq.${roomId}`,
+          },
+          (payload) => {
+            applyRow(
+              payload.new as {
+                state: GameState;
+                version: number;
+                current_player: number | null;
+              }
+            );
+          }
+        )
         .on(
           "postgres_changes",
           {
@@ -123,17 +178,21 @@ export function useOnlineRoom(gameSlug: string) {
             filter: `room_id=eq.${roomId}`,
           },
           (payload) => {
-            const row = payload.new as {
-              state: GameState;
-              version: number;
-              current_player: number | null;
-            };
-            applyRemoteGameState(row.state, row.version, row.current_player);
+            applyRow(
+              payload.new as {
+                state: GameState;
+                version: number;
+                current_player: number | null;
+              }
+            );
           }
         )
         .subscribe();
 
+      channelRef.current = channel;
+
       return () => {
+        channelRef.current = null;
         void supabase.removeChannel(channel);
       };
     },
@@ -234,15 +293,22 @@ export function useOnlineRoom(gameSlug: string) {
         await startRoomGame(room.id, myPlayerId, firstPlayer);
         pendingMoveRef.current = false;
         versionRef.current = 0;
-        await refreshRoom(room.id);
+        const data = await refreshRoom(room.id);
         setPhase("playing");
+        if (data.gameState) {
+          broadcastGameState(
+            data.gameState.state as GameState,
+            data.gameState.version,
+            data.gameState.currentPlayer
+          );
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "開始に失敗しました");
       } finally {
         setLoading(false);
       }
     },
-    [room, myPlayerId, refreshRoom]
+    [room, myPlayerId, refreshRoom, broadcastGameState]
   );
 
   const handleRematch = useCallback(
@@ -277,6 +343,8 @@ export function useOnlineRoom(gameSlug: string) {
         setPhase("finished");
       }
 
+      broadcastGameState(result.state, optimisticVersion, result.currentPlayer);
+
       void sendRoomMove(room.id, myPlayerId, move, prevVersion)
         .then((serverResult) => {
           setGameState(serverResult.state as GameState);
@@ -286,6 +354,11 @@ export function useOnlineRoom(gameSlug: string) {
           if ((serverResult.state as GameState).phase === "game-over") {
             setPhase("finished");
           }
+          broadcastGameState(
+            serverResult.state as GameState,
+            serverResult.version,
+            serverResult.currentPlayer
+          );
         })
         .catch((e) => {
           setGameState(prevState);
@@ -294,13 +367,24 @@ export function useOnlineRoom(gameSlug: string) {
           setCurrentPlayer(prevCurrentPlayer);
           setPhase(prevPhase);
           setError(e instanceof Error ? e.message : "手の送信に失敗しました");
+          broadcastGameState(prevState, prevVersion, prevCurrentPlayer);
           void refreshRoom(room.id);
         })
         .finally(() => {
           pendingMoveRef.current = false;
         });
     },
-    [room, gameState, mySeat, currentPlayer, phase, gameSlug, myPlayerId, refreshRoom]
+    [
+      room,
+      gameState,
+      mySeat,
+      currentPlayer,
+      phase,
+      gameSlug,
+      myPlayerId,
+      refreshRoom,
+      broadcastGameState,
+    ]
   );
 
   const reset = useCallback(() => {
