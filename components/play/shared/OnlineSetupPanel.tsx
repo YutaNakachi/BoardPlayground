@@ -22,6 +22,10 @@ type Props = {
   error?: string | null;
   /** ローカル開始ボタンの上に表示する追加 UI（ルール選択など） */
   extra?: ReactNode;
+  /** オンライン「部屋を作る」選択時の追加 UI */
+  createExtra?: ReactNode;
+  /** オンライン「部屋に入る」選択時の追加 UI */
+  joinExtra?: ReactNode;
   /** Waiting room UI */
   waiting?: {
     code: string;
@@ -45,12 +49,22 @@ export function OnlineSetupPanel({
   loading,
   error,
   extra,
+  createExtra,
+  joinExtra,
   waiting,
 }: Props) {
   const [displayName, setDisplayName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [joinName, setJoinName] = useState("");
   const [action, setAction] = useState<"create" | "join">("create");
+
+  const hasOnlineExtraSplit = createExtra !== undefined || joinExtra !== undefined;
+  const onlineExtra =
+    hasOnlineExtraSplit
+      ? action === "create"
+        ? createExtra
+        : joinExtra
+      : extra;
 
   if (waiting) {
     return (
@@ -111,7 +125,13 @@ export function OnlineSetupPanel({
         </div>
       ) : null}
 
-      {extra ? <div className={onlineSupported ? "mt-8" : "mt-0"}>{extra}</div> : null}
+      {mode === "local" && extra ? (
+        <div className={onlineSupported ? "mt-8" : "mt-0"}>{extra}</div>
+      ) : null}
+
+      {mode === "online" && onlineSupported && onlineExtra ? (
+        <div className="mt-8">{onlineExtra}</div>
+      ) : null}
 
       {mode === "local" || !onlineSupported ? (
         <button type="button" onClick={onStartLocal} className="btn-game mt-8">

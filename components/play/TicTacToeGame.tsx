@@ -190,17 +190,6 @@ export function TicTacToeGame() {
   const waitingGameMode = online.room
     ? parseTicTacToeGameOptions(online.room.gameOptions).mode
     : gameMode;
-  const onlineSetupExtra = (
-    <>
-      {ruleExtra}
-      <OnlineFirstPlayerPicker
-        players={online.players}
-        value={firstPlayer}
-        onChange={onFirstPlayerChange}
-      />
-    </>
-  );
-
   if (localPhase === "setup" && online.phase === "idle") {
     return (
       <OnlineSetupPanel
@@ -210,16 +199,14 @@ export function TicTacToeGame() {
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
         onCreateRoom={(displayName) =>
-          online.handleCreate(displayName, {
-            mode: gameMode,
-            ...(firstPlayer === 1 ? { firstPlayer: 1 } : {}),
-          })
+          online.handleCreate(displayName, { mode: gameMode })
         }
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
         error={online.error}
-        extra={mode === "online" ? onlineSetupExtra : ruleExtra}
+        extra={mode === "local" ? ruleExtra : undefined}
+        createExtra={mode === "online" ? ruleExtra : undefined}
       />
     );
   }
