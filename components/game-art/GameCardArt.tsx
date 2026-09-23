@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { GravityFourBoardPreview } from "@/components/game-art/GravityFourBoardPreview";
 import { HexBoardPreview } from "@/components/game-art/HexBoardPreview";
 import { LudoBoardPreview } from "@/components/game-art/LudoBoardPreview";
 import { MancalaBoardPreview } from "@/components/game-art/MancalaBoardPreview";
@@ -805,75 +806,7 @@ function TttPreview() {
 }
 
 function GravityFourPreview() {
-  const cols = 7;
-  const rows = 6;
-  const board: (0 | 1 | null)[][] = Array.from({ length: rows }, () =>
-    Array(cols).fill(null)
-  );
-  const drops: [number, 0 | 1][] = [
-    [2, 0],
-    [3, 1],
-    [2, 0],
-    [3, 1],
-    [4, 0],
-    [3, 1],
-    [2, 0],
-    [1, 1],
-    [2, 0],
-    [3, 1],
-    [4, 0],
-    [3, 1],
-  ];
-  for (const [col, player] of drops) {
-    for (let row = rows - 1; row >= 0; row--) {
-      if (board[row][col] === null) {
-        board[row][col] = player;
-        break;
-      }
-    }
-  }
-
-  const cell = 13;
-  const padX = 9.5;
-  const padY = 12;
-
-  return (
-    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="10" fill="#1e1b4b" />
-      <rect
-        x={padX - 2}
-        y={padY - 2}
-        width={cols * cell + 4}
-        height={rows * cell + 4}
-        rx="8"
-        fill="#312e81"
-        opacity="0.95"
-      />
-      {board.map((rowCells, row) =>
-        rowCells.map((player, col) => {
-          const cx = padX + col * cell + cell / 2;
-          const cy = padY + row * cell + cell / 2;
-          const holeR = 4.6;
-          const discR = 3.6;
-          return (
-            <g key={`${row}-${col}`}>
-              <circle cx={cx} cy={cy} r={holeR} fill="#312e81" stroke="#4338ca" strokeWidth="0.6" />
-              {player !== null ? (
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={discR}
-                  fill={player === 0 ? "#fb7185" : "#fcd34d"}
-                  stroke={player === 0 ? "#fda4af" : "#fde68a"}
-                  strokeWidth="0.5"
-                />
-              ) : null}
-            </g>
-          );
-        })
-      )}
-    </svg>
-  );
+  return <GravityFourBoardPreview />;
 }
 
 function DotsBoxesPreview() {
