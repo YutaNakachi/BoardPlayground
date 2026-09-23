@@ -13,18 +13,40 @@ const FRAME_BG = "rgba(30, 27, 75, 0.8)";
 const HOLE_BG = "rgba(49, 46, 129, 0.6)";
 const HOLE_BORDER = "rgba(67, 56, 202, 0.5)";
 
-/** P0 が下段で4つ並んで勝利した直後の局面（P1 は最大3つまで） */
+/** 決着前の中盤。石を多めに積み、どちらも4連にならない局面 */
 function defaultPreviewBoard(): Board {
   let board = emptyGravityFourBoard();
   const drops: [number, 0 | 1][] = [
+    [3, 0],
+    [3, 1],
+    [2, 0],
+    [4, 1],
+    [2, 1],
+    [5, 0],
+    [1, 1],
+    [6, 0],
+    [0, 1],
+    [6, 1],
+    [5, 1],
+    [4, 0],
+    [1, 0],
+    [0, 0],
+    [2, 0],
+    [5, 1],
+    [3, 0],
+    [4, 1],
+    [6, 0],
+    [1, 1],
+    [0, 1],
+    [3, 1],
+    [2, 1],
+    [4, 0],
+    [5, 0],
+    [0, 0],
+    [1, 0],
     [6, 1],
     [5, 1],
     [4, 1],
-    [4, 0],
-    [0, 0],
-    [1, 0],
-    [2, 0],
-    [3, 0],
   ];
   for (const [col, player] of drops) {
     board = dropGravityFour(board, col, player)!;
