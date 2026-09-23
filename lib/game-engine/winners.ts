@@ -6,5 +6,5 @@ export function winnerIndices(scores: number[]): number[] {
 
 export function formatWinners(winners: number[]): string {
   const names = winners.map((i) => `プレイヤー ${i + 1}`).join(" / ");
-  return winners.length > 1 ? `${names}（共同勝利）` : names;
+  return winners.length > 1 ? `${names}（引き分け）` : names;
 }

@@ -76,7 +76,7 @@ async function startGame(page) {
 async function hasGameOver(text) {
   return (
     text.includes("の勝ち") ||
-    text.includes("共同勝利") ||
+    text.includes("（引き分け）") ||
     text.includes("クリア") ||
     text.includes("もう一度") ||
     (text.includes("点") && text.includes("プレイヤー") && text.includes("連結"))

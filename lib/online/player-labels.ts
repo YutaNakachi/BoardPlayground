@@ -23,7 +23,7 @@ export function formatWinnersWithNames(
   winners: number[]
 ): string {
   const names = winners.map((i) => getSeatDisplayName(players, i)).join(" / ");
-  return winners.length > 1 ? `${names}（共同勝利）` : names;
+  return winners.length > 1 ? `${names}（引き分け）` : names;
 }
 
 /** サーバー生成の「プレイヤー1/2」文言を表示名に置き換える（表示のみ） */
