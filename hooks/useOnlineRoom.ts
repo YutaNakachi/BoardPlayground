@@ -43,6 +43,7 @@ export function useOnlineRoom(gameSlug: string) {
   const realtimeCleanupRef = useRef<(() => void) | undefined>(undefined);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const versionRef = useRef(0);
+  const gameStateRef = useRef<GameState | null>(null);
   const pendingMoveRef = useRef(false);
 
   const broadcastGameState = useCallback(
@@ -73,6 +74,10 @@ export function useOnlineRoom(gameSlug: string) {
     versionRef.current = version;
   }, [version]);
 
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
   const applyRemoteGameState = useCallback(
     (
       state: GameState,
@@ -81,7 +86,12 @@ export function useOnlineRoom(gameSlug: string) {
     ) => {
       if (pendingMoveRef.current) return;
       if (
-        !shouldApplyRemoteGameVersion(remoteVersion, versionRef.current, state)
+        !shouldApplyRemoteGameVersion(
+          remoteVersion,
+          versionRef.current,
+          state,
+          gameStateRef.current
+        )
       ) {
         return;
       }
