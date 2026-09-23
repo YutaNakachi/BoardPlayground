@@ -307,12 +307,7 @@ export function HexGame() {
         mode={mode}
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
-        onCreateRoom={(displayName) =>
-          online.handleCreate(
-            displayName,
-            firstPlayer === 1 ? { firstPlayer: 1 } : undefined
-          )
-        }
+        onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}

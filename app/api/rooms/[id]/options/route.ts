@@ -51,8 +51,11 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "ホストのみ変更できます" }, { status: 403 });
   }
 
-  if (room.status !== "waiting") {
-    return NextResponse.json({ error: "待機中のみ変更できます" }, { status: 409 });
+  if (room.status !== "waiting" && room.status !== "finished") {
+    return NextResponse.json(
+      { error: "待機中または終局後のみ変更できます" },
+      { status: 409 }
+    );
   }
 
   if (!isOnlineGame(room.game_slug)) {
