@@ -148,7 +148,26 @@ export function useOnlineRoom(gameSlug: string) {
             void refreshRoom(roomId);
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            if (pollRef.current) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+            }
+            return;
+          }
+          if (
+            status === "CHANNEL_ERROR" ||
+            status === "TIMED_OUT" ||
+            status === "CLOSED"
+          ) {
+            if (!pollRef.current) {
+              pollRef.current = setInterval(() => {
+                void refreshRoom(roomId);
+              }, 2000);
+            }
+          }
+        });
 
       return () => {
         void supabase.removeChannel(channel);

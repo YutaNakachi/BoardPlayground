@@ -1,8 +1,17 @@
+/** Server-side: stats, online API, admin client */
 export function isSupabaseConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
       process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
+
+/** Browser: Realtime only (anon key is public; service role is server-only) */
+export function isSupabaseBrowserConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 }
 
