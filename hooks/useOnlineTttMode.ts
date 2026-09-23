@@ -24,7 +24,10 @@ export function useOnlineTttMode(online: OnlineRoomSlice) {
 
   const canPersist =
     online.isHost &&
-    (online.room?.status === "waiting" || online.room?.status === "finished");
+    (online.phase === "waiting" ||
+      online.phase === "finished" ||
+      online.room?.status === "waiting" ||
+      online.room?.status === "finished");
 
   const onModeChange = useCallback(
     (next: TttMode) => {

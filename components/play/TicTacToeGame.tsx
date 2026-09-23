@@ -189,6 +189,11 @@ export function TicTacToeGame() {
   usePlaySetupNavigation(isSetupScreen, reset);
 
   const ruleExtra = modeSetupExtra(gameMode, setGameMode);
+  const startParams = {
+    firstPlayer,
+    gameOptions: { mode: onlineTttMode },
+  };
+
   const hostLobbyExtra = (
     <>
       {modeSetupExtra(
@@ -242,7 +247,7 @@ export function TicTacToeGame() {
           code: online.room.code,
           players: online.players,
           isHost: online.isHost,
-          onStart: () => online.handleStart(firstPlayer),
+          onStart: () => online.handleStart(startParams),
           canStart: online.players.length >= 2,
           extra: hostLobbyExtra,
         }}
@@ -259,7 +264,7 @@ export function TicTacToeGame() {
   const replayProps = getOnlineResultReplayProps(
     isOnline,
     online.isHost,
-    () => online.handleRematch(firstPlayer),
+    () => online.handleRematch(startParams),
     reset
   );
 

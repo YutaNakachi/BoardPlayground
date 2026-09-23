@@ -37,12 +37,21 @@ export function useOnlineFirstPlayer(online: OnlineRoomSlice) {
       setSelectionByRoom((prev) => ({ ...prev, [roomId]: seat }));
       if (
         online.isHost &&
-        (online.room?.status === "waiting" || online.room?.status === "finished")
+        (online.phase === "waiting" ||
+          online.phase === "finished" ||
+          online.room?.status === "waiting" ||
+          online.room?.status === "finished")
       ) {
         void online.handleUpdateGameOptions({ firstPlayer: seat });
       }
     },
-    [roomId, online.isHost, online.room?.status, online.handleUpdateGameOptions]
+    [
+      roomId,
+      online.isHost,
+      online.phase,
+      online.room?.status,
+      online.handleUpdateGameOptions,
+    ]
   );
 
   return { firstPlayer, onFirstPlayerChange };

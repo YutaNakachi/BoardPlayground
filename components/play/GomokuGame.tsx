@@ -155,7 +155,7 @@ export function GomokuGame() {
           code: online.room.code,
           players: online.players,
           isHost: online.isHost,
-          onStart: () => online.handleStart(firstPlayer),
+          onStart: () => online.handleStart({ firstPlayer }),
           canStart: online.players.length >= 2,
           extra: (
             <OnlineFirstPlayerPicker
@@ -175,7 +175,7 @@ export function GomokuGame() {
   const replayProps = getOnlineResultReplayProps(
     isOnline,
     online.isHost,
-    () => online.handleRematch(firstPlayer),
+    () => online.handleRematch({ firstPlayer }),
     reset
   );
 
