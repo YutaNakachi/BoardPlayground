@@ -113,7 +113,7 @@ export function NebulaLinkGame() {
         <ResultPanel
           variant="inline"
           winners={winner}
-          winnersLabel={game.isDraw ? "引き分け" : undefined}
+          draw={game.isDraw}
           onReplay={() => setPhase("setup")}
           details={
             <p className="text-slate-400">

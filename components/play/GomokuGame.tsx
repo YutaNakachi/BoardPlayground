@@ -185,6 +185,7 @@ export function GomokuGame() {
         <ResultPanel
           variant="inline"
           winners={winners}
+          draw={activeWinner === "draw"}
           winnersLabel={
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }
