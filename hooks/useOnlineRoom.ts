@@ -92,16 +92,26 @@ export function useOnlineRoom(gameSlug: string) {
     }
   }, [applyRemoteGameState]);
 
+  const startPoll = useCallback(
+    (roomId: string) => {
+      if (pollRef.current) return;
+      pollRef.current = setInterval(() => {
+        void refreshRoom(roomId);
+      }, 2000);
+    },
+    [refreshRoom]
+  );
+
   const subscribeRealtime = useCallback(
     (roomId: string) => {
       const supabase = getSupabaseBrowserClient();
       if (!supabase) {
-        pollRef.current = setInterval(() => {
-          void refreshRoom(roomId);
-        }, 2000);
+        startPoll(roomId);
         return;
       }
 
+      // room_state only: it is the sole table in supabase_realtime publication.
+      // Subscribing to unpublished tables (rooms, room_players) destabilizes the channel.
       const channel = supabase
         .channel(`room-${roomId}`)
         .on(
@@ -121,59 +131,13 @@ export function useOnlineRoom(gameSlug: string) {
             applyRemoteGameState(row.state, row.version, row.current_player);
           }
         )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "rooms",
-            filter: `id=eq.${roomId}`,
-          },
-          (payload) => {
-            const row = payload.new as { status: RoomInfo["status"] };
-            if (row.status === "playing") setPhase("playing");
-            if (row.status === "finished") setPhase("finished");
-            if (row.status === "waiting") setPhase("waiting");
-          }
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "room_players",
-            filter: `room_id=eq.${roomId}`,
-          },
-          () => {
-            void refreshRoom(roomId);
-          }
-        )
-        .subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            if (pollRef.current) {
-              clearInterval(pollRef.current);
-              pollRef.current = null;
-            }
-            return;
-          }
-          if (
-            status === "CHANNEL_ERROR" ||
-            status === "TIMED_OUT" ||
-            status === "CLOSED"
-          ) {
-            if (!pollRef.current) {
-              pollRef.current = setInterval(() => {
-                void refreshRoom(roomId);
-              }, 2000);
-            }
-          }
-        });
+        .subscribe();
 
       return () => {
         void supabase.removeChannel(channel);
       };
     },
-    [applyRemoteGameState, refreshRoom]
+    [applyRemoteGameState, startPoll]
   );
 
   useEffect(() => {
@@ -183,6 +147,18 @@ export function useOnlineRoom(gameSlug: string) {
   useEffect(() => {
     return clearRealtime;
   }, [clearRealtime]);
+
+  // Lobby: room_players is not in the Realtime publication, so poll while waiting.
+  useEffect(() => {
+    if (phase !== "waiting" || !room?.id || !getSupabaseBrowserClient()) return;
+    startPoll(room.id);
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [phase, room?.id, startPoll]);
 
   const setupRoom = useCallback(
     (roomId: string, playerId: string, seatIndex: number, roomInfo: RoomInfo) => {
