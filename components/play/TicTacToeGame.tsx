@@ -12,7 +12,7 @@ import { getPlayerTurnStyle } from "@/lib/player-colors";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
-import { parseTicTacToeGameOptions } from "@/lib/online/game-options";
+import { useOnlineTttMode } from "@/hooks/useOnlineTttMode";
 import type { TttState } from "@/lib/online/moves";
 import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import {
@@ -85,6 +85,8 @@ export function TicTacToeGame() {
   const { onlineEnabled } = usePlayStats();
   const online = useOnlineRoom("tic-tac-toe");
   const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
+  const { mode: onlineTttMode, onModeChange: onOnlineTttModeChange } =
+    useOnlineTttMode(online);
   const [mode, setMode] = useState<PlayMode>("local");
   const [gameMode, setGameMode] = useState<TttMode>("classic");
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
@@ -187,18 +189,27 @@ export function TicTacToeGame() {
   usePlaySetupNavigation(isSetupScreen, reset);
 
   const ruleExtra = modeSetupExtra(gameMode, setGameMode);
-  const waitingGameMode = online.room
-    ? parseTicTacToeGameOptions(online.room.gameOptions).mode
-    : gameMode;
+  const startParams = {
+    firstPlayer,
+    gameOptions: { mode: onlineTttMode },
+  };
 
-  const handleWaitingModeChange = useCallback(
-    (next: TttMode) => {
-      setGameMode(next);
-      if (online.isHost) {
-        void online.handleUpdateGameOptions({ mode: next });
-      }
-    },
-    [online.isHost, online.handleUpdateGameOptions]
+  const hostLobbyExtra = (
+    <>
+      {modeSetupExtra(
+        onlineTttMode,
+        onOnlineTttModeChange,
+        !online.isHost
+      )}
+      <div className="mt-6">
+        <OnlineFirstPlayerPicker
+          players={online.players}
+          value={firstPlayer}
+          onChange={online.isHost ? onFirstPlayerChange : undefined}
+          readOnly={!online.isHost}
+        />
+      </div>
+    </>
   );
 
   if (localPhase === "setup" && online.phase === "idle") {
@@ -209,15 +220,12 @@ export function TicTacToeGame() {
         mode={mode}
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
-        onCreateRoom={(displayName) =>
-          online.handleCreate(displayName, { mode: gameMode })
-        }
+        onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
         error={online.error}
         extra={mode === "local" ? ruleExtra : undefined}
-        createExtra={mode === "online" ? ruleExtra : undefined}
       />
     );
   }
@@ -239,25 +247,9 @@ export function TicTacToeGame() {
           code: online.room.code,
           players: online.players,
           isHost: online.isHost,
-          onStart: () => online.handleStart(firstPlayer),
+          onStart: () => online.handleStart(startParams),
           canStart: online.players.length >= 2,
-          extra: (
-            <>
-              {modeSetupExtra(
-                waitingGameMode,
-                online.isHost ? handleWaitingModeChange : () => {},
-                !online.isHost
-              )}
-              <div className="mt-6">
-                <OnlineFirstPlayerPicker
-                  players={online.players}
-                  value={firstPlayer}
-                  onChange={online.isHost ? onFirstPlayerChange : undefined}
-                  readOnly={!online.isHost}
-                />
-              </div>
-            </>
-          ),
+          extra: hostLobbyExtra,
         }}
       />
     );
@@ -272,7 +264,7 @@ export function TicTacToeGame() {
   const replayProps = getOnlineResultReplayProps(
     isOnline,
     online.isHost,
-    () => online.handleRematch(firstPlayer),
+    () => online.handleRematch(startParams),
     reset
   );
 
@@ -286,15 +278,7 @@ export function TicTacToeGame() {
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }
           {...replayProps}
-          replayExtra={
-            isOnline && online.isHost ? (
-              <OnlineFirstPlayerPicker
-                players={online.players}
-                value={firstPlayer}
-                onChange={onFirstPlayerChange}
-              />
-            ) : undefined
-          }
+          replayExtra={isOnline && online.isHost ? hostLobbyExtra : undefined}
           details={
             <p className="text-slate-400">
               {activeWinner === "draw"

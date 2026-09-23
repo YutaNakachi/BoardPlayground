@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
-import type { FirstPlayerSeat } from "@/lib/online/game-options";
 import {
   createRoom,
   fetchRoom,
@@ -12,6 +11,7 @@ import {
   sendRoomMove,
   startRoomGame,
   updateRoomGameOptions,
+  type StartRoomParams,
 } from "@/lib/online/room-client";
 import { shouldApplyRemoteGameVersion } from "@/lib/online/sync-game-state";
 import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
@@ -93,6 +93,11 @@ export function useOnlineRoom(gameSlug: string) {
         setPhase("playing");
       } else if (state.phase === "game-over") {
         setPhase("finished");
+        setRoom((prev) =>
+          prev && prev.status !== "finished"
+            ? { ...prev, status: "finished" }
+            : prev
+        );
       }
     },
     []
@@ -285,12 +290,12 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const handleStart = useCallback(
-    async (firstPlayer?: FirstPlayerSeat) => {
+    async (params?: StartRoomParams) => {
       if (!room) return;
       setLoading(true);
       setError(null);
       try {
-        await startRoomGame(room.id, myPlayerId, firstPlayer);
+        await startRoomGame(room.id, myPlayerId, params);
         pendingMoveRef.current = false;
         versionRef.current = 0;
         const data = await refreshRoom(room.id);
@@ -312,9 +317,9 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const handleRematch = useCallback(
-    async (firstPlayer?: FirstPlayerSeat) => {
+    async (params?: StartRoomParams) => {
       if (!room || phase !== "finished") return;
-      await handleStart(firstPlayer);
+      await handleStart(params);
     },
     [room, phase, handleStart]
   );

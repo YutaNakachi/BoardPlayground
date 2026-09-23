@@ -66,15 +66,24 @@ export async function fetchRoom(roomId: string): Promise<{
   return res.json();
 }
 
+export type StartRoomParams = {
+  firstPlayer?: 0 | 1;
+  gameOptions?: Record<string, unknown>;
+};
+
 export async function startRoomGame(
   roomId: string,
   playerId: string,
-  firstPlayer?: 0 | 1
+  params?: StartRoomParams
 ): Promise<void> {
   const res = await fetch(`/api/rooms/${roomId}/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ playerId, firstPlayer }),
+    body: JSON.stringify({
+      playerId,
+      firstPlayer: params?.firstPlayer,
+      gameOptions: params?.gameOptions,
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

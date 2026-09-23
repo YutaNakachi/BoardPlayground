@@ -16,14 +16,19 @@ export async function POST(request: Request, { params }: Params) {
 
   const { id } = await params;
 
-  let body: { playerId?: string; firstPlayer?: number };
+  let body: {
+    playerId?: string;
+    firstPlayer?: number;
+    gameOptions?: Record<string, unknown>;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { playerId, firstPlayer: requestedFirstPlayer } = body;
+  const { playerId, firstPlayer: requestedFirstPlayer, gameOptions: requestedOptions } =
+    body;
   if (!playerId) {
     return NextResponse.json({ error: "playerId is required" }, { status: 400 });
   }
@@ -82,12 +87,11 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Invalid firstPlayer" }, { status: 400 });
   }
 
-  const gameOptions =
-    requestedFirstPlayer !== undefined
-      ? mergeGameOptions(room.game_slug, room.game_options, {
-          firstPlayer: requestedFirstPlayer,
-        })
-      : mergeGameOptions(room.game_slug, room.game_options, {});
+  const optionPatch: Record<string, unknown> = { ...(requestedOptions ?? {}) };
+  if (requestedFirstPlayer !== undefined) {
+    optionPatch.firstPlayer = requestedFirstPlayer;
+  }
+  const gameOptions = mergeGameOptions(room.game_slug, room.game_options, optionPatch);
 
   if (gameOptions === null) {
     return NextResponse.json({ error: "Invalid game options" }, { status: 400 });
