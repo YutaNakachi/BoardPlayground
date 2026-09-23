@@ -274,6 +274,7 @@ export function TicTacToeGame() {
         <ResultPanel
           variant="inline"
           winners={winners}
+          draw={activeWinner === "draw"}
           winnersLabel={
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }

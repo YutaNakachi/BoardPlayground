@@ -203,6 +203,7 @@ export function ReversiGame() {
         <ResultPanel
           variant="inline"
           winners={winners}
+          draw={winners.length > 1}
           winnersLabel={
             isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
           }

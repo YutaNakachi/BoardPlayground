@@ -130,6 +130,7 @@ export function MancalaGame() {
         <ResultPanel
           variant="inline"
           winners={winners}
+          draw={winners.length > 1}
           onReplay={() => setPhase("setup")}
           details={
             <ul className="space-y-1 text-slate-400">

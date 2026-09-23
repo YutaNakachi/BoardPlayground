@@ -15,6 +15,8 @@ type Props = {
   winnersLabel?: string;
   /** 1人用ゲームなど、勝者行を出さない場合 */
   solo?: boolean;
+  /** 引き分けのときは「引き分け」だけ表示（「勝者:」なし） */
+  draw?: boolean;
   /** 盤面の上に結果を表示するコンパクト版 */
   variant?: "default" | "inline";
 };
@@ -28,6 +30,7 @@ export function ResultPanel({
   replayExtra,
   winnersLabel,
   solo = false,
+  draw = false,
   variant = "default",
 }: Props) {
   const inline = variant === "inline";
@@ -45,7 +48,7 @@ export function ResultPanel({
       </h2>
       {!solo ? (
         <p className={inline ? "mt-2 text-base" : "mt-4 text-lg"}>
-          勝者: {winnersLabel ?? formatWinners(winners)}
+          {draw ? "引き分け" : `勝者: ${winnersLabel ?? formatWinners(winners)}`}
         </p>
       ) : null}
       {details ? <div className={inline ? "mt-2" : "mt-4"}>{details}</div> : null}

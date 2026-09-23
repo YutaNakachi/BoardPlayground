@@ -126,6 +126,7 @@ export function ChessGame() {
         <ResultPanel
           variant="inline"
           winners={result.winners}
+          draw={result.winners.length > 1}
           onReplay={() => setPhase("setup")}
           details={<p className="text-slate-400">{result.message}</p>}
         />
