@@ -1,10 +1,14 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseAnonKey, getSupabaseUrl, isSupabaseConfigured } from "./config";
+import {
+  getSupabaseAnonKey,
+  getSupabaseUrl,
+  isSupabaseBrowserConfigured,
+} from "./config";
 
 let browserClient: SupabaseClient | null = null;
 
 export function getSupabaseBrowserClient(): SupabaseClient | null {
-  if (!isSupabaseConfigured()) return null;
+  if (!isSupabaseBrowserConfigured()) return null;
   if (!browserClient) {
     browserClient = createClient(getSupabaseUrl(), getSupabaseAnonKey());
   }
