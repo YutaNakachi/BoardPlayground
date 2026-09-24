@@ -23,7 +23,16 @@ New Agent 起動時にコピペする用。`{ゲーム名}` は差し替える�
 ## ゲーム追加
 
 ```
-AGENTS.md に従い、{ゲーム名} を追加してください。lib/games.ts → games/{slug}/rules.md → components/play/ → lib/play-registry.ts の順で。
+.cursor/rules/game-addition.mdc と AGENTS.md「新規ゲーム追加」に従い、{ゲーム名}（slug: {slug}）を追加してください。
+系統: {original|classic|tribute|fiction}。listed: false。
+lib/games.ts → games/{slug}/rules.md → components/play/ → lib/play-registry.ts の順で。
+PR に npm run catalog:doc の結果を含め、手動テスト手順を書いてください。テスト・カードアートは別 PR。
+```
+
+企画だけ依頼する場合（実装しない）:
+
+```
+AGENTS.md に従い、{テーマ} の新規ゲーム企画を提案してください。実装はせず、タイトル・slug 候補・系統・ルール概要・やらないことを出し、オーナーの OK を待ってください。
 ```
 
 ## オンライン対戦（ゲーム追加）

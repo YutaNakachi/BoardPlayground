@@ -1,0 +1,33 @@
+---
+description: 新規ゲーム追加（メタデータ・rules・プレイ実装）。サイト横断 UI・検証専用 PR では使わない
+globs:
+  - lib/games.ts
+  - games/**
+  - components/play/**
+  - lib/play/**
+  - lib/play-registry.ts
+alwaysApply: false
+---
+
+# ゲーム追加 Agent
+
+`AGENTS.md` の「新規ゲーム追加」「ゲームの系統」「Cloud Agent：ゲーム追加で守ること」を必ず読む。
+
+## 着手前
+
+- **ゲーム名**と **slug** が指示に含まれていること。テンプレの `{ゲーム名}` だけでは着手しない。
+- **人数・勝利条件などルール本体**と **系統**（オリジナル / クラシック / トリビュート / フィクション）が合意されていること。
+- 仕様合意前に `lib/games.ts` やプレイ画面を書かない。曖昧なときは勝手に企画しない（企画依頼時は例外）。
+- 着手前に「やること・やらないこと・PR の範囲」を短く確認する。
+
+## 実装
+
+- 順序: `lib/games.ts` → `games/{slug}/rules.md` → `components/play/` → `lib/play-registry.ts`
+- 新規は **`listed: false`**。掲載はオーナー判断。
+- PR に `npm run catalog:doc` の結果（`docs/game-catalog.md`）を含める。
+- ユニットテスト・カードアートはこの PR に含めない（検証 Agent / 掲載後など別対応）。
+
+## 系統
+
+- **トリビュート**: 市販ボードゲームのルールに近い非公式プレイ版。商品名・ルール文のコピペ禁止。非公式表示。
+- **フィクション**: 漫画等に登場するゲーム。`rules.md` で作品由来とサイト補完を分ける。

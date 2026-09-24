@@ -12,13 +12,23 @@ export const GAME_TAGS = [
 ] as const;
 export type GameTag = (typeof GAME_TAGS)[number];
 
-export type GameOrigin = "original" | "classic";
+export type GameOrigin = "original" | "classic" | "tribute" | "fiction";
 export type GameComplexity = "easy" | "normal" | "hard";
 
 export const ORIGIN_LABEL: Record<GameOrigin, string> = {
   original: "オリジナル",
   classic: "クラシック",
+  tribute: "トリビュート",
+  fiction: "フィクション",
 };
+
+/** 一覧フィルタ・about などの表示順 */
+export const GAME_ORIGIN_ORDER: readonly GameOrigin[] = [
+  "original",
+  "classic",
+  "tribute",
+  "fiction",
+];
 
 export const COMPLEXITY_LABEL: Record<GameComplexity, string> = {
   easy: "易しい",
@@ -630,7 +640,7 @@ export function getGameBySlug(slug: string): GameMeta | undefined {
   return getAllGames().find((g) => g.slug === slug);
 }
 
-const ORIGIN_ORDER: GameOrigin[] = ["original", "classic"];
+const ORIGIN_ORDER: GameOrigin[] = [...GAME_ORIGIN_ORDER];
 const COMPLEXITY_ORDER: GameComplexity[] = ["easy", "normal", "hard"];
 
 export function getCatalogTags(list: GameMeta[] = getAllGames()): GameTag[] {
