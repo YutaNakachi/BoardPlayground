@@ -13,9 +13,11 @@ Cloud Agent が Supabase のマイグレーション実行・オンライン機�
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 同上 → anon public |
 | `SUPABASE_SERVICE_ROLE_KEY` | 同上 → service_role（**秘密**） |
-| `SUPABASE_DB_URL` | Supabase → Connect → Database → URI（`postgresql://...`） |
+| `SUPABASE_DB_URL` | Supabase → **Connect → Session pooler** の URI（`postgresql://postgres.[ref]:...@aws-0-[region].pooler.supabase.com:5432/postgres`） |
 
 `SUPABASE_DB_URL` はマイグレーション実行用です。本番 DB に接続するため、**Cloud Agent 環境だけ**に置き、リポジトリにはコミットしません。
+
+Cloud Agent では Direct connection（`db.[ref].supabase.co:5432`）が IPv6 で届かないことがあるため、**Session pooler（port 5432）** を使ってください。Transaction pooler（port 6543）はマイグレーションで失敗します。
 
 ### 2. 環境設定 PR のマージ
 
