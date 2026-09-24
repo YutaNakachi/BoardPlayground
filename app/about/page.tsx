@@ -3,9 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/PageContainer";
 import {
+  GAME_ORIGIN_ORDER,
   ORIGIN_LABEL,
   getAllGames,
-  type GameOrigin,
 } from "@/lib/games";
 import { SHOW_ABOUT_PAGE, SITE_NAME } from "@/lib/site";
 
@@ -69,7 +69,7 @@ export default function AboutPage() {
         <p className="leading-relaxed text-slate-300">
           サイト上のゲームは制作フローの実例と、クラシックです。遊んで雰囲気を確かめてからご相談ください。
         </p>
-        {(["original", "classic"] as GameOrigin[]).map((origin) => {
+        {GAME_ORIGIN_ORDER.map((origin) => {
           const group = games.filter((game) => game.origin === origin);
           if (group.length === 0) return null;
           return (
