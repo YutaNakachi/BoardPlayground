@@ -23,6 +23,18 @@ Cloud Agent では Direct connection（`db.[ref].supabase.co:5432`）が IPv6 �
 
 `.cursor/environment.json` がマージされると、新しい Cloud Agent は起動時に `.env.local` を自動生成します。
 
+### 3. カスタム Dockerfile の注意（必読）
+
+`.cursor/Dockerfile` で `node:*-slim` など最小イメージを使う場合、**`curl` を必ずインストール**してください。Cloud Agent の起動処理（`install-exec-daemon`）が `curl` でバイナリを取得します。`git` を入れても `curl` コマンドは入りません。
+
+環境変更 PR ではマージ前に:
+
+1. `npm run env:check`
+2. Cloud Agent 環境の **Rebuild 成功**
+3. **新規 Agent 起動**の確認
+
+詳細: `.cursor/rules/cloud-agent-env.mdc`
+
 ## Agent が実行できるコマンド
 
 ```bash

@@ -54,6 +54,7 @@
 初回プロンプトのコピペ用: `docs/agent-prompts.md`
 
 - **サイト改善**（Cloud Agent 向け）: 一覧・ルールページ・ヘッダー/フッター、about、デプロイ関連、共通 UI。新ゲームは追加しない
+- **Cloud Agent 環境**: `.cursor/environment.json`・Dockerfile・`cloud-agent-*.sh` の変更。マージ前に Rebuild 成功と `npm run env:check` を確認。ルール: `.cursor/rules/cloud-agent-env.mdc`
 - **ゲーム追加**: 1ゲームにつき 1 Agent。`lib/games.ts` → `games/{slug}/rules.md` → `components/play/` → `lib/play-registry.ts`
 - **ゲームロジック検証**: ゲーム変更の前後で起動（常設ではない）。`rules.md` と実装の一致、境界ケース、`lib/play/*.ts` のテスト。サイト改善 PR には触れない
 - **文章・文言検証**: サイト横断の日本語・説明の正確さ（常設ではない）。ルール文・一覧説明・UI 文言のわかりやすさと表記統一。ゲームロジックの実装変更はしない

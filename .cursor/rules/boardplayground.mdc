@@ -25,3 +25,4 @@ alwaysApply: true
 - 方針: `AGENTS.md`
 - ゲーム一覧: `lib/games.ts`
 - ルール: `games/*/rules.md`
+- Cloud Agent 環境変更: `.cursor/rules/cloud-agent-env.mdc`（`.cursor/Dockerfile` 編集時は `curl` 必須）

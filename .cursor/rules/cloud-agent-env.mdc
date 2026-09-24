@@ -1,0 +1,60 @@
+---
+description: Cloud Agent 環境（.cursor/environment.json・Dockerfile・install/start）。環境変更 PR では必ず参照
+globs:
+  - .cursor/**
+  - scripts/cloud-agent-*.sh
+  - docs/cloud-agent-supabase.md
+alwaysApply: false
+---
+
+# Cloud Agent 環境 Agent
+
+対象: `.cursor/environment.json`、`.cursor/Dockerfile`、`scripts/cloud-agent-install.sh`、`scripts/cloud-agent-start.sh`、`docs/cloud-agent-supabase.md`
+
+## やる
+
+- Supabase マイグレーション・オンライン検証に必要なツールを Dockerfile に追加
+- シークレットから `.env.local` を生成する `start` スクリプトの維持
+- 環境変更 PR では **ビルド成功の確認**（下記チェックリスト）と PR 本文への記載
+
+## やらない
+
+- ゲームロジック・サイト UI の変更
+- シークレット値のリポジトリへのコミット
+
+## カスタム Dockerfile の必須パッケージ
+
+`node:*-slim` など最小イメージを使う場合、**プロジェクト用だけでなく Cloud Agent プラットフォーム用**も入れる。
+
+| パッケージ | 理由 |
+|-----------|------|
+| `curl` | `install-exec-daemon` がバイナリ取得に使用。**git の libcurl 依存では CLI は入らない** |
+| `ca-certificates` | HTTPS ダウンロード |
+| `git` | リポジトリ操作 |
+
+このリポジトリ追加:
+
+| パッケージ | 理由 |
+|-----------|------|
+| `postgresql-client` | `npm run db:migrate`（`psql` / supabase CLI 経由） |
+
+`curl` を Dockerfile から削除・コメントアウトしない。slim イメージに切り替える PR では必ず残す。
+
+## 環境変更 PR のチェックリスト
+
+マージ前にすべて満たすこと:
+
+1. `npm run env:check` が通る（Dockerfile に `curl` があること）
+2. Cloud Agent 環境で **Rebuild** が成功する（`curl: command not found` が出ない）
+3. 新規 Agent 起動が成功する（古いスナップショットだけでなく）
+4. 必要なら `npm run db:check` で Supabase 疎通を確認
+
+## トラブル時
+
+- 既存 Agent だけ動いて新規が失敗 → 古いスナップショットが残っている。Rebuild ログで `install-exec-daemon` を確認
+- `SUPABASE_DB_URL` 接続失敗 → Session pooler（port 5432）を使う。詳細は `docs/cloud-agent-supabase.md`
+
+## 参照
+
+- `docs/cloud-agent-supabase.md`
+- `scripts/check-cloud-agent-dockerfile.sh`
