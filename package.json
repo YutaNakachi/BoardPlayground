@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "catalog:doc": "npx tsx scripts/generate-game-catalog.mjs",
     "db:migrate": "bash scripts/apply-supabase-migrations.sh",
-    "db:check": "node scripts/check-supabase.mjs"
+    "db:check": "node scripts/check-supabase.mjs",
+    "env:check": "bash scripts/check-cloud-agent-dockerfile.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
