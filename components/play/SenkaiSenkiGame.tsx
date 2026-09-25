@@ -114,6 +114,39 @@ function TankArt({
   );
 }
 
+function RotateTokenBadge({ owner }: { owner: SenkaiPiece["owner"] }) {
+  const { fill } = getPlayerTurnStyle(owner);
+  return (
+    <span
+      className={[
+        "pointer-events-none absolute z-10 flex h-[15px] w-[15px] items-center justify-center rounded-[3px] border sm:h-4 sm:w-4",
+        owner === 0 ? "right-0.5 top-0.5" : "bottom-0.5 left-0.5",
+      ].join(" ")}
+      style={{
+        color: fill,
+        borderColor: fill,
+        backgroundColor: `${fill}28`,
+        boxShadow: `0 0 6px ${fill}66`,
+      }}
+      title="旋回権あり"
+      aria-hidden
+    >
+      <svg
+        viewBox="0 0 16 16"
+        className="h-2.5 w-2.5 sm:h-3 sm:w-3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M13.5 8A4.5 4.5 0 1 1 9 3.5" />
+        <path d="M13.5 3.5V7H10" />
+      </svg>
+    </span>
+  );
+}
+
 function PieceGlyph({ piece }: { piece: SenkaiPiece }) {
   const style = getPlayerTurnStyle(piece.owner);
   const fill = style.fill;
@@ -162,11 +195,6 @@ export function SenkaiSenkiGame() {
 
   const selectedPiece =
     selectedId !== null ? state.pieces[selectedId] ?? null : null;
-
-  const selectedIndex =
-    selectedId !== null
-      ? state.cells.findIndex((c) => c === selectedId)
-      : -1;
 
   const moveTargets = useMemo(() => {
     if (selectedId === null || phase !== "playing" || state.gameOver) return [];
@@ -354,18 +382,7 @@ export function SenkaiSenkiGame() {
                 <>
                   <PieceGlyph piece={piece} />
                   {piece.rotateToken && pieceHasFacing(piece.type) ? (
-                    <span
-                      className={[
-                        "pointer-events-none absolute z-10 text-[11px] leading-none drop-shadow sm:text-xs",
-                        piece.owner === 0
-                          ? "right-0.5 top-0.5"
-                          : "bottom-0.5 left-0.5",
-                      ].join(" ")}
-                      title="旋回権あり"
-                      aria-hidden
-                    >
-                      🔄
-                    </span>
+                    <RotateTokenBadge owner={piece.owner} />
                   ) : null}
                   {showRotateControls && isSelected
                     ? rotateOptions.map((facing) => (
@@ -394,7 +411,7 @@ export function SenkaiSenkiGame() {
       </div>
 
       <p className="text-center text-xs text-slate-500">
-        緑＝移動／体当たり · 橙＝射撃 · 選択中の縁矢印＝旋回 · 🔄＝旋回権
+        緑＝移動／体当たり · 橙＝射撃 · 選択中の縁矢印＝旋回 · 色付き↻＝旋回権
       </p>
     </div>
   );
