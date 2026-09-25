@@ -81,15 +81,15 @@ function PieceTokenImage({
 
   return (
     <div
-      className="relative flex h-9 w-9 items-center justify-center sm:h-10 sm:w-10"
+      className="relative flex h-full w-full min-h-[2.35rem] min-w-[2.35rem] max-h-11 max-w-11 items-center justify-center sm:max-h-12 sm:max-w-12"
       aria-hidden
     >
       <div
-        className="h-[92%] w-[92%]"
+        className="h-[108%] w-[108%] max-h-[2.75rem] max-w-[2.75rem] sm:max-h-[3rem] sm:max-w-[3rem]"
         style={{
           ...maskStyle,
           transform: `rotate(${rotate}deg)`,
-          filter: "drop-shadow(0 1px 0 rgb(0 0 0 / 0.35))",
+          filter: "drop-shadow(0 1px 1px rgb(0 0 0 / 0.45))",
         }}
       />
     </div>
