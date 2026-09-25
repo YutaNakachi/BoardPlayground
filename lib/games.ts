@@ -123,7 +123,7 @@ const games: GameMeta[] = [
       "初期配置は最下段に軽戦車・重戦車・指揮車・特攻車・軽戦車（最上段の相手は左右反転）。相手の指揮車を射撃または体当たりで撃破したプレイヤーの勝ち。",
     ],
     status: "playable",
-    listed: false,
+    listed: true,
   },
   {
     slug: "chrono-split",
