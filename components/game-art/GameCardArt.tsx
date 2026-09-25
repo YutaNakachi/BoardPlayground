@@ -3,6 +3,8 @@ import { GravityFourBoardPreview } from "@/components/game-art/GravityFourBoardP
 import { HexBoardPreview } from "@/components/game-art/HexBoardPreview";
 import { LudoBoardPreview } from "@/components/game-art/LudoBoardPreview";
 import { MancalaBoardPreview } from "@/components/game-art/MancalaBoardPreview";
+import { NebulaLinkBoardPreview } from "@/components/game-art/NebulaLinkBoardPreview";
+import { SenkaiSenkiBoardPreview } from "@/components/game-art/SenkaiSenkiBoardPreview";
 import type { GameMeta } from "@/lib/games";
 import { MORRIS_LINES, MORRIS_XY } from "@/lib/play/nine-mens-morris";
 
@@ -177,67 +179,11 @@ function CheckersPreview() {
 }
 
 function NebulaPreview() {
-  const cells: (number | "core" | null)[] = [
-    null,
-    0,
-    null,
-    1,
-    null,
-    null,
-    0,
-    "core",
-    1,
-    null,
-    null,
-    1,
-    0,
-    null,
-    2,
-    null,
-    null,
-    2,
-    null,
-    3,
-    null,
-    3,
-    null,
-    null,
-    null,
-  ];
-  const colors = ["#6366f1", "#f43f5e", "#10b981", "#f59e0b"];
+  return <NebulaLinkBoardPreview />;
+}
 
-  return (
-    <svg viewBox="0 0 120 120" className="h-full w-full max-h-24 max-w-24 drop-shadow-lg">
-      <rect width="120" height="120" rx="12" fill="#0f172a" />
-      {cells.map((cell, index) => {
-        const row = Math.floor(index / 5);
-        const col = index % 5;
-        const x = 10 + col * 20;
-        const y = 10 + row * 20;
-        const fill =
-          cell === "core"
-            ? "#fde047"
-            : cell === null
-              ? "#1e293b"
-              : colors[cell];
-        return (
-          <rect
-            key={index}
-            x={x}
-            y={y}
-            width="18"
-            height="18"
-            rx="4"
-            fill={fill}
-            opacity={cell === "core" ? 0.85 : cell === null ? 0.7 : 0.95}
-            stroke={cell === "core" ? "#facc15" : "#334155"}
-            strokeWidth="0.8"
-          />
-        );
-      })}
-      <circle cx="60" cy="60" r="4" fill="#fef08a" />
-    </svg>
-  );
+function SenkaiSenkiPreview() {
+  return <SenkaiSenkiBoardPreview />;
 }
 
 function MorrisPreview() {
@@ -885,6 +831,7 @@ function NimPreview() {
 
 const PREVIEWS: Record<string, () => ReactNode> = {
   "nebula-link": NebulaPreview,
+  "senkai-senki": SenkaiSenkiPreview,
   reversi: ReversiPreview,
   mancala: MancalaPreview,
   gomoku: GomokuPreview,
