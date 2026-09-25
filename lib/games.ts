@@ -123,7 +123,7 @@ const games: GameMeta[] = [
       "相手の指揮車を射撃または体当たりで除去したプレイヤーの勝ち。",
     ],
     status: "playable",
-    listed: false,
+    listed: true,
   },
   {
     slug: "chrono-split",
