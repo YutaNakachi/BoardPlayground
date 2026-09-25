@@ -46,7 +46,7 @@ const PIECE_LABEL: Record<PieceType, string> = {
 };
 
 const SHOOT_RANGE: Partial<Record<PieceType, number>> = {
-  light: 1,
+  light: 2,
   heavy: 3,
 };
 
@@ -172,13 +172,23 @@ function lineDestinations(
 }
 
 function tokkoDestinations(state: SenkaiState, from: number, piece: SenkaiPiece): number[] {
-  const [fdr, fdc] = FWD[piece.facing];
   const dests = new Set<number>();
-  for (const idx of lineDestinations(state, from, piece, fdr, fdc, 2, true)) {
+  for (const [ddr, ddc] of forwardDiagonals(piece.facing)) {
+    for (const idx of lineDestinations(state, from, piece, ddr, ddc, 2, true)) {
+      dests.add(idx);
+    }
+  }
+  return [...dests];
+}
+
+function lightDestinations(state: SenkaiState, from: number, piece: SenkaiPiece): number[] {
+  const dests = new Set<number>();
+  const [fdr, fdc] = FWD[piece.facing];
+  for (const idx of lineDestinations(state, from, piece, fdr, fdc, 1, false)) {
     dests.add(idx);
   }
   for (const [ddr, ddc] of forwardDiagonals(piece.facing)) {
-    for (const idx of lineDestinations(state, from, piece, ddr, ddc, 2, true)) {
+    for (const idx of lineDestinations(state, from, piece, ddr, ddc, 1, false)) {
       dests.add(idx);
     }
   }
@@ -214,7 +224,11 @@ export function legalMovesForPiece(
     return tokkoDestinations(state, from, piece);
   }
 
-  if (piece.type === "light" || piece.type === "heavy") {
+  if (piece.type === "light") {
+    return lightDestinations(state, from, piece);
+  }
+
+  if (piece.type === "heavy") {
     const { row, col } = ssCoord(from);
     const [dr, dc] = FWD[piece.facing];
     const nr = row + dr;

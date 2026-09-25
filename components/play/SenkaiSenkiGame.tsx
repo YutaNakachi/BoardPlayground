@@ -363,15 +363,21 @@ export function SenkaiSenkiGame() {
                 </span>
               ) : null}
               {piece && !arrow ? (
-                <>
+                <div
+                  className={[
+                    "relative flex items-center justify-center rounded-sm",
+                    piece.rotateToken && pieceHasFacing(piece.type)
+                      ? "ring-2 ring-cyan-300/90 shadow-[0_0_10px_rgba(34,211,238,0.65),0_0_4px_rgba(250,204,21,0.4)] outline outline-1 outline-cyan-200/50"
+                      : "",
+                  ].join(" ")}
+                  title={
+                    piece.rotateToken && pieceHasFacing(piece.type)
+                      ? "旋回権あり"
+                      : undefined
+                  }
+                >
                   <PieceGlyph piece={piece} />
-                  {piece.rotateToken && pieceHasFacing(piece.type) ? (
-                    <span
-                      className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-amber-300 ring-1 ring-slate-900"
-                      title="旋回権あり"
-                    />
-                  ) : null}
-                </>
+                </div>
               ) : null}
             </button>
           );
@@ -379,7 +385,7 @@ export function SenkaiSenkiGame() {
       </div>
 
       <p className="text-center text-xs text-slate-500">
-        緑＝移動／体当たり · 橙＝射撃 · 琥珀＝旋回（矢印） · 黄点＝旋回権
+        緑＝移動／体当たり · 橙＝射撃 · 琥珀＝旋回（矢印） · 光る縁＝旋回権
       </p>
     </div>
   );
