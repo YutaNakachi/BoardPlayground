@@ -550,7 +550,9 @@ export function applySenkaiAction(
 }
 
 export function winReasonLabel(reason: "shoot" | "ram"): string {
-  return reason === "shoot" ? "指揮車を射撃で撃破" : "指揮車を体当たりで撃破";
+  return reason === "shoot"
+    ? "射撃で指揮車を撃破しました。"
+    : "体当たりで指揮車を撃破しました。";
 }
 
 export function illegalNotice(
@@ -559,28 +561,28 @@ export function illegalNotice(
   intent: "move" | "shoot" | "rotate"
 ): string | null {
   const piece = state.pieces[pieceId];
-  if (!piece) return "駒がありません";
-  if (piece.owner !== state.current) return "相手の駒です";
+  if (!piece) return "駒がありません。";
+  if (piece.owner !== state.current) return "相手の駒です。";
   if (
     state.lockedAfterRotate !== null &&
     pieceId !== state.lockedAfterRotate
   ) {
-    return "旋回後は同じ駒で移動または射撃してください";
+    return "旋回後は同じ駒で移動または射撃してください。";
   }
   if (intent === "rotate" && piece.type === "command") {
-    return "指揮車は旋回しません";
+    return "指揮車は旋回できません。";
   }
   if (intent === "rotate" && !piece.rotateToken) {
     if (isEdgeStuck(state, pieceId)) {
       return null;
     }
-    return "旋回権がありません（先に移動または射撃）";
+    return "旋回権がありません。先に移動または射撃してください。";
   }
   if (intent === "shoot") {
-    if (piece.type === "command") return "指揮車は射撃できません";
-    if (piece.type === "scout") return "特攻車は射撃できません";
+    if (piece.type === "command") return "指揮車は射撃できません。";
+    if (piece.type === "scout") return "特攻車は射撃できません。";
     if (shootTarget(state, pieceId) === null) {
-      return "合法な射撃がありません";
+      return "この向きでは射撃できません。";
     }
   }
   return null;
