@@ -315,6 +315,24 @@ export function isEdgeStuck(state: SenkaiState, pieceId: number): boolean {
   return true;
 }
 
+function hasMoveOrShootAfterFacing(
+  state: SenkaiState,
+  pieceId: number,
+  facing: Facing
+): boolean {
+  const piece = state.pieces[pieceId];
+  if (!piece) return false;
+  const hypot: SenkaiState = {
+    ...state,
+    pieces: {
+      ...state.pieces,
+      [pieceId]: { ...piece, facing },
+    },
+  };
+  if (legalMovesForPiece(hypot, pieceId).length > 0) return true;
+  return shootTarget(hypot, pieceId) !== null;
+}
+
 export function legalRotationFacings(
   state: SenkaiState,
   pieceId: number
@@ -322,7 +340,11 @@ export function legalRotationFacings(
   const piece = state.pieces[pieceId];
   if (!piece || piece.type === "command") return [];
   if (state.lockedAfterRotate !== null) return [];
-  if (piece.rotateToken) return legalRotations(piece);
+  if (piece.rotateToken) {
+    return legalRotations(piece).filter((f) =>
+      hasMoveOrShootAfterFacing(state, pieceId, f)
+    );
+  }
   if (isEdgeStuck(state, pieceId)) {
     return [((piece.facing + 2) % 4) as Facing];
   }
@@ -525,13 +547,17 @@ export function applySenkaiAction(
     !Object.values(pieces).some((p) => p.owner === 1 && p.type === "command");
   if (loserCommandGone) {
     const w = Object.values(pieces).find((p) => p.type === "command")?.owner;
+    let resolvedReason = winReason;
+    if (resolvedReason === null && w !== undefined) {
+      resolvedReason = action.kind === "shoot" ? "shoot" : "ram";
+    }
     return {
       cells,
       pieces,
       current: state.current,
       gameOver: true,
       winner: w ?? null,
-      winReason: winReason ?? "shoot",
+      winReason: resolvedReason,
       lockedAfterRotate: null,
       skipRotateGrant: false,
     };

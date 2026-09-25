@@ -2,6 +2,8 @@ import {
   SS_COLS,
   SS_ROWS,
   applySenkaiAction,
+  hasAnyLegalAction,
+  illegalNotice,
   initialSenkaiSenki,
   isEdgeStuck,
   legalActionsForPiece,
@@ -85,6 +87,16 @@ function addPiece(
     rotateToken,
   };
   cells[ssIndex(row, col)] = id;
+}
+
+function placeCommands(
+  cells: (number | null)[],
+  pieces: Record<number, SenkaiPiece>,
+  p0Id = 900,
+  p1Id = 901
+) {
+  addPiece(cells, pieces, p0Id, 4, 4, 0, "command", 0);
+  addPiece(cells, pieces, p1Id, 0, 0, 1, "command", 2);
 }
 
 export function runSenkaiSenkiChecks(assert: AssertFn) {
@@ -298,6 +310,85 @@ export function runSenkaiSenkiChecks(assert: AssertFn) {
   assert(
     !legalActionsForPiece(start, findPiece(start, 0, "scout").id).some((a) => a.kind === "shoot"),
     "senkai scout cannot shoot"
+  );
+
+  const cmdVsCmd = withBoard(clearBoard(start), (cells, pieces) => {
+    addPiece(cells, pieces, 80, 2, 2, 0, "command", 0);
+    addPiece(cells, pieces, 81, 1, 2, 1, "command", 2);
+  });
+  const cmdWin = applySenkaiAction(
+    { ...cmdVsCmd, current: 0 },
+    80,
+    { kind: "move", to: ssIndex(1, 2) }
+  );
+  assert(
+    cmdWin?.gameOver &&
+      cmdWin.winner === 0 &&
+      cmdWin.winReason === "ram",
+    "senkai command ram command winReason ram"
+  );
+
+  const tokenBlocked = withBoard(clearBoard(start), (cells, pieces) => {
+    addPiece(cells, pieces, 40, 2, 2, 0, "light", 0, true);
+    placeCommands(cells, pieces);
+    addPiece(cells, pieces, 70, 1, 2, 1, "heavy", 2);
+    addPiece(cells, pieces, 71, 1, 1, 1, "heavy", 2);
+    addPiece(cells, pieces, 72, 1, 3, 1, "heavy", 2);
+    addPiece(cells, pieces, 73, 2, 1, 0, "heavy", 0);
+    addPiece(cells, pieces, 74, 2, 3, 0, "heavy", 0);
+    addPiece(cells, pieces, 75, 3, 1, 1, "heavy", 2);
+    addPiece(cells, pieces, 76, 3, 3, 1, "heavy", 2);
+  });
+  const tokenRotations = legalRotationFacings(
+    { ...tokenBlocked, current: 0 },
+    40
+  );
+  assert(
+    tokenRotations.length === 1 && tokenRotations[0] === 2,
+    "senkai token rotate only facings with combo follow-up"
+  );
+  for (const facing of tokenRotations) {
+    const afterRotate = applySenkaiAction(
+      { ...tokenBlocked, current: 0 },
+      40,
+      { kind: "rotate", facing }
+    );
+    assert(afterRotate?.lockedAfterRotate === 40, "senkai token rotate locks");
+    const followUps = legalActionsForPiece(afterRotate!, 40);
+    assert(followUps.length > 0, "senkai token rotate always has combo follow-up");
+  }
+
+  const innerHeavy = withBoard(clearBoard(start), (cells, pieces) => {
+    addPiece(cells, pieces, 60, 2, 2, 0, "heavy", 0);
+    placeCommands(cells, pieces);
+    addPiece(cells, pieces, 61, 1, 2, 0, "heavy", 0);
+    addPiece(cells, pieces, 62, 2, 1, 1, "light", 2);
+    addPiece(cells, pieces, 63, 2, 3, 1, "light", 2);
+  });
+  assert(!isEdgeStuck({ ...innerHeavy, current: 0 }, 60), "senkai inner not edge relief");
+  assert(
+    legalActionsForPiece({ ...innerHeavy, current: 0 }, 60).length === 0,
+    "senkai inner heavy immobile"
+  );
+  assert(
+    hasAnyLegalAction({ ...innerHeavy, current: 0 }),
+    "senkai inner stuck piece but command can still move"
+  );
+
+  assert(
+    illegalNotice({ ...start, current: 1 }, findPiece(start, 0, "light").id, "move") ===
+      "相手の駒です。",
+    "senkai illegalNotice wrong owner"
+  );
+  assert(
+    illegalNotice(start, findPiece(start, 0, "command").id, "rotate") ===
+      "指揮車は旋回できません。",
+    "senkai illegalNotice command rotate"
+  );
+  assert(
+    illegalNotice(start, findPiece(start, 0, "scout").id, "shoot") ===
+      "特攻車は射撃できません。",
+    "senkai illegalNotice scout shoot"
   );
 }
 
