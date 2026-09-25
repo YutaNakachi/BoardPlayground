@@ -114,11 +114,10 @@ function initialPieces(): { cells: (number | null)[]; pieces: Record<number, Sen
     cells[ssIndex(row, col)] = pid;
   };
 
-  const p1Front = 3;
+  const p1Front = SS_ROWS - 1;
+  const p2Front = 0;
   const types: PieceType[] = ["light", "heavy", "command", "scout", "light"];
   types.forEach((type, col) => place(p1Front, col, 0, type, 0));
-
-  const p2Front = SS_ROWS - 1 - p1Front;
   const mirrorCol = (c: number) => SS_COLS - 1 - c;
   types.forEach((type, col) => place(p2Front, mirrorCol(col), 1, type, 2));
 

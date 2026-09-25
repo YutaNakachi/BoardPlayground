@@ -53,14 +53,14 @@ function TankArt({
   const rot = FACING_DEG[facing];
   const track =
     variant === "heavy"
-      ? "h-[38%] w-[88%] rounded-[3px]"
+      ? "h-[42%] w-[96%] rounded-[4px]"
       : variant === "light"
-        ? "h-[32%] w-[78%] rounded-[2px]"
+        ? "h-[26%] w-[62%] rounded-[2px]"
         : "h-[30%] w-[72%] rounded-[2px]";
   const barrelW =
-    variant === "heavy" ? "w-[26%]" : variant === "light" ? "w-[20%]" : "w-[18%]";
+    variant === "heavy" ? "w-[32%]" : variant === "light" ? "w-[14%]" : "w-[18%]";
   const barrelH =
-    variant === "heavy" ? "h-[52%]" : variant === "light" ? "h-[44%]" : "h-[40%]";
+    variant === "heavy" ? "h-[58%]" : variant === "light" ? "h-[50%]" : "h-[40%]";
 
   return (
     <div
@@ -84,15 +84,24 @@ function TankArt({
             style={{ backgroundColor: fill, filter: "brightness(1.12)" }}
           />
           <div
-            className="absolute bottom-[28%] left-1/2 h-[22%] w-[38%] -translate-x-1/2 rounded-sm border border-black/20"
-            style={{ backgroundColor: fill, filter: "brightness(0.92)" }}
+            className={`absolute bottom-[26%] left-1/2 -translate-x-1/2 rounded-sm border border-black/20 ${
+              variant === "heavy" ? "h-[30%] w-[52%]" : "h-[18%] w-[28%]"
+            }`}
+            style={{ backgroundColor: fill, filter: "brightness(0.9)" }}
           />
         </>
       )}
       {variant === "heavy" ? (
-        <div
-          className="absolute bottom-[20%] left-[8%] h-[8%] w-[18%] rounded-sm bg-black/30"
-        />
+        <>
+          <div className="absolute bottom-[22%] left-[6%] h-[10%] w-[22%] rounded-sm bg-black/35" />
+          <div className="absolute bottom-[22%] right-[6%] h-[10%] w-[22%] rounded-sm bg-black/35" />
+          <div
+            className="absolute top-[6%] left-1/2 h-[12%] w-[38%] -translate-x-1/2 rounded-sm border border-black/25"
+            style={{ backgroundColor: fill, filter: "brightness(1.08)" }}
+          />
+        </>
+      ) : variant === "light" ? (
+        <div className="absolute bottom-[12%] left-1/2 h-[6%] w-[50%] -translate-x-1/2 rounded-full bg-black/25" />
       ) : null}
     </div>
   );
@@ -107,17 +116,13 @@ function PieceGlyph({ piece }: { piece: SenkaiPiece }) {
     return (
       <div className={base} aria-hidden>
         <div
-          className="absolute bottom-[20%] h-[34%] w-[82%] rounded-sm border border-black/25"
+          className="flex h-[72%] w-[72%] items-center justify-center rounded-sm border-2 border-white/35 shadow-inner"
           style={{ backgroundColor: fill }}
-        />
-        <div
-          className="absolute top-[22%] flex h-[38%] w-[48%] items-center justify-center rounded-md border-2 border-amber-200/50 bg-black/20"
         >
-          <span className="text-[9px] font-bold text-amber-100 sm:text-[10px]">
+          <span className="text-base font-bold leading-none text-amber-100 sm:text-lg">
             ★
           </span>
         </div>
-        <div className="absolute top-[8%] left-1/2 h-[14%] w-[8%] -translate-x-1/2 rounded-full bg-slate-300/80" />
       </div>
     );
   }
