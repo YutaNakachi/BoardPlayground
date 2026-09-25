@@ -93,41 +93,48 @@ function emptyCellFill(
   return INTERIOR_EMPTY;
 }
 
-function mono(row: number, col: number): NebulaPlacement {
-  return {
-    pieceId: NEBULA_MONO_ID,
-    rotation: 0,
-    anchorRow: row,
-    anchorCol: col,
-  };
+function withRouletteForPlacement(
+  game: ReturnType<typeof initialNebulaLink>,
+  placement: NebulaPlacement
+) {
+  if (placement.pieceId === NEBULA_MONO_ID) return game;
+  return { ...game, roulette: [placement.pieceId, "L3", "tri"] };
 }
 
-/** 北・南から星核へ伸びる中盤＋横に domino を1枚ずつ */
+/** ルーレット形状をバランスよく見せる合法手列（単マス＋ domino〜F5 など） */
+const PREVIEW_NEBULA_PLACEMENTS: NebulaPlacement[] = [
+  { pieceId: "mono", rotation: 0, anchorRow: 0, anchorCol: 10 },
+  { pieceId: "mono", rotation: 0, anchorRow: 20, anchorCol: 10 },
+  { pieceId: "domino", rotation: 0, anchorRow: 1, anchorCol: 8 },
+  { pieceId: "tri", rotation: 0, anchorRow: 19, anchorCol: 7 },
+  { pieceId: "domino", rotation: 0, anchorRow: 0, anchorCol: 6 },
+  { pieceId: "L3", rotation: 0, anchorRow: 17, anchorCol: 5 },
+  { pieceId: "tri", rotation: 0, anchorRow: 1, anchorCol: 3 },
+  { pieceId: "L4", rotation: 0, anchorRow: 14, anchorCol: 3 },
+  { pieceId: "domino", rotation: 0, anchorRow: 0, anchorCol: 1 },
+  { pieceId: "L3", rotation: 0, anchorRow: 12, anchorCol: 1 },
+  { pieceId: "T4", rotation: 0, anchorRow: 1, anchorCol: 11 },
+  { pieceId: "tri", rotation: 0, anchorRow: 11, anchorCol: 2 },
+  { pieceId: "L4", rotation: 0, anchorRow: 1, anchorCol: 0 },
+  { pieceId: "square", rotation: 0, anchorRow: 9, anchorCol: 0 },
+  { pieceId: "domino", rotation: 0, anchorRow: 0, anchorCol: 14 },
+  { pieceId: "L3", rotation: 0, anchorRow: 7, anchorCol: 2 },
+  { pieceId: "Z4", rotation: 0, anchorRow: 1, anchorCol: 16 },
+  { pieceId: "line4", rotation: 0, anchorRow: 6, anchorCol: 3 },
+  { pieceId: "plus", rotation: 0, anchorRow: 2, anchorCol: 5 },
+  { pieceId: "F5", rotation: 0, anchorRow: 3, anchorCol: 1 },
+];
+
+/** 北・南から入り、複数形状が混ざった中盤 */
 export function defaultPreviewNebulaBoard(): {
   board: NebulaBoard;
   playerCount: number;
 } {
   const playerCount = 2;
   let game = initialNebulaLink(playerCount);
-  const placements: NebulaPlacement[] = [
-    mono(0, 10),
-    mono(20, 10),
-    mono(1, 9),
-    mono(19, 11),
-    mono(2, 10),
-    mono(18, 10),
-    mono(3, 11),
-    mono(17, 9),
-    mono(4, 10),
-    mono(16, 10),
-    { pieceId: "domino", rotation: 0, anchorRow: 0, anchorCol: 7 },
-    { pieceId: "domino", rotation: 0, anchorRow: 20, anchorCol: 13 },
-  ];
 
-  for (const placement of placements) {
-    if (placement.pieceId !== NEBULA_MONO_ID) {
-      game = { ...game, roulette: [placement.pieceId, "L3", "tri"] };
-    }
+  for (const placement of PREVIEW_NEBULA_PLACEMENTS) {
+    game = withRouletteForPlacement(game, placement);
     const next = applyNebulaPlace(game, placement);
     if (!next) break;
     game = next;
