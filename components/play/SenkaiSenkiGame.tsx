@@ -48,69 +48,50 @@ const ROTATE_HIT: Record<Facing, string> = {
   3: "left-0.5 top-1/2 -translate-y-1/2",
 };
 
-/** 砲塔は facing 0 で上向き（盤面の row 減少方向） */
-function TankArt({
+const PIECE_TOKEN_SRC: Record<SenkaiPiece["type"], string> = {
+  light: "/games/senkai-senki/senkai-light-token.png",
+  heavy: "/games/senkai-senki/senkai-heavy-token.png",
+  scout: "/games/senkai-senki/senkai-scout-token.png",
+  command: "/games/senkai-senki/senkai-command-token.png",
+};
+
+/** トークン画像は facing 0 で上向き（盤面の row 減少方向）。指揮車は向きなし */
+function PieceTokenImage({
   fill,
   facing,
-  variant,
+  type,
 }: {
   fill: string;
   facing: Facing;
-  variant: "light" | "heavy" | "scout";
+  type: SenkaiPiece["type"];
 }) {
-  const rot = FACING_DEG[facing];
-  const track =
-    variant === "heavy"
-      ? "h-[42%] w-[96%] rounded-[4px]"
-      : variant === "light"
-        ? "h-[26%] w-[62%] rounded-[2px]"
-        : "h-[30%] w-[72%] rounded-[2px]";
-  const barrelW =
-    variant === "heavy" ? "w-[32%]" : variant === "light" ? "w-[14%]" : "w-[18%]";
-  const barrelH =
-    variant === "heavy" ? "h-[58%]" : variant === "light" ? "h-[50%]" : "h-[40%]";
+  const src = PIECE_TOKEN_SRC[type];
+  const rotate = type === "command" ? 0 : FACING_DEG[facing];
+  const maskStyle = {
+    backgroundColor: fill,
+    WebkitMaskImage: `url(${src})`,
+    maskImage: `url(${src})`,
+    WebkitMaskSize: "contain",
+    maskSize: "contain",
+    WebkitMaskRepeat: "no-repeat",
+    maskRepeat: "no-repeat",
+    WebkitMaskPosition: "center",
+    maskPosition: "center",
+  } as const;
 
   return (
     <div
       className="relative flex h-9 w-9 items-center justify-center sm:h-10 sm:w-10"
-      style={{ transform: `rotate(${rot}deg)` }}
       aria-hidden
     >
-      {variant === "scout" ? (
-        <div
-          className="absolute top-[18%] h-0 w-0 border-b-[22px] border-l-[11px] border-r-[11px] border-b-current border-l-transparent border-r-transparent"
-          style={{ color: fill }}
-        />
-      ) : (
-        <>
-          <div
-            className={`absolute bottom-[18%] ${track} border border-black/25`}
-            style={{ backgroundColor: fill }}
-          />
-          <div
-            className={`absolute top-[8%] left-1/2 ${barrelH} ${barrelW} -translate-x-1/2 rounded-sm border border-black/20`}
-            style={{ backgroundColor: fill, filter: "brightness(1.12)" }}
-          />
-          <div
-            className={`absolute bottom-[26%] left-1/2 -translate-x-1/2 rounded-sm border border-black/20 ${
-              variant === "heavy" ? "h-[30%] w-[52%]" : "h-[18%] w-[28%]"
-            }`}
-            style={{ backgroundColor: fill, filter: "brightness(0.9)" }}
-          />
-        </>
-      )}
-      {variant === "heavy" ? (
-        <>
-          <div className="absolute bottom-[22%] left-[6%] h-[10%] w-[22%] rounded-sm bg-black/35" />
-          <div className="absolute bottom-[22%] right-[6%] h-[10%] w-[22%] rounded-sm bg-black/35" />
-          <div
-            className="absolute top-[6%] left-1/2 h-[12%] w-[38%] -translate-x-1/2 rounded-sm border border-black/25"
-            style={{ backgroundColor: fill, filter: "brightness(1.08)" }}
-          />
-        </>
-      ) : variant === "light" ? (
-        <div className="absolute bottom-[12%] left-1/2 h-[6%] w-[50%] -translate-x-1/2 rounded-full bg-black/25" />
-      ) : null}
+      <div
+        className="h-[92%] w-[92%]"
+        style={{
+          ...maskStyle,
+          transform: `rotate(${rotate}deg)`,
+          filter: "drop-shadow(0 1px 0 rgb(0 0 0 / 0.35))",
+        }}
+      />
     </div>
   );
 }
@@ -142,34 +123,10 @@ function RotateTokenBadge({ owner }: { owner: SenkaiPiece["owner"] }) {
 }
 
 function PieceGlyph({ piece }: { piece: SenkaiPiece }) {
-  const style = getPlayerTurnStyle(piece.owner);
-  const fill = style.fill;
-  const base = "relative flex h-9 w-9 items-center justify-center sm:h-10 sm:w-10";
-
-  if (piece.type === "command") {
-    return (
-      <div className={base} aria-hidden>
-        <div
-          className="flex h-[72%] w-[72%] items-center justify-center rounded-sm border-2 border-white/35 shadow-inner"
-          style={{ backgroundColor: fill }}
-        >
-          <span className="text-base font-bold leading-none text-amber-100 sm:text-lg">
-            ★
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (piece.type === "light") {
-    return <TankArt fill={fill} facing={piece.facing} variant="light" />;
-  }
-
-  if (piece.type === "heavy") {
-    return <TankArt fill={fill} facing={piece.facing} variant="heavy" />;
-  }
-
-  return <TankArt fill={fill} facing={piece.facing} variant="scout" />;
+  const { fill } = getPlayerTurnStyle(piece.owner);
+  return (
+    <PieceTokenImage fill={fill} facing={piece.facing} type={piece.type} />
+  );
 }
 
 export function SenkaiSenkiGame() {
