@@ -198,7 +198,7 @@ export function NebulaLinkGame() {
     );
 
   const piecePickButtonClass = (pieceId: string) =>
-    `flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-xl border p-1 sm:h-14 sm:w-14 ${
+    `flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border p-0.5 sm:h-12 sm:w-12 ${
       selectedPieceId === pieceId
         ? `${turnStyle.sectionBorder} ${turnStyle.sectionBg} ring-2 ${turnStyle.sectionRing}`
         : "border-surface-border bg-surface-raised hover:border-white/20"
@@ -235,7 +235,7 @@ export function NebulaLinkGame() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2 sm:space-y-3">
       {isGameOver && winner && (
         <ResultPanel
           variant="inline"
@@ -272,7 +272,7 @@ export function NebulaLinkGame() {
 
       <div
         ref={gridRef}
-        className={`mx-auto grid w-full max-w-xl gap-px sm:gap-0.5 ${
+        className={`mx-auto grid w-full max-w-[min(100%,18.5rem)] gap-px sm:max-w-[min(100%,20rem)] sm:gap-0.5 ${
           selectedPieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{ gridTemplateColumns: `repeat(${NEBULA_SIZE}, minmax(0, 1fr))` }}
@@ -298,8 +298,8 @@ export function NebulaLinkGame() {
           let emptyClass = edgeStyle || "bg-surface-raised/80 ring-1 ring-surface-border/80";
           if (inPreview) {
             emptyClass = legal
-              ? `${turnStyle.piece} opacity-55 ring-2 ${turnStyle.pieceRing}`
-              : "bg-red-500/25 ring-2 ring-red-400/70";
+              ? `${turnStyle.piece} opacity-60 ring-2 ${turnStyle.pieceRing}`
+              : `${turnStyle.piece} opacity-25 ring-2 ring-red-400/80`;
           }
 
           return (
@@ -308,7 +308,7 @@ export function NebulaLinkGame() {
               role="button"
               tabIndex={isCore || isGameOver ? -1 : 0}
               data-cell-index={index}
-              className={`aspect-square min-h-[0.65rem] rounded-[2px] text-[8px] font-semibold transition sm:min-h-3 sm:text-[9px] ${
+              className={`aspect-square min-h-0 rounded-[1px] text-[7px] font-semibold transition sm:text-[8px] ${
                 isCore
                   ? "cursor-default bg-yellow-300/30 ring-1 ring-yellow-300/60"
                   : empty
@@ -324,60 +324,54 @@ export function NebulaLinkGame() {
       </div>
 
       {!isGameOver && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap justify-center gap-3">
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
             <button
               type="button"
               disabled={rouletteReady || spinning}
               onClick={spinRoulette}
-              className={`rounded-xl border px-5 py-2.5 text-sm font-medium text-white transition disabled:opacity-40 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40 sm:text-sm sm:px-4 sm:py-2 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
             >
-              {spinning ? "ルーレット回転中…" : rouletteReady ? "ルーレット済み" : "ルーレットを回す"}
+              {spinning ? "回転中…" : rouletteReady ? "ルーレット済" : "ルーレット"}
             </button>
             {selectedPieceId ? (
               <button
                 type="button"
                 onClick={() => setRotation((r) => (r + 1) % 4)}
-                className="rounded-xl border border-surface-border bg-surface-raised px-4 py-2.5 text-sm text-white hover:border-white/30"
+                className="rounded-lg border border-surface-border bg-surface-raised px-3 py-1.5 text-xs text-white hover:border-white/30 sm:text-sm sm:px-4 sm:py-2"
               >
-                回転（{rotation * 90}°）
+                回転 {rotation * 90}°
               </button>
             ) : null}
             {mustPass ? (
               <button
                 type="button"
                 onClick={pass}
-                className="rounded-xl border border-surface-border bg-surface-raised px-4 py-2.5 text-sm font-medium text-white hover:border-white/30"
+                className="rounded-lg border border-surface-border bg-surface-raised px-3 py-1.5 text-xs font-medium text-white hover:border-white/30 sm:text-sm sm:px-4 sm:py-2"
               >
-                パスする
+                パス
               </button>
             ) : null}
-          </div>
-
-          {rouletteReady ? (
-            <div className="flex flex-wrap justify-center gap-3">
-              {game.roulette.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPieceId(id);
-                    setNotice(null);
-                  }}
-                  className={piecePickButtonClass(id)}
-                  aria-label={`形状 ${id}`}
-                >
-                  <NebulaPiecePreview
-                    pieceId={id}
-                    rotation={previewRotationFor(id)}
-                    playerIndex={game.currentPlayer}
-                  />
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          <div className="flex justify-center">
+            {rouletteReady
+              ? game.roulette.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPieceId(id);
+                      setNotice(null);
+                    }}
+                    className={piecePickButtonClass(id)}
+                    aria-label={`形状 ${id}`}
+                  >
+                    <NebulaPiecePreview
+                      pieceId={id}
+                      rotation={previewRotationFor(id)}
+                      playerIndex={game.currentPlayer}
+                    />
+                  </button>
+                ))
+              : null}
             <button
               type="button"
               onClick={() => {
@@ -394,31 +388,47 @@ export function NebulaLinkGame() {
               />
             </button>
           </div>
+
+          <ul className="flex max-w-full flex-wrap justify-center gap-1.5">
+            {Array.from({ length: game.playerCount }, (_, player) => {
+              const style = getPlayerTurnStyle(player);
+              const edge = playerHomeEdge(player, game.playerCount);
+              return (
+                <li
+                  key={player}
+                  className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] sm:text-xs ${
+                    game.currentPlayer === player
+                      ? `${style.sectionBorder} ${style.sectionBg}`
+                      : "border-surface-border bg-surface-raised/80"
+                  }`}
+                >
+                  <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${style.dot}`} />
+                  <span className="text-slate-200">P{player + 1}</span>
+                  <span className={style.surfaceText}>{homeEdgeLabel(edge)}</span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {Array.from({ length: game.playerCount }, (_, player) => {
-          const style = getPlayerTurnStyle(player);
-          const edge = playerHomeEdge(player, game.playerCount);
-          return (
-            <li
-              key={player}
-              className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm ${
-                game.currentPlayer === player && !isGameOver
-                  ? `${style.sectionBorder} ${style.sectionBg}`
-                  : "border-surface-border bg-surface-raised"
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <span className={`inline-block h-3 w-3 rounded-full ${style.dot}`} />
-                プレイヤー {player + 1}
-              </span>
-              <span className={style.surfaceText}>ホーム {homeEdgeLabel(edge)}</span>
-            </li>
-          );
-        })}
-      </ul>
+      {isGameOver && (
+        <ul className="flex flex-wrap justify-center gap-2">
+          {Array.from({ length: game.playerCount }, (_, player) => {
+            const style = getPlayerTurnStyle(player);
+            const edge = playerHomeEdge(player, game.playerCount);
+            return (
+              <li
+                key={player}
+                className="flex items-center gap-2 rounded-lg border border-surface-border bg-surface-raised px-2 py-1 text-xs"
+              >
+                <span className={`inline-block h-2 w-2 rounded-full ${style.dot}`} />
+                P{player + 1} · {homeEdgeLabel(edge)}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
