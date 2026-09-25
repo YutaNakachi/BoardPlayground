@@ -75,7 +75,7 @@ function edgeFillAt(
   return fills;
 }
 
-/** 角マス：各辺の色がその辺側の三角に入る向きで分割 */
+/** 角マス：上/下の帯＋左/右の帯で辺の色をその辺側に表示 */
 function cornerSplitBackground(
   row: number,
   col: number,
@@ -87,18 +87,19 @@ function cornerSplitBackground(
   const e = fills.east;
   const w = fills.west;
   const tint = (color: string) => `${color}${color.startsWith("rgba") ? "" : "88"}`;
+  const band = "50%";
 
   if (row === 0 && col === 0 && n && w) {
-    return `linear-gradient(to top right, ${tint(w)} 50%, ${tint(n)} 50%)`;
+    return `linear-gradient(${tint(n)}, ${tint(n)}) top / 100% ${band} no-repeat, linear-gradient(${tint(w)}, ${tint(w)}) left / ${band} 100% no-repeat`;
   }
   if (row === 0 && col === last && n && e) {
-    return `linear-gradient(to top left, ${tint(e)} 50%, ${tint(n)} 50%)`;
+    return `linear-gradient(${tint(n)}, ${tint(n)}) top / 100% ${band} no-repeat, linear-gradient(${tint(e)}, ${tint(e)}) right / ${band} 100% no-repeat`;
   }
   if (row === last && col === 0 && s && w) {
-    return `linear-gradient(to bottom right, ${tint(w)} 50%, ${tint(s)} 50%)`;
+    return `linear-gradient(${tint(s)}, ${tint(s)}) bottom / 100% ${band} no-repeat, linear-gradient(${tint(w)}, ${tint(w)}) left / ${band} 100% no-repeat`;
   }
   if (row === last && col === last && s && e) {
-    return `linear-gradient(to bottom left, ${tint(e)} 50%, ${tint(s)} 50%)`;
+    return `linear-gradient(${tint(s)}, ${tint(s)}) bottom / 100% ${band} no-repeat, linear-gradient(${tint(e)}, ${tint(e)}) right / ${band} 100% no-repeat`;
   }
   return null;
 }
@@ -128,7 +129,7 @@ function nebulaHomeEdgeCellLook(
   const cornerBg = cornerSplitBackground(row, col, fills);
   if (cornerBg) {
     return {
-      className: `${ring} ring-white/25`,
+      className: `${ring} ring-white/25 bg-surface-raised/60`,
       style: { background: cornerBg },
     };
   }
@@ -381,12 +382,12 @@ export function NebulaLinkGame() {
 
       <div
         ref={gridRef}
-        className={`mx-auto grid w-fit max-w-full gap-px [--nebula-cell:0.82rem] sm:[--nebula-cell:0.9rem] md:[--nebula-cell:1.05rem] lg:[--nebula-cell:1.18rem] sm:gap-0.5 ${
+        className={`mx-auto grid w-fit max-w-full gap-px sm:gap-0.5 ${
           selectedPieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{
-          gridTemplateColumns: `repeat(${NEBULA_SIZE}, var(--nebula-cell))`,
-          gridTemplateRows: `repeat(${NEBULA_SIZE}, var(--nebula-cell))`,
+          gridTemplateColumns: `repeat(${NEBULA_SIZE}, clamp(0.72rem, 2.85vmin, 1.28rem))`,
+          gridTemplateRows: `repeat(${NEBULA_SIZE}, clamp(0.72rem, 2.85vmin, 1.28rem))`,
         }}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
