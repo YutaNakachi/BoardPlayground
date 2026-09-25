@@ -2,18 +2,18 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PlayPageShell } from "@/components/play/PlayPageShell";
 import { loadGameRules } from "@/lib/game-rules";
-import { getAllGames, getGameBySlug } from "@/lib/games";
+import { getRegisteredGameBySlug } from "@/lib/games";
 import { playComponents } from "@/lib/play-registry";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
-  return getAllGames().map((game) => ({ slug: game.slug }));
+  return Object.keys(playComponents).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const game = getGameBySlug(slug);
+  const game = getRegisteredGameBySlug(slug);
   if (!game) return { title: "ゲームが見つかりません" };
   return {
     title: `${game.title}をプレイ`,
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PlayPage({ params }: Props) {
   const { slug } = await params;
-  const game = getGameBySlug(slug);
+  const game = getRegisteredGameBySlug(slug);
   if (!game) notFound();
 
   const Play = playComponents[slug];

@@ -19,6 +19,7 @@ import { NebulaLinkGame } from "@/components/play/NebulaLinkGame";
 import { NineMensMorrisGame } from "@/components/play/NineMensMorrisGame";
 import { NimGame } from "@/components/play/NimGame";
 import { ReversiGame } from "@/components/play/ReversiGame";
+import { SenkaiSenkiGame } from "@/components/play/SenkaiSenkiGame";
 import { ShogiGame } from "@/components/play/ShogiGame";
 import { SlidePuzzleGame } from "@/components/play/SlidePuzzleGame";
 import { SpiderGame } from "@/components/play/SpiderGame";
@@ -28,6 +29,7 @@ import { TicTacToeGame } from "@/components/play/TicTacToeGame";
 export const playComponents: Record<string, ComponentType> = {
   "star-trade": StarTradeGame,
   "nebula-link": NebulaLinkGame,
+  "senkai-senki": SenkaiSenkiGame,
   "chrono-split": ChronoSplitGame,
   reversi: ReversiGame,
   mancala: MancalaGame,

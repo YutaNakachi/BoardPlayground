@@ -8,17 +8,20 @@ import { OriginChip } from "@/components/OriginChip";
 import { GameRulesView } from "@/components/rules/GameRulesView";
 import { TAG_CHIP_CLASS } from "@/lib/chip-styles";
 import { loadGameRules } from "@/lib/game-rules";
-import { getAllGames, getGameBySlug } from "@/lib/games";
+import {
+  getAllRegisteredGames,
+  getRegisteredGameBySlug,
+} from "@/lib/games";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
-  return getAllGames().map((game) => ({ slug: game.slug }));
+  return getAllRegisteredGames().map((game) => ({ slug: game.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const game = getGameBySlug(slug);
+  const game = getRegisteredGameBySlug(slug);
   if (!game) return { title: "ゲームが見つかりません" };
   return {
     title: game.title,
@@ -28,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function GameDetailPage({ params }: Props) {
   const { slug } = await params;
-  const game = getGameBySlug(slug);
+  const game = getRegisteredGameBySlug(slug);
   if (!game) notFound();
 
   const rules = loadGameRules(slug, game);

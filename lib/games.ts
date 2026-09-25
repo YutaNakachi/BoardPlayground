@@ -103,6 +103,29 @@ const games: GameMeta[] = [
     listed: true,
   },
   {
+    slug: "senkai-senki",
+    title: "旋回戦棋",
+    description:
+      "向きを持つ戦車駒で相手の指揮車を撃ち落とす2人対戦。移動か射撃で旋回権を得てから向きを変えます。",
+    origin: "original",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 12,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["ボード", "心理戦"],
+    rulesSummary: [
+      "5×7の盤。各5駒は常に上下左右のいずれかを向く。手番は1駒につき移動・旋回・射撃のいずれか1つ。",
+      "移動先が敵マスなら体当たり（指揮車は体当たりでも除去されない）。偵察車は射撃なし。",
+      "移動または射撃のあとその駒に旋回権が付く。旋回権がある駒だけ旋回できる。",
+      "相手の指揮車を射撃または体当たりで除去したプレイヤーの勝ち。",
+    ],
+    status: "playable",
+    listed: false,
+  },
+  {
     slug: "chrono-split",
     title: "クロノ・スプリット",
     description:
@@ -638,6 +661,11 @@ export function getAllGames(): GameMeta[] {
 
 export function getGameBySlug(slug: string): GameMeta | undefined {
   return getAllGames().find((g) => g.slug === slug);
+}
+
+/** 掲載前（`listed: false`）でもプレイ・ルール直リンク用 */
+export function getRegisteredGameBySlug(slug: string): GameMeta | undefined {
+  return games.find((g) => g.slug === slug);
 }
 
 const ORIGIN_ORDER: GameOrigin[] = [...GAME_ORIGIN_ORDER];
