@@ -197,10 +197,12 @@ export function NebulaLinkGame() {
         )
     );
 
-  const piecePickClass = (pieceId: string) =>
-    selectedPieceId === pieceId
-      ? `${turnStyle.sectionBorder} ${turnStyle.sectionBg} ring-2 ${turnStyle.sectionRing}`
-      : "border-surface-border bg-surface-raised hover:border-white/20";
+  const piecePickButtonClass = (pieceId: string) =>
+    `flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-xl border p-1 sm:h-14 sm:w-14 ${
+      selectedPieceId === pieceId
+        ? `${turnStyle.sectionBorder} ${turnStyle.sectionBg} ring-2 ${turnStyle.sectionRing}`
+        : "border-surface-border bg-surface-raised hover:border-white/20"
+    }`;
 
   const previewRotationFor = (pieceId: string) =>
     selectedPieceId === pieceId ? rotation : 0;
@@ -270,7 +272,7 @@ export function NebulaLinkGame() {
 
       <div
         ref={gridRef}
-        className={`mx-auto grid w-full max-w-2xl gap-px sm:gap-0.5 ${
+        className={`mx-auto grid w-full max-w-xl gap-px sm:gap-0.5 ${
           selectedPieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{ gridTemplateColumns: `repeat(${NEBULA_SIZE}, minmax(0, 1fr))` }}
@@ -306,7 +308,7 @@ export function NebulaLinkGame() {
               role="button"
               tabIndex={isCore || isGameOver ? -1 : 0}
               data-cell-index={index}
-              className={`aspect-square min-h-[1.15rem] rounded-[2px] text-[9px] font-semibold transition sm:min-h-5 sm:text-[10px] ${
+              className={`aspect-square min-h-[0.65rem] rounded-[2px] text-[8px] font-semibold transition sm:min-h-3 sm:text-[9px] ${
                 isCore
                   ? "cursor-default bg-yellow-300/30 ring-1 ring-yellow-300/60"
                   : empty
@@ -362,7 +364,8 @@ export function NebulaLinkGame() {
                     setSelectedPieceId(id);
                     setNotice(null);
                   }}
-                  className={`flex min-w-[4.5rem] flex-col items-center gap-2 rounded-xl border px-3 py-2 ${piecePickClass(id)}`}
+                  className={piecePickButtonClass(id)}
+                  aria-label={`形状 ${id}`}
                 >
                   <NebulaPiecePreview
                     pieceId={id}
@@ -381,15 +384,14 @@ export function NebulaLinkGame() {
                 setSelectedPieceId(NEBULA_MONO_ID);
                 setNotice(null);
               }}
-              className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-2 ${piecePickClass(NEBULA_MONO_ID)}`}
+              className={piecePickButtonClass(NEBULA_MONO_ID)}
+              aria-label="単マス（常時利用可）"
             >
-              <span className="text-xs text-slate-400">常時</span>
               <NebulaPiecePreview
                 pieceId={NEBULA_MONO_ID}
                 rotation={previewRotationFor(NEBULA_MONO_ID)}
                 playerIndex={game.currentPlayer}
               />
-              <span className="text-xs text-slate-300">単マス</span>
             </button>
           </div>
         </div>
