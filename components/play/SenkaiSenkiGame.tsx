@@ -232,7 +232,17 @@ export function SenkaiSenkiGame() {
 
       setNotice("そこには移動・射撃できません");
     },
-    [phase, state, selectedId, moveTargets, shootIdx, apply]
+    [
+      phase,
+      state.gameOver,
+      state.cells,
+      state.pieces,
+      state.current,
+      selectedId,
+      moveTargets,
+      shootIdx,
+      apply,
+    ]
   );
 
   const onRotateArrow = useCallback(
