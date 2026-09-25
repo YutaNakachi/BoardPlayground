@@ -1,4 +1,4 @@
-export const NEBULA_SIZE = 15;
+export const NEBULA_SIZE = 21;
 export const NEBULA_CORE = Math.floor(NEBULA_SIZE / 2) * NEBULA_SIZE + Math.floor(NEBULA_SIZE / 2);
 
 export const NEBULA_MONO_ID = "mono";

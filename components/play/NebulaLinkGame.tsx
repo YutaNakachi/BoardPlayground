@@ -32,14 +32,25 @@ import {
 
 type Phase = "setup" | "playing" | "game-over";
 
-function cellIndexFromPointer(clientX: number, clientY: number): number | null {
-  const el = document.elementFromPoint(clientX, clientY);
-  const cell = el?.closest<HTMLElement>("[data-cell-index]");
-  if (!cell) return null;
-  const raw = cell.dataset.cellIndex;
-  if (raw === undefined) return null;
-  const index = Number(raw);
-  return Number.isFinite(index) ? index : null;
+/** 盤の1マス（rem）。21×21でもマス寸は固定 */
+const NEBULA_CELL_REM = 1.1;
+/** タッチ時は指の少し上をアンカーにする（指で隠れない） */
+const TOUCH_PLACEMENT_OFFSET_Y = 56;
+
+function cellIndexFromClient(
+  grid: HTMLDivElement,
+  clientX: number,
+  clientY: number,
+  pointerType: string
+): number | null {
+  const rect = grid.getBoundingClientRect();
+  const offsetY = pointerType === "touch" ? TOUCH_PLACEMENT_OFFSET_Y : 0;
+  const x = clientX - rect.left;
+  const y = clientY - rect.top - offsetY;
+  if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) return null;
+  const col = Math.min(NEBULA_SIZE - 1, Math.floor((x / rect.width) * NEBULA_SIZE));
+  const row = Math.min(NEBULA_SIZE - 1, Math.floor((y / rect.height) * NEBULA_SIZE));
+  return nebulaIndex(row, col);
 }
 
 export function NebulaLinkGame() {
@@ -162,7 +173,7 @@ export function NebulaLinkGame() {
     return (
       <SetupPanel
         title="ネビュラ・リンク"
-        description="15×15の星雲盤で、ルーレットの形状ブロックを置き、星核を自分のホーム辺側に閉じ込めたら勝ち。単マスは常に使えます。"
+        description="21×21の星雲盤で、ルーレットの形状ブロックを置き、星核を自分のホーム辺側に閉じ込めたら勝ち。単マスは常に使えます。"
         playerCount={playerCount}
         onPlayerCount={setPlayerCount}
         onStart={startGame}
@@ -207,9 +218,13 @@ export function NebulaLinkGame() {
   const previewRotationFor = (pieceId: string) =>
     selectedPieceId === pieceId ? rotation : 0;
 
+  const placementLegal =
+    hoverIndex !== null &&
+    Boolean(selectedPieceId && cellPlacementLegal(hoverIndex));
+
   const handleGridPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isGameOver || !selectedPieceId) return;
-    const index = cellIndexFromPointer(e.clientX, e.clientY);
+    const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index === null) return;
     setHoverIndex(index);
     setPlacingPointer(true);
@@ -218,13 +233,14 @@ export function NebulaLinkGame() {
 
   const handleGridPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!selectedPieceId) return;
-    const index = cellIndexFromPointer(e.clientX, e.clientY);
+    const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index !== null) setHoverIndex(index);
   };
 
   const handleGridPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!placingPointer && !selectedPieceId) return;
-    const index = cellIndexFromPointer(e.clientX, e.clientY) ?? hoverIndex;
+    const index =
+      cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType) ?? hoverIndex;
     if (index !== null && selectedPieceId && cellPlacementLegal(index)) {
       placeAt(index);
     }
@@ -272,10 +288,13 @@ export function NebulaLinkGame() {
 
       <div
         ref={gridRef}
-        className={`mx-auto grid w-full max-w-[min(100%,18.5rem)] gap-px sm:max-w-[min(100%,20rem)] sm:gap-0.5 ${
+        className={`mx-auto grid w-fit max-w-full gap-px sm:gap-0.5 ${
           selectedPieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
-        style={{ gridTemplateColumns: `repeat(${NEBULA_SIZE}, minmax(0, 1fr))` }}
+        style={{
+          gridTemplateColumns: `repeat(${NEBULA_SIZE}, ${NEBULA_CELL_REM}rem)`,
+          gridTemplateRows: `repeat(${NEBULA_SIZE}, ${NEBULA_CELL_REM}rem)`,
+        }}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
         onPointerUp={handleGridPointerUp}
@@ -285,7 +304,6 @@ export function NebulaLinkGame() {
           const isCore = index === NEBULA_CORE;
           const empty = owner === null;
           const inPreview = previewCells.has(index);
-          const legal = cellPlacementLegal(index);
 
           const edgeOwner = homeEdgeOwnerAt(index, game.playerCount);
           const edgeStyle =
@@ -297,9 +315,9 @@ export function NebulaLinkGame() {
 
           let emptyClass = edgeStyle || "bg-surface-raised/80 ring-1 ring-surface-border/80";
           if (inPreview) {
-            emptyClass = legal
-              ? `${turnStyle.piece} opacity-60 ring-2 ${turnStyle.pieceRing}`
-              : `${turnStyle.piece} opacity-25 ring-2 ring-red-400/80`;
+            emptyClass = placementLegal
+              ? `${turnStyle.piece} opacity-90 ring-2 ring-white/80 brightness-110`
+              : "bg-red-600/75 ring-2 ring-red-300 brightness-110";
           }
 
           return (
@@ -308,7 +326,7 @@ export function NebulaLinkGame() {
               role="button"
               tabIndex={isCore || isGameOver ? -1 : 0}
               data-cell-index={index}
-              className={`aspect-square min-h-0 rounded-[1px] text-[7px] font-semibold transition sm:text-[8px] ${
+              className={`size-full rounded-[1px] text-[7px] font-semibold transition sm:text-[8px] ${
                 isCore
                   ? "cursor-default bg-yellow-300/30 ring-1 ring-yellow-300/60"
                   : empty
@@ -338,9 +356,10 @@ export function NebulaLinkGame() {
               <button
                 type="button"
                 onClick={() => setRotation((r) => (r + 1) % 4)}
-                className="rounded-lg border border-surface-border bg-surface-raised px-3 py-1.5 text-xs text-white hover:border-white/30 sm:text-sm sm:px-4 sm:py-2"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-surface-border bg-surface-raised text-xl leading-none hover:border-white/30 sm:h-12 sm:w-12"
+                aria-label={`ブロックを回転（現在 ${rotation * 90} 度）`}
               >
-                回転 {rotation * 90}°
+                🔄
               </button>
             ) : null}
             {mustPass ? (

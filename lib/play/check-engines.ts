@@ -898,8 +898,8 @@ function checkChineseCheckers() {
 }
 
 function checkNebulaLink() {
-  assert(NEBULA_SIZE === 15, "nebula 15x15 board");
-  assert(NEBULA_CORE === 112, "nebula core center index");
+  assert(NEBULA_SIZE === 21, "nebula 21x21 board");
+  assert(NEBULA_CORE === 220, "nebula core center index");
 
   const roulette = rollNebulaRoulette(() => 0);
   assert(roulette.length === 3, "nebula roulette picks 3");
@@ -913,15 +913,15 @@ function checkNebulaLink() {
   assert(spun !== null && spun.roulette.length === 3, "nebula spin roulette");
 
   assert(
-    isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 0, 7),
+    isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 0, 10),
     "nebula mono on north home edge"
   );
   assert(
-    isLegalNebulaPlacement(state.board, 1, 2, NEBULA_MONO_ID, 0, 14, 7),
+    isLegalNebulaPlacement(state.board, 1, 2, NEBULA_MONO_ID, 0, 20, 10),
     "nebula P2 mono on south home edge"
   );
   assert(
-    !isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 7, 7),
+    !isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 10, 10),
     "nebula cannot place on core"
   );
 
@@ -929,14 +929,14 @@ function checkNebulaLink() {
     pieceId: NEBULA_MONO_ID,
     rotation: 0,
     anchorRow: 0,
-    anchorCol: 7,
+    anchorCol: 10,
   });
   assert(placed !== null, "nebula apply mono north");
   assert(placed!.currentPlayer === 1, "nebula turn advances");
 
   const p2State = placed!;
   assert(
-    isLegalNebulaPlacement(p2State.board, 1, 2, NEBULA_MONO_ID, 0, 14, 7),
+    isLegalNebulaPlacement(p2State.board, 1, 2, NEBULA_MONO_ID, 0, 20, 10),
     "nebula player 2 can place mono on south"
   );
 
