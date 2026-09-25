@@ -2,7 +2,7 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import { NebulaPiecePreview } from "@/components/play/shared/NebulaPiecePreview";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -14,7 +14,7 @@ import {
   applyNebulaSpinRoulette,
   canNebulaPass,
   homeEdgeLabel,
-  homeEdgeOwnerAt,
+  homeEdgeOwnersAt,
   initialNebulaLink,
   isLegalNebulaPlacement,
   legalNebulaPlacements,
@@ -32,8 +32,6 @@ import {
 
 type Phase = "setup" | "playing" | "game-over";
 
-/** 盤の1マス（rem）。21×21でもマス寸は固定 */
-const NEBULA_CELL_REM = 0.82;
 /** タッチ時は指の少し上・左をアンカーにする（指で隠れない） */
 const TOUCH_PLACEMENT_OFFSET_Y = 56;
 const TOUCH_PLACEMENT_OFFSET_X = 28;
@@ -53,6 +51,48 @@ function cellIndexFromClient(
   const col = Math.min(NEBULA_SIZE - 1, Math.floor((x / rect.width) * NEBULA_SIZE));
   const row = Math.min(NEBULA_SIZE - 1, Math.floor((y / rect.height) * NEBULA_SIZE));
   return nebulaIndex(row, col);
+}
+
+function nebulaHomeEdgeCellLook(
+  owners: Array<number | "neutral">
+): { className: string; style?: CSSProperties } {
+  const ring = "ring-1 ring-inset";
+  if (owners.length === 0) return { className: "" };
+
+  if (owners.length === 1 && owners[0] === "neutral") {
+    return { className: `${ring} bg-slate-600/40 ring-slate-500/70` };
+  }
+
+  if (owners.length === 1) {
+    const s = getPlayerTurnStyle(owners[0]);
+    return { className: `${ring} ${s.piece}/45 ${s.pieceRing}` };
+  }
+
+  const players = owners.filter((o): o is number => typeof o === "number");
+  const hasNeutral = owners.includes("neutral");
+
+  if (hasNeutral && players.length === 1) {
+    const fill = getPlayerTurnStyle(players[0]).fill;
+    return {
+      className: `${ring} ring-slate-500/55`,
+      style: {
+        background: `linear-gradient(135deg, ${fill}88 50%, rgba(71,85,105,0.55) 50%)`,
+      },
+    };
+  }
+
+  if (players.length >= 2) {
+    const a = getPlayerTurnStyle(players[0]).fill;
+    const b = getPlayerTurnStyle(players[1]).fill;
+    return {
+      className: `${ring} ring-white/25`,
+      style: {
+        background: `linear-gradient(135deg, ${a}88 50%, ${b}88 50%)`,
+      },
+    };
+  }
+
+  return { className: `${ring} bg-slate-600/40 ring-slate-500/70` };
 }
 
 export function NebulaLinkGame() {
@@ -300,12 +340,12 @@ export function NebulaLinkGame() {
 
       <div
         ref={gridRef}
-        className={`mx-auto grid w-fit max-w-full gap-px sm:gap-0.5 ${
+        className={`mx-auto grid w-fit max-w-full gap-px [--nebula-cell:0.82rem] md:[--nebula-cell:0.95rem] lg:[--nebula-cell:1.05rem] sm:gap-0.5 ${
           selectedPieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{
-          gridTemplateColumns: `repeat(${NEBULA_SIZE}, ${NEBULA_CELL_REM}rem)`,
-          gridTemplateRows: `repeat(${NEBULA_SIZE}, ${NEBULA_CELL_REM}rem)`,
+          gridTemplateColumns: `repeat(${NEBULA_SIZE}, var(--nebula-cell))`,
+          gridTemplateRows: `repeat(${NEBULA_SIZE}, var(--nebula-cell))`,
         }}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
@@ -317,15 +357,13 @@ export function NebulaLinkGame() {
           const empty = owner === null;
           const inPreview = previewCells.has(index);
 
-          const edgeOwner = homeEdgeOwnerAt(index, game.playerCount);
-          const edgeStyle =
-            edgeOwner === "neutral"
-              ? "ring-1 ring-inset ring-slate-500/50 bg-slate-700/20"
-              : edgeOwner !== null
-                ? `${getPlayerTurnStyle(edgeOwner).surface} ${getPlayerTurnStyle(edgeOwner).surfaceBorder} ring-1 ring-inset`
-                : "";
+          const edgeLook = nebulaHomeEdgeCellLook(
+            homeEdgeOwnersAt(index, game.playerCount)
+          );
 
-          let emptyClass = edgeStyle || "bg-surface-raised/80 ring-1 ring-surface-border/80";
+          let emptyClass =
+            edgeLook.className || "bg-surface-raised/80 ring-1 ring-surface-border/80";
+          const emptyStyle = edgeLook.style;
           if (inPreview) {
             emptyClass = placementLegal
               ? `${turnStyle.piece} opacity-90 ring-2 ring-white/80 brightness-110`
@@ -338,7 +376,8 @@ export function NebulaLinkGame() {
               role="button"
               tabIndex={isCore || isGameOver ? -1 : 0}
               data-cell-index={index}
-              className={`size-full rounded-[1px] text-[7px] font-semibold transition sm:text-[8px] ${
+              style={empty && !inPreview && !isCore ? emptyStyle : undefined}
+              className={`size-full rounded-[1px] transition ${
                 isCore
                   ? "cursor-default bg-yellow-300/30 ring-1 ring-yellow-300/60"
                   : empty
@@ -347,7 +386,7 @@ export function NebulaLinkGame() {
               } flex items-center justify-center`}
               aria-label={isCore ? "星核" : empty ? "空マス" : `プレイヤー ${owner + 1}`}
             >
-              {isCore ? "★" : empty ? "" : owner + 1}
+              {isCore ? "★" : null}
             </div>
           );
         })}

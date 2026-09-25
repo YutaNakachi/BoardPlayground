@@ -32,7 +32,41 @@ export function getNebulaPiece(pieceId: string): NebulaPiece | undefined {
   return PIECE_BY_ID.get(pieceId);
 }
 
-/** 盤上のマスがどのプレイヤーのホーム辺か（3人時の南は neutral） */
+/** 外周マスが属するホーム辺（角は複数辺に属する） */
+export function homeEdgeOwnersAt(
+  index: number,
+  playerCount: number
+): Array<number | "neutral"> {
+  const { row, col } = nebulaRowCol(index);
+  const edges = borderEdgesAt(row, col);
+  if (edges.length === 0) return [];
+
+  const owners: Array<number | "neutral"> = [];
+  for (const edge of edges) {
+    if (playerCount === 2) {
+      if (edge === "north") owners.push(0);
+      else if (edge === "south") owners.push(1);
+      continue;
+    }
+    if (playerCount === 3) {
+      if (edge === "north") owners.push(0);
+      else if (edge === "east") owners.push(1);
+      else if (edge === "west") owners.push(2);
+      else if (edge === "south") owners.push("neutral");
+      continue;
+    }
+    const byEdge: Record<NebulaEdge, number> = {
+      north: 0,
+      east: 1,
+      south: 2,
+      west: 3,
+    };
+    owners.push(byEdge[edge]);
+  }
+  return owners;
+}
+
+/** 表示用の単一オーナー（角は北→東→南→西の優先で1つ） */
 export function homeEdgeOwnerAt(
   index: number,
   playerCount: number
