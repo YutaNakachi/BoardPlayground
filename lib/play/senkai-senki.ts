@@ -21,6 +21,10 @@ export type SenkaiState = {
   gameOver: boolean;
   winner: Player | null;
   winReason: "shoot" | "ram" | null;
+  /** 旋回後、同じ駒で移動または射撃が必須 */
+  lockedAfterRotate: number | null;
+  /** 直後の移動・射撃では旋回権を付与しない */
+  skipRotateGrant: boolean;
 };
 
 const FWD: [number, number][] = [
@@ -28,6 +32,14 @@ const FWD: [number, number][] = [
   [0, 1],
   [1, 0],
   [0, -1],
+];
+
+const COMMAND_DIRS: [number, number][] = [
+  ...FWD,
+  [-1, -1],
+  [-1, 1],
+  [1, 1],
+  [1, -1],
 ];
 
 const PIECE_LABEL: Record<PieceType, string> = {
@@ -38,7 +50,7 @@ const PIECE_LABEL: Record<PieceType, string> = {
 };
 
 const SHOOT_RANGE: Partial<Record<PieceType, number>> = {
-  light: 1,
+  light: 2,
   heavy: 3,
 };
 
@@ -106,18 +118,12 @@ function initialPieces(): { cells: (number | null)[]; pieces: Record<number, Sen
     cells[ssIndex(row, col)] = pid;
   };
 
-  place(3, 0, 0, "light", 0);
-  place(3, 2, 0, "scout", 0);
-  place(3, 3, 0, "light", 0);
-  place(4, 1, 0, "heavy", 0);
-  place(4, 2, 0, "command", 0);
-
+  const p1Front = SS_ROWS - 1;
+  const p2Front = 0;
+  const types: PieceType[] = ["light", "heavy", "command", "scout", "light"];
+  types.forEach((type, col) => place(p1Front, col, 0, type, 0));
   const mirrorCol = (c: number) => SS_COLS - 1 - c;
-  place(1, mirrorCol(0), 1, "light", 2);
-  place(1, mirrorCol(2), 1, "scout", 2);
-  place(1, mirrorCol(3), 1, "light", 2);
-  place(0, mirrorCol(1), 1, "heavy", 2);
-  place(0, mirrorCol(2), 1, "command", 2);
+  types.forEach((type, col) => place(p2Front, mirrorCol(col), 1, type, 2));
 
   return { cells, pieces };
 }
@@ -131,6 +137,8 @@ export function initialSenkaiSenki(): SenkaiState {
     gameOver: false,
     winner: null,
     winReason: null,
+    lockedAfterRotate: null,
+    skipRotateGrant: false,
   };
 }
 
@@ -170,13 +178,23 @@ function lineDestinations(
 }
 
 function tokkoDestinations(state: SenkaiState, from: number, piece: SenkaiPiece): number[] {
-  const [fdr, fdc] = FWD[piece.facing];
   const dests = new Set<number>();
-  for (const idx of lineDestinations(state, from, piece, fdr, fdc, 2, true)) {
+  for (const [ddr, ddc] of forwardDiagonals(piece.facing)) {
+    for (const idx of lineDestinations(state, from, piece, ddr, ddc, 2, true)) {
+      dests.add(idx);
+    }
+  }
+  return [...dests];
+}
+
+function lightDestinations(state: SenkaiState, from: number, piece: SenkaiPiece): number[] {
+  const dests = new Set<number>();
+  const [fdr, fdc] = FWD[piece.facing];
+  for (const idx of lineDestinations(state, from, piece, fdr, fdc, 1, false)) {
     dests.add(idx);
   }
   for (const [ddr, ddc] of forwardDiagonals(piece.facing)) {
-    for (const idx of lineDestinations(state, from, piece, ddr, ddc, 2, true)) {
+    for (const idx of lineDestinations(state, from, piece, ddr, ddc, 1, false)) {
       dests.add(idx);
     }
   }
@@ -197,7 +215,7 @@ export function legalMovesForPiece(
   if (piece.type === "command") {
     const { row, col } = ssCoord(from);
     const dests: number[] = [];
-    for (const [dr, dc] of FWD) {
+    for (const [dr, dc] of COMMAND_DIRS) {
       const nr = row + dr;
       const nc = col + dc;
       if (!inBounds(nr, nc)) continue;
@@ -212,8 +230,19 @@ export function legalMovesForPiece(
     return tokkoDestinations(state, from, piece);
   }
 
-  if (piece.type === "light" || piece.type === "heavy") {
-    return [];
+  if (piece.type === "light") {
+    return lightDestinations(state, from, piece);
+  }
+
+  if (piece.type === "heavy") {
+    const { row, col } = ssCoord(from);
+    const [dr, dc] = FWD[piece.facing];
+    const nr = row + dr;
+    const nc = col + dc;
+    if (!inBounds(nr, nc)) return [];
+    const to = ssIndex(nr, nc);
+    if (pieceAt(state, to)) return [];
+    return [to];
   }
 
   return [];
@@ -259,12 +288,73 @@ export function legalRotations(piece: SenkaiPiece): Facing[] {
   return turns;
 }
 
+function isPerimeterCell(index: number): boolean {
+  const { row, col } = ssCoord(index);
+  return (
+    row === 0 ||
+    row === SS_ROWS - 1 ||
+    col === 0 ||
+    col === SS_COLS - 1
+  );
+}
+
+/** 外周で移動・射撃がなく旋回権もないときの救済（180°のみ） */
+export function isEdgeStuck(state: SenkaiState, pieceId: number): boolean {
+  const piece = state.pieces[pieceId];
+  if (!piece || piece.type === "command" || piece.rotateToken) return false;
+
+  const from = state.cells.findIndex((c) => c === pieceId);
+  if (from < 0 || !isPerimeterCell(from)) return false;
+
+  if (legalMovesForPiece(state, pieceId).length > 0) return false;
+
+  if (piece.type === "light" || piece.type === "heavy") {
+    if (shootTarget(state, pieceId) !== null) return false;
+  }
+
+  return true;
+}
+
+export function legalRotationFacings(
+  state: SenkaiState,
+  pieceId: number
+): Facing[] {
+  const piece = state.pieces[pieceId];
+  if (!piece || piece.type === "command") return [];
+  if (state.lockedAfterRotate !== null) return [];
+  if (piece.rotateToken) return legalRotations(piece);
+  if (isEdgeStuck(state, pieceId)) {
+    return [((piece.facing + 2) % 4) as Facing];
+  }
+  return [];
+}
+
+function isReliefRotate(
+  state: SenkaiState,
+  pieceId: number,
+  facing: Facing
+): boolean {
+  const piece = state.pieces[pieceId];
+  if (!piece) return false;
+  return (
+    isEdgeStuck(state, pieceId) &&
+    facing === (((piece.facing + 2) % 4) as Facing)
+  );
+}
+
 export function legalActionsForPiece(
   state: SenkaiState,
   pieceId: number
 ): SenkaiAction[] {
   const piece = state.pieces[pieceId];
   if (!piece || piece.owner !== state.current || state.gameOver) return [];
+
+  if (
+    state.lockedAfterRotate !== null &&
+    pieceId !== state.lockedAfterRotate
+  ) {
+    return [];
+  }
 
   const actions: SenkaiAction[] = [];
   for (const to of legalMovesForPiece(state, pieceId)) {
@@ -273,8 +363,10 @@ export function legalActionsForPiece(
   if (shootTarget(state, pieceId) !== null) {
     actions.push({ kind: "shoot" });
   }
-  for (const facing of legalRotations(piece)) {
-    actions.push({ kind: "rotate", facing });
+  if (state.lockedAfterRotate === null) {
+    for (const facing of legalRotationFacings(state, pieceId)) {
+      actions.push({ kind: "rotate", facing });
+    }
   }
   return actions;
 }
@@ -355,6 +447,7 @@ export function applySenkaiAction(
   let winReason: "shoot" | "ram" | null = null;
 
   const from = cells.findIndex((c) => c === pieceId);
+  const mayGrantRotate = !state.skipRotateGrant;
 
   if (action.kind === "move") {
     const target = pieceAt({ ...state, cells, pieces }, action.to);
@@ -366,11 +459,11 @@ export function applySenkaiAction(
       winReason = ram.winReason;
       if (!winner && pieces[pieceId]) {
         cells[action.to] = pieceId;
-        grantRotateToken(pieces, pieceId);
+        if (mayGrantRotate) grantRotateToken(pieces, pieceId);
       }
     } else {
       cells[action.to] = pieceId;
-      grantRotateToken(pieces, pieceId);
+      if (mayGrantRotate) grantRotateToken(pieces, pieceId);
     }
   } else if (action.kind === "shoot") {
     const targetIdx = shootTarget({ ...state, cells, pieces }, pieceId);
@@ -382,12 +475,35 @@ export function applySenkaiAction(
       winner = piece.owner;
       winReason = "shoot";
     }
-    grantRotateToken(pieces, pieceId);
+    if (mayGrantRotate) grantRotateToken(pieces, pieceId);
   } else if (action.kind === "rotate") {
+    const relief = isReliefRotate(state, pieceId, action.facing);
     pieces[pieceId] = {
       ...piece,
       facing: action.facing,
       rotateToken: false,
+    };
+    if (relief) {
+      return {
+        cells,
+        pieces,
+        current: state.current === 0 ? 1 : 0,
+        gameOver: false,
+        winner: null,
+        winReason: null,
+        lockedAfterRotate: null,
+        skipRotateGrant: false,
+      };
+    }
+    return {
+      cells,
+      pieces,
+      current: state.current,
+      gameOver: false,
+      winner: null,
+      winReason: null,
+      lockedAfterRotate: pieceId,
+      skipRotateGrant: true,
     };
   }
 
@@ -399,6 +515,8 @@ export function applySenkaiAction(
       gameOver: true,
       winner,
       winReason,
+      lockedAfterRotate: null,
+      skipRotateGrant: false,
     };
   }
 
@@ -414,6 +532,8 @@ export function applySenkaiAction(
       gameOver: true,
       winner: w ?? null,
       winReason: winReason ?? "shoot",
+      lockedAfterRotate: null,
+      skipRotateGrant: false,
     };
   }
 
@@ -424,6 +544,8 @@ export function applySenkaiAction(
     gameOver: false,
     winner: null,
     winReason: null,
+    lockedAfterRotate: null,
+    skipRotateGrant: false,
   };
 }
 
@@ -439,10 +561,19 @@ export function illegalNotice(
   const piece = state.pieces[pieceId];
   if (!piece) return "駒がありません";
   if (piece.owner !== state.current) return "相手の駒です";
+  if (
+    state.lockedAfterRotate !== null &&
+    pieceId !== state.lockedAfterRotate
+  ) {
+    return "旋回後は同じ駒で移動または射撃してください";
+  }
   if (intent === "rotate" && piece.type === "command") {
     return "指揮車は旋回しません";
   }
   if (intent === "rotate" && !piece.rotateToken) {
+    if (isEdgeStuck(state, pieceId)) {
+      return null;
+    }
     return "旋回権がありません（先に移動または射撃）";
   }
   if (intent === "shoot") {
