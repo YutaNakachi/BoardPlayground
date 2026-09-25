@@ -101,36 +101,30 @@ function withRouletteForPlacement(
   return { ...game, roulette: [placement.pieceId, "L3", "tri"] };
 }
 
-/** ルーレット形状をバランスよく見せる合法手列（単マス＋ domino〜F5 など） */
+/** 4人・四辺ホームから入った中盤（単マス＋ domino〜F5 など） */
 const PREVIEW_NEBULA_PLACEMENTS: NebulaPlacement[] = [
   { pieceId: "mono", rotation: 0, anchorRow: 0, anchorCol: 10 },
+  { pieceId: "mono", rotation: 0, anchorRow: 10, anchorCol: 20 },
   { pieceId: "mono", rotation: 0, anchorRow: 20, anchorCol: 10 },
+  { pieceId: "mono", rotation: 0, anchorRow: 10, anchorCol: 0 },
   { pieceId: "domino", rotation: 0, anchorRow: 1, anchorCol: 8 },
-  { pieceId: "tri", rotation: 0, anchorRow: 19, anchorCol: 7 },
-  { pieceId: "domino", rotation: 0, anchorRow: 0, anchorCol: 6 },
-  { pieceId: "L3", rotation: 0, anchorRow: 17, anchorCol: 5 },
-  { pieceId: "tri", rotation: 0, anchorRow: 1, anchorCol: 3 },
-  { pieceId: "L4", rotation: 0, anchorRow: 14, anchorCol: 3 },
-  { pieceId: "domino", rotation: 0, anchorRow: 0, anchorCol: 1 },
-  { pieceId: "L3", rotation: 0, anchorRow: 12, anchorCol: 1 },
-  { pieceId: "T4", rotation: 0, anchorRow: 1, anchorCol: 11 },
-  { pieceId: "tri", rotation: 0, anchorRow: 11, anchorCol: 2 },
-  { pieceId: "L4", rotation: 0, anchorRow: 1, anchorCol: 0 },
-  { pieceId: "square", rotation: 0, anchorRow: 9, anchorCol: 0 },
-  { pieceId: "domino", rotation: 0, anchorRow: 0, anchorCol: 14 },
-  { pieceId: "L3", rotation: 0, anchorRow: 7, anchorCol: 2 },
-  { pieceId: "Z4", rotation: 0, anchorRow: 1, anchorCol: 16 },
-  { pieceId: "line4", rotation: 0, anchorRow: 6, anchorCol: 3 },
-  { pieceId: "plus", rotation: 0, anchorRow: 2, anchorCol: 5 },
-  { pieceId: "F5", rotation: 0, anchorRow: 3, anchorCol: 1 },
+  { pieceId: "tri", rotation: 0, anchorRow: 9, anchorCol: 17 },
+  { pieceId: "L3", rotation: 0, anchorRow: 18, anchorCol: 8 },
+  { pieceId: "L4", rotation: 0, anchorRow: 7, anchorCol: 1 },
+  { pieceId: "T4", rotation: 0, anchorRow: 0, anchorCol: 5 },
+  { pieceId: "square", rotation: 0, anchorRow: 7, anchorCol: 15 },
+  { pieceId: "Z4", rotation: 0, anchorRow: 16, anchorCol: 5 },
+  { pieceId: "line4", rotation: 0, anchorRow: 6, anchorCol: 2 },
+  { pieceId: "plus", rotation: 0, anchorRow: 0, anchorCol: 2 },
+  { pieceId: "F5", rotation: 0, anchorRow: 4, anchorCol: 13 },
 ];
 
-/** 北・南から入り、複数形状が混ざった中盤 */
+/** 4人対戦の四辺ホーム色＋複数形状が混ざった中盤 */
 export function defaultPreviewNebulaBoard(): {
   board: NebulaBoard;
   playerCount: number;
 } {
-  const playerCount = 2;
+  const playerCount = 4;
   let game = initialNebulaLink(playerCount);
 
   for (const placement of PREVIEW_NEBULA_PLACEMENTS) {
