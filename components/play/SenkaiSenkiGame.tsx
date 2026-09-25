@@ -40,87 +40,97 @@ const FACING_ARROW: Record<Facing, string> = {
   3: "←",
 };
 
+/** 砲塔は facing 0 で上向き（盤面の row 減少方向） */
+function TankArt({
+  fill,
+  facing,
+  variant,
+}: {
+  fill: string;
+  facing: Facing;
+  variant: "light" | "heavy" | "scout";
+}) {
+  const rot = FACING_DEG[facing];
+  const track =
+    variant === "heavy"
+      ? "h-[38%] w-[88%] rounded-[3px]"
+      : variant === "light"
+        ? "h-[32%] w-[78%] rounded-[2px]"
+        : "h-[30%] w-[72%] rounded-[2px]";
+  const barrelW =
+    variant === "heavy" ? "w-[26%]" : variant === "light" ? "w-[20%]" : "w-[18%]";
+  const barrelH =
+    variant === "heavy" ? "h-[52%]" : variant === "light" ? "h-[44%]" : "h-[40%]";
+
+  return (
+    <div
+      className="relative flex h-9 w-9 items-center justify-center sm:h-10 sm:w-10"
+      style={{ transform: `rotate(${rot}deg)` }}
+      aria-hidden
+    >
+      {variant === "scout" ? (
+        <div
+          className="absolute top-[18%] h-0 w-0 border-b-[22px] border-l-[11px] border-r-[11px] border-b-current border-l-transparent border-r-transparent"
+          style={{ color: fill }}
+        />
+      ) : (
+        <>
+          <div
+            className={`absolute bottom-[18%] ${track} border border-black/25`}
+            style={{ backgroundColor: fill }}
+          />
+          <div
+            className={`absolute top-[8%] left-1/2 ${barrelH} ${barrelW} -translate-x-1/2 rounded-sm border border-black/20`}
+            style={{ backgroundColor: fill, filter: "brightness(1.12)" }}
+          />
+          <div
+            className="absolute bottom-[28%] left-1/2 h-[22%] w-[38%] -translate-x-1/2 rounded-sm border border-black/20"
+            style={{ backgroundColor: fill, filter: "brightness(0.92)" }}
+          />
+        </>
+      )}
+      {variant === "heavy" ? (
+        <div
+          className="absolute bottom-[20%] left-[8%] h-[8%] w-[18%] rounded-sm bg-black/30"
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function PieceGlyph({ piece }: { piece: SenkaiPiece }) {
   const style = getPlayerTurnStyle(piece.owner);
   const fill = style.fill;
-  const rot = pieceHasFacing(piece.type)
-    ? FACING_DEG[piece.facing]
-    : 0;
-
   const base = "relative flex h-9 w-9 items-center justify-center sm:h-10 sm:w-10";
 
   if (piece.type === "command") {
     return (
       <div className={base} aria-hidden>
         <div
-          className="flex h-[70%] w-[70%] items-center justify-center rounded-md border-2 border-white/30 shadow-inner"
+          className="absolute bottom-[20%] h-[34%] w-[82%] rounded-sm border border-black/25"
           style={{ backgroundColor: fill }}
+        />
+        <div
+          className="absolute top-[22%] flex h-[38%] w-[48%] items-center justify-center rounded-md border-2 border-amber-200/50 bg-black/20"
         >
-          <span className="text-[10px] font-bold text-white/90 sm:text-xs">指</span>
+          <span className="text-[9px] font-bold text-amber-100 sm:text-[10px]">
+            ★
+          </span>
         </div>
+        <div className="absolute top-[8%] left-1/2 h-[14%] w-[8%] -translate-x-1/2 rounded-full bg-slate-300/80" />
       </div>
     );
   }
 
   if (piece.type === "light") {
-    return (
-      <div
-        className={base}
-        style={{ transform: `rotate(${rot}deg)` }}
-        aria-hidden
-      >
-        <div
-          className="h-[40%] w-[85%] rounded-sm"
-          style={{ backgroundColor: fill }}
-        />
-        <div
-          className="absolute left-[72%] top-1/2 h-[18%] w-[35%] -translate-y-1/2 rounded-sm"
-          style={{ backgroundColor: fill, filter: "brightness(1.2)" }}
-        />
-        <span className="absolute -bottom-0.5 text-[8px] font-medium text-slate-400">
-          軽
-        </span>
-      </div>
-    );
+    return <TankArt fill={fill} facing={piece.facing} variant="light" />;
   }
 
   if (piece.type === "heavy") {
-    return (
-      <div
-        className={base}
-        style={{ transform: `rotate(${rot}deg)` }}
-        aria-hidden
-      >
-        <div
-          className="h-[55%] w-[95%] rounded-sm"
-          style={{ backgroundColor: fill }}
-        />
-        <div
-          className="absolute left-[68%] top-1/2 h-[28%] w-[42%] -translate-y-1/2 rounded-sm"
-          style={{ backgroundColor: fill, filter: "brightness(1.15)" }}
-        />
-        <span className="absolute -bottom-0.5 text-[8px] font-medium text-slate-400">
-          重
-        </span>
-      </div>
-    );
+    return <TankArt fill={fill} facing={piece.facing} variant="heavy" />;
   }
 
-  return (
-    <div
-      className={base}
-      style={{ transform: `rotate(${rot}deg)` }}
-      aria-hidden
-    >
-      <div
-        className="h-0 w-0 border-b-[18px] border-l-[12px] border-r-[12px] border-b-current border-l-transparent border-r-transparent sm:border-b-[22px] sm:border-l-[14px] sm:border-r-[14px]"
-        style={{ color: fill }}
-      />
-      <span className="absolute -bottom-0.5 text-[8px] font-medium text-slate-400">
-        特
-      </span>
-    </div>
-  );
+  return <TankArt fill={fill} facing={piece.facing} variant="scout" />;
 }
 
 export function SenkaiSenkiGame() {

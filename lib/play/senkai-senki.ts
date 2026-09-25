@@ -30,6 +30,14 @@ const FWD: [number, number][] = [
   [0, -1],
 ];
 
+const COMMAND_DIRS: [number, number][] = [
+  ...FWD,
+  [-1, -1],
+  [-1, 1],
+  [1, 1],
+  [1, -1],
+];
+
 const PIECE_LABEL: Record<PieceType, string> = {
   command: "指揮車",
   light: "軽戦車",
@@ -106,18 +114,13 @@ function initialPieces(): { cells: (number | null)[]; pieces: Record<number, Sen
     cells[ssIndex(row, col)] = pid;
   };
 
-  place(3, 0, 0, "light", 0);
-  place(3, 2, 0, "scout", 0);
-  place(3, 3, 0, "light", 0);
-  place(4, 1, 0, "heavy", 0);
-  place(4, 2, 0, "command", 0);
+  const p1Front = 3;
+  const types: PieceType[] = ["light", "heavy", "command", "scout", "light"];
+  types.forEach((type, col) => place(p1Front, col, 0, type, 0));
 
+  const p2Front = SS_ROWS - 1 - p1Front;
   const mirrorCol = (c: number) => SS_COLS - 1 - c;
-  place(1, mirrorCol(0), 1, "light", 2);
-  place(1, mirrorCol(2), 1, "scout", 2);
-  place(1, mirrorCol(3), 1, "light", 2);
-  place(0, mirrorCol(1), 1, "heavy", 2);
-  place(0, mirrorCol(2), 1, "command", 2);
+  types.forEach((type, col) => place(p2Front, mirrorCol(col), 1, type, 2));
 
   return { cells, pieces };
 }
@@ -197,7 +200,7 @@ export function legalMovesForPiece(
   if (piece.type === "command") {
     const { row, col } = ssCoord(from);
     const dests: number[] = [];
-    for (const [dr, dc] of FWD) {
+    for (const [dr, dc] of COMMAND_DIRS) {
       const nr = row + dr;
       const nc = col + dc;
       if (!inBounds(nr, nc)) continue;
@@ -213,7 +216,14 @@ export function legalMovesForPiece(
   }
 
   if (piece.type === "light" || piece.type === "heavy") {
-    return [];
+    const { row, col } = ssCoord(from);
+    const [dr, dc] = FWD[piece.facing];
+    const nr = row + dr;
+    const nc = col + dc;
+    if (!inBounds(nr, nc)) return [];
+    const to = ssIndex(nr, nc);
+    if (pieceAt(state, to)) return [];
+    return [to];
   }
 
   return [];
