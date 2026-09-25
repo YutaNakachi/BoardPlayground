@@ -40,6 +40,37 @@ const FACING_LABEL: Record<Facing, string> = {
   3: "左",
 };
 
+function turnActionText(
+  piece: SenkaiPiece | null,
+  options: {
+    lockedAfterRotate: boolean;
+    edgeStuck: boolean;
+    canRotate: boolean;
+  }
+): string {
+  if (!piece) return "駒を選んでください。";
+  const name = pieceLabel(piece.type);
+  if (options.lockedAfterRotate) {
+    return piece.type === "scout"
+      ? `${name}：同じ駒で移動`
+      : `${name}：同じ駒で移動または射撃`;
+  }
+  if (options.edgeStuck) {
+    return `${name}：壁際の救済旋回（180°のみ・手番終了）`;
+  }
+  if (piece.type === "command") {
+    return `${name}：移動`;
+  }
+  if (piece.type === "scout") {
+    return options.canRotate
+      ? `${name}：移動、または旋回`
+      : `${name}：移動`;
+  }
+  return options.canRotate
+    ? `${name}：移動・射撃、または旋回`
+    : `${name}：移動または射撃`;
+}
+
 /** 選択中駒マス内に置く旋回タップ領域（その向きの辺中央） */
 const ROTATE_HIT: Record<Facing, string> = {
   0: "left-1/2 top-0.5 -translate-x-1/2",
@@ -236,7 +267,7 @@ export function SenkaiSenkiGame() {
           piece.owner === state.current &&
           piece.id !== state.lockedAfterRotate
         ) {
-          setNotice("旋回後は同じ駒で移動または射撃してください");
+          setNotice("旋回後は同じ駒で移動または射撃してください。");
           return;
         }
         if (selectedId !== state.lockedAfterRotate) {
@@ -245,7 +276,7 @@ export function SenkaiSenkiGame() {
       } else if (selectedId === null) {
         if (!piece || piece.owner !== state.current) {
           setNotice(
-            piece ? "自分の駒を選んでください" : "空のマスです"
+            piece ? "自分の駒を選んでください。" : "空のマスです。"
           );
           return;
         }
@@ -256,7 +287,7 @@ export function SenkaiSenkiGame() {
 
       if (actingId !== null && piece && piece.id === actingId) {
         if (state.lockedAfterRotate === actingId) {
-          setNotice("旋回後は移動または射撃を選んでください");
+          setNotice("旋回後は同じ駒で移動または射撃してください。");
           return;
         }
         setSelectedId(null);
@@ -267,14 +298,14 @@ export function SenkaiSenkiGame() {
 
       if (moveTargets.includes(index)) {
         if (!apply(actingId, { kind: "move", to: index })) {
-          setNotice("その移動はできません");
+          setNotice("その移動はできません。");
         }
         return;
       }
 
       if (shootIdx === index && shootIdx !== null) {
         if (!apply(actingId, { kind: "shoot" })) {
-          setNotice("射撃できません");
+          setNotice("射撃できません。");
         }
         return;
       }
@@ -289,7 +320,7 @@ export function SenkaiSenkiGame() {
         return;
       }
 
-      setNotice("そこには移動・射撃できません");
+      setNotice("そこには移動・射撃できません。");
     },
     [
       phase,
@@ -309,11 +340,11 @@ export function SenkaiSenkiGame() {
     (facing: Facing) => {
       if (selectedId === null) return;
       if (!rotateOptions.includes(facing)) {
-        setNotice("その向きには旋回できません");
+        setNotice("その向きには旋回できません。");
         return;
       }
       if (!apply(selectedId, { kind: "rotate", facing })) {
-        setNotice("旋回できません");
+        setNotice("旋回できません。");
       }
     },
     [selectedId, rotateOptions, apply]
@@ -326,7 +357,7 @@ export function SenkaiSenkiGame() {
     return (
       <SetupPanel
         title="砲塔戦棋"
-        description="砲塔の向きと役割が異なる戦車で相手の指揮車を落とす2人対戦。軽・重は射撃、特攻車は体当たり、指揮車は全方位の移動です。"
+        description="砲塔の向きと役割が異なる戦車で、相手の指揮車を撃破する2人用ゲーム。軽戦車・重戦車は射撃、特攻車は体当たり、指揮車は8方向に動けます。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -354,17 +385,12 @@ export function SenkaiSenkiGame() {
         <TurnBanner
           playerIndex={state.current}
           playerLabel={`プレイヤー ${state.current + 1}`}
-          action={
-            state.lockedAfterRotate !== null && selectedPiece
-              ? `${pieceLabel(selectedPiece.type)}：旋回後は移動または射撃`
-              : selectedPiece &&
-                  actingPieceId !== null &&
-                  isEdgeStuck(state, actingPieceId)
-                ? `${pieceLabel(selectedPiece.type)}：壁際救済（180°旋回で手番終了）`
-                : selectedPiece
-                  ? `${pieceLabel(selectedPiece.type)}を操作中`
-                  : "駒を選んでください"
-          }
+          action={turnActionText(selectedPiece, {
+            lockedAfterRotate: state.lockedAfterRotate !== null,
+            edgeStuck:
+              actingPieceId !== null && isEdgeStuck(state, actingPieceId),
+            canRotate: rotateOptions.length > 0,
+          })}
           notice={notice ?? undefined}
         />
       )}
@@ -436,7 +462,7 @@ export function SenkaiSenkiGame() {
       </div>
 
       <p className="text-center text-xs text-slate-500">
-        緑＝移動／体当たり · 橙＝射撃 · 選択中の縁矢印＝旋回 · 色付き↻＝旋回権
+        緑＝移動／体当たり · 橙＝射撃 · 縁の矢印＝旋回 · 色付き↻＝旋回権
       </p>
     </div>
   );
