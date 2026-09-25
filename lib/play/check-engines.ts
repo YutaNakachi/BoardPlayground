@@ -91,12 +91,13 @@ import {
   applyNebulaPass,
   applyNebulaPlace,
   initialNebulaLink,
-  legalNebulaMoves,
+  isLegalNebulaPlacement,
+  legalNebulaPlacements,
   NEBULA_CORE,
-  nebulaCoreRingProgress,
-  nebulaTokensFor,
+  NEBULA_MONO_ID,
+  NEBULA_SIZE,
   nebulaVictoryPlayer,
-  nebulaWinners,
+  rollNebulaRoulette,
 } from "./nebula-link";
 import {
   clickMorris,
@@ -896,40 +897,44 @@ function checkChineseCheckers() {
 }
 
 function checkNebulaLink() {
-  assert(nebulaTokensFor(2) === 12, "nebula 2p tokens");
-  assert(nebulaTokensFor(3) === 8, "nebula 3p tokens");
-  assert(nebulaTokensFor(4) === 6, "nebula 4p tokens");
+  assert(NEBULA_SIZE === 11, "nebula 11x11 board");
+  assert(NEBULA_CORE === 60, "nebula core center index");
 
-  const board = Array<number | null>(25).fill(null);
-  board[NEBULA_CORE] = -1;
-  board[0] = 0;
-  board[6] = 0;
-  board[1] = 1;
-  assert(nebulaCoreRingProgress(board, 0) === 0, "nebula no core ring yet");
-  assert(nebulaCoreRingProgress(board, 1) === 0, "nebula isolated piece");
+  const roulette = rollNebulaRoulette(() => 0);
+  assert(roulette.length === 3, "nebula roulette picks 3");
+  assert(new Set(roulette).size === 3, "nebula roulette unique");
 
-  const winBoard = Array<number | null>(25).fill(null);
-  winBoard[NEBULA_CORE] = -1;
-  winBoard[7] = 0;
-  winBoard[6] = 0;
-  winBoard[11] = 0;
-  winBoard[8] = 0;
-  winBoard[13] = 0;
-  assert(nebulaVictoryPlayer(winBoard, 2) === 0, "nebula core ring win");
-  assert(nebulaCoreRingProgress(winBoard, 0) === 3, "nebula core ring progress");
+  const state = initialNebulaLink(2);
+  assert(nebulaVictoryPlayer(state.board, 2) === null, "nebula no win on empty board");
 
-  let state = initialNebulaLink(2);
-  assert(applyNebulaPlace(state, NEBULA_CORE) === null, "nebula cannot place on core");
-  assert(applyNebulaPlace(state, 0) !== null, "nebula legal first place");
-  state = applyNebulaPlace(state, 0)!;
-  state = applyNebulaPlace(state, 24)!;
-  assert(legalNebulaMoves(state.board, 0, 11, 2).includes(1), "nebula grows from own node");
   assert(
-    !legalNebulaMoves(state.board, 0, 11, 2).includes(20),
-    "nebula cannot place away from own group"
+    isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 0, 5),
+    "nebula mono on north home edge"
+  );
+  assert(
+    !isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 5, 5),
+    "nebula first must touch home not center"
+  );
+  assert(
+    !isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 5, 5),
+    "nebula cannot place on core"
   );
 
-  assert(applyNebulaPass(initialNebulaLink(2)) === null, "nebula cannot pass with legal move");
+  const placed = applyNebulaPlace(state, {
+    pieceId: NEBULA_MONO_ID,
+    rotation: 0,
+    anchorRow: 0,
+    anchorCol: 5,
+  });
+  assert(placed !== null, "nebula apply mono north");
+  assert(placed!.currentPlayer === 1, "nebula turn advances");
+
+  const pieces = [...state.roulette, NEBULA_MONO_ID];
+  assert(
+    legalNebulaPlacements(state.board, 0, 2, pieces).length > 0,
+    "nebula has legal moves with mono"
+  );
+  assert(applyNebulaPass(state) === null, "nebula cannot pass with legal mono");
 }
 
 function checkChronoSplit() {

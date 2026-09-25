@@ -10,14 +10,21 @@ import { getPlayerTurnStyle, playerPieceClasses } from "@/lib/player-colors";
 import {
   applyNebulaPass,
   applyNebulaPlace,
+  canNebulaPass,
+  homeEdgeLabel,
   initialNebulaLink,
-  legalNebulaMoves,
+  isLegalNebulaPlacement,
+  legalNebulaPlacements,
   NEBULA_CORE,
-  NEBULA_CORE_RING,
-  NEBULA_CORE_RING_WIN,
-  nebulaCoreRingProgress,
-  nebulaTokensFor,
+  NEBULA_MONO_ID,
+  NEBULA_SIZE,
+  nebulaIndex,
+  nebulaRowCol,
   nebulaWinners,
+  pieceCellsAt,
+  pieceLabel,
+  playerHomeEdge,
+  type NebulaPlacement,
   type NebulaState,
 } from "@/lib/play/nebula-link";
 
@@ -28,51 +35,77 @@ export function NebulaLinkGame() {
   const [playerCount, setPlayerCount] = useState(2);
   const [phase, setPhase] = useState<Phase>("setup");
   const [game, setGame] = useState<NebulaState | null>(null);
-  const [passNotice, setPassNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
+  const [rotation, setRotation] = useState(0);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const startGame = useCallback(() => {
     recordLocalPlay();
     setGame(initialNebulaLink(playerCount));
-    setPassNotice(null);
+    setNotice(null);
+    setSelectedPieceId(null);
+    setRotation(0);
     setPhase("playing");
   }, [recordLocalPlay, playerCount]);
 
-  const legalMoves = useMemo(() => {
-    if (!game || phase !== "playing") return [];
-    const player = game.currentPlayer;
-    return legalNebulaMoves(
-      game.board,
-      player,
-      game.remaining[player],
-      game.playerCount
-    );
-  }, [game, phase]);
-
-  const progress = useMemo(() => {
+  const allowedPieces = useMemo(() => {
     if (!game) return [];
-    return Array.from({ length: game.playerCount }, (_, i) => ({
-      player: i,
-      core: nebulaCoreRingProgress(game.board, i),
-    }));
+    return [...game.roulette, NEBULA_MONO_ID];
   }, [game]);
 
-  const place = useCallback(
+  const legalMoves = useMemo(() => {
+    if (!game || phase !== "playing") return [];
+    return legalNebulaPlacements(
+      game.board,
+      game.currentPlayer,
+      game.playerCount,
+      allowedPieces
+    );
+  }, [game, phase, allowedPieces]);
+
+  const previewCells = useMemo(() => {
+    if (!game || !selectedPieceId || hoverIndex === null) return new Set<number>();
+    const { row, col } = nebulaRowCol(hoverIndex);
+    const cells = pieceCellsAt(selectedPieceId, rotation, row, col);
+    const set = new Set<number>();
+    for (const { row: r, col: c } of cells) {
+      if (r >= 0 && r < NEBULA_SIZE && c >= 0 && c < NEBULA_SIZE) {
+        set.add(nebulaIndex(r, c));
+      }
+    }
+    return set;
+  }, [game, selectedPieceId, rotation, hoverIndex]);
+
+  const placeAt = useCallback(
     (index: number) => {
-      if (!game || phase !== "playing") return;
-      const next = applyNebulaPlace(game, index);
-      if (!next) return;
-      setPassNotice(null);
+      if (!game || phase !== "playing" || !selectedPieceId) return;
+      const { row, col } = nebulaRowCol(index);
+      const placement: NebulaPlacement = {
+        pieceId: selectedPieceId,
+        rotation,
+        anchorRow: row,
+        anchorCol: col,
+      };
+      const next = applyNebulaPlace(game, placement);
+      if (!next) {
+        setNotice("ここには置けません");
+        return;
+      }
+      setNotice(null);
+      setSelectedPieceId(null);
       setGame(next);
       if (next.gameOver) setPhase("game-over");
     },
-    [phase, game]
+    [phase, game, selectedPieceId, rotation]
   );
 
   const pass = useCallback(() => {
     if (!game || phase !== "playing") return;
     const next = applyNebulaPass(game);
     if (!next) return;
-    setPassNotice(`プレイヤー ${game.currentPlayer + 1} がパス`);
+    setNotice(`プレイヤー ${game.currentPlayer + 1} がパス`);
+    setSelectedPieceId(null);
     setGame(next);
     if (next.gameOver) setPhase("game-over");
   }, [phase, game]);
@@ -89,13 +122,13 @@ export function NebulaLinkGame() {
     return (
       <SetupPanel
         title="ネビュラ・リンク"
-        description="星核の周り4マスのうち3つを、自分の連結したノードで占めたら勝ち。最初の1個はどこでも、2個目以降は自分のノードに隣接して置きます。"
+        description="11×11の星雲盤で、ルーレットの形状ブロックを置き、星核を自分のホーム辺側に閉じ込めたら勝ち。単マスは常に使えます。"
         playerCount={playerCount}
         onPlayerCount={setPlayerCount}
         onStart={startGame}
         extra={
           <p className="mt-4 text-xs text-slate-500">
-            各 {nebulaTokensFor(playerCount)} 個のノード
+            2人は北・南、3人は北・東・西（南は中立）、4人は四辺。自分のブロックは角だけでつなげます。
           </p>
         }
       />
@@ -105,7 +138,21 @@ export function NebulaLinkGame() {
   if (!game) return null;
 
   const isGameOver = phase === "game-over" && winner !== null;
-  const mustPass = phase === "playing" && legalMoves.length === 0;
+  const mustPass = phase === "playing" && canNebulaPass(game);
+  const home = playerHomeEdge(game.currentPlayer, game.playerCount);
+
+  const previewLegal =
+    selectedPieceId &&
+    hoverIndex !== null &&
+    isLegalNebulaPlacement(
+      game.board,
+      game.currentPlayer,
+      game.playerCount,
+      selectedPieceId,
+      rotation,
+      nebulaRowCol(hoverIndex).row,
+      nebulaRowCol(hoverIndex).col
+    );
 
   return (
     <div className="space-y-6">
@@ -118,8 +165,8 @@ export function NebulaLinkGame() {
           details={
             <p className="text-slate-400">
               {game.isDraw
-                ? "誰も勝利条件を満たさず、置ける手がなくなりました。"
-                : `星核に隣接するマスを ${NEBULA_CORE_RING_WIN} つ、1つの連結グループで占めました。`}
+                ? "全員が連続パスし、引き分けになりました。"
+                : "星核をホーム辺側に閉じ込め、ホーム辺につながったループが完成しました。"}
             </p>
           }
         />
@@ -129,56 +176,108 @@ export function NebulaLinkGame() {
         <TurnBanner
           playerIndex={game.currentPlayer}
           playerLabel={`プレイヤー ${game.currentPlayer + 1}`}
-          stats={`残り ${game.remaining[game.currentPlayer]} 個 · 星核隣接 ${progress[game.currentPlayer]?.core ?? 0}/${NEBULA_CORE_RING_WIN}`}
+          stats={`ホーム辺：${homeEdgeLabel(home)} · 合法手 ${legalMoves.length}`}
           action={
-            passNotice ??
+            notice ??
             (mustPass
-              ? "置ける場所がないためパスします"
-              : legalMoves.length > 0
-                ? `置けるマス ${legalMoves.length} か所`
-                : undefined)
+              ? "置ける形がないためパスできます"
+              : selectedPieceId
+                ? "マスをクリックして配置（回転ボタンで向き変更）"
+                : "ルーレットまたは単マスを選んでください")
           }
         />
       )}
 
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-1.5 sm:gap-2">
+      {!isGameOver && (
+        <div className="space-y-3">
+          <p className="text-center text-xs text-slate-400">ルーレット（3つから1つ）</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {game.roulette.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setSelectedPieceId(id);
+                  setNotice(null);
+                }}
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  selectedPieceId === id
+                    ? "border-accent bg-accent/20 text-white"
+                    : "border-surface-border bg-surface-raised text-slate-300 hover:border-accent/40"
+                }`}
+              >
+                {pieceLabel(id)}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPieceId(NEBULA_MONO_ID);
+                setNotice(null);
+              }}
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                selectedPieceId === NEBULA_MONO_ID
+                  ? "border-accent bg-accent/20 text-white"
+                  : "border-surface-border bg-surface-raised text-slate-300 hover:border-accent/40"
+              }`}
+            >
+              単マス（常時）
+            </button>
+          </div>
+          {selectedPieceId ? (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => setRotation((r) => (r + 1) % 4)}
+                className="rounded-lg border border-surface-border bg-surface-raised px-4 py-2 text-sm text-white hover:border-accent/50"
+              >
+                回転（{rotation * 90}°）
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      <div
+        className="mx-auto grid max-w-lg gap-0.5 sm:gap-1"
+        style={{ gridTemplateColumns: `repeat(${NEBULA_SIZE}, minmax(0, 1fr))` }}
+      >
         {game.board.map((owner, index) => {
           const isCore = index === NEBULA_CORE;
-          const isCoreRing = NEBULA_CORE_RING.includes(index);
           const empty = owner === null;
-          const canPlace = !isGameOver && legalMoves.includes(index);
+          const inPreview = previewCells.has(index);
+          const canPlace =
+            !isGameOver &&
+            selectedPieceId &&
+            inPreview &&
+            previewLegal &&
+            empty &&
+            !isCore;
+
           return (
             <button
               key={index}
               type="button"
-              disabled={isCore || !empty || isGameOver || !canPlace}
-              onClick={() => place(index)}
-              className={`aspect-square min-h-11 rounded-lg text-xs font-semibold transition sm:text-sm ${
+              disabled={isCore || isGameOver || (!empty && !canPlace)}
+              onMouseEnter={() => setHoverIndex(index)}
+              onMouseLeave={() => setHoverIndex(null)}
+              onClick={() => {
+                if (canPlace) placeAt(index);
+              }}
+              className={`aspect-square min-h-6 rounded-sm text-[10px] font-semibold transition sm:min-h-7 sm:text-xs ${
                 isCore
-                  ? "cursor-default bg-yellow-300/20 text-yellow-200 ring-1 ring-yellow-300/40"
+                  ? "cursor-default bg-yellow-300/25 ring-1 ring-yellow-300/50"
                   : empty
-                    ? canPlace
-                      ? isCoreRing
-                        ? "bg-accent/15 ring-2 ring-accent hover:bg-accent/25"
-                        : "bg-surface-raised ring-2 ring-accent hover:bg-accent/10"
-                      : isCoreRing
-                        ? "cursor-default bg-yellow-300/10 ring-1 ring-yellow-300/30 text-yellow-200/60"
-                        : "cursor-default bg-surface-raised/60 ring-1 ring-surface-border text-slate-600"
+                    ? inPreview
+                      ? previewLegal
+                        ? "bg-accent/25 ring-1 ring-accent"
+                        : "bg-red-500/15 ring-1 ring-red-400/50"
+                      : "bg-surface-raised/80 ring-1 ring-surface-border"
                     : playerPieceClasses(owner)
               }`}
-              aria-label={
-                isCore
-                  ? "星核"
-                  : isCoreRing && empty
-                    ? "星核に隣接するマス"
-                    : empty
-                      ? canPlace
-                        ? `置ける空マス ${index + 1}`
-                        : `置けない空マス ${index + 1}`
-                      : `プレイヤー ${owner + 1} のノード`
-              }
+              aria-label={isCore ? "星核" : empty ? "空マス" : `プレイヤー ${owner + 1}`}
             >
-              {isCore ? "核" : empty ? (isCoreRing ? "★" : "") : owner + 1}
+              {isCore ? "★" : empty ? "" : owner + 1}
             </button>
           );
         })}
@@ -195,8 +294,9 @@ export function NebulaLinkGame() {
       ) : null}
 
       <ul className="grid gap-2 sm:grid-cols-2">
-        {progress.map(({ player, core }) => {
+        {Array.from({ length: game.playerCount }, (_, player) => {
           const style = getPlayerTurnStyle(player);
+          const edge = playerHomeEdge(player, game.playerCount);
           return (
             <li
               key={player}
@@ -210,14 +310,11 @@ export function NebulaLinkGame() {
                 <span className={`inline-block h-3 w-3 rounded-full ${style.dot}`} />
                 プレイヤー {player + 1}
               </span>
-              <span className="text-slate-400">
-                星核隣接 {core}/{NEBULA_CORE_RING_WIN} · 残り {game.remaining[player]}
-              </span>
+              <span className="text-slate-400">ホーム {homeEdgeLabel(edge)}</span>
             </li>
           );
         })}
       </ul>
-
     </div>
   );
 }
