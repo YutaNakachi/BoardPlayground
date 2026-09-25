@@ -2,7 +2,7 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { NebulaPiecePreview } from "@/components/play/shared/NebulaPiecePreview";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
@@ -53,13 +53,6 @@ export function NebulaLinkGame() {
     setPhase("playing");
   }, [recordLocalPlay, playerCount]);
 
-  useEffect(() => {
-    setSelectedPieceId(null);
-    setRotation(0);
-    setHoverIndex(null);
-    setSpinning(false);
-  }, [game?.currentPlayer, game?.roulette.length]);
-
   const allowedPieces = useMemo(() => {
     if (!game) return [NEBULA_MONO_ID];
     return game.roulette.length > 0
@@ -96,7 +89,11 @@ export function NebulaLinkGame() {
     setNotice(null);
     window.setTimeout(() => {
       const next = applyNebulaSpinRoulette(game);
-      if (next) setGame(next);
+      if (next) {
+        setGame(next);
+        setSelectedPieceId(null);
+        setRotation(0);
+      }
       setSpinning(false);
     }, 600);
   }, [game, spinning]);
@@ -118,6 +115,8 @@ export function NebulaLinkGame() {
       }
       setNotice(null);
       setSelectedPieceId(null);
+      setRotation(0);
+      setHoverIndex(null);
       setGame(next);
       if (next.gameOver) setPhase("game-over");
     },
@@ -130,6 +129,9 @@ export function NebulaLinkGame() {
     if (!next) return;
     setNotice(`プレイヤー ${game.currentPlayer + 1} がパス`);
     setSelectedPieceId(null);
+    setRotation(0);
+    setHoverIndex(null);
+    setSpinning(false);
     setGame(next);
     if (next.gameOver) setPhase("game-over");
   }, [phase, game]);
