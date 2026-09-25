@@ -186,18 +186,22 @@ export function SenkaiSenkiGame() {
     setPhase("playing");
   }, [recordLocalPlay]);
 
+  const actingPieceId = state.lockedAfterRotate ?? selectedId;
+
   const selectedPiece =
-    selectedId !== null ? state.pieces[selectedId] ?? null : null;
+    actingPieceId !== null ? state.pieces[actingPieceId] ?? null : null;
 
   const moveTargets = useMemo(() => {
-    if (selectedId === null || phase !== "playing" || state.gameOver) return [];
-    return legalMovesForPiece(state, selectedId);
-  }, [selectedId, phase, state]);
+    if (actingPieceId === null || phase !== "playing" || state.gameOver) {
+      return [];
+    }
+    return legalMovesForPiece(state, actingPieceId);
+  }, [actingPieceId, phase, state]);
 
   const shootIdx = useMemo(() => {
-    if (selectedId === null || phase !== "playing") return null;
-    return shootTarget(state, selectedId);
-  }, [selectedId, phase, state]);
+    if (actingPieceId === null || phase !== "playing") return null;
+    return shootTarget(state, actingPieceId);
+  }, [actingPieceId, phase, state]);
 
   const rotateOptions = useMemo(() => {
     if (!selectedPiece) return [];
@@ -205,9 +209,10 @@ export function SenkaiSenkiGame() {
   }, [selectedPiece]);
 
   const showRotateControls = Boolean(
-    selectedPiece &&
-      selectedId !== null &&
-      selectedPiece.id === selectedId &&
+    state.lockedAfterRotate === null &&
+      selectedPiece &&
+      actingPieceId !== null &&
+      selectedPiece.id === actingPieceId &&
       rotateOptions.length > 0
   );
 
@@ -233,11 +238,17 @@ export function SenkaiSenkiGame() {
       const actingId = state.lockedAfterRotate ?? selectedId;
 
       if (state.lockedAfterRotate !== null) {
-        if (!piece || piece.id !== state.lockedAfterRotate) {
+        if (
+          piece &&
+          piece.owner === state.current &&
+          piece.id !== state.lockedAfterRotate
+        ) {
           setNotice("旋回後は同じ駒で移動または射撃してください");
           return;
         }
-        setSelectedId(state.lockedAfterRotate);
+        if (selectedId !== state.lockedAfterRotate) {
+          setSelectedId(state.lockedAfterRotate);
+        }
       } else if (selectedId === null) {
         if (!piece || piece.owner !== state.current) {
           setNotice(
@@ -250,8 +261,8 @@ export function SenkaiSenkiGame() {
         return;
       }
 
-      if (piece && piece.id === selectedId) {
-        if (state.lockedAfterRotate === selectedId) {
+      if (actingId !== null && piece && piece.id === actingId) {
+        if (state.lockedAfterRotate === actingId) {
           setNotice("旋回後は移動または射撃を選んでください");
           return;
         }
@@ -370,7 +381,10 @@ export function SenkaiSenkiGame() {
           const piece = cellId !== null ? state.pieces[cellId] : null;
           const isMove = moveTargets.includes(index);
           const isShoot = shootIdx === index;
-          const isSelected = cellId !== null && cellId === selectedId;
+          const isSelected =
+            cellId !== null &&
+            actingPieceId !== null &&
+            cellId === actingPieceId;
           const { row } = ssCoord(index);
           const isCenterRow = row === 2;
 
