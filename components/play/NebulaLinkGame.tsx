@@ -59,13 +59,16 @@ function nebulaHomeEdgeCellLook(
   const ring = "ring-1 ring-inset";
   if (owners.length === 0) return { className: "" };
 
-  if (owners.length === 1 && owners[0] === "neutral") {
-    return { className: `${ring} bg-slate-600/40 ring-slate-500/70` };
-  }
-
   if (owners.length === 1) {
-    const s = getPlayerTurnStyle(owners[0]);
-    return { className: `${ring} ${s.piece}/45 ${s.pieceRing}` };
+    const only = owners[0];
+    if (only === "neutral") {
+      return { className: `${ring} bg-slate-600/40 ring-slate-500/70` };
+    }
+    const s = getPlayerTurnStyle(only);
+    return {
+      className: `${ring} ${s.pieceRing}`,
+      style: { backgroundColor: `${s.fill}73` },
+    };
   }
 
   const players = owners.filter((o): o is number => typeof o === "number");
