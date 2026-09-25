@@ -11,7 +11,8 @@ import {
   applySenkaiAction,
   initialSenkaiSenki,
   legalMovesForPiece,
-  legalRotations,
+  isEdgeStuck,
+  legalRotationFacings,
   pieceHasFacing,
   pieceLabel,
   shootTarget,
@@ -204,9 +205,9 @@ export function SenkaiSenkiGame() {
   }, [actingPieceId, phase, state]);
 
   const rotateOptions = useMemo(() => {
-    if (!selectedPiece) return [];
-    return legalRotations(selectedPiece);
-  }, [selectedPiece]);
+    if (actingPieceId === null) return [];
+    return legalRotationFacings(state, actingPieceId);
+  }, [actingPieceId, state]);
 
   const showRotateControls = Boolean(
     state.lockedAfterRotate === null &&
@@ -364,9 +365,13 @@ export function SenkaiSenkiGame() {
           action={
             state.lockedAfterRotate !== null && selectedPiece
               ? `${pieceLabel(selectedPiece.type)}：旋回後は移動または射撃`
-              : selectedPiece
-                ? `${pieceLabel(selectedPiece.type)}を操作中`
-                : "駒を選んでください"
+              : selectedPiece &&
+                  actingPieceId !== null &&
+                  isEdgeStuck(state, actingPieceId)
+                ? `${pieceLabel(selectedPiece.type)}：壁際救済（180°旋回で手番終了）`
+                : selectedPiece
+                  ? `${pieceLabel(selectedPiece.type)}を操作中`
+                  : "駒を選んでください"
           }
           notice={notice ?? undefined}
         />

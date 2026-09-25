@@ -288,6 +288,60 @@ export function legalRotations(piece: SenkaiPiece): Facing[] {
   return turns;
 }
 
+function isPerimeterCell(index: number): boolean {
+  const { row, col } = ssCoord(index);
+  return (
+    row === 0 ||
+    row === SS_ROWS - 1 ||
+    col === 0 ||
+    col === SS_COLS - 1
+  );
+}
+
+/** 外周で移動・射撃がなく旋回権もないときの救済（180°のみ） */
+export function isEdgeStuck(state: SenkaiState, pieceId: number): boolean {
+  const piece = state.pieces[pieceId];
+  if (!piece || piece.type === "command" || piece.rotateToken) return false;
+
+  const from = state.cells.findIndex((c) => c === pieceId);
+  if (from < 0 || !isPerimeterCell(from)) return false;
+
+  if (legalMovesForPiece(state, pieceId).length > 0) return false;
+
+  if (piece.type === "light" || piece.type === "heavy") {
+    if (shootTarget(state, pieceId) !== null) return false;
+  }
+
+  return true;
+}
+
+export function legalRotationFacings(
+  state: SenkaiState,
+  pieceId: number
+): Facing[] {
+  const piece = state.pieces[pieceId];
+  if (!piece || piece.type === "command") return [];
+  if (state.lockedAfterRotate !== null) return [];
+  if (piece.rotateToken) return legalRotations(piece);
+  if (isEdgeStuck(state, pieceId)) {
+    return [((piece.facing + 2) % 4) as Facing];
+  }
+  return [];
+}
+
+function isReliefRotate(
+  state: SenkaiState,
+  pieceId: number,
+  facing: Facing
+): boolean {
+  const piece = state.pieces[pieceId];
+  if (!piece) return false;
+  return (
+    isEdgeStuck(state, pieceId) &&
+    facing === (((piece.facing + 2) % 4) as Facing)
+  );
+}
+
 export function legalActionsForPiece(
   state: SenkaiState,
   pieceId: number
@@ -310,7 +364,7 @@ export function legalActionsForPiece(
     actions.push({ kind: "shoot" });
   }
   if (state.lockedAfterRotate === null) {
-    for (const facing of legalRotations(piece)) {
+    for (const facing of legalRotationFacings(state, pieceId)) {
       actions.push({ kind: "rotate", facing });
     }
   }
@@ -423,11 +477,24 @@ export function applySenkaiAction(
     }
     if (mayGrantRotate) grantRotateToken(pieces, pieceId);
   } else if (action.kind === "rotate") {
+    const relief = isReliefRotate(state, pieceId, action.facing);
     pieces[pieceId] = {
       ...piece,
       facing: action.facing,
       rotateToken: false,
     };
+    if (relief) {
+      return {
+        cells,
+        pieces,
+        current: state.current === 0 ? 1 : 0,
+        gameOver: false,
+        winner: null,
+        winReason: null,
+        lockedAfterRotate: null,
+        skipRotateGrant: false,
+      };
+    }
     return {
       cells,
       pieces,
@@ -504,6 +571,9 @@ export function illegalNotice(
     return "指揮車は旋回しません";
   }
   if (intent === "rotate" && !piece.rotateToken) {
+    if (isEdgeStuck(state, pieceId)) {
+      return null;
+    }
     return "旋回権がありません（先に移動または射撃）";
   }
   if (intent === "shoot") {
