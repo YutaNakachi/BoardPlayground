@@ -90,6 +90,7 @@ import {
 import {
   applyNebulaPass,
   applyNebulaPlace,
+  applyNebulaSpinRoulette,
   initialNebulaLink,
   isLegalNebulaPlacement,
   legalNebulaPlacements,
@@ -897,26 +898,30 @@ function checkChineseCheckers() {
 }
 
 function checkNebulaLink() {
-  assert(NEBULA_SIZE === 11, "nebula 11x11 board");
-  assert(NEBULA_CORE === 60, "nebula core center index");
+  assert(NEBULA_SIZE === 15, "nebula 15x15 board");
+  assert(NEBULA_CORE === 112, "nebula core center index");
 
   const roulette = rollNebulaRoulette(() => 0);
   assert(roulette.length === 3, "nebula roulette picks 3");
   assert(new Set(roulette).size === 3, "nebula roulette unique");
 
   const state = initialNebulaLink(2);
+  assert(state.roulette.length === 0, "nebula roulette starts empty");
   assert(nebulaVictoryPlayer(state.board, 2) === null, "nebula no win on empty board");
 
+  const spun = applyNebulaSpinRoulette(state);
+  assert(spun !== null && spun.roulette.length === 3, "nebula spin roulette");
+
   assert(
-    isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 0, 5),
+    isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 0, 7),
     "nebula mono on north home edge"
   );
   assert(
-    !isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 5, 5),
-    "nebula first must touch home not center"
+    isLegalNebulaPlacement(state.board, 1, 2, NEBULA_MONO_ID, 0, 14, 7),
+    "nebula P2 mono on south home edge"
   );
   assert(
-    !isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 5, 5),
+    !isLegalNebulaPlacement(state.board, 0, 2, NEBULA_MONO_ID, 0, 7, 7),
     "nebula cannot place on core"
   );
 
@@ -924,14 +929,19 @@ function checkNebulaLink() {
     pieceId: NEBULA_MONO_ID,
     rotation: 0,
     anchorRow: 0,
-    anchorCol: 5,
+    anchorCol: 7,
   });
   assert(placed !== null, "nebula apply mono north");
   assert(placed!.currentPlayer === 1, "nebula turn advances");
 
-  const pieces = [...state.roulette, NEBULA_MONO_ID];
+  const p2State = placed!;
   assert(
-    legalNebulaPlacements(state.board, 0, 2, pieces).length > 0,
+    isLegalNebulaPlacement(p2State.board, 1, 2, NEBULA_MONO_ID, 0, 14, 7),
+    "nebula player 2 can place mono on south"
+  );
+
+  assert(
+    legalNebulaPlacements(state.board, 0, 2, [NEBULA_MONO_ID]).length > 0,
     "nebula has legal moves with mono"
   );
   assert(applyNebulaPass(state) === null, "nebula cannot pass with legal mono");
