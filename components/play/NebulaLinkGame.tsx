@@ -26,8 +26,10 @@ import {
   nebulaWinners,
   pieceCellsAt,
   playerHomeEdge,
+  type NebulaEdge,
   type NebulaPlacement,
   type NebulaState,
+  borderEdgesAt,
 } from "@/lib/play/nebula-link";
 
 type Phase = "setup" | "playing" | "game-over";
@@ -53,10 +55,61 @@ function cellIndexFromClient(
   return nebulaIndex(row, col);
 }
 
+const NEUTRAL_EDGE_FILL = "rgba(71,85,105,0.55)";
+
+function edgeFillAt(
+  row: number,
+  col: number,
+  playerCount: number
+): Partial<Record<NebulaEdge, string>> {
+  const edges = borderEdgesAt(row, col);
+  const owners = homeEdgeOwnersAt(nebulaIndex(row, col), playerCount);
+  const fills: Partial<Record<NebulaEdge, string>> = {};
+  edges.forEach((edge, i) => {
+    const owner = owners[i];
+    fills[edge] =
+      owner === "neutral"
+        ? NEUTRAL_EDGE_FILL
+        : getPlayerTurnStyle(owner).fill;
+  });
+  return fills;
+}
+
+/** 角マス：各辺の色がその辺側の三角に入る向きで分割 */
+function cornerSplitBackground(
+  row: number,
+  col: number,
+  fills: Partial<Record<NebulaEdge, string>>
+): string | null {
+  const last = NEBULA_SIZE - 1;
+  const n = fills.north;
+  const s = fills.south;
+  const e = fills.east;
+  const w = fills.west;
+  const tint = (color: string) => `${color}${color.startsWith("rgba") ? "" : "88"}`;
+
+  if (row === 0 && col === 0 && n && w) {
+    return `linear-gradient(to top right, ${tint(w)} 50%, ${tint(n)} 50%)`;
+  }
+  if (row === 0 && col === last && n && e) {
+    return `linear-gradient(to top left, ${tint(e)} 50%, ${tint(n)} 50%)`;
+  }
+  if (row === last && col === 0 && s && w) {
+    return `linear-gradient(to bottom right, ${tint(w)} 50%, ${tint(s)} 50%)`;
+  }
+  if (row === last && col === last && s && e) {
+    return `linear-gradient(to bottom left, ${tint(e)} 50%, ${tint(s)} 50%)`;
+  }
+  return null;
+}
+
 function nebulaHomeEdgeCellLook(
-  owners: Array<number | "neutral">
+  row: number,
+  col: number,
+  playerCount: number
 ): { className: string; style?: CSSProperties } {
   const ring = "ring-1 ring-inset";
+  const owners = homeEdgeOwnersAt(nebulaIndex(row, col), playerCount);
   if (owners.length === 0) return { className: "" };
 
   if (owners.length === 1) {
@@ -71,27 +124,12 @@ function nebulaHomeEdgeCellLook(
     };
   }
 
-  const players = owners.filter((o): o is number => typeof o === "number");
-  const hasNeutral = owners.includes("neutral");
-
-  if (hasNeutral && players.length === 1) {
-    const fill = getPlayerTurnStyle(players[0]).fill;
-    return {
-      className: `${ring} ring-slate-500/55`,
-      style: {
-        background: `linear-gradient(135deg, ${fill}88 50%, rgba(71,85,105,0.55) 50%)`,
-      },
-    };
-  }
-
-  if (players.length >= 2) {
-    const a = getPlayerTurnStyle(players[0]).fill;
-    const b = getPlayerTurnStyle(players[1]).fill;
+  const fills = edgeFillAt(row, col, playerCount);
+  const cornerBg = cornerSplitBackground(row, col, fills);
+  if (cornerBg) {
     return {
       className: `${ring} ring-white/25`,
-      style: {
-        background: `linear-gradient(135deg, ${a}88 50%, ${b}88 50%)`,
-      },
+      style: { background: cornerBg },
     };
   }
 
@@ -343,7 +381,7 @@ export function NebulaLinkGame() {
 
       <div
         ref={gridRef}
-        className={`mx-auto grid w-fit max-w-full gap-px [--nebula-cell:0.82rem] md:[--nebula-cell:0.95rem] lg:[--nebula-cell:1.05rem] sm:gap-0.5 ${
+        className={`mx-auto grid w-fit max-w-full gap-px [--nebula-cell:0.82rem] sm:[--nebula-cell:0.9rem] md:[--nebula-cell:1.05rem] lg:[--nebula-cell:1.18rem] sm:gap-0.5 ${
           selectedPieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{
@@ -360,8 +398,11 @@ export function NebulaLinkGame() {
           const empty = owner === null;
           const inPreview = previewCells.has(index);
 
+          const { row: cellRow, col: cellCol } = nebulaRowCol(index);
           const edgeLook = nebulaHomeEdgeCellLook(
-            homeEdgeOwnersAt(index, game.playerCount)
+            cellRow,
+            cellCol,
+            game.playerCount
           );
 
           let emptyClass =
