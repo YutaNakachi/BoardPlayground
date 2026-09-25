@@ -1,4 +1,4 @@
-export const NEBULA_SIZE = 11;
+export const NEBULA_SIZE = 21;
 export const NEBULA_CORE = Math.floor(NEBULA_SIZE / 2) * NEBULA_SIZE + Math.floor(NEBULA_SIZE / 2);
 
 export const NEBULA_MONO_ID = "mono";
@@ -27,6 +27,36 @@ export const NEBULA_PIECES: NebulaPiece[] = [
 ];
 
 const PIECE_BY_ID = new Map(NEBULA_PIECES.map((p) => [p.id, p]));
+
+export function getNebulaPiece(pieceId: string): NebulaPiece | undefined {
+  return PIECE_BY_ID.get(pieceId);
+}
+
+/** 盤上のマスがどのプレイヤーのホーム辺か（3人時の南は neutral） */
+export function homeEdgeOwnerAt(
+  index: number,
+  playerCount: number
+): number | "neutral" | null {
+  const { row, col } = nebulaRowCol(index);
+  const last = NEBULA_SIZE - 1;
+  if (playerCount === 2) {
+    if (row === 0) return 0;
+    if (row === last) return 1;
+    return null;
+  }
+  if (playerCount === 3) {
+    if (row === 0) return 0;
+    if (col === last) return 1;
+    if (col === 0) return 2;
+    if (row === last) return "neutral";
+    return null;
+  }
+  if (row === 0) return 0;
+  if (col === last) return 1;
+  if (row === last) return 2;
+  if (col === 0) return 3;
+  return null;
+}
 const ROULETTE_POOL = NEBULA_PIECES.filter((p) => p.roulette).map((p) => p.id);
 
 export type NebulaBoard = (number | null)[];
@@ -343,9 +373,14 @@ export function initialNebulaLink(playerCount: number): NebulaState {
     gameOver: false,
     winners: [],
     isDraw: false,
-    roulette: rollNebulaRoulette(),
+    roulette: [],
     passesInRow: 0,
   };
+}
+
+export function applyNebulaSpinRoulette(state: NebulaState): NebulaState | null {
+  if (state.gameOver || state.roulette.length > 0) return null;
+  return { ...state, roulette: rollNebulaRoulette() };
 }
 
 function finishState(
@@ -374,9 +409,15 @@ function advanceTurn(state: NebulaState, board: NebulaBoard): NebulaState {
     ...state,
     board,
     currentPlayer: nextPlayer,
-    roulette: rollNebulaRoulette(),
+    roulette: [],
     passesInRow: 0,
   };
+}
+
+function allowedPieceIds(state: NebulaState): string[] {
+  const ids = [NEBULA_MONO_ID];
+  if (state.roulette.length > 0) ids.unshift(...state.roulette);
+  return ids;
 }
 
 export function applyNebulaPlace(
@@ -385,8 +426,14 @@ export function applyNebulaPlace(
 ): NebulaState | null {
   if (state.gameOver) return null;
   const player = state.currentPlayer;
-  const allowedPieces = [...state.roulette, NEBULA_MONO_ID];
+  const allowedPieces = allowedPieceIds(state);
   if (!allowedPieces.includes(placement.pieceId)) return null;
+  if (
+    placement.pieceId !== NEBULA_MONO_ID &&
+    !state.roulette.includes(placement.pieceId)
+  ) {
+    return null;
+  }
 
   if (
     !isLegalNebulaPlacement(
@@ -423,7 +470,7 @@ export function applyNebulaPlace(
     ...state,
     board,
     currentPlayer: nextPlayer,
-    roulette: rollNebulaRoulette(),
+    roulette: [],
     passesInRow: 0,
   };
 }
@@ -431,8 +478,10 @@ export function applyNebulaPlace(
 export function canNebulaPass(state: NebulaState): boolean {
   if (state.gameOver) return false;
   const player = state.currentPlayer;
-  const pieces = [...state.roulette, NEBULA_MONO_ID];
-  return legalNebulaPlacements(state.board, player, state.playerCount, pieces).length === 0;
+  return (
+    legalNebulaPlacements(state.board, player, state.playerCount, allowedPieceIds(state))
+      .length === 0
+  );
 }
 
 export function applyNebulaPass(state: NebulaState): NebulaState | null {
@@ -452,7 +501,7 @@ export function applyNebulaPass(state: NebulaState): NebulaState | null {
   return {
     ...state,
     currentPlayer: nextPlayer,
-    roulette: rollNebulaRoulette(),
+    roulette: [],
     passesInRow,
   };
 }
