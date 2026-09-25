@@ -33,9 +33,10 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 /** 盤の1マス（rem）。21×21でもマス寸は固定 */
-const NEBULA_CELL_REM = 1.1;
-/** タッチ時は指の少し上をアンカーにする（指で隠れない） */
+const NEBULA_CELL_REM = 0.82;
+/** タッチ時は指の少し上・左をアンカーにする（指で隠れない） */
 const TOUCH_PLACEMENT_OFFSET_Y = 56;
+const TOUCH_PLACEMENT_OFFSET_X = 28;
 
 function cellIndexFromClient(
   grid: HTMLDivElement,
@@ -45,7 +46,8 @@ function cellIndexFromClient(
 ): number | null {
   const rect = grid.getBoundingClientRect();
   const offsetY = pointerType === "touch" ? TOUCH_PLACEMENT_OFFSET_Y : 0;
-  const x = clientX - rect.left;
+  const offsetX = pointerType === "touch" ? TOUCH_PLACEMENT_OFFSET_X : 0;
+  const x = clientX - rect.left - offsetX;
   const y = clientY - rect.top - offsetY;
   if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) return null;
   const col = Math.min(NEBULA_SIZE - 1, Math.floor((x / rect.width) * NEBULA_SIZE));
@@ -218,6 +220,16 @@ export function NebulaLinkGame() {
   const previewRotationFor = (pieceId: string) =>
     selectedPieceId === pieceId ? rotation : 0;
 
+  const pickPiece = (pieceId: string) => {
+    setNotice(null);
+    if (selectedPieceId === pieceId) {
+      setRotation((r) => (r + 1) % 4);
+    } else {
+      setSelectedPieceId(pieceId);
+      setRotation(0);
+    }
+  };
+
   const placementLegal =
     hoverIndex !== null &&
     Boolean(selectedPieceId && cellPlacementLegal(hoverIndex));
@@ -278,7 +290,7 @@ export function NebulaLinkGame() {
             (mustPass
               ? "置ける形がないためパスできます"
               : selectedPieceId
-                ? "盤上でドラッグして位置を決め、指を離して配置"
+                ? "盤上でドラッグして離して配置・同じ形をもう一度押すと回転"
                 : rouletteReady
                   ? "ルーレットの形または単マスを選んでください"
                   : "ルーレットを回すか、単マスを選んでください")
@@ -317,7 +329,7 @@ export function NebulaLinkGame() {
           if (inPreview) {
             emptyClass = placementLegal
               ? `${turnStyle.piece} opacity-90 ring-2 ring-white/80 brightness-110`
-              : "bg-red-600/75 ring-2 ring-red-300 brightness-110";
+              : "bg-slate-500/35 ring-2 ring-slate-400/50";
           }
 
           return (
@@ -352,16 +364,6 @@ export function NebulaLinkGame() {
             >
               {spinning ? "回転中…" : rouletteReady ? "ルーレット済" : "ルーレット"}
             </button>
-            {selectedPieceId ? (
-              <button
-                type="button"
-                onClick={() => setRotation((r) => (r + 1) % 4)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-surface-border bg-surface-raised text-xl leading-none hover:border-white/30 sm:h-12 sm:w-12"
-                aria-label={`ブロックを回転（現在 ${rotation * 90} 度）`}
-              >
-                🔄
-              </button>
-            ) : null}
             {mustPass ? (
               <button
                 type="button"
@@ -376,12 +378,9 @@ export function NebulaLinkGame() {
                   <button
                     key={id}
                     type="button"
-                    onClick={() => {
-                      setSelectedPieceId(id);
-                      setNotice(null);
-                    }}
+                    onClick={() => pickPiece(id)}
                     className={piecePickButtonClass(id)}
-                    aria-label={`形状 ${id}`}
+                    aria-label={`形状 ${id}。選択中に再押下で回転`}
                   >
                     <NebulaPiecePreview
                       pieceId={id}
@@ -393,12 +392,9 @@ export function NebulaLinkGame() {
               : null}
             <button
               type="button"
-              onClick={() => {
-                setSelectedPieceId(NEBULA_MONO_ID);
-                setNotice(null);
-              }}
+              onClick={() => pickPiece(NEBULA_MONO_ID)}
               className={piecePickButtonClass(NEBULA_MONO_ID)}
-              aria-label="単マス（常時利用可）"
+              aria-label="単マス（常時利用可）。選択中に再押下で回転"
             >
               <NebulaPiecePreview
                 pieceId={NEBULA_MONO_ID}
