@@ -81,4 +81,112 @@ body {
   .badge-online {
     @apply rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-200 ring-1 ring-emerald-400/35;
   }
+
+  /* ネビュラ・リンク：角マス（スマホ＝帯、md以上＝L形グラデ） */
+  .nebula-corner-cell {
+    @apply relative overflow-hidden;
+  }
+
+  .nebula-corner-tl::before,
+  .nebula-corner-tr::before,
+  .nebula-corner-bl::before,
+  .nebula-corner-br::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+  }
+
+  .nebula-corner-tl::after,
+  .nebula-corner-tr::after,
+  .nebula-corner-bl::after,
+  .nebula-corner-br::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+  }
+
+  .nebula-corner-tl::before {
+    inset: 0 auto 0 0;
+    width: 50%;
+    background: var(--nebula-edge-a);
+  }
+
+  .nebula-corner-tl::after {
+    inset: 0 0 auto 0;
+    height: 50%;
+    background: var(--nebula-edge-b);
+  }
+
+  .nebula-corner-tr::before {
+    inset: 0 0 0 auto;
+    width: 50%;
+    background: var(--nebula-edge-a);
+  }
+
+  .nebula-corner-tr::after {
+    inset: 0 0 auto 0;
+    height: 50%;
+    background: var(--nebula-edge-b);
+  }
+
+  .nebula-corner-bl::before {
+    inset: 0 auto 0 0;
+    width: 50%;
+    background: var(--nebula-edge-a);
+  }
+
+  .nebula-corner-bl::after {
+    inset: auto 0 0 0;
+    height: 50%;
+    background: var(--nebula-edge-b);
+  }
+
+  .nebula-corner-br::before {
+    inset: 0 0 0 auto;
+    width: 50%;
+    background: var(--nebula-edge-a);
+  }
+
+  .nebula-corner-br::after {
+    inset: auto 0 0 0;
+    height: 50%;
+    background: var(--nebula-edge-b);
+  }
+
+  @media (min-width: 768px) {
+    .nebula-corner-tl::before,
+    .nebula-corner-tl::after,
+    .nebula-corner-tr::before,
+    .nebula-corner-tr::after,
+    .nebula-corner-bl::before,
+    .nebula-corner-bl::after,
+    .nebula-corner-br::before,
+    .nebula-corner-br::after {
+      display: none;
+    }
+
+    .nebula-corner-tl {
+      background:
+        linear-gradient(var(--nebula-edge-b), var(--nebula-edge-b)) top / 100% 50% no-repeat,
+        linear-gradient(var(--nebula-edge-a), var(--nebula-edge-a)) left / 50% 100% no-repeat;
+    }
+
+    .nebula-corner-tr {
+      background:
+        linear-gradient(var(--nebula-edge-b), var(--nebula-edge-b)) top / 100% 50% no-repeat,
+        linear-gradient(var(--nebula-edge-a), var(--nebula-edge-a)) right / 50% 100% no-repeat;
+    }
+
+    .nebula-corner-bl {
+      background:
+        linear-gradient(var(--nebula-edge-b), var(--nebula-edge-b)) bottom / 100% 50% no-repeat,
+        linear-gradient(var(--nebula-edge-a), var(--nebula-edge-a)) left / 50% 100% no-repeat;
+    }
+
+    .nebula-corner-br {
+      background:
+        linear-gradient(var(--nebula-edge-b), var(--nebula-edge-b)) bottom / 100% 50% no-repeat,
+        linear-gradient(var(--nebula-edge-a), var(--nebula-edge-a)) right / 50% 100% no-repeat;
+    }
+  }
 }

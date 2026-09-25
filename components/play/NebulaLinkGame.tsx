@@ -75,24 +75,21 @@ function edgeFillAt(
   return fills;
 }
 
-type CornerBandSide = "top" | "bottom" | "left" | "right";
-
 type HomeEdgeLook = {
   className: string;
   style?: CSSProperties;
-  cornerBands?: { side: CornerBandSide; color: string }[];
 };
 
 function edgeTint(color: string): string {
   return `${color}${color.startsWith("rgba") ? "" : "88"}`;
 }
 
-/** 角マス：辺側の帯（レイヤー描画でモバイルでも崩れにくい） */
-function cornerBands(
+/** 角マス：--nebula-edge-a/b と nebula-corner-*（globals.css） */
+function cornerCellLook(
   row: number,
   col: number,
   fills: Partial<Record<NebulaEdge, string>>
-): HomeEdgeLook["cornerBands"] | null {
+): Pick<HomeEdgeLook, "className" | "style"> | null {
   const last = NEBULA_SIZE - 1;
   const n = fills.north;
   const s = fills.south;
@@ -100,43 +97,42 @@ function cornerBands(
   const w = fills.west;
 
   if (row === 0 && col === 0 && n && w) {
-    return [
-      { side: "left", color: edgeTint(w) },
-      { side: "top", color: edgeTint(n) },
-    ];
+    return {
+      className: "nebula-corner-cell nebula-corner-tl",
+      style: {
+        "--nebula-edge-a": edgeTint(w),
+        "--nebula-edge-b": edgeTint(n),
+      } as CSSProperties,
+    };
   }
   if (row === 0 && col === last && n && e) {
-    return [
-      { side: "right", color: edgeTint(e) },
-      { side: "top", color: edgeTint(n) },
-    ];
+    return {
+      className: "nebula-corner-cell nebula-corner-tr",
+      style: {
+        "--nebula-edge-a": edgeTint(e),
+        "--nebula-edge-b": edgeTint(n),
+      } as CSSProperties,
+    };
   }
   if (row === last && col === 0 && s && w) {
-    return [
-      { side: "left", color: edgeTint(w) },
-      { side: "bottom", color: edgeTint(s) },
-    ];
+    return {
+      className: "nebula-corner-cell nebula-corner-bl",
+      style: {
+        "--nebula-edge-a": edgeTint(w),
+        "--nebula-edge-b": edgeTint(s),
+      } as CSSProperties,
+    };
   }
   if (row === last && col === last && s && e) {
-    return [
-      { side: "right", color: edgeTint(e) },
-      { side: "bottom", color: edgeTint(s) },
-    ];
+    return {
+      className: "nebula-corner-cell nebula-corner-br",
+      style: {
+        "--nebula-edge-a": edgeTint(e),
+        "--nebula-edge-b": edgeTint(s),
+      } as CSSProperties,
+    };
   }
   return null;
-}
-
-function cornerBandClass(side: CornerBandSide): string {
-  switch (side) {
-    case "top":
-      return "absolute inset-x-0 top-0 z-[1] h-1/2";
-    case "bottom":
-      return "absolute inset-x-0 bottom-0 z-[1] h-1/2";
-    case "left":
-      return "absolute inset-y-0 left-0 z-0 w-1/2";
-    case "right":
-      return "absolute inset-y-0 right-0 z-0 w-1/2";
-  }
 }
 
 function nebulaHomeEdgeCellLook(
@@ -161,11 +157,11 @@ function nebulaHomeEdgeCellLook(
   }
 
   const fills = edgeFillAt(row, col, playerCount);
-  const bands = cornerBands(row, col, fills);
-  if (bands) {
+  const corner = cornerCellLook(row, col, fills);
+  if (corner) {
     return {
-      className: `${ring} relative overflow-hidden ring-white/25 bg-surface-raised/60`,
-      cornerBands: bands,
+      className: `${ring} ring-white/25 bg-surface-raised/60 ${corner.className}`,
+      style: corner.style,
     };
   }
 
@@ -421,8 +417,8 @@ export function NebulaLinkGame() {
           selectedPieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{
-          gridTemplateColumns: `repeat(${NEBULA_SIZE}, clamp(0.86rem, 3.35vmin, 1.28rem))`,
-          gridTemplateRows: `repeat(${NEBULA_SIZE}, clamp(0.86rem, 3.35vmin, 1.28rem))`,
+          gridTemplateColumns: `repeat(${NEBULA_SIZE}, clamp(0.92rem, 3.65vmin, 1.28rem))`,
+          gridTemplateRows: `repeat(${NEBULA_SIZE}, clamp(0.92rem, 3.65vmin, 1.28rem))`,
         }}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
@@ -444,7 +440,6 @@ export function NebulaLinkGame() {
           let emptyClass =
             edgeLook.className || "bg-surface-raised/80 ring-1 ring-surface-border/80";
           const emptyStyle = edgeLook.style;
-          const cornerBands = edgeLook.cornerBands;
           if (inPreview) {
             emptyClass = placementLegal
               ? `${turnStyle.piece} opacity-90 ring-2 ring-white/80 brightness-110`
@@ -468,16 +463,6 @@ export function NebulaLinkGame() {
               aria-label={isCore ? "星核" : empty ? "空マス" : `プレイヤー ${owner + 1}`}
             >
               {isCore ? "★" : null}
-              {empty && !inPreview && cornerBands
-                ? cornerBands.map((band) => (
-                    <span
-                      key={band.side}
-                      aria-hidden
-                      className={`pointer-events-none ${cornerBandClass(band.side)}`}
-                      style={{ backgroundColor: band.color }}
-                    />
-                  ))
-                : null}
             </div>
           );
         })}
