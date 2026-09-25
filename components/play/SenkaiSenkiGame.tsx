@@ -33,20 +33,49 @@ const FACING_DEG: Record<Facing, number> = {
   3: 270,
 };
 
-const FACING_ARROW: Record<Facing, string> = {
-  0: "↑",
-  1: "→",
-  2: "↓",
-  3: "←",
+const FACING_LABEL: Record<Facing, string> = {
+  0: "上",
+  1: "右",
+  2: "下",
+  3: "左",
 };
 
-/** 選択中駒マス内に置く旋回タップ領域 */
+/** 選択中駒マス内に置く旋回タップ領域（その向きの辺中央） */
 const ROTATE_HIT: Record<Facing, string> = {
   0: "left-1/2 top-0.5 -translate-x-1/2",
   1: "right-0.5 top-1/2 -translate-y-1/2",
   2: "left-1/2 bottom-0.5 -translate-x-1/2",
   3: "left-0.5 top-1/2 -translate-y-1/2",
 };
+
+/** 駒の向きに対する右前（forwardDiagonals の右側） */
+const ROTATE_TOKEN_CORNER: Record<Facing, string> = {
+  0: "right-0 top-0",
+  1: "right-0 bottom-0",
+  2: "left-0 bottom-0",
+  3: "left-0 top-0",
+};
+
+function RotateFacingIcon({ facing }: { facing: Facing }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 shrink-0"
+      aria-hidden
+    >
+      <g transform={`rotate(${FACING_DEG[facing]} 12 12)`}>
+        <path
+          d="M12 5v12M12 5l-4.25 4.5M12 5l4.25 4.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.25"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
+    </svg>
+  );
+}
 
 const PIECE_TOKEN_SRC: Record<SenkaiPiece["type"], string> = {
   light: "/games/senkai-senki/senkai-light-token.png",
@@ -96,13 +125,19 @@ function PieceTokenImage({
   );
 }
 
-function RotateTokenBadge({ owner }: { owner: SenkaiPiece["owner"] }) {
+function RotateTokenBadge({
+  owner,
+  facing,
+}: {
+  owner: SenkaiPiece["owner"];
+  facing: Facing;
+}) {
   const { fill } = getPlayerTurnStyle(owner);
   return (
     <span
       className={[
         "pointer-events-none absolute z-10 flex h-4 w-4 items-center justify-center rounded-sm",
-        owner === 0 ? "right-0 top-0" : "bottom-0 left-0",
+        ROTATE_TOKEN_CORNER[facing],
       ].join(" ")}
       style={{
         color: fill,
@@ -372,16 +407,16 @@ export function SenkaiSenkiGame() {
                 <>
                   <PieceGlyph piece={piece} />
                   {piece.rotateToken && pieceHasFacing(piece.type) ? (
-                    <RotateTokenBadge owner={piece.owner} />
+                    <RotateTokenBadge owner={piece.owner} facing={piece.facing} />
                   ) : null}
                   {showRotateControls && isSelected
                     ? rotateOptions.map((facing) => (
                         <button
                           key={facing}
                           type="button"
-                          aria-label={`${FACING_ARROW[facing]}へ旋回`}
+                          aria-label={`${FACING_LABEL[facing]}向きへ旋回`}
                           className={[
-                            "absolute z-20 flex h-6 w-6 items-center justify-center rounded-md border border-amber-400/80 bg-amber-950/90 text-sm font-bold text-amber-200 shadow-md hover:bg-amber-900",
+                            "absolute z-20 flex h-6 w-6 items-center justify-center rounded-md border border-amber-400/80 bg-amber-950/90 text-amber-200 shadow-md hover:bg-amber-900",
                             ROTATE_HIT[facing],
                           ].join(" ")}
                           onClick={(e) => {
@@ -389,7 +424,7 @@ export function SenkaiSenkiGame() {
                             onRotateArrow(facing);
                           }}
                         >
-                          {FACING_ARROW[facing]}
+                          <RotateFacingIcon facing={facing} />
                         </button>
                       ))
                     : null}
