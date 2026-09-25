@@ -1,7 +1,7 @@
 export type Player = 0 | 1;
 
 export const SS_COLS = 5;
-export const SS_ROWS = 7;
+export const SS_ROWS = 5;
 
 export type PieceType = "command" | "light" | "heavy" | "scout";
 export type Facing = 0 | 1 | 2 | 3;
@@ -34,17 +34,20 @@ const PIECE_LABEL: Record<PieceType, string> = {
   command: "指揮車",
   light: "軽戦車",
   heavy: "重戦車",
-  scout: "偵察車",
+  scout: "特攻車",
 };
 
-const RANGE: Partial<Record<PieceType, number>> = {
-  command: 2,
+const SHOOT_RANGE: Partial<Record<PieceType, number>> = {
   light: 1,
   heavy: 3,
 };
 
 export function pieceLabel(type: PieceType): string {
   return PIECE_LABEL[type];
+}
+
+export function pieceHasFacing(type: PieceType): boolean {
+  return type !== "command";
 }
 
 export function ssIndex(row: number, col: number): number {
@@ -59,7 +62,7 @@ function inBounds(row: number, col: number): boolean {
   return row >= 0 && row < SS_ROWS && col >= 0 && col < SS_COLS;
 }
 
-function fixDiagonal(facing: Facing): [number, number][] {
+function forwardDiagonals(facing: Facing): [number, number][] {
   switch (facing) {
     case 0:
       return [[-1, -1], [-1, 1]];
@@ -103,14 +106,12 @@ function initialPieces(): { cells: (number | null)[]; pieces: Record<number, Sen
     cells[ssIndex(row, col)] = pid;
   };
 
-  // Player 0 (bottom): rows 5–6, faces up (0)
-  place(5, 0, 0, "light", 0);
-  place(5, 2, 0, "scout", 0);
-  place(5, 3, 0, "light", 0);
-  place(6, 1, 0, "heavy", 0);
-  place(6, 2, 0, "command", 0);
+  place(3, 0, 0, "light", 0);
+  place(3, 2, 0, "scout", 0);
+  place(3, 3, 0, "light", 0);
+  place(4, 1, 0, "heavy", 0);
+  place(4, 2, 0, "command", 0);
 
-  // Player 1 (top): mirror left–right, rows 0–1, faces down (2)
   const mirrorCol = (c: number) => SS_COLS - 1 - c;
   place(1, mirrorCol(0), 1, "light", 2);
   place(1, mirrorCol(2), 1, "scout", 2);
@@ -139,12 +140,83 @@ export type RotateAction = { kind: "rotate"; facing: Facing };
 
 export type SenkaiAction = MoveAction | ShootAction | RotateAction;
 
-function moveDeltas(piece: SenkaiPiece): [number, number][] {
-  const fwd = FWD[piece.facing];
-  if (piece.type === "scout") {
-    return [fwd, ...fixDiagonal(piece.facing)];
+function lineDestinations(
+  state: SenkaiState,
+  from: number,
+  piece: SenkaiPiece,
+  dr: number,
+  dc: number,
+  maxDist: number,
+  canRam: boolean
+): number[] {
+  const { row, col } = ssCoord(from);
+  const dests: number[] = [];
+
+  for (let dist = 1; dist <= maxDist; dist++) {
+    const nr = row + dr * dist;
+    const nc = col + dc * dist;
+    if (!inBounds(nr, nc)) break;
+    const to = ssIndex(nr, nc);
+    const target = pieceAt(state, to);
+    if (target) {
+      if (target.owner === piece.owner) break;
+      if (canRam) dests.push(to);
+      break;
+    }
+    dests.push(to);
   }
-  return [fwd];
+
+  return dests;
+}
+
+function tokkoDestinations(state: SenkaiState, from: number, piece: SenkaiPiece): number[] {
+  const [fdr, fdc] = FWD[piece.facing];
+  const dests = new Set<number>();
+  for (const idx of lineDestinations(state, from, piece, fdr, fdc, 2, true)) {
+    dests.add(idx);
+  }
+  for (const [ddr, ddc] of forwardDiagonals(piece.facing)) {
+    for (const idx of lineDestinations(state, from, piece, ddr, ddc, 2, true)) {
+      dests.add(idx);
+    }
+  }
+  return [...dests];
+}
+
+export function legalMovesForPiece(
+  state: SenkaiState,
+  pieceId: number
+): number[] {
+  if (state.gameOver) return [];
+  const piece = state.pieces[pieceId];
+  if (!piece || piece.owner !== state.current) return [];
+
+  const from = state.cells.findIndex((c) => c === pieceId);
+  if (from < 0) return [];
+
+  if (piece.type === "command") {
+    const { row, col } = ssCoord(from);
+    const dests: number[] = [];
+    for (const [dr, dc] of FWD) {
+      const nr = row + dr;
+      const nc = col + dc;
+      if (!inBounds(nr, nc)) continue;
+      const to = ssIndex(nr, nc);
+      const target = pieceAt(state, to);
+      if (!target || target.owner !== piece.owner) dests.push(to);
+    }
+    return dests;
+  }
+
+  if (piece.type === "scout") {
+    return tokkoDestinations(state, from, piece);
+  }
+
+  if (piece.type === "light" || piece.type === "heavy") {
+    return [];
+  }
+
+  return [];
 }
 
 export function shootTarget(
@@ -153,13 +225,12 @@ export function shootTarget(
 ): number | null {
   const piece = state.pieces[pieceId];
   if (!piece) return null;
-  const range = RANGE[piece.type];
+  const range = SHOOT_RANGE[piece.type];
   if (range === undefined) return null;
 
-  const { row, col } = ssCoord(
-    state.cells.findIndex((c) => c === pieceId)
-  );
-  if (row < 0) return null;
+  const from = state.cells.findIndex((c) => c === pieceId);
+  if (from < 0) return null;
+  const { row, col } = ssCoord(from);
 
   const [dr, dc] = FWD[piece.facing];
   for (let dist = 1; dist <= range; dist++) {
@@ -176,34 +247,8 @@ export function shootTarget(
   return null;
 }
 
-export function legalMovesForPiece(
-  state: SenkaiState,
-  pieceId: number
-): number[] {
-  if (state.gameOver) return [];
-  const piece = state.pieces[pieceId];
-  if (!piece || piece.owner !== state.current) return [];
-
-  const from = state.cells.findIndex((c) => c === pieceId);
-  if (from < 0) return [];
-
-  const { row, col } = ssCoord(from);
-  const dests: number[] = [];
-
-  for (const [dr, dc] of moveDeltas(piece)) {
-    const nr = row + dr;
-    const nc = col + dc;
-    if (!inBounds(nr, nc)) continue;
-    const to = ssIndex(nr, nc);
-    const target = pieceAt(state, to);
-    if (!target || target.owner !== piece.owner) dests.push(to);
-  }
-
-  return dests;
-}
-
 export function legalRotations(piece: SenkaiPiece): Facing[] {
-  if (!piece.rotateToken) return [];
+  if (piece.type === "command" || !piece.rotateToken) return [];
   const turns: Facing[] = [
     ((piece.facing + 1) % 4) as Facing,
     ((piece.facing + 3) % 4) as Facing,
@@ -237,8 +282,6 @@ export function legalActionsForPiece(
 export function hasAnyLegalAction(state: SenkaiState): boolean {
   for (const id of Object.values(state.pieces)) {
     if (id.owner !== state.current) continue;
-    const idx = state.cells.findIndex((c) => c === id.id);
-    if (idx < 0) continue;
     if (legalActionsForPiece(state, id.id).length > 0) return true;
   }
   return false;
@@ -246,7 +289,8 @@ export function hasAnyLegalAction(state: SenkaiState): boolean {
 
 function grantRotateToken(pieces: Record<number, SenkaiPiece>, pieceId: number) {
   const p = pieces[pieceId];
-  if (p) pieces[pieceId] = { ...p, rotateToken: true };
+  if (!p || p.type === "command") return;
+  pieces[pieceId] = { ...p, rotateToken: true };
 }
 
 function removePiece(
@@ -257,6 +301,32 @@ function removePiece(
   const idx = cells.findIndex((c) => c === pieceId);
   if (idx >= 0) cells[idx] = null;
   delete pieces[pieceId];
+}
+
+function resolveRam(
+  cells: (number | null)[],
+  pieces: Record<number, SenkaiPiece>,
+  attackerId: number,
+  defenderId: number,
+  defenderType: PieceType
+): { winner: Player | null; winReason: "ram" | null } {
+  const attacker = pieces[attackerId];
+  if (!attacker) return { winner: null, winReason: null };
+
+  if (attacker.type === "command") {
+    removePiece(cells, pieces, defenderId);
+    if (defenderType === "command") {
+      return { winner: attacker.owner, winReason: "ram" };
+    }
+    return { winner: null, winReason: null };
+  }
+
+  removePiece(cells, pieces, defenderId);
+  removePiece(cells, pieces, attackerId);
+  if (defenderType === "command") {
+    return { winner: attacker.owner, winReason: "ram" };
+  }
+  return { winner: null, winReason: null };
 }
 
 export function applySenkaiAction(
@@ -291,24 +361,12 @@ export function applySenkaiAction(
     cells[from] = null;
 
     if (target) {
-      const defenderType = target.type;
-      const defenderId = target.id;
-      if (piece.type === "command") {
-        removePiece(cells, pieces, defenderId);
+      const ram = resolveRam(cells, pieces, pieceId, target.id, target.type);
+      winner = ram.winner;
+      winReason = ram.winReason;
+      if (!winner && pieces[pieceId]) {
         cells[action.to] = pieceId;
-        if (defenderType === "command") {
-          winner = piece.owner;
-          winReason = "ram";
-        } else if (!winner) {
-          grantRotateToken(pieces, pieceId);
-        }
-      } else {
-        removePiece(cells, pieces, defenderId);
-        removePiece(cells, pieces, pieceId);
-        if (defenderType === "command") {
-          winner = piece.owner;
-          winReason = "ram";
-        }
+        grantRotateToken(pieces, pieceId);
       }
     } else {
       cells[action.to] = pieceId;
@@ -381,14 +439,30 @@ export function illegalNotice(
   const piece = state.pieces[pieceId];
   if (!piece) return "駒がありません";
   if (piece.owner !== state.current) return "相手の駒です";
+  if (intent === "rotate" && piece.type === "command") {
+    return "指揮車は旋回しません";
+  }
   if (intent === "rotate" && !piece.rotateToken) {
     return "旋回権がありません（先に移動または射撃）";
   }
   if (intent === "shoot") {
-    if (piece.type === "scout") return "偵察車は射撃できません";
+    if (piece.type === "command") return "指揮車は射撃できません";
+    if (piece.type === "scout") return "特攻車は射撃できません";
     if (shootTarget(state, pieceId) === null) {
       return "合法な射撃がありません";
     }
   }
   return null;
+}
+
+export function rotateArrowNeighbor(
+  pieceIndex: number,
+  facing: Facing
+): number | null {
+  const { row, col } = ssCoord(pieceIndex);
+  const [dr, dc] = FWD[facing];
+  const nr = row + dr;
+  const nc = col + dc;
+  if (!inBounds(nr, nc)) return null;
+  return ssIndex(nr, nc);
 }

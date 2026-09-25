@@ -10,14 +10,14 @@ import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applySenkaiAction,
   initialSenkaiSenki,
-  legalActionsForPiece,
   legalMovesForPiece,
   legalRotations,
+  pieceHasFacing,
   pieceLabel,
+  rotateArrowNeighbor,
   shootTarget,
   ssCoord,
   SS_COLS,
-  SS_ROWS,
   winReasonLabel,
   type Facing,
   type SenkaiPiece,
@@ -33,35 +33,92 @@ const FACING_DEG: Record<Facing, number> = {
   3: 270,
 };
 
-function TankGlyph({
-  piece,
-  size = "md",
-}: {
-  piece: SenkaiPiece;
-  size?: "md" | "sm";
-}) {
+const FACING_ARROW: Record<Facing, string> = {
+  0: "↑",
+  1: "→",
+  2: "↓",
+  3: "←",
+};
+
+function PieceGlyph({ piece }: { piece: SenkaiPiece }) {
   const style = getPlayerTurnStyle(piece.owner);
-  const dim = size === "sm" ? "h-7 w-7" : "h-9 w-9 sm:h-10 sm:w-10";
+  const fill = style.fill;
+  const rot = pieceHasFacing(piece.type)
+    ? FACING_DEG[piece.facing]
+    : 0;
+
+  const base = "relative flex h-9 w-9 items-center justify-center sm:h-10 sm:w-10";
+
+  if (piece.type === "command") {
+    return (
+      <div className={base} aria-hidden>
+        <div
+          className="flex h-[70%] w-[70%] items-center justify-center rounded-md border-2 border-white/30 shadow-inner"
+          style={{ backgroundColor: fill }}
+        >
+          <span className="text-[10px] font-bold text-white/90 sm:text-xs">指</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (piece.type === "light") {
+    return (
+      <div
+        className={base}
+        style={{ transform: `rotate(${rot}deg)` }}
+        aria-hidden
+      >
+        <div
+          className="h-[40%] w-[85%] rounded-sm"
+          style={{ backgroundColor: fill }}
+        />
+        <div
+          className="absolute left-[72%] top-1/2 h-[18%] w-[35%] -translate-y-1/2 rounded-sm"
+          style={{ backgroundColor: fill, filter: "brightness(1.2)" }}
+        />
+        <span className="absolute -bottom-0.5 text-[8px] font-medium text-slate-400">
+          軽
+        </span>
+      </div>
+    );
+  }
+
+  if (piece.type === "heavy") {
+    return (
+      <div
+        className={base}
+        style={{ transform: `rotate(${rot}deg)` }}
+        aria-hidden
+      >
+        <div
+          className="h-[55%] w-[95%] rounded-sm"
+          style={{ backgroundColor: fill }}
+        />
+        <div
+          className="absolute left-[68%] top-1/2 h-[28%] w-[42%] -translate-y-1/2 rounded-sm"
+          style={{ backgroundColor: fill, filter: "brightness(1.15)" }}
+        />
+        <span className="absolute -bottom-0.5 text-[8px] font-medium text-slate-400">
+          重
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`relative ${dim} flex items-center justify-center`}
-      style={{ transform: `rotate(${FACING_DEG[piece.facing]}deg)` }}
+      className={base}
+      style={{ transform: `rotate(${rot}deg)` }}
       aria-hidden
     >
       <div
-        className="h-[55%] w-[75%] rounded-sm"
-        style={{ backgroundColor: style.fill }}
+        className="h-0 w-0 border-b-[18px] border-l-[12px] border-r-[12px] border-b-current border-l-transparent border-r-transparent sm:border-b-[22px] sm:border-l-[14px] sm:border-r-[14px]"
+        style={{ color: fill }}
       />
-      <div
-        className="absolute top-[8%] h-[35%] w-[22%] rounded-sm"
-        style={{ backgroundColor: style.fill, filter: "brightness(1.15)" }}
-      />
-      {piece.rotateToken ? (
-        <span
-          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-300 ring-1 ring-slate-900"
-          title="旋回権あり"
-        />
-      ) : null}
+      <span className="absolute -bottom-0.5 text-[8px] font-medium text-slate-400">
+        特
+      </span>
     </div>
   );
 }
@@ -84,6 +141,11 @@ export function SenkaiSenkiGame() {
   const selectedPiece =
     selectedId !== null ? state.pieces[selectedId] ?? null : null;
 
+  const selectedIndex =
+    selectedId !== null
+      ? state.cells.findIndex((c) => c === selectedId)
+      : -1;
+
   const moveTargets = useMemo(() => {
     if (selectedId === null || phase !== "playing" || state.gameOver) return [];
     return legalMovesForPiece(state, selectedId);
@@ -99,8 +161,21 @@ export function SenkaiSenkiGame() {
     return legalRotations(selectedPiece);
   }, [selectedPiece]);
 
+  const rotateArrows = useMemo(() => {
+    if (selectedIndex < 0 || rotateOptions.length === 0) return [];
+    return rotateOptions
+      .map((facing) => ({
+        facing,
+        cell: rotateArrowNeighbor(selectedIndex, facing),
+      }))
+      .filter(
+        (x): x is { facing: Facing; cell: number } =>
+          x.cell !== null && state.cells[x.cell] === null
+      );
+  }, [selectedIndex, rotateOptions, state.cells]);
+
   const apply = useCallback(
-    (pieceId: number, action: ReturnType<typeof legalActionsForPiece>[number]) => {
+    (pieceId: number, action: Parameters<typeof applySenkaiAction>[2]) => {
       const next = applySenkaiAction(state, pieceId, action);
       if (!next) return false;
       setState(next);
@@ -157,10 +232,20 @@ export function SenkaiSenkiGame() {
 
       setNotice("そこには移動・射撃できません");
     },
-    [phase, state, selectedId, moveTargets, shootIdx, apply]
+    [
+      phase,
+      state.gameOver,
+      state.cells,
+      state.pieces,
+      state.current,
+      selectedId,
+      moveTargets,
+      shootIdx,
+      apply,
+    ]
   );
 
-  const onRotate = useCallback(
+  const onRotateArrow = useCallback(
     (facing: Facing) => {
       if (selectedId === null) return;
       if (!rotateOptions.includes(facing)) {
@@ -180,8 +265,8 @@ export function SenkaiSenkiGame() {
   if (phase === "setup") {
     return (
       <SetupPanel
-        title="旋回戦棋"
-        description="向きを持つ戦車駒で相手の指揮車を撃ち落とす2人対戦。移動または射撃で旋回権を得てから向きを変えられます。"
+        title="砲塔戦棋"
+        description="砲塔の向きと役割が異なる戦車で相手の指揮車を落とす2人対戦。軽・重は射撃、特攻車は体当たり、指揮車は全方位の移動です。"
         playerCount={2}
         playerOptions={[2]}
         onPlayerCount={() => {}}
@@ -193,7 +278,7 @@ export function SenkaiSenkiGame() {
   const isGameOver = phase === "game-over" && state.winner !== null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {isGameOver && state.winner !== null && state.winReason && (
         <ResultPanel
           variant="inline"
@@ -219,62 +304,67 @@ export function SenkaiSenkiGame() {
       )}
 
       <div
-        className="mx-auto grid w-full max-w-md gap-0.5 rounded-xl border border-slate-700/80 bg-slate-900/50 p-2 sm:max-w-lg"
+        className="mx-auto grid w-full max-w-sm gap-1 rounded-xl border border-slate-700/80 bg-slate-900/50 p-2"
         style={{ gridTemplateColumns: `repeat(${SS_COLS}, minmax(0, 1fr))` }}
-        aria-label="旋回戦棋の盤面"
+        aria-label="砲塔戦棋の盤面"
       >
         {state.cells.map((cellId, index) => {
           const piece = cellId !== null ? state.pieces[cellId] : null;
           const isMove = moveTargets.includes(index);
           const isShoot = shootIdx === index;
           const isSelected = cellId !== null && cellId === selectedId;
+          const arrow = rotateArrows.find((a) => a.cell === index);
           const { row } = ssCoord(index);
-          const isCenterRow = row === 3;
+          const isCenterRow = row === 2;
 
           return (
             <button
               key={index}
               type="button"
               disabled={isGameOver}
-              onClick={() => onCell(index)}
+              onClick={() => {
+                if (arrow) {
+                  onRotateArrow(arrow.facing);
+                  return;
+                }
+                onCell(index);
+              }}
               className={[
-                "relative flex aspect-[5/6] items-center justify-center rounded-sm border transition",
-                isCenterRow ? "bg-slate-700/30" : "bg-slate-800/70",
+                "relative flex aspect-square items-center justify-center rounded-sm border transition",
+                isCenterRow ? "bg-slate-700/25" : "bg-slate-800/70",
                 "border-slate-700/60",
                 isSelected ? "ring-2 ring-indigo-400" : "",
                 isMove && !isShoot ? "ring-2 ring-emerald-500/80 bg-emerald-950/40" : "",
                 isShoot ? "ring-2 ring-orange-500 bg-orange-950/50" : "",
+                arrow ? "ring-2 ring-amber-400/90 bg-amber-950/30" : "",
               ].join(" ")}
             >
-              {piece ? <TankGlyph piece={piece} /> : null}
+              {arrow ? (
+                <span
+                  className="pointer-events-none text-xl font-bold text-amber-300"
+                  aria-hidden
+                >
+                  {FACING_ARROW[arrow.facing]}
+                </span>
+              ) : null}
+              {piece && !arrow ? (
+                <>
+                  <PieceGlyph piece={piece} />
+                  {piece.rotateToken && pieceHasFacing(piece.type) ? (
+                    <span
+                      className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-amber-300 ring-1 ring-slate-900"
+                      title="旋回権あり"
+                    />
+                  ) : null}
+                </>
+              ) : null}
             </button>
           );
         })}
       </div>
 
-      {!isGameOver && selectedPiece && rotateOptions.length > 0 && (
-        <div className="mx-auto flex max-w-lg flex-col items-center gap-2">
-          <p className="text-xs text-slate-500">旋回（タップで確定）</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {rotateOptions.map((facing) => (
-              <button
-                key={facing}
-                type="button"
-                onClick={() => onRotate(facing)}
-                className="rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-2 hover:border-indigo-400"
-              >
-                <TankGlyph
-                  piece={{ ...selectedPiece, facing }}
-                  size="sm"
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <p className="text-center text-xs text-slate-500">
-        緑＝移動／体当たり先 · 橙＝射撃 · 黄点＝旋回権 · プレイヤー1が先手
+        緑＝移動／体当たり · 橙＝射撃 · 琥珀＝旋回（矢印） · 黄点＝旋回権
       </p>
     </div>
   );
