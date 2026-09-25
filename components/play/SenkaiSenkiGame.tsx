@@ -119,31 +119,23 @@ function RotateTokenBadge({ owner }: { owner: SenkaiPiece["owner"] }) {
   return (
     <span
       className={[
-        "pointer-events-none absolute z-10 flex h-[15px] w-[15px] items-center justify-center rounded-[3px] border sm:h-4 sm:w-4",
-        owner === 0 ? "right-0.5 top-0.5" : "bottom-0.5 left-0.5",
+        "pointer-events-none absolute z-10 flex h-4 w-4 items-center justify-center rounded-sm",
+        owner === 0 ? "right-0 top-0" : "bottom-0 left-0",
       ].join(" ")}
       style={{
         color: fill,
-        borderColor: fill,
-        backgroundColor: `${fill}28`,
-        boxShadow: `0 0 6px ${fill}66`,
+        border: `1.5px solid ${fill}`,
+        backgroundColor: "rgb(15 23 42 / 0.92)",
+        fontSize: "13px",
+        fontWeight: 700,
+        lineHeight: 1,
+        fontFamily: "ui-sans-serif, system-ui, sans-serif",
+        boxShadow: `0 0 4px ${fill}99`,
       }}
       title="旋回権あり"
       aria-hidden
     >
-      <svg
-        viewBox="0 0 24 24"
-        className="h-3 w-3 sm:h-3.5 sm:w-3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-        <path d="M21 3v5h-5" />
-      </svg>
+      ↻
     </span>
   );
 }
@@ -224,7 +216,7 @@ export function SenkaiSenkiGame() {
       const next = applySenkaiAction(state, pieceId, action);
       if (!next) return false;
       setState(next);
-      setSelectedId(null);
+      setSelectedId(next.lockedAfterRotate);
       setNotice(null);
       if (next.gameOver) setPhase("game-over");
       return true;
@@ -238,7 +230,15 @@ export function SenkaiSenkiGame() {
       const occupant = state.cells[index];
       const piece = occupant !== null ? state.pieces[occupant] : null;
 
-      if (selectedId === null) {
+      const actingId = state.lockedAfterRotate ?? selectedId;
+
+      if (state.lockedAfterRotate !== null) {
+        if (!piece || piece.id !== state.lockedAfterRotate) {
+          setNotice("旋回後は同じ駒で移動または射撃してください");
+          return;
+        }
+        setSelectedId(state.lockedAfterRotate);
+      } else if (selectedId === null) {
         if (!piece || piece.owner !== state.current) {
           setNotice(
             piece ? "自分の駒を選んでください" : "空のマスです"
@@ -251,25 +251,35 @@ export function SenkaiSenkiGame() {
       }
 
       if (piece && piece.id === selectedId) {
+        if (state.lockedAfterRotate === selectedId) {
+          setNotice("旋回後は移動または射撃を選んでください");
+          return;
+        }
         setSelectedId(null);
         return;
       }
 
+      if (actingId === null) return;
+
       if (moveTargets.includes(index)) {
-        if (!apply(selectedId, { kind: "move", to: index })) {
+        if (!apply(actingId, { kind: "move", to: index })) {
           setNotice("その移動はできません");
         }
         return;
       }
 
       if (shootIdx === index && shootIdx !== null) {
-        if (!apply(selectedId, { kind: "shoot" })) {
+        if (!apply(actingId, { kind: "shoot" })) {
           setNotice("射撃できません");
         }
         return;
       }
 
-      if (piece && piece.owner === state.current) {
+      if (
+        piece &&
+        piece.owner === state.current &&
+        state.lockedAfterRotate === null
+      ) {
         setSelectedId(piece.id);
         setNotice(null);
         return;
@@ -283,6 +293,7 @@ export function SenkaiSenkiGame() {
       state.cells,
       state.pieces,
       state.current,
+      state.lockedAfterRotate,
       selectedId,
       moveTargets,
       shootIdx,
@@ -340,9 +351,11 @@ export function SenkaiSenkiGame() {
           playerIndex={state.current}
           playerLabel={`プレイヤー ${state.current + 1}`}
           action={
-            selectedPiece
-              ? `${pieceLabel(selectedPiece.type)}を操作中`
-              : "駒を選んでください"
+            state.lockedAfterRotate !== null && selectedPiece
+              ? `${pieceLabel(selectedPiece.type)}：旋回後は移動または射撃`
+              : selectedPiece
+                ? `${pieceLabel(selectedPiece.type)}を操作中`
+                : "駒を選んでください"
           }
           notice={notice ?? undefined}
         />

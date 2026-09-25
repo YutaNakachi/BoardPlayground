@@ -21,6 +21,10 @@ export type SenkaiState = {
   gameOver: boolean;
   winner: Player | null;
   winReason: "shoot" | "ram" | null;
+  /** 旋回後、同じ駒で移動または射撃が必須 */
+  lockedAfterRotate: number | null;
+  /** 直後の移動・射撃では旋回権を付与しない */
+  skipRotateGrant: boolean;
 };
 
 const FWD: [number, number][] = [
@@ -133,6 +137,8 @@ export function initialSenkaiSenki(): SenkaiState {
     gameOver: false,
     winner: null,
     winReason: null,
+    lockedAfterRotate: null,
+    skipRotateGrant: false,
   };
 }
 
@@ -289,6 +295,13 @@ export function legalActionsForPiece(
   const piece = state.pieces[pieceId];
   if (!piece || piece.owner !== state.current || state.gameOver) return [];
 
+  if (
+    state.lockedAfterRotate !== null &&
+    pieceId !== state.lockedAfterRotate
+  ) {
+    return [];
+  }
+
   const actions: SenkaiAction[] = [];
   for (const to of legalMovesForPiece(state, pieceId)) {
     actions.push({ kind: "move", to });
@@ -296,8 +309,10 @@ export function legalActionsForPiece(
   if (shootTarget(state, pieceId) !== null) {
     actions.push({ kind: "shoot" });
   }
-  for (const facing of legalRotations(piece)) {
-    actions.push({ kind: "rotate", facing });
+  if (state.lockedAfterRotate === null) {
+    for (const facing of legalRotations(piece)) {
+      actions.push({ kind: "rotate", facing });
+    }
   }
   return actions;
 }
@@ -378,6 +393,7 @@ export function applySenkaiAction(
   let winReason: "shoot" | "ram" | null = null;
 
   const from = cells.findIndex((c) => c === pieceId);
+  const mayGrantRotate = !state.skipRotateGrant;
 
   if (action.kind === "move") {
     const target = pieceAt({ ...state, cells, pieces }, action.to);
@@ -389,11 +405,11 @@ export function applySenkaiAction(
       winReason = ram.winReason;
       if (!winner && pieces[pieceId]) {
         cells[action.to] = pieceId;
-        grantRotateToken(pieces, pieceId);
+        if (mayGrantRotate) grantRotateToken(pieces, pieceId);
       }
     } else {
       cells[action.to] = pieceId;
-      grantRotateToken(pieces, pieceId);
+      if (mayGrantRotate) grantRotateToken(pieces, pieceId);
     }
   } else if (action.kind === "shoot") {
     const targetIdx = shootTarget({ ...state, cells, pieces }, pieceId);
@@ -405,12 +421,22 @@ export function applySenkaiAction(
       winner = piece.owner;
       winReason = "shoot";
     }
-    grantRotateToken(pieces, pieceId);
+    if (mayGrantRotate) grantRotateToken(pieces, pieceId);
   } else if (action.kind === "rotate") {
     pieces[pieceId] = {
       ...piece,
       facing: action.facing,
       rotateToken: false,
+    };
+    return {
+      cells,
+      pieces,
+      current: state.current,
+      gameOver: false,
+      winner: null,
+      winReason: null,
+      lockedAfterRotate: pieceId,
+      skipRotateGrant: true,
     };
   }
 
@@ -422,6 +448,8 @@ export function applySenkaiAction(
       gameOver: true,
       winner,
       winReason,
+      lockedAfterRotate: null,
+      skipRotateGrant: false,
     };
   }
 
@@ -437,6 +465,8 @@ export function applySenkaiAction(
       gameOver: true,
       winner: w ?? null,
       winReason: winReason ?? "shoot",
+      lockedAfterRotate: null,
+      skipRotateGrant: false,
     };
   }
 
@@ -447,6 +477,8 @@ export function applySenkaiAction(
     gameOver: false,
     winner: null,
     winReason: null,
+    lockedAfterRotate: null,
+    skipRotateGrant: false,
   };
 }
 
@@ -462,6 +494,12 @@ export function illegalNotice(
   const piece = state.pieces[pieceId];
   if (!piece) return "駒がありません";
   if (piece.owner !== state.current) return "相手の駒です";
+  if (
+    state.lockedAfterRotate !== null &&
+    pieceId !== state.lockedAfterRotate
+  ) {
+    return "旋回後は同じ駒で移動または射撃してください";
+  }
   if (intent === "rotate" && piece.type === "command") {
     return "指揮車は旋回しません";
   }
