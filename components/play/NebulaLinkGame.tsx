@@ -80,56 +80,52 @@ type HomeEdgeLook = {
   style?: CSSProperties;
 };
 
-function edgeTint(color: string): string {
-  return `${color}${color.startsWith("rgba") ? "" : "88"}`;
+const NEBULA_CORNER_BASE = "rgba(22, 18, 32, 0.88)";
+
+function fillAlpha(color: string, alpha = 0.55): string {
+  if (color.startsWith("rgba")) return color;
+  const hex = color.replace("#", "");
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** 角マス：--nebula-edge-a/b と nebula-corner-*（globals.css） */
-function cornerCellLook(
+/** 角マス：辺の色がその辺側に付く L 形（インライン background-image） */
+function cornerCellStyle(
   row: number,
   col: number,
   fills: Partial<Record<NebulaEdge, string>>
-): Pick<HomeEdgeLook, "className" | "style"> | null {
+): CSSProperties | null {
   const last = NEBULA_SIZE - 1;
   const n = fills.north;
   const s = fills.south;
   const e = fills.east;
   const w = fills.west;
+  const band = "50%";
 
   if (row === 0 && col === 0 && n && w) {
     return {
-      className: "nebula-corner-cell nebula-corner-tl",
-      style: {
-        "--nebula-edge-a": edgeTint(w),
-        "--nebula-edge-b": edgeTint(n),
-      } as CSSProperties,
+      backgroundColor: NEBULA_CORNER_BASE,
+      backgroundImage: `linear-gradient(${fillAlpha(n)}, ${fillAlpha(n)}) top / 100% ${band} no-repeat, linear-gradient(${fillAlpha(w)}, ${fillAlpha(w)}) left / ${band} 100% no-repeat`,
     };
   }
   if (row === 0 && col === last && n && e) {
     return {
-      className: "nebula-corner-cell nebula-corner-tr",
-      style: {
-        "--nebula-edge-a": edgeTint(e),
-        "--nebula-edge-b": edgeTint(n),
-      } as CSSProperties,
+      backgroundColor: NEBULA_CORNER_BASE,
+      backgroundImage: `linear-gradient(${fillAlpha(n)}, ${fillAlpha(n)}) top / 100% ${band} no-repeat, linear-gradient(${fillAlpha(e)}, ${fillAlpha(e)}) right / ${band} 100% no-repeat`,
     };
   }
   if (row === last && col === 0 && s && w) {
     return {
-      className: "nebula-corner-cell nebula-corner-bl",
-      style: {
-        "--nebula-edge-a": edgeTint(w),
-        "--nebula-edge-b": edgeTint(s),
-      } as CSSProperties,
+      backgroundColor: NEBULA_CORNER_BASE,
+      backgroundImage: `linear-gradient(${fillAlpha(s)}, ${fillAlpha(s)}) bottom / 100% ${band} no-repeat, linear-gradient(${fillAlpha(w)}, ${fillAlpha(w)}) left / ${band} 100% no-repeat`,
     };
   }
   if (row === last && col === last && s && e) {
     return {
-      className: "nebula-corner-cell nebula-corner-br",
-      style: {
-        "--nebula-edge-a": edgeTint(e),
-        "--nebula-edge-b": edgeTint(s),
-      } as CSSProperties,
+      backgroundColor: NEBULA_CORNER_BASE,
+      backgroundImage: `linear-gradient(${fillAlpha(s)}, ${fillAlpha(s)}) bottom / 100% ${band} no-repeat, linear-gradient(${fillAlpha(e)}, ${fillAlpha(e)}) right / ${band} 100% no-repeat`,
     };
   }
   return null;
@@ -157,11 +153,11 @@ function nebulaHomeEdgeCellLook(
   }
 
   const fills = edgeFillAt(row, col, playerCount);
-  const corner = cornerCellLook(row, col, fills);
-  if (corner) {
+  const cornerStyle = cornerCellStyle(row, col, fills);
+  if (cornerStyle) {
     return {
-      className: `${ring} ring-white/25 bg-surface-raised/60 ${corner.className}`,
-      style: corner.style,
+      className: `${ring} ring-white/25`,
+      style: cornerStyle,
     };
   }
 
@@ -417,8 +413,8 @@ export function NebulaLinkGame() {
           selectedPieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{
-          gridTemplateColumns: `repeat(${NEBULA_SIZE}, clamp(0.92rem, 3.65vmin, 1.28rem))`,
-          gridTemplateRows: `repeat(${NEBULA_SIZE}, clamp(0.92rem, 3.65vmin, 1.28rem))`,
+          gridTemplateColumns: `repeat(${NEBULA_SIZE}, clamp(0.95rem, 4vmin, 1.3rem))`,
+          gridTemplateRows: `repeat(${NEBULA_SIZE}, clamp(0.95rem, 4vmin, 1.3rem))`,
         }}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
