@@ -148,6 +148,7 @@ import {
   tttRotatingOldest,
   tttWinner,
 } from "./tic-tac-toe";
+import { runSenkaiSenkiChecks } from "./senkai-senki.test";
 
 function assert(cond: boolean, message: string) {
   if (!cond) throw new Error(message);
@@ -1037,6 +1038,7 @@ export function runPlayEngineChecks() {
   checkNebulaLink();
   checkChronoSplit();
   checkStarTrade();
+  runSenkaiSenkiChecks(assert);
 }
 
 if (typeof process !== "undefined" && process.argv[1]?.includes("check-engines")) {
