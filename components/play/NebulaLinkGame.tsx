@@ -75,17 +75,12 @@ function edgeFillAt(
   return fills;
 }
 
-type CornerBandLayer = { className: string; color: string };
-
 type HomeEdgeLook = {
   className: string;
   style?: CSSProperties;
-  cornerBands?: CornerBandLayer[];
 };
 
-const NEBULA_CORNER_BASE = "rgba(22, 18, 32, 0.88)";
-
-function fillAlpha(color: string, alpha = 0.55): string {
+function fillAlpha(color: string, alpha = 0.62): string {
   if (color.startsWith("rgba")) return color;
   const hex = color.replace("#", "");
   const r = Number.parseInt(hex.slice(0, 2), 16);
@@ -94,12 +89,12 @@ function fillAlpha(color: string, alpha = 0.55): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** 角マス：辺側の帯を DOM レイヤーで描画（グラデ多重は端末で消えることがある） */
-function cornerBandLayers(
+/** 角マス：マス対角で2色を斜め分割（左辺側 / 上辺側など辺の色を対応する三角に） */
+function cornerDiagonalStyle(
   row: number,
   col: number,
   fills: Partial<Record<NebulaEdge, string>>
-): CornerBandLayer[] | null {
+): CSSProperties | null {
   const last = NEBULA_SIZE - 1;
   const n = fills.north;
   const s = fills.south;
@@ -107,28 +102,24 @@ function cornerBandLayers(
   const w = fills.west;
 
   if (row === 0 && col === 0 && n && w) {
-    return [
-      { className: "absolute inset-y-0 left-0 w-1/2", color: fillAlpha(w) },
-      { className: "absolute inset-x-0 top-0 z-[1] h-1/2", color: fillAlpha(n) },
-    ];
+    return {
+      background: `linear-gradient(to top right, ${fillAlpha(w)} 50%, ${fillAlpha(n)} 50%)`,
+    };
   }
   if (row === 0 && col === last && n && e) {
-    return [
-      { className: "absolute inset-y-0 right-0 w-1/2", color: fillAlpha(e) },
-      { className: "absolute inset-x-0 top-0 z-[1] h-1/2", color: fillAlpha(n) },
-    ];
+    return {
+      background: `linear-gradient(to top left, ${fillAlpha(e)} 50%, ${fillAlpha(n)} 50%)`,
+    };
   }
   if (row === last && col === 0 && s && w) {
-    return [
-      { className: "absolute inset-y-0 left-0 w-1/2", color: fillAlpha(w) },
-      { className: "absolute inset-x-0 bottom-0 z-[1] h-1/2", color: fillAlpha(s) },
-    ];
+    return {
+      background: `linear-gradient(to bottom right, ${fillAlpha(w)} 50%, ${fillAlpha(s)} 50%)`,
+    };
   }
   if (row === last && col === last && s && e) {
-    return [
-      { className: "absolute inset-y-0 right-0 w-1/2", color: fillAlpha(e) },
-      { className: "absolute inset-x-0 bottom-0 z-[1] h-1/2", color: fillAlpha(s) },
-    ];
+    return {
+      background: `linear-gradient(to bottom left, ${fillAlpha(e)} 50%, ${fillAlpha(s)} 50%)`,
+    };
   }
   return null;
 }
@@ -155,12 +146,11 @@ function nebulaHomeEdgeCellLook(
   }
 
   const fills = edgeFillAt(row, col, playerCount);
-  const bands = cornerBandLayers(row, col, fills);
-  if (bands) {
+  const cornerStyle = cornerDiagonalStyle(row, col, fills);
+  if (cornerStyle) {
     return {
-      className: `${ring} relative overflow-hidden ring-white/25`,
-      style: { backgroundColor: NEBULA_CORNER_BASE },
-      cornerBands: bands,
+      className: `${ring} ring-white/25`,
+      style: cornerStyle,
     };
   }
 
@@ -439,7 +429,6 @@ export function NebulaLinkGame() {
           let emptyClass =
             edgeLook.className || "bg-surface-raised/80 ring-1 ring-surface-border/80";
           const emptyStyle = edgeLook.style;
-          const cornerBandLayers = edgeLook.cornerBands;
           if (inPreview) {
             emptyClass = placementLegal
               ? `${turnStyle.piece} opacity-90 ring-2 ring-white/80 brightness-110`
@@ -463,16 +452,6 @@ export function NebulaLinkGame() {
               aria-label={isCore ? "星核" : empty ? "空マス" : `プレイヤー ${owner + 1}`}
             >
               {isCore ? "★" : null}
-              {empty && !inPreview && cornerBandLayers
-                ? cornerBandLayers.map((band, bandIndex) => (
-                    <span
-                      key={bandIndex}
-                      aria-hidden
-                      className={`pointer-events-none ${band.className}`}
-                      style={{ backgroundColor: band.color }}
-                    />
-                  ))
-                : null}
             </div>
           );
         })}
