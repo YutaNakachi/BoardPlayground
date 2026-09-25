@@ -14,7 +14,6 @@ import {
   legalRotations,
   pieceHasFacing,
   pieceLabel,
-  rotateArrowNeighbor,
   shootTarget,
   ssCoord,
   SS_COLS,
@@ -38,6 +37,14 @@ const FACING_ARROW: Record<Facing, string> = {
   1: "→",
   2: "↓",
   3: "←",
+};
+
+/** 選択中駒マス内に置く旋回タップ領域 */
+const ROTATE_HIT: Record<Facing, string> = {
+  0: "left-1/2 top-0.5 -translate-x-1/2",
+  1: "right-0.5 top-1/2 -translate-y-1/2",
+  2: "left-1/2 bottom-0.5 -translate-x-1/2",
+  3: "left-0.5 top-1/2 -translate-y-1/2",
 };
 
 /** 砲塔は facing 0 で上向き（盤面の row 減少方向） */
@@ -176,18 +183,12 @@ export function SenkaiSenkiGame() {
     return legalRotations(selectedPiece);
   }, [selectedPiece]);
 
-  const rotateArrows = useMemo(() => {
-    if (selectedIndex < 0 || rotateOptions.length === 0) return [];
-    return rotateOptions
-      .map((facing) => ({
-        facing,
-        cell: rotateArrowNeighbor(selectedIndex, facing),
-      }))
-      .filter(
-        (x): x is { facing: Facing; cell: number } =>
-          x.cell !== null && state.cells[x.cell] === null
-      );
-  }, [selectedIndex, rotateOptions, state.cells]);
+  const showRotateControls = Boolean(
+    selectedPiece &&
+      selectedId !== null &&
+      selectedPiece.id === selectedId &&
+      rotateOptions.length > 0
+  );
 
   const apply = useCallback(
     (pieceId: number, action: Parameters<typeof applySenkaiAction>[2]) => {
@@ -328,7 +329,6 @@ export function SenkaiSenkiGame() {
           const isMove = moveTargets.includes(index);
           const isShoot = shootIdx === index;
           const isSelected = cellId !== null && cellId === selectedId;
-          const arrow = rotateArrows.find((a) => a.cell === index);
           const { row } = ssCoord(index);
           const isCenterRow = row === 2;
 
@@ -337,13 +337,7 @@ export function SenkaiSenkiGame() {
               key={index}
               type="button"
               disabled={isGameOver}
-              onClick={() => {
-                if (arrow) {
-                  onRotateArrow(arrow.facing);
-                  return;
-                }
-                onCell(index);
-              }}
+              onClick={() => onCell(index)}
               className={[
                 "relative flex aspect-square items-center justify-center rounded-sm border transition",
                 isCenterRow ? "bg-slate-700/25" : "bg-slate-800/70",
@@ -351,33 +345,48 @@ export function SenkaiSenkiGame() {
                 isSelected ? "ring-2 ring-indigo-400" : "",
                 isMove && !isShoot ? "ring-2 ring-emerald-500/80 bg-emerald-950/40" : "",
                 isShoot ? "ring-2 ring-orange-500 bg-orange-950/50" : "",
-                arrow ? "ring-2 ring-amber-400/90 bg-amber-950/30" : "",
+                showRotateControls && isSelected
+                  ? "ring-2 ring-amber-400/70"
+                  : "",
               ].join(" ")}
             >
-              {arrow ? (
-                <span
-                  className="pointer-events-none text-xl font-bold text-amber-300"
-                  aria-hidden
-                >
-                  {FACING_ARROW[arrow.facing]}
-                </span>
-              ) : null}
-              {piece && !arrow ? (
-                <div
-                  className={[
-                    "relative flex items-center justify-center rounded-sm",
-                    piece.rotateToken && pieceHasFacing(piece.type)
-                      ? "ring-2 ring-cyan-300/90 shadow-[0_0_10px_rgba(34,211,238,0.65),0_0_4px_rgba(250,204,21,0.4)] outline outline-1 outline-cyan-200/50"
-                      : "",
-                  ].join(" ")}
-                  title={
-                    piece.rotateToken && pieceHasFacing(piece.type)
-                      ? "旋回権あり"
-                      : undefined
-                  }
-                >
+              {piece ? (
+                <>
                   <PieceGlyph piece={piece} />
-                </div>
+                  {piece.rotateToken && pieceHasFacing(piece.type) ? (
+                    <span
+                      className={[
+                        "pointer-events-none absolute z-10 text-[11px] leading-none drop-shadow sm:text-xs",
+                        piece.owner === 0
+                          ? "right-0.5 top-0.5"
+                          : "bottom-0.5 left-0.5",
+                      ].join(" ")}
+                      title="旋回権あり"
+                      aria-hidden
+                    >
+                      🔄
+                    </span>
+                  ) : null}
+                  {showRotateControls && isSelected
+                    ? rotateOptions.map((facing) => (
+                        <button
+                          key={facing}
+                          type="button"
+                          aria-label={`${FACING_ARROW[facing]}へ旋回`}
+                          className={[
+                            "absolute z-20 flex h-6 w-6 items-center justify-center rounded-md border border-amber-400/80 bg-amber-950/90 text-sm font-bold text-amber-200 shadow-md hover:bg-amber-900",
+                            ROTATE_HIT[facing],
+                          ].join(" ")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRotateArrow(facing);
+                          }}
+                        >
+                          {FACING_ARROW[facing]}
+                        </button>
+                      ))
+                    : null}
+                </>
               ) : null}
             </button>
           );
@@ -385,7 +394,7 @@ export function SenkaiSenkiGame() {
       </div>
 
       <p className="text-center text-xs text-slate-500">
-        緑＝移動／体当たり · 橙＝射撃 · 琥珀＝旋回（矢印） · 光る縁＝旋回権
+        緑＝移動／体当たり · 橙＝射撃 · 選択中の縁矢印＝旋回 · 🔄＝旋回権
       </p>
     </div>
   );
