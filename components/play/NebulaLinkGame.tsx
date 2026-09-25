@@ -75,9 +75,12 @@ function edgeFillAt(
   return fills;
 }
 
+type CornerBandLayer = { className: string; color: string };
+
 type HomeEdgeLook = {
   className: string;
   style?: CSSProperties;
+  cornerBands?: CornerBandLayer[];
 };
 
 const NEBULA_CORNER_BASE = "rgba(22, 18, 32, 0.88)";
@@ -91,42 +94,41 @@ function fillAlpha(color: string, alpha = 0.55): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** 角マス：辺の色がその辺側に付く L 形（インライン background-image） */
-function cornerCellStyle(
+/** 角マス：辺側の帯を DOM レイヤーで描画（グラデ多重は端末で消えることがある） */
+function cornerBandLayers(
   row: number,
   col: number,
   fills: Partial<Record<NebulaEdge, string>>
-): CSSProperties | null {
+): CornerBandLayer[] | null {
   const last = NEBULA_SIZE - 1;
   const n = fills.north;
   const s = fills.south;
   const e = fills.east;
   const w = fills.west;
-  const band = "50%";
 
   if (row === 0 && col === 0 && n && w) {
-    return {
-      backgroundColor: NEBULA_CORNER_BASE,
-      backgroundImage: `linear-gradient(${fillAlpha(n)}, ${fillAlpha(n)}) top / 100% ${band} no-repeat, linear-gradient(${fillAlpha(w)}, ${fillAlpha(w)}) left / ${band} 100% no-repeat`,
-    };
+    return [
+      { className: "absolute inset-y-0 left-0 w-1/2", color: fillAlpha(w) },
+      { className: "absolute inset-x-0 top-0 z-[1] h-1/2", color: fillAlpha(n) },
+    ];
   }
   if (row === 0 && col === last && n && e) {
-    return {
-      backgroundColor: NEBULA_CORNER_BASE,
-      backgroundImage: `linear-gradient(${fillAlpha(n)}, ${fillAlpha(n)}) top / 100% ${band} no-repeat, linear-gradient(${fillAlpha(e)}, ${fillAlpha(e)}) right / ${band} 100% no-repeat`,
-    };
+    return [
+      { className: "absolute inset-y-0 right-0 w-1/2", color: fillAlpha(e) },
+      { className: "absolute inset-x-0 top-0 z-[1] h-1/2", color: fillAlpha(n) },
+    ];
   }
   if (row === last && col === 0 && s && w) {
-    return {
-      backgroundColor: NEBULA_CORNER_BASE,
-      backgroundImage: `linear-gradient(${fillAlpha(s)}, ${fillAlpha(s)}) bottom / 100% ${band} no-repeat, linear-gradient(${fillAlpha(w)}, ${fillAlpha(w)}) left / ${band} 100% no-repeat`,
-    };
+    return [
+      { className: "absolute inset-y-0 left-0 w-1/2", color: fillAlpha(w) },
+      { className: "absolute inset-x-0 bottom-0 z-[1] h-1/2", color: fillAlpha(s) },
+    ];
   }
   if (row === last && col === last && s && e) {
-    return {
-      backgroundColor: NEBULA_CORNER_BASE,
-      backgroundImage: `linear-gradient(${fillAlpha(s)}, ${fillAlpha(s)}) bottom / 100% ${band} no-repeat, linear-gradient(${fillAlpha(e)}, ${fillAlpha(e)}) right / ${band} 100% no-repeat`,
-    };
+    return [
+      { className: "absolute inset-y-0 right-0 w-1/2", color: fillAlpha(e) },
+      { className: "absolute inset-x-0 bottom-0 z-[1] h-1/2", color: fillAlpha(s) },
+    ];
   }
   return null;
 }
@@ -153,11 +155,12 @@ function nebulaHomeEdgeCellLook(
   }
 
   const fills = edgeFillAt(row, col, playerCount);
-  const cornerStyle = cornerCellStyle(row, col, fills);
-  if (cornerStyle) {
+  const bands = cornerBandLayers(row, col, fills);
+  if (bands) {
     return {
-      className: `${ring} ring-white/25`,
-      style: cornerStyle,
+      className: `${ring} relative overflow-hidden ring-white/25`,
+      style: { backgroundColor: NEBULA_CORNER_BASE },
+      cornerBands: bands,
     };
   }
 
@@ -436,6 +439,7 @@ export function NebulaLinkGame() {
           let emptyClass =
             edgeLook.className || "bg-surface-raised/80 ring-1 ring-surface-border/80";
           const emptyStyle = edgeLook.style;
+          const cornerBandLayers = edgeLook.cornerBands;
           if (inPreview) {
             emptyClass = placementLegal
               ? `${turnStyle.piece} opacity-90 ring-2 ring-white/80 brightness-110`
@@ -459,6 +463,16 @@ export function NebulaLinkGame() {
               aria-label={isCore ? "星核" : empty ? "空マス" : `プレイヤー ${owner + 1}`}
             >
               {isCore ? "★" : null}
+              {empty && !inPreview && cornerBandLayers
+                ? cornerBandLayers.map((band, bandIndex) => (
+                    <span
+                      key={bandIndex}
+                      aria-hidden
+                      className={`pointer-events-none ${band.className}`}
+                      style={{ backgroundColor: band.color }}
+                    />
+                  ))
+                : null}
             </div>
           );
         })}
