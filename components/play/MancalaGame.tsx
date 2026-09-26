@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { flushSync } from "react-dom";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -54,6 +55,14 @@ function findIncreasedPit(prev: number[], curr: number[]): number {
     if (curr[i] > prev[i]) return i;
   }
   return -1;
+}
+
+function pitsEqual(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 async function animateSowFrames(
@@ -137,15 +146,19 @@ export function MancalaGame() {
     setOnlineBoardPits(pits);
   }, []);
 
-  const finalizeOnlineSow = useCallback((finalPits: number[]) => {
-    syncOnlineBoardPits(finalPits);
-    setOnlineAnimPits(null);
-    setIsAnimating(false);
-    setPulseIndex(null);
-    requestAnimationFrame(() => {
-      setSowingPlayer(null);
-    });
-  }, [syncOnlineBoardPits]);
+  const finalizeOnlineSow = useCallback(
+    (finalPits: number[]) => {
+      displayPitsRef.current = finalPits;
+      flushSync(() => {
+        setOnlineBoardPits(finalPits);
+        setOnlineAnimPits(null);
+        setIsAnimating(false);
+        setPulseIndex(null);
+        setSowingPlayer(null);
+      });
+    },
+    []
+  );
 
   const runOnlineSowAnimation = useCallback(
     async (beforePits: number[], player: Player, pit: number) => {
@@ -237,16 +250,28 @@ export function MancalaGame() {
           ? "playing"
           : "setup";
 
+  const onlineBoardPendingSync =
+    isOnline &&
+    onlineState != null &&
+    onlineAnimPits === null &&
+    !pitsEqual(onlineBoardPits, onlineState.pits);
+
+  const pendingSowSeat: Player | null =
+    onlineBoardPendingSync && onlineState.lastMove
+      ? (onlineState.lastMove.seat as Player)
+      : null;
+
+  const onlineSowVisual =
+    isAnimating || sowingPlayer !== null || pendingSowSeat !== null;
+
   const bannerCurrent: Player =
-    sowingPlayer !== null
-      ? sowingPlayer
-      : isOnline && onlineState
-        ? (onlineState.current as Player)
-        : current;
+    sowingPlayer ??
+    pendingSowSeat ??
+    (isOnline && onlineState ? (onlineState.current as Player) : current);
 
   const activeNotice =
     isOnline && onlineState
-      ? isAnimating || sowingPlayer !== null
+      ? onlineSowVisual
         ? null
         : localizePlayerNotice(onlineState.notice, online.players)
       : notice;
@@ -367,7 +392,7 @@ export function MancalaGame() {
     isOnline &&
     online.isMyTurn &&
     activePhase === "playing" &&
-    !isAnimating;
+    !onlineSowVisual;
   const canPlay = isOnline ? canPlayOnline : canPlayLocal;
 
   const displayPits = isOnline
@@ -378,7 +403,10 @@ export function MancalaGame() {
   const logicPits = isOnline ? onlineBoardPits : pits;
 
   const showTurnAction =
-    isOnline && !isAnimating && !online.isMyTurn && activePhase === "playing";
+    isOnline &&
+    !onlineSowVisual &&
+    !online.isMyTurn &&
+    activePhase === "playing";
 
   const replayProps = useMemo(
     () =>
