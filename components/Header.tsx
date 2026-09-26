@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { releaseBodyScrollLock } from "@/lib/body-scroll-lock";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 import { JoinRoomModal } from "@/components/JoinRoomModal";
@@ -154,11 +154,30 @@ export function Header() {
   const { onlineEnabled } = usePlayStats();
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinModalKey, setJoinModalKey] = useState(0);
+  const [joinNavSlug, setJoinNavSlug] = useState<string | null>(null);
   const filterCount = isHome ? countSidebarFilters(filters) : 0;
+
+  const joinNavArrived = useMemo(() => {
+    if (!joinNavSlug) return false;
+    const playPath = `/play/${joinNavSlug}`;
+    return pathname === playPath || pathname.startsWith(`${playPath}/`);
+  }, [joinNavSlug, pathname]);
+
+  const finishJoinNavigation = useCallback(() => {
+    setJoinNavSlug(null);
+    setJoinOpen(false);
+  }, []);
 
   useEffect(() => {
     releaseBodyScrollLock();
   }, [pathname]);
+
+  useEffect(() => {
+    if (!joinNavSlug || !joinNavArrived) return;
+    queueMicrotask(() => {
+      finishJoinNavigation();
+    });
+  }, [joinNavSlug, joinNavArrived, finishJoinNavigation]);
 
   return (
     <>
@@ -238,7 +257,12 @@ export function Header() {
       <JoinRoomModal
         key={joinModalKey}
         open={joinOpen}
-        onClose={() => setJoinOpen(false)}
+        connectingToSlug={joinNavSlug}
+        onJoinNavigate={setJoinNavSlug}
+        onClose={() => {
+          setJoinOpen(false);
+          setJoinNavSlug(null);
+        }}
       />
     </>
   );

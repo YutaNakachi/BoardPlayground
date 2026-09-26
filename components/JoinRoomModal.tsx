@@ -2,8 +2,8 @@
 
 import { joinRoomFlow } from "@/lib/online/join-room-flow";
 import { RoomCodeInput } from "@/components/play/shared/RoomCodeInput";
-import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 const subscribeNoop = () => () => {};
@@ -12,16 +12,21 @@ const getServerSnapshot = () => false;
 
 type Props = {
   open: boolean;
+  connectingToSlug: string | null;
   onClose: () => void;
+  onJoinNavigate: (gameSlug: string) => void;
 };
 
-export function JoinRoomModal({ open, onClose }: Props) {
+export function JoinRoomModal({
+  open,
+  connectingToSlug,
+  onClose,
+  onJoinNavigate,
+}: Props) {
   const router = useRouter();
-  const pathname = usePathname();
   const [displayName, setDisplayName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [connectingToSlug, setConnectingToSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isBusy = loading || connectingToSlug !== null;
   const mounted = useSyncExternalStore(
@@ -29,16 +34,6 @@ export function JoinRoomModal({ open, onClose }: Props) {
     getClientSnapshot,
     getServerSnapshot
   );
-
-  useEffect(() => {
-    if (!connectingToSlug || !open) return;
-    const playPath = `/play/${connectingToSlug}`;
-    if (pathname === playPath || pathname.startsWith(`${playPath}/`)) {
-      setConnectingToSlug(null);
-      setLoading(false);
-      onClose();
-    }
-  }, [pathname, connectingToSlug, open, onClose]);
 
   const close = useCallback(() => {
     if (isBusy) return;
@@ -56,12 +51,12 @@ export function JoinRoomModal({ open, onClose }: Props) {
         displayName,
         navigate: (path) => router.push(path),
       });
-      setConnectingToSlug(result.gameSlug);
+      onJoinNavigate(result.gameSlug);
     } catch (e) {
       setError(e instanceof Error ? e.message : "部屋への参加に失敗しました");
       setLoading(false);
     }
-  }, [displayName, joinCode, router]);
+  }, [displayName, joinCode, onJoinNavigate, router]);
 
   if (!(open || connectingToSlug) || !mounted) return null;
 
