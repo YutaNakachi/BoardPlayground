@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { PageContainer } from "@/components/PageContainer";
 import { PlayCatalogLink } from "@/components/play/PlayCatalogLink";
 import { PlayPageProvider, usePlayPage } from "@/components/play/PlayPageContext";
@@ -52,7 +52,7 @@ function PlayPageShellInner({ game, rules, children }: Props) {
         </div>
       </div>
 
-      {children}
+      <Suspense fallback={null}>{children}</Suspense>
 
       <GameRulesOverlay
         rules={rules}

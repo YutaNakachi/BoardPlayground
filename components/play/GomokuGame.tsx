@@ -133,6 +133,7 @@ export function GomokuGame() {
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
+        initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
       />
     );

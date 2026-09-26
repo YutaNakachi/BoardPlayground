@@ -9,14 +9,16 @@ type CreateRoomResponse = {
   seatIndex: number;
 };
 
-type JoinRoomResponse = {
+export type JoinRoomResponse = {
   roomId: string;
   code: string;
   playerId: string;
   seatIndex: number;
   status: string;
+  gameSlug: string;
   players: RoomPlayer[];
   hostPlayerId: string;
+  gameOptions?: Record<string, unknown>;
 };
 
 export async function createRoom(

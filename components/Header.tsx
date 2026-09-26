@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
+import { JoinRoomModal } from "@/components/JoinRoomModal";
+import { usePlayStats } from "@/components/PlayStatsProvider";
 import { countSidebarFilters } from "@/lib/games";
 import { SiteBrand } from "@/components/SiteBrand";
 import { SITE_NAME } from "@/lib/site";
@@ -31,6 +34,8 @@ export function Header() {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const { open, toggleSidebar, filters } = useCatalogSidebar();
+  const { onlineEnabled } = usePlayStats();
+  const [joinOpen, setJoinOpen] = useState(false);
   const filterCount = isHome ? countSidebarFilters(filters) : 0;
 
   return (
@@ -62,19 +67,31 @@ export function Header() {
           <SiteBrand variant="header" />
         </Link>
 
-        <Link
-          href="/ranking"
-          aria-current={pathname === "/ranking" ? "page" : undefined}
-          className={`ml-auto inline-flex min-h-9 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition sm:min-h-10 ${
-            pathname === "/ranking"
-              ? "border-accent/50 bg-accent/20 text-white"
-              : "border-white/15 bg-white/5 text-slate-300 hover:border-white/25 hover:text-white"
-          }`}
-          aria-label="プレイ回数ランキング"
-        >
-          ランキング
-        </Link>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {onlineEnabled ? (
+            <button
+              type="button"
+              onClick={() => setJoinOpen(true)}
+              className="inline-flex min-h-9 items-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-medium text-slate-300 transition hover:border-white/25 hover:text-white sm:min-h-10"
+            >
+              部屋に入る
+            </button>
+          ) : null}
+          <Link
+            href="/ranking"
+            aria-current={pathname === "/ranking" ? "page" : undefined}
+            className={`inline-flex min-h-9 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition sm:min-h-10 ${
+              pathname === "/ranking"
+                ? "border-accent/50 bg-accent/20 text-white"
+                : "border-white/15 bg-white/5 text-slate-300 hover:border-white/25 hover:text-white"
+            }`}
+            aria-label="プレイ回数ランキング"
+          >
+            ランキング
+          </Link>
+        </div>
       </div>
+      <JoinRoomModal open={joinOpen} onClose={() => setJoinOpen(false)} />
     </header>
   );
 }

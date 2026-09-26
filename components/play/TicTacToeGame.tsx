@@ -224,6 +224,7 @@ export function TicTacToeGame() {
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
+        initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
         extra={mode === "local" ? ruleExtra : undefined}
       />
