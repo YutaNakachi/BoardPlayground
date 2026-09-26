@@ -87,13 +87,15 @@ export function GameRulesView({ rules, onClose, variant = "page" }: Props) {
     const scrollEl = scrollRef.current;
     if (!scrollEl || sectionIds.length === 0) return;
 
-    const rootTop = scrollEl.getBoundingClientRect().top;
+    // scrollToSection と同じ基準線（サイトヘッダー分）で「現在の見出し」を決める
+    const markerLine =
+      scrollEl.getBoundingClientRect().top + getSiteHeaderScrollOffset(scrollEl);
     let nextActive = sectionIds[0];
 
     for (const id of sectionIds) {
       const element = sectionRefs.current.get(id);
       if (!element) continue;
-      if (element.getBoundingClientRect().top - rootTop <= 2) {
+      if (element.getBoundingClientRect().top <= markerLine + 1) {
         nextActive = id;
       }
     }
