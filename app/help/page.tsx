@@ -45,7 +45,7 @@ const FAQ_ITEMS: FaqItem[] = [
         <Link href={SITE_CONTACT_PATH} className="text-accent hover:underline">
           お問い合わせフォーム
         </Link>
-        からご連絡ください。メールアドレスの公開掲示はしていません。
+        からご連絡ください。
       </>
     ),
   },

@@ -7,6 +7,7 @@ import {
   type GameOrigin,
 } from "@/lib/games";
 import {
+  SITE_CONTACT_PATH,
   SITE_HELP_PATH,
   SITE_NAME,
   SITE_RANKING_PATH,
@@ -20,12 +21,13 @@ export const metadata: Metadata = {
 const ORIGIN_KEYS: GameOrigin[] = ["original", "classic", "tribute", "fiction"];
 
 const ORIGIN_GUIDE_DESCRIPTION: Record<GameOrigin, string> = {
-  original: "当サイト独自のゲームです。",
-  classic: "商標を使わない伝統的なゲームです。",
+  original: "当サイトで企画・公開している独自ルールのゲームです。",
+  classic:
+    "長い年月を経て広く知られた、伝統的なボードゲームです。当サイトではルールの説明と、ブラウザで遊べる画面を提供しています。",
   tribute:
     "身近な市販ボードゲームの体験に近いルールを、当サイト独自に再現した非公式プレイ版です。公式商品・権利者提供ではありません。",
   fiction:
-    "漫画・アニメなどの作品に登場するゲームを、作品で分かる範囲をベースにした当サイトのプレイ版です。足りないルールはサイトで補完しています。非公式です。",
+    "漫画・アニメ・映画などの作品に登場するゲームを、作品で分かる範囲をベースにした当サイトのプレイ版です。足りないルールはサイトで補完しています。非公式です。",
 };
 
 export default function GuidePage() {
@@ -82,7 +84,11 @@ export default function GuidePage() {
           <Link href={SITE_HELP_PATH} className="text-accent hover:underline">
             ヘルプ
           </Link>
-          をご覧ください。お問い合わせはフッターのリンクからフォームをご利用ください。
+          をご覧ください。お問い合わせは
+          <Link href={SITE_CONTACT_PATH} className="text-accent hover:underline">
+            お問い合わせフォーム
+          </Link>
+          をご利用ください。
         </p>
       </section>
     </PageContainer>
