@@ -2,7 +2,14 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -125,12 +132,20 @@ export function MancalaGame() {
     onlineBoardPitsRef.current = onlineBoardPits;
   }, [onlineBoardPits]);
 
-  const commitOnlineBoardFromServer = useCallback(() => {
-    const latest = onlineStateRef.current;
-    if (!latest) return;
-    setOnlineBoardPits(latest.pits);
-    displayPitsRef.current = latest.pits;
+  const syncOnlineBoardPits = useCallback((pits: number[]) => {
+    displayPitsRef.current = pits;
+    setOnlineBoardPits(pits);
   }, []);
+
+  const finalizeOnlineSow = useCallback((finalPits: number[]) => {
+    syncOnlineBoardPits(finalPits);
+    setOnlineAnimPits(null);
+    setIsAnimating(false);
+    setPulseIndex(null);
+    requestAnimationFrame(() => {
+      setSowingPlayer(null);
+    });
+  }, [syncOnlineBoardPits]);
 
   const runOnlineSowAnimation = useCallback(
     async (beforePits: number[], player: Player, pit: number) => {
@@ -146,25 +161,25 @@ export function MancalaGame() {
         setPulseIndex(pulse);
       });
 
-      setOnlineAnimPits(null);
-      setSowingPlayer(null);
-      setIsAnimating(false);
-      setPulseIndex(null);
+      const latest = onlineStateRef.current;
+      const finalPits = latest?.pits ?? frames[frames.length - 1];
+      finalizeOnlineSow(finalPits);
     },
-    []
+    [finalizeOnlineSow]
   );
 
   useEffect(() => {
-    if (!isOnline || !onlineState) return;
+    if (!isOnline) return;
+    const state = onlineStateRef.current;
+    if (!state) return;
 
     const v = online.version;
     const prevV = lastVersionRef.current;
 
     if (prevV === null) {
       lastVersionRef.current = v;
-      queueMicrotask(() => {
-        setOnlineBoardPits(onlineState.pits);
-        displayPitsRef.current = onlineState.pits;
+      startTransition(() => {
+        syncOnlineBoardPits(state.pits);
       });
       return;
     }
@@ -178,11 +193,10 @@ export function MancalaGame() {
 
     lastVersionRef.current = v;
 
-    const move = onlineState.lastMove;
+    const move = state.lastMove;
     if (!move) {
-      queueMicrotask(() => {
-        setOnlineBoardPits(onlineState.pits);
-        displayPitsRef.current = onlineState.pits;
+      startTransition(() => {
+        syncOnlineBoardPits(state.pits);
       });
       return;
     }
@@ -191,26 +205,21 @@ export function MancalaGame() {
     const player = move.seat as Player;
     const pit =
       move.pit ??
-      inferMancalaSourcePit(prevPits, onlineState.pits, player) ??
+      inferMancalaSourcePit(prevPits, state.pits, player) ??
       undefined;
 
     if (pit === undefined || !isMancalaPit(player, pit)) {
-      queueMicrotask(() => commitOnlineBoardFromServer());
+      startTransition(() => {
+        syncOnlineBoardPits(state.pits);
+      });
       return;
     }
 
     const token = ++opponentAnimTokenRef.current;
     void runOnlineSowAnimation(prevPits, player, pit).then(() => {
       if (opponentAnimTokenRef.current !== token) return;
-      commitOnlineBoardFromServer();
     });
-  }, [
-    isOnline,
-    online.version,
-    onlineState,
-    runOnlineSowAnimation,
-    commitOnlineBoardFromServer,
-  ]);
+  }, [isOnline, online.version, runOnlineSowAnimation, syncOnlineBoardPits]);
 
   useEffect(() => {
     if (!isOnline || online.phase === "idle") {
@@ -237,7 +246,7 @@ export function MancalaGame() {
 
   const activeNotice =
     isOnline && onlineState
-      ? isAnimating
+      ? isAnimating || sowingPlayer !== null
         ? null
         : localizePlayerNotice(onlineState.notice, online.players)
       : notice;
@@ -271,12 +280,10 @@ export function MancalaGame() {
           setPulseIndex(pulse);
         });
 
-        setOnlineAnimPits(null);
-        setSowingPlayer(null);
-        setIsAnimating(false);
-        setPulseIndex(null);
+        const latest = onlineStateRef.current;
+        const finalPits = latest?.pits ?? frames[frames.length - 1];
+        finalizeOnlineSow(finalPits);
         ownMoveAnimatingRef.current = false;
-        commitOnlineBoardFromServer();
         return;
       }
 
@@ -326,7 +333,7 @@ export function MancalaGame() {
       current,
       isAnimating,
       onlineBoardPits,
-      commitOnlineBoardFromServer,
+      finalizeOnlineSow,
     ]
   );
 
@@ -554,7 +561,7 @@ function Store({
   return (
     <div
       className={`row-span-2 flex min-h-28 flex-col items-center justify-center rounded-2xl border text-lg font-semibold transition-transform duration-150 sm:min-h-32 ${
-        pulsing ? "scale-105 ring-2 ring-amber-300/90" : ""
+        pulsing ? "ring-2 ring-amber-300/80 brightness-110" : ""
       } ${
         active
           ? `${style.sectionBorder} ${style.sectionBg}`
@@ -592,7 +599,7 @@ function PitButton({
       onClick={onClick}
       aria-label={`${label} ${count}個`}
       className={`flex min-h-16 flex-col items-center justify-center rounded-2xl border text-lg font-semibold transition duration-150 sm:min-h-20 ${
-        pulsing ? "scale-105 ring-2 ring-amber-300/90" : ""
+        pulsing ? "ring-2 ring-amber-300/80 brightness-110" : ""
       } ${
         playable
           ? `${style.sectionBorder} ${style.bg} text-white hover:brightness-110`
