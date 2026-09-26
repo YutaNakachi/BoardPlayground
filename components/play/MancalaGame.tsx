@@ -2,7 +2,14 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -77,20 +84,14 @@ export function MancalaGame() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [pulseIndex, setPulseIndex] = useState<number | null>(null);
 
-  const [onlineDisplayPits, setOnlineDisplayPits] = useState<number[]>(
-    initialMancala()
-  );
+  const [onlineAnimPits, setOnlineAnimPits] = useState<number[] | null>(null);
   const [sowingPlayer, setSowingPlayer] = useState<Player | null>(null);
 
-  const displayPitsRef = useRef(onlineDisplayPits);
+  const displayPitsRef = useRef<number[]>(initialMancala());
   const lastVersionRef = useRef<number | null>(null);
   const ownMoveAnimatingRef = useRef(false);
   const onlineStateRef = useRef<MancalaState | null>(null);
   const opponentAnimTokenRef = useRef(0);
-
-  useEffect(() => {
-    displayPitsRef.current = onlineDisplayPits;
-  }, [onlineDisplayPits]);
 
   useEffect(() => {
     if (
@@ -118,10 +119,17 @@ export function MancalaGame() {
   const isOnline =
     online.phase === "playing" || online.phase === "finished";
   const onlineState = online.gameState as MancalaState | null;
+  const serverOnlinePits = onlineState?.pits ?? initialMancala();
 
   useEffect(() => {
     onlineStateRef.current = onlineState;
   }, [onlineState]);
+
+  useLayoutEffect(() => {
+    if (isOnline && !isAnimating && onlineState) {
+      displayPitsRef.current = onlineState.pits;
+    }
+  }, [isOnline, isAnimating, onlineState, serverOnlinePits]);
 
   const runOnlineSowAnimation = useCallback(
     async (beforePits: number[], player: Player, pit: number) => {
@@ -133,15 +141,11 @@ export function MancalaGame() {
       setPulseIndex(null);
 
       await animateSowFrames(frames, (frame, pulse) => {
-        setOnlineDisplayPits(frame);
+        setOnlineAnimPits(frame);
         setPulseIndex(pulse);
       });
 
-      const latest = onlineStateRef.current;
-      if (latest) {
-        setOnlineDisplayPits(latest.pits);
-        displayPitsRef.current = latest.pits;
-      }
+      setOnlineAnimPits(null);
       setSowingPlayer(null);
       setIsAnimating(false);
       setPulseIndex(null);
@@ -157,8 +161,6 @@ export function MancalaGame() {
 
     if (prevV === null) {
       lastVersionRef.current = v;
-      setOnlineDisplayPits(onlineState.pits);
-      displayPitsRef.current = onlineState.pits;
       return;
     }
 
@@ -174,8 +176,6 @@ export function MancalaGame() {
 
     const move = onlineState.lastMove;
     if (!move) {
-      setOnlineDisplayPits(onlineState.pits);
-      displayPitsRef.current = onlineState.pits;
       return;
     }
 
@@ -186,28 +186,21 @@ export function MancalaGame() {
       undefined;
 
     if (pit === undefined || !isMancalaPit(player, pit)) {
-      setOnlineDisplayPits(onlineState.pits);
-      displayPitsRef.current = onlineState.pits;
       return;
     }
 
     const token = ++opponentAnimTokenRef.current;
     void runOnlineSowAnimation(prevPits, player, pit).then(() => {
       if (opponentAnimTokenRef.current !== token) return;
-      const latest = onlineStateRef.current;
-      if (latest) {
-        setOnlineDisplayPits(latest.pits);
-        displayPitsRef.current = latest.pits;
-      }
     });
-  }, [isOnline, online.version, onlineState, online.currentPlayer, runOnlineSowAnimation]);
+  }, [isOnline, online.version, onlineState, runOnlineSowAnimation]);
 
   useEffect(() => {
-    if (!isOnline) {
+    if (!isOnline || online.phase === "idle") {
       lastVersionRef.current = null;
       ownMoveAnimatingRef.current = false;
     }
-  }, [isOnline]);
+  }, [isOnline, online.phase]);
 
   const activePhase =
     isOnline && onlineState
@@ -258,19 +251,11 @@ export function MancalaGame() {
         setPulseIndex(null);
 
         await animateSowFrames(frames, (frame, pulse) => {
-          setOnlineDisplayPits(frame);
+          setOnlineAnimPits(frame);
           setPulseIndex(pulse);
         });
 
-        const latest = onlineStateRef.current;
-        if (latest) {
-          setOnlineDisplayPits(latest.pits);
-          displayPitsRef.current = latest.pits;
-        } else {
-          setOnlineDisplayPits(result.pits);
-          displayPitsRef.current = result.pits;
-        }
-
+        setOnlineAnimPits(null);
         setSowingPlayer(null);
         setIsAnimating(false);
         setPulseIndex(null);
@@ -338,19 +323,17 @@ export function MancalaGame() {
 
   const roomPlayers = isOnline ? online.players : [];
 
-  const reset = useCallback(() => {
+  const leaveToSetup = useCallback(() => {
     online.reset();
     setLocalPhase("setup");
     setMode("local");
     setPlayMode({ mode: "local" });
-    lastVersionRef.current = null;
-    ownMoveAnimatingRef.current = false;
   }, [online.reset, setPlayMode]);
 
   const isSetupScreen =
     (localPhase === "setup" && online.phase === "idle") ||
     online.phase === "waiting";
-  usePlaySetupNavigation(isSetupScreen, reset);
+  usePlaySetupNavigation(isSetupScreen, leaveToSetup);
 
   const isGameOver = activePhase === "game-over" && winners !== null;
   const canPlayLocal = localPhase === "playing" && !isAnimating;
@@ -362,14 +345,25 @@ export function MancalaGame() {
   const canPlay = isOnline ? canPlayOnline : canPlayLocal;
 
   const displayPits = isOnline
-    ? onlineDisplayPits
+    ? onlineAnimPits ?? serverOnlinePits
     : isAnimating
       ? animatedPits
       : pits;
-  const logicPits = isOnline ? onlineDisplayPits : pits;
+  const logicPits = isOnline ? serverOnlinePits : pits;
 
   const showTurnAction =
     isOnline && !isAnimating && !online.isMyTurn && activePhase === "playing";
+
+  const replayProps = useMemo(
+    () =>
+      getOnlineResultReplayProps(
+        isOnline,
+        online.isHost,
+        () => online.handleRematch({ firstPlayer }),
+        leaveToSetup
+      ),
+    [isOnline, online.isHost, online.handleRematch, firstPlayer, leaveToSetup]
+  );
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
@@ -419,13 +413,6 @@ export function MancalaGame() {
       />
     );
   }
-
-  const replayProps = getOnlineResultReplayProps(
-    isOnline,
-    online.isHost,
-    () => online.handleRematch({ firstPlayer }),
-    reset
-  );
 
   return (
     <div className="space-y-6">
