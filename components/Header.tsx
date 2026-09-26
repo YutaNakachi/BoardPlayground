@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { releaseBodyScrollLock } from "@/lib/body-scroll-lock";
 import { useCatalogSidebar } from "@/components/CatalogSidebarContext";
 import { JoinRoomModal } from "@/components/JoinRoomModal";
 import { usePlayStats } from "@/components/PlayStatsProvider";
@@ -154,6 +155,10 @@ export function Header() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinModalKey, setJoinModalKey] = useState(0);
   const filterCount = isHome ? countSidebarFilters(filters) : 0;
+
+  useEffect(() => {
+    releaseBodyScrollLock();
+  }, [pathname]);
 
   return (
     <>

@@ -1,4 +1,3 @@
-import { startJoinNavigationShield } from "@/lib/online/join-navigation-shield";
 import { savePendingJoin } from "@/lib/online/join-room-pending";
 import { joinRoom } from "@/lib/online/room-client";
 import { isOnlineGame } from "@/lib/online/types";
@@ -33,7 +32,6 @@ export async function joinRoomFlow(
     playerId: result.playerId,
     seatIndex: result.seatIndex,
   });
-  startJoinNavigationShield(gameSlug);
   params.navigate(
     `/play/${gameSlug}?room=${encodeURIComponent(result.code)}`
   );

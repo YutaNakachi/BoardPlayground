@@ -6,7 +6,6 @@ import { CatalogSidebarProvider } from "@/components/CatalogSidebarContext";
 import { CatalogUrlSync } from "@/components/CatalogUrlSync";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
-import { JoinNavigationShield } from "@/components/JoinNavigationShield";
 import { PlayStatsProvider } from "@/components/PlayStatsProvider";
 import { SiteSidebar } from "@/components/SiteSidebar";
 import { getAllGames } from "@/lib/games";
@@ -63,7 +62,6 @@ export default function RootLayout({
             <CatalogUrlSync />
           </Suspense>
           <PlayStatsProvider>
-          <JoinNavigationShield />
           <a
             href="#main-content"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"

@@ -11,11 +11,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { joinRoomFlow } from "@/lib/online/join-room-flow";
 import {
-  clearJoinNavigationShield,
-  readJoinNavigationShield,
-  startJoinNavigationShield,
-} from "@/lib/online/join-navigation-shield";
-import {
   clearPendingJoin,
   pendingJoinMatchesUrlCode,
   readPendingJoin,
@@ -339,7 +334,6 @@ export function useOnlineRoom(gameSlug: string) {
         const data = await fetchRoom(roomId);
         if (data.room.gameSlug !== gameSlug) {
           savePendingJoin(resolvedCode, displayName, session);
-          startJoinNavigationShield(data.room.gameSlug);
           reset();
           router.replace(
             `/play/${data.room.gameSlug}?room=${encodeURIComponent(resolvedCode)}`
@@ -352,7 +346,6 @@ export function useOnlineRoom(gameSlug: string) {
       } catch (e) {
         setError(e instanceof Error ? e.message : "部屋への参加に失敗しました");
         clearPendingJoin();
-        clearJoinNavigationShield();
         clearRoomQuery();
       } finally {
         setLoading(false);
@@ -376,24 +369,6 @@ export function useOnlineRoom(gameSlug: string) {
       pendingJoinMatchesUrlCode(joinCodeFromUrl) !== null
     );
   }, [room, phase, joinCodeFromUrl]);
-
-  useEffect(() => {
-    const shieldSlug = readJoinNavigationShield();
-    if (!shieldSlug || shieldSlug !== gameSlug) return;
-    if (!room && phase === "idle") return;
-
-    let outer = 0;
-    let inner = 0;
-    outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => {
-        clearJoinNavigationShield();
-      });
-    });
-    return () => {
-      cancelAnimationFrame(outer);
-      cancelAnimationFrame(inner);
-    };
-  }, [room, phase, gameSlug]);
 
   useEffect(() => {
     if (!joinCodeFromUrl || phase !== "idle" || room) return;

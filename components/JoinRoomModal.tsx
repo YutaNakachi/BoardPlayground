@@ -2,7 +2,7 @@
 
 import { joinRoomFlow } from "@/lib/online/join-room-flow";
 import { RoomCodeInput } from "@/components/play/shared/RoomCodeInput";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
@@ -17,10 +17,13 @@ type Props = {
 
 export function JoinRoomModal({ open, onClose }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [displayName, setDisplayName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [connectingToSlug, setConnectingToSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isBusy = loading || connectingToSlug !== null;
   const mounted = useSyncExternalStore(
     subscribeNoop,
     getClientSnapshot,
@@ -28,42 +31,47 @@ export function JoinRoomModal({ open, onClose }: Props) {
   );
 
   useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
+    if (!connectingToSlug || !open) return;
+    const playPath = `/play/${connectingToSlug}`;
+    if (pathname === playPath || pathname.startsWith(`${playPath}/`)) {
+      setConnectingToSlug(null);
+      setLoading(false);
+      onClose();
+    }
+  }, [pathname, connectingToSlug, open, onClose]);
 
   const close = useCallback(() => {
-    if (loading) return;
+    if (isBusy) return;
     setError(null);
     setLoading(false);
     onClose();
-  }, [loading, onClose]);
+  }, [isBusy, onClose]);
 
   const submit = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      await joinRoomFlow({
+      const result = await joinRoomFlow({
         code: joinCode,
         displayName,
         navigate: (path) => router.push(path),
       });
-      onClose();
+      setConnectingToSlug(result.gameSlug);
     } catch (e) {
       setError(e instanceof Error ? e.message : "部屋への参加に失敗しました");
       setLoading(false);
     }
-  }, [displayName, joinCode, onClose, router]);
+  }, [displayName, joinCode, router]);
 
-  if (!open || !mounted) return null;
+  if (!(open || connectingToSlug) || !mounted) return null;
+
+  const backdropClass = connectingToSlug
+    ? "fixed inset-0 z-[100] overflow-y-auto bg-[#12101a] p-4 sm:p-6"
+    : "fixed inset-0 z-[100] overflow-y-auto bg-black/60 p-4 sm:p-6";
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 p-4 sm:p-6"
+      className={backdropClass}
       role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) close();
@@ -79,11 +87,20 @@ export function JoinRoomModal({ open, onClose }: Props) {
           <h2 id="join-room-title" className="text-lg font-bold text-white">
             部屋に入る
           </h2>
-          <p className="mt-2 text-sm text-slate-400">
-            部屋コードを入力してください。
-          </p>
+          {connectingToSlug ? (
+            <p className="mt-2 text-sm text-slate-400">
+              部屋に接続しています…しばらくお待ちください
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-slate-400">
+              部屋コードを入力してください。
+            </p>
+          )}
 
-          <fieldset disabled={loading} className="mt-6 space-y-4 disabled:opacity-60">
+          <fieldset
+            disabled={isBusy}
+            className="mt-6 space-y-4 disabled:opacity-60"
+          >
             <label className="block text-sm" htmlFor="global-join-code">
               <span className="text-slate-400">部屋コード</span>
               <RoomCodeInput
@@ -117,7 +134,7 @@ export function JoinRoomModal({ open, onClose }: Props) {
             <button
               type="button"
               onClick={close}
-              disabled={loading}
+              disabled={isBusy}
               className="min-h-11 rounded-full border border-white/15 px-4 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-50"
             >
               キャンセル
@@ -125,10 +142,14 @@ export function JoinRoomModal({ open, onClose }: Props) {
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={loading || joinCode.length < 6 || !displayName.trim()}
+              disabled={isBusy || joinCode.length < 6 || !displayName.trim()}
               className="btn-game min-h-11"
             >
-              {loading ? "参加中…" : "参加する"}
+              {connectingToSlug
+                ? "接続中…"
+                : loading
+                  ? "参加中…"
+                  : "参加する"}
             </button>
           </div>
         </div>
