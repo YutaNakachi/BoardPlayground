@@ -25,6 +25,7 @@ import {
   nebulaRowCol,
   nebulaWinners,
   pieceCellsAt,
+  pieceLabel,
   playerHomeEdge,
   type NebulaEdge,
   type NebulaPlacement,
@@ -238,7 +239,7 @@ export function NebulaLinkGame() {
       };
       const next = applyNebulaPlace(game, placement);
       if (!next) {
-        setNotice("ここには置けません");
+        setNotice("ここには置けません。");
         return false;
       }
       setNotice(null);
@@ -256,7 +257,7 @@ export function NebulaLinkGame() {
     if (!game || phase !== "playing") return;
     const next = applyNebulaPass(game);
     if (!next) return;
-    setNotice(`プレイヤー ${game.currentPlayer + 1} がパス`);
+    setNotice(`プレイヤー ${game.currentPlayer + 1} がパスしました。`);
     setSelectedPieceId(null);
     setRotation(0);
     setHoverIndex(null);
@@ -283,7 +284,7 @@ export function NebulaLinkGame() {
         onStart={startGame}
         extra={
           <p className="mt-4 text-xs text-slate-500">
-            2人は北・南、3人は北・東・西（南は中立）、4人は四辺。自分のブロックは角だけでつなげます。
+            2人は北・南、3人は北・東・西（南は中立）、4人は四辺。初手はホーム辺から、2手目以降は自分のブロックに角だけでつなぎます。
           </p>
         }
       />
@@ -376,7 +377,7 @@ export function NebulaLinkGame() {
             <p className="text-slate-400">
               {game.isDraw
                 ? "全員が連続パスし、引き分けになりました。"
-                : "星核をホーム辺側に閉じ込め、ホーム辺につながったループが完成しました。"}
+                : "星核を自分のホーム辺側に閉じ込めました。"}
             </p>
           }
         />
@@ -386,16 +387,16 @@ export function NebulaLinkGame() {
         <TurnBanner
           playerIndex={game.currentPlayer}
           playerLabel={`プレイヤー ${game.currentPlayer + 1}`}
-          stats={`ホーム辺：${homeEdgeLabel(home)} · 合法手 ${legalMoves.length}`}
+          stats={`ホーム辺：${homeEdgeLabel(home)} · 置ける手 ${legalMoves.length}`}
           action={
             notice ??
             (mustPass
-              ? "置ける形がないためパスできます"
+              ? "置ける形がないためパスできます。"
               : selectedPieceId
-                ? "盤上でドラッグして離して配置・同じ形をもう一度押すと回転"
+                ? "盤上で位置を合わせて離すと置きます。同じ形をもう一度押すと回転します。"
                 : rouletteReady
-                  ? "ルーレットの形または単マスを選んでください"
-                  : "ルーレットを回すか、単マスを選んでください")
+                  ? "ルーレットの形または単マスを選んでください。"
+                  : "ルーレットを回すか、単マスを選んでください。")
           }
         />
       )}
@@ -466,7 +467,7 @@ export function NebulaLinkGame() {
               onClick={spinRoulette}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40 sm:text-sm sm:px-4 sm:py-2 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
             >
-              {spinning ? "回転中…" : rouletteReady ? "ルーレット済" : "ルーレット"}
+              {spinning ? "回しています…" : rouletteReady ? "ルーレット済み" : "ルーレット"}
             </button>
             {mustPass ? (
               <button
@@ -484,7 +485,7 @@ export function NebulaLinkGame() {
                     type="button"
                     onClick={() => pickPiece(id)}
                     className={piecePickButtonClass(id)}
-                    aria-label={`形状 ${id}。選択中に再押下で回転`}
+                    aria-label={`${pieceLabel(id)}。選んだ状態でもう一度押すと回転`}
                   >
                     <NebulaPiecePreview
                       pieceId={id}
@@ -498,7 +499,7 @@ export function NebulaLinkGame() {
               type="button"
               onClick={() => pickPiece(NEBULA_MONO_ID)}
               className={piecePickButtonClass(NEBULA_MONO_ID)}
-              aria-label="単マス（常時利用可）。選択中に再押下で回転"
+              aria-label="単マス（いつでも使えます）。選んだ状態でもう一度押すと回転"
             >
               <NebulaPiecePreview
                 pieceId={NEBULA_MONO_ID}
