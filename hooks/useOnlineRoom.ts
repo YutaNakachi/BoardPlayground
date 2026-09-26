@@ -452,6 +452,8 @@ export function useOnlineRoom(gameSlug: string) {
       try {
         await startRoomGame(room.id, myPlayerId, params);
         pendingMoveRef.current = false;
+        moveQueueRef.current = [];
+        setMovePending(false);
         versionRef.current = 0;
         const data = await refreshRoom(room.id);
         setPhase("playing");
@@ -473,10 +475,18 @@ export function useOnlineRoom(gameSlug: string) {
 
   const handleRematch = useCallback(
     async (params?: StartRoomParams) => {
-      if (!room || phase !== "finished") return;
+      if (!room) return;
+      const ended =
+        phase === "finished" ||
+        room.status === "finished" ||
+        gameState?.phase === "game-over";
+      if (!ended) return;
+      moveQueueRef.current = [];
+      pendingMoveRef.current = false;
+      setMovePending(false);
       await handleStart(params);
     },
-    [room, phase, handleStart]
+    [room, phase, gameState, handleStart]
   );
 
   const applyServerMoveSuccess = useCallback(
