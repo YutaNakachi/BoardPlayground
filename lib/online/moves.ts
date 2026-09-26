@@ -106,12 +106,18 @@ export type HexState = {
   winner: Player | null;
 };
 
+export type MancalaLastMove = {
+  seat: number;
+  pit: number;
+};
+
 export type MancalaState = {
   pits: number[];
   current: Player;
   notice: string | null;
   phase: "playing" | "game-over";
   winner: Player | "draw" | null;
+  lastMove: MancalaLastMove | null;
 };
 
 export type GameState =
@@ -208,6 +214,7 @@ export function createInitialState(
         notice: null,
         phase: "playing",
         winner: null,
+        lastMove: null,
       };
   }
 }
@@ -476,6 +483,8 @@ export function applyMove(
       const result = sowMancala(s.pits, s.current as MancalaPlayer, move.pit);
       if (!result) return { error: "Illegal move" };
 
+      const lastMove: MancalaLastMove = { seat: seatIndex, pit: move.pit };
+
       if (result.over) {
         const winner = mancalaWinner(result.pits);
         return {
@@ -485,6 +494,7 @@ export function applyMove(
             notice: null,
             phase: "game-over",
             winner,
+            lastMove,
           },
           currentPlayer: null,
         };
@@ -498,6 +508,7 @@ export function applyMove(
             notice: "最後の石が自分のゴールに入ったので、もう一度",
             phase: "playing",
             winner: null,
+            lastMove,
           },
           currentPlayer: s.current,
         };
@@ -512,6 +523,7 @@ export function applyMove(
           notice,
           phase: "playing",
           winner: null,
+          lastMove,
         },
         currentPlayer: nextPlayer,
       };

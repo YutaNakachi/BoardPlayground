@@ -2,7 +2,7 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
@@ -21,6 +21,7 @@ import {
 import type { PlayMode } from "@/lib/online/types";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
+  inferMancalaSourcePit,
   initialMancala,
   isMancalaPit,
   mancalaSowFrames,
@@ -48,6 +49,20 @@ function findIncreasedPit(prev: number[], curr: number[]): number {
   return -1;
 }
 
+async function animateSowFrames(
+  frames: number[][],
+  onFrame: (pits: number[], pulseIndex: number | null) => void
+): Promise<void> {
+  if (frames.length === 0) return;
+  onFrame(frames[0], null);
+  for (let i = 1; i < frames.length; i++) {
+    await sleep(SOW_STEP_MS);
+    onFrame(frames[i], findIncreasedPit(frames[i - 1], frames[i]));
+  }
+  await sleep(120);
+  onFrame(frames[frames.length - 1], null);
+}
+
 export function MancalaGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const { onlineEnabled } = usePlayStats();
@@ -61,6 +76,21 @@ export function MancalaGame() {
   const [notice, setNotice] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [pulseIndex, setPulseIndex] = useState<number | null>(null);
+
+  const [onlineDisplayPits, setOnlineDisplayPits] = useState<number[]>(
+    initialMancala()
+  );
+  const [sowingPlayer, setSowingPlayer] = useState<Player | null>(null);
+
+  const displayPitsRef = useRef(onlineDisplayPits);
+  const lastVersionRef = useRef<number | null>(null);
+  const ownMoveAnimatingRef = useRef(false);
+  const onlineStateRef = useRef<MancalaState | null>(null);
+  const opponentAnimTokenRef = useRef(0);
+
+  useEffect(() => {
+    displayPitsRef.current = onlineDisplayPits;
+  }, [onlineDisplayPits]);
 
   useEffect(() => {
     if (
@@ -89,14 +119,96 @@ export function MancalaGame() {
     online.phase === "playing" || online.phase === "finished";
   const onlineState = online.gameState as MancalaState | null;
 
-  const activePits =
-    isOnline && onlineState ? onlineState.pits : isAnimating ? animatedPits : pits;
-  const activeCurrent =
-    isOnline && onlineState ? (onlineState.current as Player) : current;
-  const activeNotice =
-    isOnline && onlineState
-      ? localizePlayerNotice(onlineState.notice, online.players)
-      : notice;
+  useEffect(() => {
+    onlineStateRef.current = onlineState;
+  }, [onlineState]);
+
+  const runOnlineSowAnimation = useCallback(
+    async (beforePits: number[], player: Player, pit: number) => {
+      const frames = mancalaSowFrames(beforePits, player, pit);
+      if (!frames) return;
+
+      setIsAnimating(true);
+      setSowingPlayer(player);
+      setPulseIndex(null);
+
+      await animateSowFrames(frames, (frame, pulse) => {
+        setOnlineDisplayPits(frame);
+        setPulseIndex(pulse);
+      });
+
+      const latest = onlineStateRef.current;
+      if (latest) {
+        setOnlineDisplayPits(latest.pits);
+        displayPitsRef.current = latest.pits;
+      }
+      setSowingPlayer(null);
+      setIsAnimating(false);
+      setPulseIndex(null);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!isOnline || !onlineState) return;
+
+    const v = online.version;
+    const prevV = lastVersionRef.current;
+
+    if (prevV === null) {
+      lastVersionRef.current = v;
+      setOnlineDisplayPits(onlineState.pits);
+      displayPitsRef.current = onlineState.pits;
+      return;
+    }
+
+    if (v === prevV) return;
+
+    if (ownMoveAnimatingRef.current) {
+      lastVersionRef.current = v;
+      return;
+    }
+
+    const prevPits = displayPitsRef.current;
+    lastVersionRef.current = v;
+
+    const move = onlineState.lastMove;
+    if (!move) {
+      setOnlineDisplayPits(onlineState.pits);
+      displayPitsRef.current = onlineState.pits;
+      return;
+    }
+
+    const player = move.seat as Player;
+    const pit =
+      move.pit ??
+      inferMancalaSourcePit(prevPits, onlineState.pits, player) ??
+      undefined;
+
+    if (pit === undefined || !isMancalaPit(player, pit)) {
+      setOnlineDisplayPits(onlineState.pits);
+      displayPitsRef.current = onlineState.pits;
+      return;
+    }
+
+    const token = ++opponentAnimTokenRef.current;
+    void runOnlineSowAnimation(prevPits, player, pit).then(() => {
+      if (opponentAnimTokenRef.current !== token) return;
+      const latest = onlineStateRef.current;
+      if (latest) {
+        setOnlineDisplayPits(latest.pits);
+        displayPitsRef.current = latest.pits;
+      }
+    });
+  }, [isOnline, online.version, onlineState, online.currentPlayer, runOnlineSowAnimation]);
+
+  useEffect(() => {
+    if (!isOnline) {
+      lastVersionRef.current = null;
+      ownMoveAnimatingRef.current = false;
+    }
+  }, [isOnline]);
+
   const activePhase =
     isOnline && onlineState
       ? onlineState.phase
@@ -106,13 +218,66 @@ export function MancalaGame() {
           ? "playing"
           : "setup";
 
+  const bannerCurrent: Player =
+    sowingPlayer !== null
+      ? sowingPlayer
+      : isOnline && onlineState
+        ? (onlineState.current as Player)
+        : current;
+
+  const activeNotice =
+    isOnline && onlineState
+      ? isAnimating
+        ? null
+        : localizePlayerNotice(onlineState.notice, online.players)
+      : notice;
+
   const playPit = useCallback(
     async (index: number) => {
       if (isOnline) {
-        if (!online.isMyTurn || activePhase !== "playing") return;
-        void online.handleMove({ type: "mancala", pit: index });
+        if (
+          !online.isMyTurn ||
+          activePhase !== "playing" ||
+          isAnimating ||
+          online.mySeat < 0
+        ) {
+          return;
+        }
+
+        const beforePits = displayPitsRef.current;
+        const player = online.mySeat as Player;
+        const frames = mancalaSowFrames(beforePits, player, index);
+        const result = sowMancala(beforePits, player, index);
+        if (!frames || !result) return;
+
+        ownMoveAnimatingRef.current = true;
+        online.handleMove({ type: "mancala", pit: index });
+
+        setIsAnimating(true);
+        setSowingPlayer(player);
+        setPulseIndex(null);
+
+        await animateSowFrames(frames, (frame, pulse) => {
+          setOnlineDisplayPits(frame);
+          setPulseIndex(pulse);
+        });
+
+        const latest = onlineStateRef.current;
+        if (latest) {
+          setOnlineDisplayPits(latest.pits);
+          displayPitsRef.current = latest.pits;
+        } else {
+          setOnlineDisplayPits(result.pits);
+          displayPitsRef.current = result.pits;
+        }
+
+        setSowingPlayer(null);
+        setIsAnimating(false);
+        setPulseIndex(null);
+        ownMoveAnimatingRef.current = false;
         return;
       }
+
       if (localPhase !== "playing" || isAnimating) return;
 
       const frames = mancalaSowFrames(pits, current, index);
@@ -178,6 +343,8 @@ export function MancalaGame() {
     setLocalPhase("setup");
     setMode("local");
     setPlayMode({ mode: "local" });
+    lastVersionRef.current = null;
+    ownMoveAnimatingRef.current = false;
   }, [online.reset, setPlayMode]);
 
   const isSetupScreen =
@@ -188,10 +355,21 @@ export function MancalaGame() {
   const isGameOver = activePhase === "game-over" && winners !== null;
   const canPlayLocal = localPhase === "playing" && !isAnimating;
   const canPlayOnline =
-    isOnline && online.isMyTurn && activePhase === "playing";
+    isOnline &&
+    online.isMyTurn &&
+    activePhase === "playing" &&
+    !isAnimating;
   const canPlay = isOnline ? canPlayOnline : canPlayLocal;
-  const displayPits = isOnline ? activePits : isAnimating ? animatedPits : pits;
-  const logicPits = isOnline ? activePits : pits;
+
+  const displayPits = isOnline
+    ? onlineDisplayPits
+    : isAnimating
+      ? animatedPits
+      : pits;
+  const logicPits = isOnline ? onlineDisplayPits : pits;
+
+  const showTurnAction =
+    isOnline && !isAnimating && !online.isMyTurn && activePhase === "playing";
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
@@ -290,12 +468,10 @@ export function MancalaGame() {
 
       {!isGameOver && (
         <TurnBanner
-          playerIndex={activeCurrent}
-          playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+          playerIndex={bannerCurrent}
+          playerLabel={formatSeatLabel(roomPlayers, bannerCurrent)}
           notice={activeNotice ?? undefined}
-          action={
-            isOnline && !online.isMyTurn ? "相手の手番です" : undefined
-          }
+          action={showTurnAction ? "相手の手番です" : undefined}
         />
       )}
 
@@ -306,8 +482,8 @@ export function MancalaGame() {
             isOnline ? `${formatSeatLabel(roomPlayers, 1)} ゴール` : "P2 ゴール"
           }
           playerIndex={1}
-          active={activeCurrent === 1}
-          pulsing={!isOnline && pulseIndex === 13}
+          active={bannerCurrent === 1}
+          pulsing={pulseIndex === 13}
         />
         {P2_PITS.map((pitIndex) => (
           <PitButton
@@ -317,11 +493,11 @@ export function MancalaGame() {
             playerIndex={1}
             playable={
               canPlay &&
-              activeCurrent === 1 &&
+              (isOnline ? online.mySeat === 1 : bannerCurrent === 1) &&
               isMancalaPit(1, pitIndex) &&
               logicPits[pitIndex] > 0
             }
-            pulsing={!isOnline && pulseIndex === pitIndex}
+            pulsing={pulseIndex === pitIndex}
             onClick={() => playPit(pitIndex)}
           />
         ))}
@@ -331,8 +507,8 @@ export function MancalaGame() {
             isOnline ? `${formatSeatLabel(roomPlayers, 0)} ゴール` : "P1 ゴール"
           }
           playerIndex={0}
-          active={activeCurrent === 0}
-          pulsing={!isOnline && pulseIndex === 6}
+          active={bannerCurrent === 0}
+          pulsing={pulseIndex === 6}
         />
         {P1_PITS.map((pitIndex) => (
           <PitButton
@@ -342,11 +518,11 @@ export function MancalaGame() {
             playerIndex={0}
             playable={
               canPlay &&
-              activeCurrent === 0 &&
+              (isOnline ? online.mySeat === 0 : bannerCurrent === 0) &&
               isMancalaPit(0, pitIndex) &&
               logicPits[pitIndex] > 0
             }
-            pulsing={!isOnline && pulseIndex === pitIndex}
+            pulsing={pulseIndex === pitIndex}
             onClick={() => playPit(pitIndex)}
           />
         ))}
