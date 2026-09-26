@@ -1,7 +1,7 @@
 import type { GameState } from "./moves";
 
-function dotsBoxesDrawnEdgeCount(state: GameState): number | null {
-  if (!("edgeOwners" in state)) return null;
+function dotsBoxesDrawnEdgeCount(state: GameState | null): number | null {
+  if (!state || !("edgeOwners" in state)) return null;
   const edgeOwners = (state as { edgeOwners?: Record<string, unknown> })
     .edgeOwners;
   if (!edgeOwners) return null;
