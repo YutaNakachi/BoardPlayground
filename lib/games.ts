@@ -83,7 +83,7 @@ const games: GameMeta[] = [
     slug: "nebula-link",
     title: "ネビュラ・リンク",
     description:
-      "21×21の星雲盤でルーレットの形状ブロックを置き、星核を自分のホーム辺側に閉じ込めたら勝ち。単マスはいつでも使えます。",
+      "21×21の盤面で、様々な形状のブロックを配置し、星核を自分のホーム辺側に閉じ込めたら勝ち。",
     origin: "original",
     players: "2〜4",
     playersMin: 2,
