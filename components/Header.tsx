@@ -8,7 +8,12 @@ import { JoinRoomModal } from "@/components/JoinRoomModal";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { countSidebarFilters } from "@/lib/games";
 import { SiteBrand } from "@/components/SiteBrand";
-import { SITE_NAME } from "@/lib/site";
+import {
+  SITE_CONTACT_PATH,
+  SITE_GUIDE_PATH,
+  SITE_NAME,
+  SITE_RANKING_PATH,
+} from "@/lib/site";
 
 function MenuIcon() {
   return (
@@ -57,6 +62,47 @@ function JoinRoomIcon() {
   );
 }
 
+function GuideIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden
+      className="text-current"
+    >
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M10 9v4M10 7h.01"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ContactIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden
+      className="text-current"
+    >
+      <path
+        d="M4 6.5 10 11l6-4.5M4 6.5h12V14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6.5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function RankingIcon() {
   return (
     <svg
@@ -85,6 +131,12 @@ function RankingIcon() {
 
 const headerActionClass =
   "inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border text-slate-300 transition hover:border-white/25 hover:text-white sm:min-h-10 sm:min-w-10 sm:rounded-full sm:px-3.5";
+
+function headerNavLinkClass(active: boolean) {
+  return `${headerActionClass} ${
+    active ? "border-accent/50 bg-accent/20 text-white" : "border-white/15 bg-white/5"
+  }`;
+}
 
 export function Header() {
   const pathname = usePathname();
@@ -124,7 +176,29 @@ export function Header() {
             <SiteBrand variant="header" />
           </Link>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+            <Link
+              href={SITE_GUIDE_PATH}
+              aria-current={pathname === SITE_GUIDE_PATH ? "page" : undefined}
+              className={headerNavLinkClass(pathname === SITE_GUIDE_PATH)}
+              aria-label="このサイトについて"
+              title="このサイトについて"
+            >
+              <GuideIcon />
+              <span className="hidden max-w-[9rem] truncate text-sm font-medium lg:inline">
+                このサイトについて
+              </span>
+            </Link>
+            <Link
+              href={SITE_CONTACT_PATH}
+              aria-current={pathname === SITE_CONTACT_PATH ? "page" : undefined}
+              className={headerNavLinkClass(pathname === SITE_CONTACT_PATH)}
+              aria-label="お問い合わせ"
+              title="お問い合わせ"
+            >
+              <ContactIcon />
+              <span className="hidden text-sm font-medium sm:inline">お問い合わせ</span>
+            </Link>
             {onlineEnabled ? (
               <button
                 type="button"
@@ -138,13 +212,9 @@ export function Header() {
               </button>
             ) : null}
             <Link
-              href="/ranking"
-              aria-current={pathname === "/ranking" ? "page" : undefined}
-              className={`${headerActionClass} ${
-                pathname === "/ranking"
-                  ? "border-accent/50 bg-accent/20 text-white"
-                  : "border-white/15 bg-white/5"
-              }`}
+              href={SITE_RANKING_PATH}
+              aria-current={pathname === SITE_RANKING_PATH ? "page" : undefined}
+              className={headerNavLinkClass(pathname === SITE_RANKING_PATH)}
               aria-label="プレイ回数ランキング"
               title="ランキング"
             >
