@@ -33,6 +33,7 @@ export const ONLINE_GAME_SLUGS = [
   "gravity-four",
   "nim",
   "hex",
+  "mancala",
 ] as const;
 
 export type OnlineGameSlug = (typeof ONLINE_GAME_SLUGS)[number];

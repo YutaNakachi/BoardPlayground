@@ -83,6 +83,7 @@ export function validateGameOptions(
     case "gravity-four":
     case "nim":
     case "hex":
+    case "mancala":
       return parseCommonGameOptions(raw);
   }
 }
