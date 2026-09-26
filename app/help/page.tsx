@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { BackToHomeLink } from "@/components/BackToHomeLink";
 import { PageContainer } from "@/components/PageContainer";
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   description: `${SITE_NAME}のよくある質問（ランキング・オンライン部屋・表示について）`,
 };
 
-type FaqItem = { question: string; answer: string };
+type FaqItem = { question: string; answer: ReactNode };
 
 const FAQ_ITEMS: FaqItem[] = [
   {
@@ -29,7 +30,7 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: "「オンライン可」の表示が出ない・オンラインタブがない",
     answer:
-      "オンライン部屋はサーバー（Supabase 等）の設定が有効なときだけ利用できます。未設定や障害時は、一覧の「オンライン可」バッジ・絞り込み・プレイ画面のオンライン切替は表示されません。ローカルプレイは引き続き利用できます。",
+      "オンライン部屋はサーバーの設定が有効なときだけ利用できます。未設定や障害時は、一覧の「オンライン可」バッジ・絞り込み・プレイ画面のオンライン切替は表示されません。ローカルプレイは引き続き利用できます。",
   },
   {
     question: "同じ端末で2人で遊ぶには？",
@@ -38,7 +39,15 @@ const FAQ_ITEMS: FaqItem[] = [
   },
   {
     question: "不具合や要望を伝えたい",
-    answer: `サイト上のお問い合わせフォーム（${SITE_CONTACT_PATH}）からご連絡ください。メールアドレスの公開掲示はしていません。`,
+    answer: (
+      <>
+        サイト上の
+        <Link href={SITE_CONTACT_PATH} className="text-accent hover:underline">
+          お問い合わせフォーム
+        </Link>
+        からご連絡ください。メールアドレスの公開掲示はしていません。
+      </>
+    ),
   },
 ];
 

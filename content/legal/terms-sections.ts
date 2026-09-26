@@ -52,4 +52,4 @@ export const TERMS_SECTIONS: LegalSection[] = [
   },
 ];
 
-export const TERMS_LAST_UPDATED = "2026年3月26日";
+export const TERMS_LAST_UPDATED = "2026年9月26日";

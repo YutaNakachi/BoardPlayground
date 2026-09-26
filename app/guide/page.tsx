@@ -19,6 +19,15 @@ export const metadata: Metadata = {
 
 const ORIGIN_KEYS: GameOrigin[] = ["original", "classic", "tribute", "fiction"];
 
+const ORIGIN_GUIDE_DESCRIPTION: Record<GameOrigin, string> = {
+  original: "当サイト独自のゲームです。",
+  classic: "商標を使わない伝統的なゲームです。",
+  tribute:
+    "身近な市販ボードゲームの体験に近いルールを、当サイト独自に再現した非公式プレイ版です。公式商品・権利者提供ではありません。",
+  fiction:
+    "漫画・アニメなどの作品に登場するゲームを、作品で分かる範囲をベースにした当サイトのプレイ版です。足りないルールはサイトで補完しています。非公式です。",
+};
+
 export default function GuidePage() {
   return (
     <PageContainer>
@@ -31,7 +40,9 @@ export default function GuidePage() {
       <section className="mt-10 space-y-3">
         <h2 className="text-xl font-semibold text-white">遊び方の基本</h2>
         <ul className="list-disc space-y-2 pl-5 leading-relaxed text-slate-300">
-          <li>トップの一覧からゲームを選び、「遊ぶ！」またはルールページからプレイ画面へ進みます。</li>
+          <li>
+            トップの一覧でゲームカードを選ぶと、プレイの準備画面へ進みます。ルールを先に読む場合はカード上の「ルール」から詳細ページへ行き、そこから「遊ぶ！」でプレイ画面へ進めます。
+          </li>
           <li>同じ画面で順番に操作する<strong className="font-medium text-slate-200">ローカルプレイ</strong>が基本です。2人以上で1台の端末を共有して遊べます。</li>
           <li>対応ゲームでは、プレイ画面で<strong className="font-medium text-slate-200">オンライン</strong>を選び、部屋コードで離れた相手と対戦できます（サイトのオンライン機能が有効な場合）。</li>
         </ul>
@@ -47,11 +58,7 @@ export default function GuidePage() {
             <li key={key}>
               <span className="font-medium text-slate-200">{ORIGIN_LABEL[key]}</span>
               —{" "}
-              {key === "tribute" || key === "fiction"
-                ? "非公式のプレイ版です。公式商品・権利者提供ではありません。"
-                : key === "classic"
-                  ? "商標を使わない伝統的なゲームです。"
-                  : "当サイト独自のゲームです。"}
+              {ORIGIN_GUIDE_DESCRIPTION[key]}
             </li>
           ))}
         </ul>

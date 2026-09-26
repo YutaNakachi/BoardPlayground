@@ -54,4 +54,4 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   },
 ];
 
-export const PRIVACY_LAST_UPDATED = "2026年3月26日";
+export const PRIVACY_LAST_UPDATED = "2026年9月26日";
