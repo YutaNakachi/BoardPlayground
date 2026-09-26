@@ -143,13 +143,17 @@ export function useOnlineRoom(gameSlug: string) {
     const data = await fetchRoom(roomId);
     setRoom(data.room);
     if (data.gameState) {
+      const remoteState = data.gameState.state as GameState;
       applyRemoteGameState(
-        data.gameState.state as GameState,
+        remoteState,
         data.gameState.version,
         data.gameState.currentPlayer
       );
-      if (data.room.status === "playing") setPhase("playing");
-      if (data.room.status === "finished") setPhase("finished");
+      if (remoteState.phase === "game-over" || data.room.status === "finished") {
+        setPhase("finished");
+      } else if (data.room.status === "playing") {
+        setPhase("playing");
+      }
     } else if (data.room.status === "waiting") {
       setPhase("waiting");
     }
@@ -535,19 +539,15 @@ export function useOnlineRoom(gameSlug: string) {
 
       void sendRoomMove(room.id, myPlayerId, move, expectedVersion)
         .then((serverResult) => {
-          versionRef.current = serverResult.version;
-          setVersion(serverResult.version);
-
           if (moveQueueRef.current.length > 0) {
-            broadcastGameState(
-              serverResult.state as GameState,
-              serverResult.version,
-              serverResult.currentPlayer
-            );
+            // Peers already received newer optimistic broadcasts; stale server rows rewind the board.
             const nextMove = moveQueueRef.current.shift()!;
             sendMovePipelineRef.current(nextMove, serverResult.version);
             return;
           }
+
+          versionRef.current = serverResult.version;
+          setVersion(serverResult.version);
 
           applyServerMoveSuccess(
             serverResult.state as GameState,

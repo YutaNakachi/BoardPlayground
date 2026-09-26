@@ -16,18 +16,57 @@ function isGameOverState(state: GameState | null): boolean {
   return state?.phase === "game-over";
 }
 
+function isRematchStart(
+  remoteVersion: number,
+  remoteState: GameState,
+  currentState: GameState | null
+): boolean {
+  return (
+    remoteVersion === 1 &&
+    remoteState.phase === "playing" &&
+    isGameOverState(currentState)
+  );
+}
+
 export function shouldApplyRemoteGameVersion(
   remoteVersion: number,
   currentVersion: number,
   remoteState: GameState,
   currentState: GameState | null
 ): boolean {
-  if (remoteVersion >= currentVersion) return true;
+  if (isRematchStart(remoteVersion, remoteState, currentState)) {
+    return true;
+  }
+
+  if (isGameOverState(currentState) && remoteState.phase === "playing") {
+    return false;
+  }
+
+  const remoteEdges = dotsBoxesDrawnEdgeCount(remoteState);
+  const currentEdges = dotsBoxesDrawnEdgeCount(currentState);
+
+  if (remoteVersion >= currentVersion) {
+    if (
+      remoteEdges !== null &&
+      currentEdges !== null &&
+      remoteEdges < currentEdges
+    ) {
+      return false;
+    }
+    if (
+      remoteVersion === currentVersion &&
+      isGameOverState(currentState) &&
+      remoteState.phase === "playing"
+    ) {
+      return false;
+    }
+    return true;
+  }
+
   if (isGameOverState(remoteState) && !isGameOverState(currentState)) {
     return true;
   }
-  const remoteEdges = dotsBoxesDrawnEdgeCount(remoteState);
-  const currentEdges = dotsBoxesDrawnEdgeCount(currentState);
+
   if (
     remoteEdges !== null &&
     currentEdges !== null &&
@@ -35,9 +74,6 @@ export function shouldApplyRemoteGameVersion(
   ) {
     return true;
   }
-  return (
-    remoteVersion === 1 &&
-    remoteState.phase === "playing" &&
-    currentState?.phase === "game-over"
-  );
+
+  return false;
 }
