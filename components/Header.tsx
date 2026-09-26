@@ -134,7 +134,7 @@ const headerActionClass =
   "group relative inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-xl border text-slate-300 transition hover:border-white/25 hover:text-white sm:min-h-10 sm:min-w-10 sm:rounded-full";
 
 const headerTooltipClass =
-  "pointer-events-none absolute right-0 top-full z-50 mt-2 whitespace-nowrap rounded-lg border border-white/10 bg-surface-raised px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100";
+  "pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-surface-raised px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100";
 
 function HeaderTooltip({ label }: { label: string }) {
   return <span className={headerTooltipClass}>{label}</span>;
