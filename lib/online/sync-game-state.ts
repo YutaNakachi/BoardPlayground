@@ -12,6 +12,10 @@ function dotsBoxesDrawnEdgeCount(state: GameState | null): number | null {
  * 同一部屋での再戦時、version が 1 に戻る更新を前ゲームの終局状態より優先して適用する。
  * 再戦後に着手済み（currentVersion > 1）のときは遅延した version 1 を無視する。
  */
+function isGameOverState(state: GameState | null): boolean {
+  return state?.phase === "game-over";
+}
+
 export function shouldApplyRemoteGameVersion(
   remoteVersion: number,
   currentVersion: number,
@@ -19,6 +23,9 @@ export function shouldApplyRemoteGameVersion(
   currentState: GameState | null
 ): boolean {
   if (remoteVersion >= currentVersion) return true;
+  if (isGameOverState(remoteState) && !isGameOverState(currentState)) {
+    return true;
+  }
   const remoteEdges = dotsBoxesDrawnEdgeCount(remoteState);
   const currentEdges = dotsBoxesDrawnEdgeCount(currentState);
   if (

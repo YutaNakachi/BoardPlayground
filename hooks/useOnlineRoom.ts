@@ -105,7 +105,12 @@ export function useOnlineRoom(gameSlug: string) {
       remoteVersion: number,
       remoteCurrentPlayer: number | null
     ) => {
-      if (pendingMoveRef.current) return;
+      const remoteGameOver = state.phase === "game-over";
+      if (pendingMoveRef.current) {
+        if (!remoteGameOver) return;
+        pendingMoveRef.current = false;
+        setMovePending(false);
+      }
       if (
         !shouldApplyRemoteGameVersion(
           remoteVersion,
