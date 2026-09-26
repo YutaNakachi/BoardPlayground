@@ -74,11 +74,12 @@ function GuideIcon() {
     >
       <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
       <path
-        d="M10 9v4M10 7h.01"
+        d="M7.75 7.9a2.75 2.75 0 0 1 4.35-.15c.85.85.75 2.1-.2 2.75-.55.4-1 .75-1 1.35V12.5"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
+      <circle cx="10" cy="14.25" r="0.85" fill="currentColor" />
     </svg>
   );
 }
@@ -130,7 +131,14 @@ function RankingIcon() {
 }
 
 const headerActionClass =
-  "inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border text-slate-300 transition hover:border-white/25 hover:text-white sm:min-h-10 sm:min-w-10 sm:rounded-full sm:px-3.5";
+  "group relative inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-xl border text-slate-300 transition hover:border-white/25 hover:text-white sm:min-h-10 sm:min-w-10 sm:rounded-full";
+
+const headerTooltipClass =
+  "pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-surface-raised px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100";
+
+function HeaderTooltip({ label }: { label: string }) {
+  return <span className={headerTooltipClass}>{label}</span>;
+}
 
 function headerNavLinkClass(active: boolean) {
   return `${headerActionClass} ${
@@ -177,38 +185,15 @@ export function Header() {
           </Link>
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
-            <Link
-              href={SITE_GUIDE_PATH}
-              aria-current={pathname === SITE_GUIDE_PATH ? "page" : undefined}
-              className={headerNavLinkClass(pathname === SITE_GUIDE_PATH)}
-              aria-label="このサイトについて"
-              title="このサイトについて"
-            >
-              <GuideIcon />
-              <span className="hidden max-w-[9rem] truncate text-sm font-medium lg:inline">
-                このサイトについて
-              </span>
-            </Link>
-            <Link
-              href={SITE_CONTACT_PATH}
-              aria-current={pathname === SITE_CONTACT_PATH ? "page" : undefined}
-              className={headerNavLinkClass(pathname === SITE_CONTACT_PATH)}
-              aria-label="お問い合わせ"
-              title="お問い合わせ"
-            >
-              <ContactIcon />
-              <span className="hidden text-sm font-medium sm:inline">お問い合わせ</span>
-            </Link>
             {onlineEnabled ? (
               <button
                 type="button"
                 onClick={() => setJoinOpen(true)}
                 className={`${headerActionClass} border-white/15 bg-white/5`}
                 aria-label="部屋に入る"
-                title="部屋に入る"
               >
                 <JoinRoomIcon />
-                <span className="hidden text-sm font-medium sm:inline">部屋に入る</span>
+                <HeaderTooltip label="部屋に入る" />
               </button>
             ) : null}
             <Link
@@ -216,10 +201,27 @@ export function Header() {
               aria-current={pathname === SITE_RANKING_PATH ? "page" : undefined}
               className={headerNavLinkClass(pathname === SITE_RANKING_PATH)}
               aria-label="プレイ回数ランキング"
-              title="ランキング"
             >
               <RankingIcon />
-              <span className="hidden text-sm font-medium sm:inline">ランキング</span>
+              <HeaderTooltip label="ランキング" />
+            </Link>
+            <Link
+              href={SITE_CONTACT_PATH}
+              aria-current={pathname === SITE_CONTACT_PATH ? "page" : undefined}
+              className={headerNavLinkClass(pathname === SITE_CONTACT_PATH)}
+              aria-label="お問い合わせ"
+            >
+              <ContactIcon />
+              <HeaderTooltip label="お問い合わせ" />
+            </Link>
+            <Link
+              href={SITE_GUIDE_PATH}
+              aria-current={pathname === SITE_GUIDE_PATH ? "page" : undefined}
+              className={headerNavLinkClass(pathname === SITE_GUIDE_PATH)}
+              aria-label="このサイトについて"
+            >
+              <GuideIcon />
+              <HeaderTooltip label="このサイトについて" />
             </Link>
           </div>
         </div>
