@@ -25,6 +25,11 @@ import {
   hexWinner,
   type Board as HexBoard,
 } from "@/lib/play/hex";
+import {
+  initialMancala,
+  sowMancala,
+  type Player as MancalaPlayer,
+} from "@/lib/play/mancala";
 import { initialNim, nimOver, takeNim } from "@/lib/play/nim";
 import {
   initialReversiBoard,
@@ -101,6 +106,20 @@ export type HexState = {
   winner: Player | null;
 };
 
+export type MancalaLastMove = {
+  seat: number;
+  pit: number;
+};
+
+export type MancalaState = {
+  pits: number[];
+  current: Player;
+  notice: string | null;
+  phase: "playing" | "game-over";
+  winner: Player | "draw" | null;
+  lastMove: MancalaLastMove | null;
+};
+
 export type GameState =
   | ReversiState
   | TttState
@@ -108,13 +127,23 @@ export type GameState =
   | CheckersState
   | GravityFourState
   | NimState
-  | HexState;
+  | HexState
+  | MancalaState;
 
 export type MovePayload =
   | { type: "place"; index: number }
   | { type: "drop"; col: number }
   | { type: "nim"; heapIndex: number; count: number }
-  | { type: "checkers"; move: CheckersMove };
+  | { type: "checkers"; move: CheckersMove }
+  | { type: "mancala"; pit: number };
+
+function mancalaWinner(pits: number[]): Player | "draw" {
+  const p0 = pits[6];
+  const p1 = pits[13];
+  if (p0 > p1) return 0;
+  if (p1 > p0) return 1;
+  return "draw";
+}
 
 export function createInitialState(
   slug: OnlineGameSlug,
@@ -177,6 +206,15 @@ export function createInitialState(
         current: firstPlayer,
         phase: "playing",
         winner: null,
+      };
+    case "mancala":
+      return {
+        pits: initialMancala(),
+        current: firstPlayer,
+        notice: null,
+        phase: "playing",
+        winner: null,
+        lastMove: null,
       };
   }
 }
@@ -435,6 +473,58 @@ export function applyMove(
       const nextPlayer: Player = s.current === 0 ? 1 : 0;
       return {
         state: { board: next, current: nextPlayer, phase: "playing", winner: null },
+        currentPlayer: nextPlayer,
+      };
+    }
+
+    case "mancala": {
+      const s = state as MancalaState;
+      if (move.type !== "mancala") return { error: "Invalid move type" };
+      const result = sowMancala(s.pits, s.current as MancalaPlayer, move.pit);
+      if (!result) return { error: "Illegal move" };
+
+      const lastMove: MancalaLastMove = { seat: seatIndex, pit: move.pit };
+
+      if (result.over) {
+        const winner = mancalaWinner(result.pits);
+        return {
+          state: {
+            pits: result.pits,
+            current: s.current,
+            notice: null,
+            phase: "game-over",
+            winner,
+            lastMove,
+          },
+          currentPlayer: null,
+        };
+      }
+
+      if (result.extraTurn) {
+        return {
+          state: {
+            pits: result.pits,
+            current: s.current,
+            notice: "最後の石が自分のゴールに入ったので、もう一度",
+            phase: "playing",
+            winner: null,
+            lastMove,
+          },
+          currentPlayer: s.current,
+        };
+      }
+
+      const nextPlayer: Player = s.current === 0 ? 1 : 0;
+      const notice = result.captured ? "向かいの石を取りました" : null;
+      return {
+        state: {
+          pits: result.pits,
+          current: nextPlayer,
+          notice,
+          phase: "playing",
+          winner: null,
+          lastMove,
+        },
         currentPlayer: nextPlayer,
       };
     }

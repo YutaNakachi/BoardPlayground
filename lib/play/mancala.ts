@@ -90,6 +90,19 @@ export function mancalaSowFrames(
   return frames;
 }
 
+/** 直前の盤面と手後の盤面から、まいた側の穴を推測（lastMove がない古い状態用） */
+export function inferMancalaSourcePit(
+  prev: number[],
+  next: number[],
+  player: Player
+): number | null {
+  for (let i = 0; i < prev.length; i++) {
+    if (!isMancalaPit(player, i)) continue;
+    if (prev[i] > 0 && next[i] === 0) return i;
+  }
+  return null;
+}
+
 export function sowMancala(
   pits: number[],
   player: Player,

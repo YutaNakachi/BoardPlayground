@@ -2,13 +2,34 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useState } from "react";
-import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
-import { TurnBanner } from "@/components/play/shared/TurnBanner";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
-import { winnerIndices } from "@/lib/game-engine";
 import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { flushSync } from "react-dom";
+import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import { ResultPanel } from "@/components/play/shared/ResultPanel";
+import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import { winnerIndices } from "@/lib/game-engine";
+import type { MancalaState } from "@/lib/online/moves";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+  localizePlayerNotice,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
+import { getPlayerTurnStyle } from "@/lib/player-colors";
+import {
+  inferMancalaSourcePit,
   initialMancala,
   isMancalaPit,
   mancalaSowFrames,
@@ -16,11 +37,14 @@ import {
   type Player,
 } from "@/lib/play/mancala";
 
-type Phase = "setup" | "playing" | "game-over";
+type LocalPhase = "setup" | "playing" | "game-over";
 
 const P1_PITS = [0, 1, 2, 3, 4, 5];
 const P2_PITS = [12, 11, 10, 9, 8, 7];
 const SOW_STEP_MS = 280;
+
+const SETUP_DESCRIPTION =
+  "自分の穴の石を反時計回りにまきます。最後がゴールならもう一度、自分側の空き穴なら向かいの石も取れます。";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -33,9 +57,48 @@ function findIncreasedPit(prev: number[], curr: number[]): number {
   return -1;
 }
 
+function pitsEqual(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/** ローカル同様、まきアニメ後に適用する終盤面（取り・残石集計・終局を含む） */
+function onlineSowFinalPits(
+  beforePits: number[],
+  player: Player,
+  pit: number,
+  frames: number[][],
+  serverPits: number[] | undefined
+): number[] {
+  const result = sowMancala(beforePits, player, pit);
+  if (result) return result.pits;
+  return serverPits ?? frames[frames.length - 1] ?? beforePits;
+}
+
+async function animateSowFrames(
+  frames: number[][],
+  onFrame: (pits: number[], pulseIndex: number | null) => void
+): Promise<void> {
+  if (frames.length === 0) return;
+  onFrame(frames[0], null);
+  for (let i = 1; i < frames.length; i++) {
+    await sleep(SOW_STEP_MS);
+    onFrame(frames[i], findIncreasedPit(frames[i - 1], frames[i]));
+  }
+  await sleep(120);
+  onFrame(frames[frames.length - 1], null);
+}
+
 export function MancalaGame() {
-  const { recordLocalPlay } = usePlayPage();
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("mancala");
+  const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [pits, setPits] = useState<number[]>(initialMancala);
   const [animatedPits, setAnimatedPits] = useState<number[]>(initialMancala);
   const [current, setCurrent] = useState<Player>(0);
@@ -43,9 +106,31 @@ export function MancalaGame() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [pulseIndex, setPulseIndex] = useState<number | null>(null);
 
-  const visiblePits = isAnimating ? animatedPits : pits;
+  const [onlineBoardPits, setOnlineBoardPits] = useState<number[]>(
+    initialMancala()
+  );
+  const [onlineAnimPits, setOnlineAnimPits] = useState<number[] | null>(null);
+  const [sowingPlayer, setSowingPlayer] = useState<Player | null>(null);
 
-  const startGame = useCallback(() => {
+  const displayPitsRef = useRef<number[]>(initialMancala());
+  const onlineBoardPitsRef = useRef(onlineBoardPits);
+  const lastVersionRef = useRef<number | null>(null);
+  const ownMoveAnimatingRef = useRef(false);
+  const onlineStateRef = useRef<MancalaState | null>(null);
+  const opponentAnimTokenRef = useRef(0);
+
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (mode === "local") {
+      setPlayMode({ mode: "local" });
+    }
+  }, [online.room?.code, online.phase, mode, setPlayMode]);
+
+  const startLocal = useCallback(() => {
     recordLocalPlay();
     const initial = initialMancala();
     setPits(initial);
@@ -54,12 +139,216 @@ export function MancalaGame() {
     setNotice(null);
     setPulseIndex(null);
     setIsAnimating(false);
-    setPhase("playing");
+    setLocalPhase("playing");
   }, [recordLocalPlay]);
+
+  const isOnline =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as MancalaState | null;
+
+  useEffect(() => {
+    onlineStateRef.current = onlineState;
+  }, [onlineState]);
+
+  useEffect(() => {
+    onlineBoardPitsRef.current = onlineBoardPits;
+  }, [onlineBoardPits]);
+
+  const syncOnlineBoardPits = useCallback((pits: number[]) => {
+    displayPitsRef.current = pits;
+    setOnlineBoardPits(pits);
+  }, []);
+
+  const finalizeOnlineSow = useCallback(
+    (finalPits: number[]) => {
+      displayPitsRef.current = finalPits;
+      flushSync(() => {
+        setOnlineBoardPits(finalPits);
+        setOnlineAnimPits(null);
+        setIsAnimating(false);
+        setPulseIndex(null);
+        setSowingPlayer(null);
+      });
+    },
+    []
+  );
+
+  const runOnlineSowAnimation = useCallback(
+    async (beforePits: number[], player: Player, pit: number) => {
+      const frames = mancalaSowFrames(beforePits, player, pit);
+      if (!frames) return;
+
+      setIsAnimating(true);
+      setSowingPlayer(player);
+      setPulseIndex(null);
+
+      await animateSowFrames(frames, (frame, pulse) => {
+        setOnlineAnimPits(frame);
+        setPulseIndex(pulse);
+      });
+
+      const latest = onlineStateRef.current;
+      const finalPits = onlineSowFinalPits(
+        beforePits,
+        player,
+        pit,
+        frames,
+        latest?.pits
+      );
+      finalizeOnlineSow(finalPits);
+    },
+    [finalizeOnlineSow]
+  );
+
+  useEffect(() => {
+    if (!isOnline) return;
+    const state = onlineStateRef.current;
+    if (!state) return;
+
+    const v = online.version;
+    const prevV = lastVersionRef.current;
+
+    if (prevV === null) {
+      lastVersionRef.current = v;
+      startTransition(() => {
+        syncOnlineBoardPits(state.pits);
+      });
+      return;
+    }
+
+    if (v === prevV) return;
+
+    if (ownMoveAnimatingRef.current) {
+      lastVersionRef.current = v;
+      return;
+    }
+
+    lastVersionRef.current = v;
+
+    const move = state.lastMove;
+    if (!move) {
+      startTransition(() => {
+        syncOnlineBoardPits(state.pits);
+      });
+      return;
+    }
+
+    const prevPits = onlineBoardPitsRef.current;
+    const player = move.seat as Player;
+    const pit =
+      move.pit ??
+      inferMancalaSourcePit(prevPits, state.pits, player) ??
+      undefined;
+
+    if (pit === undefined || !isMancalaPit(player, pit)) {
+      startTransition(() => {
+        syncOnlineBoardPits(state.pits);
+      });
+      return;
+    }
+
+    const token = ++opponentAnimTokenRef.current;
+    void runOnlineSowAnimation(prevPits, player, pit).then(() => {
+      if (opponentAnimTokenRef.current !== token) return;
+    });
+  }, [isOnline, online.version, runOnlineSowAnimation, syncOnlineBoardPits]);
+
+  useEffect(() => {
+    if (!isOnline || online.phase === "idle") {
+      lastVersionRef.current = null;
+      ownMoveAnimatingRef.current = false;
+    }
+  }, [isOnline, online.phase]);
+
+  const activePhase =
+    isOnline && onlineState
+      ? onlineState.phase
+      : localPhase === "game-over"
+        ? "game-over"
+        : localPhase === "playing"
+          ? "playing"
+          : "setup";
+
+  const onlineBoardPendingSync =
+    isOnline &&
+    onlineState != null &&
+    onlineAnimPits === null &&
+    !pitsEqual(onlineBoardPits, onlineState.pits);
+
+  const pendingSowSeat: Player | null =
+    onlineBoardPendingSync && onlineState.lastMove
+      ? (onlineState.lastMove.seat as Player)
+      : null;
+
+  const pendingExtraTurnNotice =
+    isOnline &&
+    onlineState != null &&
+    onlineBoardPendingSync &&
+    onlineState.notice?.includes("もう一度") &&
+    onlineState.lastMove != null &&
+    onlineState.current === onlineState.lastMove.seat;
+
+  const onlineSowVisual =
+    isAnimating ||
+    sowingPlayer !== null ||
+    pendingSowSeat !== null ||
+    pendingExtraTurnNotice;
+
+  const bannerCurrent: Player =
+    sowingPlayer ??
+    pendingSowSeat ??
+    (isOnline && onlineState ? (onlineState.current as Player) : current);
+
+  const activeNotice =
+    isOnline && onlineState
+      ? onlineSowVisual
+        ? null
+        : localizePlayerNotice(onlineState.notice, online.players)
+      : notice;
 
   const playPit = useCallback(
     async (index: number) => {
-      if (phase !== "playing" || isAnimating) return;
+      if (isOnline) {
+        if (
+          !online.isMyTurn ||
+          activePhase !== "playing" ||
+          isAnimating ||
+          online.mySeat < 0
+        ) {
+          return;
+        }
+
+        const beforePits = onlineBoardPits;
+        const player = online.mySeat as Player;
+        const frames = mancalaSowFrames(beforePits, player, index);
+        if (!frames) return;
+
+        ownMoveAnimatingRef.current = true;
+        online.handleMove({ type: "mancala", pit: index });
+
+        setIsAnimating(true);
+        setSowingPlayer(player);
+        setPulseIndex(null);
+
+        await animateSowFrames(frames, (frame, pulse) => {
+          setOnlineAnimPits(frame);
+          setPulseIndex(pulse);
+        });
+
+        const latest = onlineStateRef.current;
+        const finalPits = onlineSowFinalPits(
+          beforePits,
+          player,
+          index,
+          frames,
+          latest?.pits
+        );
+        finalizeOnlineSow(finalPits);
+        ownMoveAnimatingRef.current = false;
+        return;
+      }
+
+      if (localPhase !== "playing" || isAnimating) return;
 
       const frames = mancalaSowFrames(pits, current, index);
       const result = sowMancala(pits, current, index);
@@ -67,7 +356,6 @@ export function MancalaGame() {
 
       setIsAnimating(true);
       setNotice(null);
-
       setAnimatedPits(frames[0]);
 
       for (let i = 1; i < frames.length; i++) {
@@ -81,7 +369,7 @@ export function MancalaGame() {
       setPits(result.pits);
 
       if (result.over) {
-        setPhase("game-over");
+        setLocalPhase("game-over");
         setNotice(null);
         setIsAnimating(false);
         return;
@@ -97,32 +385,126 @@ export function MancalaGame() {
       setCurrent(current === 0 ? 1 : 0);
       setIsAnimating(false);
     },
-    [phase, pits, current, isAnimating]
+    [
+      isOnline,
+      online,
+      activePhase,
+      localPhase,
+      pits,
+      current,
+      isAnimating,
+      onlineBoardPits,
+      finalizeOnlineSow,
+    ]
   );
 
   const winners = useMemo(() => {
-    if (phase !== "game-over") return null;
+    if (activePhase !== "game-over") return null;
+    if (isOnline && onlineState) {
+      if (onlineState.winner === "draw") return [0, 1];
+      if (onlineState.winner !== null) return [onlineState.winner];
+      return null;
+    }
     return winnerIndices([pits[6], pits[13]]);
-  }, [phase, pits]);
+  }, [activePhase, isOnline, onlineState, pits]);
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
-  usePlaySetupNavigation(phase === "setup", backToSetup);
+  const roomPlayers = isOnline ? online.players : [];
 
-  if (phase === "setup") {
+  const leaveToSetup = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setPlayMode({ mode: "local" });
+  }, [online.reset, setPlayMode]);
+
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") ||
+    online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, leaveToSetup);
+
+  const serverGameOver = activePhase === "game-over" && winners !== null;
+  const isGameOver = serverGameOver && !(isOnline && onlineSowVisual);
+  const showTurnBanner = !serverGameOver || (isOnline && onlineSowVisual);
+  const canPlayLocal = localPhase === "playing" && !isAnimating;
+  const canPlayOnline =
+    isOnline &&
+    online.isMyTurn &&
+    activePhase === "playing" &&
+    !onlineSowVisual;
+  const canPlay = isOnline ? canPlayOnline : canPlayLocal;
+
+  const displayPits = isOnline
+    ? onlineAnimPits ?? onlineBoardPits
+    : isAnimating
+      ? animatedPits
+      : pits;
+  const logicPits = isOnline ? onlineBoardPits : pits;
+
+  const showTurnAction =
+    isOnline &&
+    !onlineSowVisual &&
+    !online.isMyTurn &&
+    activePhase === "playing";
+
+  const replayProps = useMemo(
+    () =>
+      getOnlineResultReplayProps(
+        isOnline,
+        online.isHost,
+        () => online.handleRematch({ firstPlayer }),
+        leaveToSetup
+      ),
+    [isOnline, online.isHost, online.handleRematch, firstPlayer, leaveToSetup]
+  );
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="マンカラ・カラハ"
-        description="自分の穴の石を反時計回りにまきます。最後がゴールならもう一度、自分側の空き穴なら向かいの石も取れます。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
+        description={SETUP_DESCRIPTION}
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={(displayName) => online.handleCreate(displayName)}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        error={online.error}
       />
     );
   }
 
-  const isGameOver = phase === "game-over" && winners !== null;
-  const canPlay = phase === "playing" && !isAnimating;
+  if (online.phase === "waiting" && online.room) {
+    return (
+      <OnlineSetupPanel
+        title="マンカラ・カラハ"
+        description={SETUP_DESCRIPTION}
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          isHost: online.isHost,
+          onStart: () => online.handleStart({ firstPlayer }),
+          canStart: online.players.length >= 2,
+          extra: (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              onChange={online.isHost ? onFirstPlayerChange : undefined}
+              readOnly={!online.isHost}
+            />
+          ),
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -131,60 +513,93 @@ export function MancalaGame() {
           variant="inline"
           winners={winners}
           draw={winners.length > 1}
-          onReplay={() => setPhase("setup")}
+          winnersLabel={
+            isOnline ? formatWinnersWithNames(roomPlayers, winners) : undefined
+          }
+          {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                onChange={onFirstPlayerChange}
+              />
+            ) : undefined
+          }
           details={
             <ul className="space-y-1 text-slate-400">
-              <li>プレイヤー 1 のゴール: {pits[6]} 個</li>
-              <li>プレイヤー 2 のゴール: {pits[13]} 個</li>
+              <li>
+                {isOnline
+                  ? formatSeatLabel(roomPlayers, 0)
+                  : "プレイヤー 1"}
+                のゴール: {displayPits[6]} 個
+              </li>
+              <li>
+                {isOnline
+                  ? formatSeatLabel(roomPlayers, 1)
+                  : "プレイヤー 2"}
+                のゴール: {displayPits[13]} 個
+              </li>
             </ul>
           }
         />
       )}
 
-      {!isGameOver && (
+      {showTurnBanner && (
         <TurnBanner
-          playerIndex={current}
-          playerLabel={`プレイヤー ${current + 1}`}
-          notice={notice ?? undefined}
+          playerIndex={bannerCurrent}
+          playerLabel={formatSeatLabel(roomPlayers, bannerCurrent)}
+          notice={activeNotice ?? undefined}
+          action={showTurnAction ? "相手の手番です" : undefined}
         />
       )}
 
       <div className="mx-auto grid max-w-xl grid-cols-8 gap-1.5 sm:gap-2">
         <Store
-          count={visiblePits[13]}
-          label="P2 ゴール"
+          count={displayPits[13]}
+          label={
+            isOnline ? `${formatSeatLabel(roomPlayers, 1)} ゴール` : "P2 ゴール"
+          }
           playerIndex={1}
-          active={current === 1}
+          active={bannerCurrent === 1}
           pulsing={pulseIndex === 13}
         />
         {P2_PITS.map((pitIndex) => (
           <PitButton
             key={pitIndex}
-            count={visiblePits[pitIndex]}
+            count={displayPits[pitIndex]}
             label="P2 穴"
             playerIndex={1}
             playable={
-              canPlay && current === 1 && isMancalaPit(1, pitIndex) && pits[pitIndex] > 0
+              canPlay &&
+              (isOnline ? online.mySeat === 1 : bannerCurrent === 1) &&
+              isMancalaPit(1, pitIndex) &&
+              logicPits[pitIndex] > 0
             }
             pulsing={pulseIndex === pitIndex}
             onClick={() => playPit(pitIndex)}
           />
         ))}
         <Store
-          count={visiblePits[6]}
-          label="P1 ゴール"
+          count={displayPits[6]}
+          label={
+            isOnline ? `${formatSeatLabel(roomPlayers, 0)} ゴール` : "P1 ゴール"
+          }
           playerIndex={0}
-          active={current === 0}
+          active={bannerCurrent === 0}
           pulsing={pulseIndex === 6}
         />
         {P1_PITS.map((pitIndex) => (
           <PitButton
             key={pitIndex}
-            count={visiblePits[pitIndex]}
+            count={displayPits[pitIndex]}
             label="P1 穴"
             playerIndex={0}
             playable={
-              canPlay && current === 0 && isMancalaPit(0, pitIndex) && pits[pitIndex] > 0
+              canPlay &&
+              (isOnline ? online.mySeat === 0 : bannerCurrent === 0) &&
+              isMancalaPit(0, pitIndex) &&
+              logicPits[pitIndex] > 0
             }
             pulsing={pulseIndex === pitIndex}
             onClick={() => playPit(pitIndex)}
@@ -212,14 +627,16 @@ function Store({
   return (
     <div
       className={`row-span-2 flex min-h-28 flex-col items-center justify-center rounded-2xl border text-lg font-semibold transition-transform duration-150 sm:min-h-32 ${
-        pulsing ? "scale-105 ring-2 ring-amber-300/90" : ""
+        pulsing ? "ring-2 ring-amber-300/80 brightness-110" : ""
       } ${
         active
           ? `${style.sectionBorder} ${style.sectionBg}`
           : "border-surface-border bg-surface-raised"
       }`}
     >
-      <span className="text-[10px] font-medium text-slate-500">{label}</span>
+      <span className="text-center text-[10px] font-medium text-slate-500">
+        {label}
+      </span>
       <span className="text-2xl tabular-nums">{count}</span>
     </div>
   );
@@ -248,7 +665,7 @@ function PitButton({
       onClick={onClick}
       aria-label={`${label} ${count}個`}
       className={`flex min-h-16 flex-col items-center justify-center rounded-2xl border text-lg font-semibold transition duration-150 sm:min-h-20 ${
-        pulsing ? "scale-105 ring-2 ring-amber-300/90" : ""
+        pulsing ? "ring-2 ring-amber-300/80 brightness-110" : ""
       } ${
         playable
           ? `${style.sectionBorder} ${style.bg} text-white hover:brightness-110`
