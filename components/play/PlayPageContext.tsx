@@ -4,12 +4,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { releaseBodyScrollLock } from "@/lib/body-scroll-lock";
 import { useRecordPlay } from "@/hooks/useRecordPlay";
 import type { PlayMode } from "@/lib/online/types";
 
@@ -65,6 +67,11 @@ export function PlayPageProvider({
 
   const recordLocalPlay = useCallback(() => recordPlay("local"), [recordPlay]);
   const recordOnlinePlay = useCallback(() => recordPlay("online"), [recordPlay]);
+
+  useEffect(() => {
+    releaseBodyScrollLock();
+    return () => releaseBodyScrollLock();
+  }, []);
 
   const value = useMemo(
     () => ({
