@@ -10,10 +10,10 @@ import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineDotsBoxesSize } from "@/hooks/useOnlineDotsBoxesSize";
 import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import type { DotsBoxesOnlineState } from "@/lib/online/moves";
-import { parseDotsBoxesSize } from "@/lib/online/game-options";
 import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import {
   formatSeatLabel,
@@ -66,19 +66,24 @@ function DotsBoxesSizePicker({
   return (
     <div className="space-y-2">
       <p className="text-center text-xs text-slate-400">盤面サイズ</p>
-      <div className="flex flex-wrap justify-center gap-2">
-        {DOTS_BOXES_SIZE_OPTIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            disabled={readOnly}
-            onClick={() => onChange?.(option)}
-            className={`min-w-14 px-4 py-2 ${setupPillClass(value === option)}`}
-          >
-            {option}×{option}
-          </button>
-        ))}
-      </div>
+      {readOnly ? (
+        <p className="text-center text-sm font-medium text-white">
+          {value}×{value}
+        </p>
+      ) : (
+        <div className="flex flex-wrap justify-center gap-2">
+          {DOTS_BOXES_SIZE_OPTIONS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onChange?.(option)}
+              className={`min-w-14 px-4 py-2 ${setupPillClass(value === option)}`}
+            >
+              {option}×{option}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -91,12 +96,12 @@ export function DotsAndBoxesGame() {
   const { onlineEnabled } = usePlayStats();
   const online = useOnlineRoom("dots-and-boxes");
   const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
+  const { size: onlineSize, onSizeChange: onOnlineSizeChange } =
+    useOnlineDotsBoxesSize(online);
   const [mode, setMode] = useState<PlayMode>("local");
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [size, setSize] = useState<DotsBoxesSize>(4);
   const [state, setState] = useState<DotsBoxesState>(() => initialDotsBoxes(4));
-
-  const onlineSize = parseDotsBoxesSize(online.room?.gameOptions);
 
   useEffect(() => {
     if (
@@ -189,14 +194,6 @@ export function DotsAndBoxesGame() {
     setPlayMode({ mode: "local" });
   }, [online.reset, setPlayMode]);
 
-  const onOnlineSizeChange = useCallback(
-    (next: DotsBoxesSize) => {
-      if (!online.isHost) return;
-      void online.handleUpdateGameOptions({ size: next });
-    },
-    [online.isHost, online.handleUpdateGameOptions]
-  );
-
   const isSetupScreen =
     (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
   usePlaySetupNavigation(isSetupScreen, reset);
@@ -210,7 +207,7 @@ export function DotsAndBoxesGame() {
     <>
       <DotsBoxesSizePicker
         value={onlineSize}
-        onChange={onOnlineSizeChange}
+        onChange={online.isHost ? onOnlineSizeChange : undefined}
         readOnly={!online.isHost}
       />
       <div className="mt-6">
@@ -282,7 +279,8 @@ export function DotsAndBoxesGame() {
   }
 
   const isGameOver = activePhase === "game-over" && winners !== null;
-  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const canInteract =
+    (isOnline ? online.isMyTurn && !online.movePending : true) && !isGameOver;
   const totalBoxes = rows * cols;
   const replayProps = getOnlineResultReplayProps(
     isOnline,
@@ -308,6 +306,7 @@ export function DotsAndBoxesGame() {
                 <DotsBoxesSizePicker
                   value={onlineSize}
                   onChange={onOnlineSizeChange}
+                  readOnly={false}
                 />
                 <div className="mt-4">
                   <OnlineFirstPlayerPicker

@@ -57,6 +57,7 @@ export function useOnlineRoom(gameSlug: string) {
   const [mySeat, setMySeat] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [movePending, setMovePending] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const realtimeCleanupRef = useRef<(() => void) | undefined>(undefined);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -426,6 +427,11 @@ export function useOnlineRoom(gameSlug: string) {
     async (partial: Record<string, unknown>) => {
       if (!room || room.hostPlayerId !== myPlayerId) return;
       setError(null);
+      setRoom((prev) =>
+        prev
+          ? { ...prev, gameOptions: { ...prev.gameOptions, ...partial } }
+          : prev
+      );
       try {
         await updateRoomGameOptions(room.id, myPlayerId, partial);
         await refreshRoom(room.id);
@@ -474,6 +480,7 @@ export function useOnlineRoom(gameSlug: string) {
   const handleMove = useCallback(
     (move: MovePayload) => {
       if (!room || gameState === null || mySeat < 0) return;
+      if (pendingMoveRef.current || movePending) return;
       if (currentPlayer !== mySeat) return;
 
       const slug = room.gameSlug as OnlineGameSlug;
@@ -486,6 +493,7 @@ export function useOnlineRoom(gameSlug: string) {
       const prevPhase = phase;
 
       pendingMoveRef.current = true;
+      setMovePending(true);
       const optimisticVersion = prevVersion + 1;
       setGameState(result.state);
       setCurrentPlayer(result.currentPlayer);
@@ -524,6 +532,7 @@ export function useOnlineRoom(gameSlug: string) {
         })
         .finally(() => {
           pendingMoveRef.current = false;
+          setMovePending(false);
         });
     },
     [
@@ -533,6 +542,7 @@ export function useOnlineRoom(gameSlug: string) {
       currentPlayer,
       phase,
       myPlayerId,
+      movePending,
       refreshRoom,
       broadcastGameState,
     ]
@@ -557,6 +567,7 @@ export function useOnlineRoom(gameSlug: string) {
       players,
       error,
       loading,
+      movePending,
       handleCreate,
       handleJoin,
       handleUpdateGameOptions,
@@ -581,6 +592,7 @@ export function useOnlineRoom(gameSlug: string) {
       players,
       error,
       loading,
+      movePending,
       handleCreate,
       handleJoin,
       handleUpdateGameOptions,
