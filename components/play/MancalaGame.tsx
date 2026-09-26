@@ -65,6 +65,19 @@ function pitsEqual(a: number[], b: number[]): boolean {
   return true;
 }
 
+/** ローカル同様、まきアニメ後に適用する終盤面（取り・残石集計・終局を含む） */
+function onlineSowFinalPits(
+  beforePits: number[],
+  player: Player,
+  pit: number,
+  frames: number[][],
+  serverPits: number[] | undefined
+): number[] {
+  const result = sowMancala(beforePits, player, pit);
+  if (result) return result.pits;
+  return serverPits ?? frames[frames.length - 1] ?? beforePits;
+}
+
 async function animateSowFrames(
   frames: number[][],
   onFrame: (pits: number[], pulseIndex: number | null) => void
@@ -175,7 +188,13 @@ export function MancalaGame() {
       });
 
       const latest = onlineStateRef.current;
-      const finalPits = latest?.pits ?? frames[frames.length - 1];
+      const finalPits = onlineSowFinalPits(
+        beforePits,
+        player,
+        pit,
+        frames,
+        latest?.pits
+      );
       finalizeOnlineSow(finalPits);
     },
     [finalizeOnlineSow]
@@ -261,8 +280,19 @@ export function MancalaGame() {
       ? (onlineState.lastMove.seat as Player)
       : null;
 
+  const pendingExtraTurnNotice =
+    isOnline &&
+    onlineState != null &&
+    onlineBoardPendingSync &&
+    onlineState.notice?.includes("もう一度") &&
+    onlineState.lastMove != null &&
+    onlineState.current === onlineState.lastMove.seat;
+
   const onlineSowVisual =
-    isAnimating || sowingPlayer !== null || pendingSowSeat !== null;
+    isAnimating ||
+    sowingPlayer !== null ||
+    pendingSowSeat !== null ||
+    pendingExtraTurnNotice;
 
   const bannerCurrent: Player =
     sowingPlayer ??
@@ -306,7 +336,13 @@ export function MancalaGame() {
         });
 
         const latest = onlineStateRef.current;
-        const finalPits = latest?.pits ?? frames[frames.length - 1];
+        const finalPits = onlineSowFinalPits(
+          beforePits,
+          player,
+          index,
+          frames,
+          latest?.pits
+        );
         finalizeOnlineSow(finalPits);
         ownMoveAnimatingRef.current = false;
         return;
@@ -386,7 +422,9 @@ export function MancalaGame() {
     online.phase === "waiting";
   usePlaySetupNavigation(isSetupScreen, leaveToSetup);
 
-  const isGameOver = activePhase === "game-over" && winners !== null;
+  const serverGameOver = activePhase === "game-over" && winners !== null;
+  const isGameOver = serverGameOver && !(isOnline && onlineSowVisual);
+  const showTurnBanner = !serverGameOver || (isOnline && onlineSowVisual);
   const canPlayLocal = localPhase === "playing" && !isAnimating;
   const canPlayOnline =
     isOnline &&
@@ -507,7 +545,7 @@ export function MancalaGame() {
         />
       )}
 
-      {!isGameOver && (
+      {showTurnBanner && (
         <TurnBanner
           playerIndex={bannerCurrent}
           playerLabel={formatSeatLabel(roomPlayers, bannerCurrent)}
