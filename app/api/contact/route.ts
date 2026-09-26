@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { apiError } from "@/lib/api/errors";
 import { getContactEnv, isContactConfigured } from "@/lib/contact/config";
 import { parseContactBody, validateContactPayload } from "@/lib/contact/validate";
+import { formatContactFrom } from "@/lib/contact/resend-send";
 import { SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -48,16 +49,16 @@ export async function POST(request: Request) {
     payload.message,
   ].join("\n");
 
-  const { error } = await resend.emails.send({
-    from: fromEmail,
+  const { error: notifyError } = await resend.emails.send({
+    from: formatContactFrom(fromEmail),
     to: toEmail,
     replyTo: payload.email,
     subject: `【${SITE_NAME}】お問い合わせ: ${payload.name}`,
     text,
   });
 
-  if (error) {
-    console.error("contact send failed", error.message);
+  if (notifyError) {
+    console.error("contact notify failed", notifyError);
     return apiError("送信に失敗しました。時間をおいて再度お試しください", 503);
   }
 

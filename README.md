@@ -72,6 +72,8 @@ npm run dev
 
 Vercel の **Settings → Environment Variables** に上記を追加し、Redeploy してください。未設定の場合は `/contact` で受付不可の表示になります。
 
+送信者向けの受付確認メールは、Resend で独自ドメインを認証したあとに有効化する予定です（`lib/contact/auto-reply.ts`）。
+
 ## ゲーム
 
 掲載するのはブラウザ実装済みのゲーム（オンライン部屋未対応のため、手札秘匿などは順次追加予定）。

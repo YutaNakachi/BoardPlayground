@@ -15,7 +15,6 @@ export function ContactForm({ configured }: Props) {
   const [company, setCompany] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!configured || status === "sending") return;
