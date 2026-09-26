@@ -36,16 +36,10 @@ export function JoinRoomModal({ open, onClose }: Props) {
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!open) {
-      setLoading(false);
-      setError(null);
-    }
-  }, [open]);
-
   const close = useCallback(() => {
     if (loading) return;
     setError(null);
+    setLoading(false);
     onClose();
   }, [loading, onClose]);
 

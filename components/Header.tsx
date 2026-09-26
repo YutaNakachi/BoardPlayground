@@ -152,6 +152,7 @@ export function Header() {
   const { open, toggleSidebar, filters } = useCatalogSidebar();
   const { onlineEnabled } = usePlayStats();
   const [joinOpen, setJoinOpen] = useState(false);
+  const [joinModalKey, setJoinModalKey] = useState(0);
   const filterCount = isHome ? countSidebarFilters(filters) : 0;
 
   return (
@@ -188,7 +189,10 @@ export function Header() {
             {onlineEnabled ? (
               <button
                 type="button"
-                onClick={() => setJoinOpen(true)}
+                onClick={() => {
+                  setJoinModalKey((k) => k + 1);
+                  setJoinOpen(true);
+                }}
                 className={`${headerActionClass} border-white/15 bg-white/5`}
                 aria-label="部屋に入る"
               >
@@ -226,7 +230,11 @@ export function Header() {
           </div>
         </div>
       </header>
-      <JoinRoomModal open={joinOpen} onClose={() => setJoinOpen(false)} />
+      <JoinRoomModal
+        key={joinModalKey}
+        open={joinOpen}
+        onClose={() => setJoinOpen(false)}
+      />
     </>
   );
 }
