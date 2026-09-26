@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackToHomeLink } from "@/components/BackToHomeLink";
 import { GameMetaIndicators } from "@/components/GameMetaIndicators";
+import { GameRulesOnlineBadge } from "@/components/GameRulesOnlineBadge";
 import { PageContainer } from "@/components/PageContainer";
 import { OriginChip } from "@/components/OriginChip";
 import { GameRulesView } from "@/components/rules/GameRulesView";
@@ -50,6 +51,7 @@ export default async function GameDetailPage({ params }: Props) {
                 {tag}
               </span>
             ))}
+            <GameRulesOnlineBadge slug={slug} />
           </div>
           <GameMetaIndicators game={game} />
         </div>

@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { BackToHomeLink } from "@/components/BackToHomeLink";
 import { PageContainer } from "@/components/PageContainer";
+import { SITE_NAME } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "プレイ回数ランキング",
+  description: `${SITE_NAME}のゲーム別プレイ回数ランキング。ゲーム開始時にカウントされ、日本時間（JST）基準で集計されます。`,
+};
 import { RankingTabs } from "@/components/RankingTabs";
 import {
   fetchRankingCached,

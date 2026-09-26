@@ -60,6 +60,18 @@ npm run dev
 
 **Cloud Agent** からマイグレーションを実行する設定: [docs/cloud-agent-supabase.md](docs/cloud-agent-supabase.md)
 
+### 環境変数（お問い合わせ）
+
+お問い合わせフォームを有効にするには、`.env.example` の Resend 関連変数を設定します。
+
+| 変数 | 用途 |
+|------|------|
+| `RESEND_API_KEY` | Resend API キー（サーバー専用） |
+| `RESEND_FROM_EMAIL` | Resend で検証済みの送信元アドレス |
+| `CONTACT_TO_EMAIL` | 問い合わせの受信先（サーバー専用・リポジトリにコミットしない） |
+
+Vercel の **Settings → Environment Variables** に上記を追加し、Redeploy してください。未設定の場合は `/contact` で受付不可の表示になります。
+
 ## ゲーム
 
 掲載するのはブラウザ実装済みのゲーム（オンライン部屋未対応のため、手札秘匿などは順次追加予定）。

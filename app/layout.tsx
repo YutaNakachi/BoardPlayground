@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, M_PLUS_Rounded_1c } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { CatalogSidebarProvider } from "@/components/CatalogSidebarContext";
+import { CatalogUrlSync } from "@/components/CatalogUrlSync";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { PlayStatsProvider } from "@/components/PlayStatsProvider";
@@ -56,6 +58,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${display.variable} font-sans antialiased`}
       >
         <CatalogSidebarProvider games={games}>
+          <Suspense fallback={null}>
+            <CatalogUrlSync />
+          </Suspense>
           <PlayStatsProvider>
           <a
             href="#main-content"
