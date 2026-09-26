@@ -279,8 +279,7 @@ export function DotsAndBoxesGame() {
   }
 
   const isGameOver = activePhase === "game-over" && winners !== null;
-  const canInteract =
-    (isOnline ? online.isMyTurn && !online.movePending : true) && !isGameOver;
+  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
   const totalBoxes = rows * cols;
   const replayProps = getOnlineResultReplayProps(
     isOnline,

@@ -64,6 +64,7 @@ export function useOnlineRoom(gameSlug: string) {
   const versionRef = useRef(0);
   const gameStateRef = useRef<GameState | null>(null);
   const pendingMoveRef = useRef(false);
+  const moveQueueRef = useRef<MovePayload[]>([]);
 
   const broadcastGameState = useCallback(
     (state: GameState, remoteVersion: number, remoteCurrentPlayer: number | null) => {
@@ -87,6 +88,7 @@ export function useOnlineRoom(gameSlug: string) {
     realtimeCleanupRef.current = undefined;
     channelRef.current = null;
     pendingMoveRef.current = false;
+    moveQueueRef.current = [];
   }, []);
 
   useEffect(() => {
@@ -477,24 +479,114 @@ export function useOnlineRoom(gameSlug: string) {
     [room, phase, handleStart]
   );
 
-  const handleMove = useCallback(
-    (move: MovePayload) => {
-      if (!room || gameState === null || mySeat < 0) return;
-      if (pendingMoveRef.current || movePending) return;
-      if (currentPlayer !== mySeat) return;
+  const applyServerMoveSuccess = useCallback(
+    (
+      serverState: GameState,
+      serverVersion: number,
+      serverCurrentPlayer: number | null
+    ) => {
+      versionRef.current = serverVersion;
+      setVersion(serverVersion);
+      setGameState(serverState);
+      setCurrentPlayer(serverCurrentPlayer);
+      if (serverState.phase === "game-over") {
+        setPhase("finished");
+      }
+      broadcastGameState(serverState, serverVersion, serverCurrentPlayer);
+    },
+    [broadcastGameState]
+  );
 
-      const slug = room.gameSlug as OnlineGameSlug;
-      const result = applyMove(slug, gameState, mySeat, move);
-      if ("error" in result) return;
+  const sendMovePipelineRef = useRef<
+    (move: MovePayload, expectedVersion: number) => void
+  >(() => {});
 
-      const prevState = gameState;
-      const prevVersion = versionRef.current;
-      const prevCurrentPlayer = currentPlayer;
-      const prevPhase = phase;
+  useEffect(() => {
+    sendMovePipelineRef.current = (move: MovePayload, expectedVersion: number) => {
+      if (!room) return;
 
       pendingMoveRef.current = true;
       setMovePending(true);
-      const optimisticVersion = prevVersion + 1;
+
+      const rollbackState = gameStateRef.current;
+      const rollbackVersion = versionRef.current;
+      const rollbackCurrentPlayer = currentPlayer;
+      const rollbackPhase = phase;
+
+      void sendRoomMove(room.id, myPlayerId, move, expectedVersion)
+        .then((serverResult) => {
+          versionRef.current = serverResult.version;
+          setVersion(serverResult.version);
+
+          if (moveQueueRef.current.length > 0) {
+            const nextMove = moveQueueRef.current.shift()!;
+            sendMovePipelineRef.current(nextMove, serverResult.version);
+            return;
+          }
+
+          applyServerMoveSuccess(
+            serverResult.state as GameState,
+            serverResult.version,
+            serverResult.currentPlayer
+          );
+          pendingMoveRef.current = false;
+          setMovePending(false);
+        })
+        .catch((e) => {
+          moveQueueRef.current = [];
+          if (rollbackState) {
+            setGameState(rollbackState);
+            setVersion(rollbackVersion);
+            versionRef.current = rollbackVersion;
+            setCurrentPlayer(rollbackCurrentPlayer);
+            setPhase(rollbackPhase);
+            broadcastGameState(
+              rollbackState,
+              rollbackVersion,
+              rollbackCurrentPlayer
+            );
+          }
+          setError(e instanceof Error ? e.message : "手の送信に失敗しました");
+          void refreshRoom(room.id);
+          pendingMoveRef.current = false;
+          setMovePending(false);
+        });
+    };
+  }, [
+    room,
+    myPlayerId,
+    currentPlayer,
+    phase,
+    applyServerMoveSuccess,
+    refreshRoom,
+    broadcastGameState,
+  ]);
+
+  const sendMovePipeline = useCallback(
+    (move: MovePayload, expectedVersion: number) => {
+      sendMovePipelineRef.current(move, expectedVersion);
+    },
+    []
+  );
+
+  const handleMove = useCallback(
+    (move: MovePayload) => {
+      if (!room || mySeat < 0) return;
+      const liveState = gameStateRef.current;
+      if (!liveState) return;
+
+      const slug = room.gameSlug as OnlineGameSlug;
+      const chainedExtraTurn =
+        pendingMoveRef.current &&
+        liveState.phase !== "game-over" &&
+        liveState.current === mySeat;
+
+      if (!chainedExtraTurn && currentPlayer !== mySeat) return;
+
+      const result = applyMove(slug, liveState, mySeat, move);
+      if ("error" in result) return;
+
+      const optimisticVersion = versionRef.current + 1;
       setGameState(result.state);
       setCurrentPlayer(result.currentPlayer);
       setVersion(optimisticVersion);
@@ -502,50 +594,16 @@ export function useOnlineRoom(gameSlug: string) {
       if (result.state.phase === "game-over") {
         setPhase("finished");
       }
-
       broadcastGameState(result.state, optimisticVersion, result.currentPlayer);
 
-      void sendRoomMove(room.id, myPlayerId, move, prevVersion)
-        .then((serverResult) => {
-          setGameState(serverResult.state as GameState);
-          setVersion(serverResult.version);
-          versionRef.current = serverResult.version;
-          setCurrentPlayer(serverResult.currentPlayer);
-          if ((serverResult.state as GameState).phase === "game-over") {
-            setPhase("finished");
-          }
-          broadcastGameState(
-            serverResult.state as GameState,
-            serverResult.version,
-            serverResult.currentPlayer
-          );
-        })
-        .catch((e) => {
-          setGameState(prevState);
-          setVersion(prevVersion);
-          versionRef.current = prevVersion;
-          setCurrentPlayer(prevCurrentPlayer);
-          setPhase(prevPhase);
-          setError(e instanceof Error ? e.message : "手の送信に失敗しました");
-          broadcastGameState(prevState, prevVersion, prevCurrentPlayer);
-          void refreshRoom(room.id);
-        })
-        .finally(() => {
-          pendingMoveRef.current = false;
-          setMovePending(false);
-        });
+      if (pendingMoveRef.current) {
+        moveQueueRef.current.push(move);
+        return;
+      }
+
+      sendMovePipeline(move, optimisticVersion - 1);
     },
-    [
-      room,
-      gameState,
-      mySeat,
-      currentPlayer,
-      phase,
-      myPlayerId,
-      movePending,
-      refreshRoom,
-      broadcastGameState,
-    ]
+    [room, mySeat, currentPlayer, broadcastGameState, sendMovePipeline]
   );
 
   const isHost = room?.hostPlayerId === myPlayerId;
