@@ -62,8 +62,10 @@ export function ContactForm({ configured }: Props) {
   if (status === "success") {
     return (
       <div className="space-y-4">
-        <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-          送信しました。内容を確認のうえ、返信が必要な場合はご入力のメールアドレス宛にご連絡します。
+        <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm leading-relaxed text-emerald-100">
+          送信が完了しました。
+          <br />
+          内容を確認のうえ、返信が必要な場合はご入力いただいたメールアドレス宛にご連絡いたします。
         </p>
         <button
           type="button"
