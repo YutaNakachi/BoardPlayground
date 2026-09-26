@@ -134,7 +134,7 @@ const headerActionClass =
   "group relative inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-xl border text-slate-300 transition hover:border-white/25 hover:text-white sm:min-h-10 sm:min-w-10 sm:rounded-full";
 
 const headerTooltipClass =
-  "pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-surface-raised px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100";
+  "pointer-events-none absolute right-0 top-full z-50 mt-2 whitespace-nowrap rounded-lg border border-white/10 bg-surface-raised px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100";
 
 function HeaderTooltip({ label }: { label: string }) {
   return <span className={headerTooltipClass}>{label}</span>;
@@ -156,7 +156,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-surface-border bg-surface/85 backdrop-blur-md">
+      <header className="sticky top-0 z-40 overflow-visible border-b border-surface-border bg-surface/85 backdrop-blur-md">
         <div className="mx-auto flex h-12 max-w-6xl items-center gap-2 px-3 sm:h-14 sm:gap-3 sm:px-6">
           {isHome ? (
             <button
@@ -184,7 +184,7 @@ export function Header() {
             <SiteBrand variant="header" />
           </Link>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+          <div className="ml-auto flex shrink-0 items-center gap-1 overflow-visible sm:gap-1.5">
             {onlineEnabled ? (
               <button
                 type="button"
