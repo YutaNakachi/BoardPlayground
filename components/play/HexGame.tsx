@@ -5,6 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
@@ -298,6 +299,10 @@ export function HexGame() {
     ? (activeCurrent as Stone)
     : stoneForPlayer(game, game.current);
   const roomPlayers = isOnline ? online.players : [];
+
+  if (online.completingPendingJoin) {
+    return <PendingJoinConnecting />;
+  }
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (

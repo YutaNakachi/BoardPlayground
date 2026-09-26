@@ -5,6 +5,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -211,6 +212,10 @@ export function TicTacToeGame() {
       </div>
     </>
   );
+
+  if (online.completingPendingJoin) {
+    return <PendingJoinConnecting />;
+  }
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (

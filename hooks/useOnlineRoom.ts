@@ -1,11 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { joinRoomFlow } from "@/lib/online/join-room-flow";
 import {
   clearPendingJoin,
+  pendingJoinMatchesUrlCode,
   readPendingJoin,
   savePendingJoin,
 } from "@/lib/online/join-room-pending";
@@ -286,21 +293,42 @@ export function useOnlineRoom(gameSlug: string) {
   }, [router, gameSlug]);
 
   const completeJoinWithCode = useCallback(
-    async (code: string, displayName: string) => {
+    async (
+      code: string,
+      displayName: string,
+      session?: { roomId: string; playerId: string; seatIndex: number }
+    ) => {
       setLoading(true);
       setError(null);
       try {
-        const result = await joinRoom(code, displayName);
-        const data = await fetchRoom(result.roomId);
+        let roomId: string;
+        let playerId: string;
+        let seatIndex: number;
+        let resolvedCode: string;
+
+        if (session) {
+          roomId = session.roomId;
+          playerId = session.playerId;
+          seatIndex = session.seatIndex;
+          resolvedCode = code;
+        } else {
+          const result = await joinRoom(code, displayName);
+          roomId = result.roomId;
+          playerId = result.playerId;
+          seatIndex = result.seatIndex;
+          resolvedCode = result.code;
+        }
+
+        const data = await fetchRoom(roomId);
         if (data.room.gameSlug !== gameSlug) {
-          savePendingJoin(result.code, displayName);
+          savePendingJoin(resolvedCode, displayName, session);
           reset();
           router.replace(
-            `/play/${data.room.gameSlug}?room=${encodeURIComponent(result.code)}`
+            `/play/${data.room.gameSlug}?room=${encodeURIComponent(resolvedCode)}`
           );
           return;
         }
-        setupRoom(result.roomId, result.playerId, result.seatIndex, data.room);
+        setupRoom(roomId, playerId, seatIndex, data.room);
         clearPendingJoin();
         clearRoomQuery();
       } catch (e) {
@@ -322,23 +350,30 @@ export function useOnlineRoom(gameSlug: string) {
     return normalized.length >= 6 ? normalized : null;
   }, [searchParams]);
 
+  const completingPendingJoin = useMemo(() => {
+    if (room) return false;
+    return (
+      phase === "idle" &&
+      pendingJoinMatchesUrlCode(joinCodeFromUrl) !== null
+    );
+  }, [room, phase, joinCodeFromUrl]);
+
   useEffect(() => {
-    if (!joinCodeFromUrl || phase !== "idle") return;
+    if (!joinCodeFromUrl || phase !== "idle" || room) return;
     if (pendingUrlJoinRef.current === joinCodeFromUrl) return;
 
-    const pending = readPendingJoin();
-    if (
-      !pending ||
-      normalizeRoomCodeInput(pending.code) !== joinCodeFromUrl
-    ) {
-      return;
-    }
+    const pending = pendingJoinMatchesUrlCode(joinCodeFromUrl);
+    if (!pending) return;
 
     pendingUrlJoinRef.current = joinCodeFromUrl;
     queueMicrotask(() => {
-      void completeJoinWithCode(joinCodeFromUrl, pending.displayName);
+      void completeJoinWithCode(
+        joinCodeFromUrl,
+        pending.displayName,
+        pending.session
+      );
     });
-  }, [joinCodeFromUrl, phase, completeJoinWithCode]);
+  }, [joinCodeFromUrl, phase, room, completeJoinWithCode]);
 
   useEffect(() => {
     if (!room || room.gameSlug === gameSlug) return;
@@ -531,6 +566,7 @@ export function useOnlineRoom(gameSlug: string) {
       reset,
       refreshRoom,
       joinCodeFromUrl,
+      completingPendingJoin,
     }),
     [
       phase,
@@ -554,6 +590,7 @@ export function useOnlineRoom(gameSlug: string) {
       reset,
       refreshRoom,
       joinCodeFromUrl,
+      completingPendingJoin,
     ]
   );
 }

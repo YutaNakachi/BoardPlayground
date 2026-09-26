@@ -18,7 +18,7 @@ export async function joinRoomFlow(
 ): Promise<JoinRoomFlowResult> {
   const trimmedName = params.displayName.trim();
   if (!trimmedName) {
-    throw new Error("表示名を入力してください");
+    throw new Error("プレイヤー名を入力してください");
   }
 
   const result = await joinRoom(params.code, trimmedName);
@@ -27,7 +27,11 @@ export async function joinRoomFlow(
     throw new Error("この部屋のゲームに参加できません");
   }
 
-  savePendingJoin(result.code, trimmedName);
+  savePendingJoin(result.code, trimmedName, {
+    roomId: result.roomId,
+    playerId: result.playerId,
+    seatIndex: result.seatIndex,
+  });
   params.navigate(
     `/play/${gameSlug}?room=${encodeURIComponent(result.code)}`
   );

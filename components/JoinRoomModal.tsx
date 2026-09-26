@@ -80,12 +80,21 @@ export function JoinRoomModal({ open, onClose }: Props) {
             部屋に入る
           </h2>
           <p className="mt-2 text-sm text-slate-400">
-            部屋コードを入力してください。ゲームの種類に合ったプレイ画面へ移動します。
+            部屋コードを入力してください。
           </p>
 
           <div className="mt-6 space-y-4">
-            <label className="block text-sm text-slate-300" htmlFor="global-join-name">
-              表示名
+            <label className="block text-sm" htmlFor="global-join-code">
+              <span className="text-slate-400">部屋コード</span>
+              <RoomCodeInput
+                id="global-join-code"
+                value={joinCode}
+                onChange={setJoinCode}
+                required
+              />
+            </label>
+            <label className="block text-sm" htmlFor="global-join-name">
+              <span className="text-slate-400">プレイヤー名</span>
               <input
                 id="global-join-name"
                 type="text"
@@ -93,17 +102,9 @@ export function JoinRoomModal({ open, onClose }: Props) {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-base text-white"
-                placeholder="ニックネーム"
+                placeholder="プレイヤー1"
                 autoComplete="nickname"
-              />
-            </label>
-            <label className="block text-sm text-slate-300" htmlFor="global-join-code">
-              部屋コード
-              <RoomCodeInput
-                id="global-join-code"
-                value={joinCode}
-                onChange={setJoinCode}
-                required
+                enterKeyHint="done"
               />
             </label>
           </div>

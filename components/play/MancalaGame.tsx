@@ -13,6 +13,7 @@ import {
 import { flushSync } from "react-dom";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
@@ -456,6 +457,10 @@ export function MancalaGame() {
       ),
     [isOnline, online.isHost, online.handleRematch, firstPlayer, leaveToSetup]
   );
+
+  if (online.completingPendingJoin) {
+    return <PendingJoinConnecting />;
+  }
 
   if (localPhase === "setup" && online.phase === "idle") {
     return (
