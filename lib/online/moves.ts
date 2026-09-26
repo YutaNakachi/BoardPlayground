@@ -1,4 +1,11 @@
 import {
+  drawDotsBoxesEdge,
+  initialDotsBoxes,
+  type DotsBoxesState,
+  type Edge,
+  type EdgeKind,
+} from "@/lib/play/dots-and-boxes";
+import {
   applyCheckersMove,
   checkersMoves,
   checkersPieceCount,
@@ -49,7 +56,11 @@ import {
   type TttHistories,
   type TttMode,
 } from "@/lib/play/tic-tac-toe";
-import { parseFirstPlayer, parseTicTacToeGameOptions } from "./game-options";
+import {
+  parseDotsBoxesSize,
+  parseFirstPlayer,
+  parseTicTacToeGameOptions,
+} from "./game-options";
 import type { OnlineGameSlug } from "./types";
 
 export type ReversiState = {
@@ -111,6 +122,10 @@ export type MancalaLastMove = {
   pit: number;
 };
 
+export type DotsBoxesOnlineState = DotsBoxesState & {
+  phase: "playing" | "game-over";
+};
+
 export type MancalaState = {
   pits: number[];
   current: Player;
@@ -128,14 +143,16 @@ export type GameState =
   | GravityFourState
   | NimState
   | HexState
-  | MancalaState;
+  | MancalaState
+  | DotsBoxesOnlineState;
 
 export type MovePayload =
   | { type: "place"; index: number }
   | { type: "drop"; col: number }
   | { type: "nim"; heapIndex: number; count: number }
   | { type: "checkers"; move: CheckersMove }
-  | { type: "mancala"; pit: number };
+  | { type: "mancala"; pit: number }
+  | { type: "dots-boxes"; kind: EdgeKind; row: number; col: number };
 
 function mancalaWinner(pits: number[]): Player | "draw" {
   const p0 = pits[6];
@@ -216,6 +233,15 @@ export function createInitialState(
         winner: null,
         lastMove: null,
       };
+    case "dots-and-boxes": {
+      const size = parseDotsBoxesSize(gameOptions);
+      const base = initialDotsBoxes(size);
+      return {
+        ...base,
+        current: firstPlayer,
+        phase: "playing",
+      };
+    }
   }
 }
 
@@ -474,6 +500,24 @@ export function applyMove(
       return {
         state: { board: next, current: nextPlayer, phase: "playing", winner: null },
         currentPlayer: nextPlayer,
+      };
+    }
+
+    case "dots-and-boxes": {
+      const s = state as DotsBoxesOnlineState;
+      if (move.type !== "dots-boxes") return { error: "Invalid move type" };
+      const edge: Edge = { kind: move.kind, row: move.row, col: move.col };
+      const next = drawDotsBoxesEdge(s, edge);
+      if (!next) return { error: "Illegal move" };
+      if (next.over) {
+        return {
+          state: { ...next, phase: "game-over" },
+          currentPlayer: null,
+        };
+      }
+      return {
+        state: { ...next, phase: "playing" },
+        currentPlayer: next.current,
       };
     }
 
