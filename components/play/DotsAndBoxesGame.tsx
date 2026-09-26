@@ -242,20 +242,17 @@ export function DotsAndBoxesGame() {
     return (
       <OnlineSetupPanel
         title="ドット・アンド・ボックス"
-        description={`${size}×${size}の箱を囲みます。${SETUP_DESCRIPTION}`}
+        description={SETUP_DESCRIPTION}
         mode={mode}
         onModeChange={setMode}
         onlineSupported={onlineEnabled}
-        onCreateRoom={(displayName) =>
-          online.handleCreate(displayName, { size })
-        }
+        onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
-        extra={sizeSelector}
-        createExtra={sizeSelector}
+        extra={mode === "local" ? sizeSelector : undefined}
       />
     );
   }

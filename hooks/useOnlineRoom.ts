@@ -623,6 +623,7 @@ export function useOnlineRoom(gameSlug: string) {
 
       if (wasChained) {
         moveQueueRef.current.push(move);
+        broadcastGameState(result.state, optimisticVersion, result.currentPlayer);
         return;
       }
 
