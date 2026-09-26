@@ -1,3 +1,4 @@
+import type { DotsBoxesSize } from "@/lib/play/dots-and-boxes";
 import type { TttMode } from "@/lib/play/tic-tac-toe";
 import type { OnlineGameSlug } from "./types";
 
@@ -12,7 +13,14 @@ export type TicTacToeGameOptions = {
   firstPlayer?: FirstPlayerSeat;
 };
 
-export type OnlineGameOptions = TicTacToeGameOptions | CommonGameOptions;
+export type DotsBoxesGameOptions = CommonGameOptions & {
+  size?: DotsBoxesSize;
+};
+
+export type OnlineGameOptions =
+  | TicTacToeGameOptions
+  | DotsBoxesGameOptions
+  | CommonGameOptions;
 
 export function parseFirstPlayer(raw: unknown): FirstPlayerSeat {
   if (raw && typeof raw === "object" && "firstPlayer" in raw) {
@@ -55,6 +63,37 @@ function parseCommonGameOptions(raw: unknown): CommonGameOptions | null {
   return normalizeFirstPlayer({ firstPlayer });
 }
 
+export function parseDotsBoxesSize(raw: unknown): DotsBoxesSize {
+  if (raw && typeof raw === "object" && "size" in raw) {
+    const size = (raw as { size: unknown }).size;
+    if (size === 3 || size === 4 || size === 5) return size;
+  }
+  return 4;
+}
+
+function parseDotsBoxesGameOptions(raw: unknown): DotsBoxesGameOptions | null {
+  if (raw == null) return { size: 4 };
+  if (typeof raw !== "object") return null;
+  const keys = Object.keys(raw as object);
+  if (!keys.every((key) => key === "firstPlayer" || key === "size")) {
+    return null;
+  }
+  if (
+    "size" in (raw as object) &&
+    (raw as { size: unknown }).size !== 3 &&
+    (raw as { size: unknown }).size !== 4 &&
+    (raw as { size: unknown }).size !== 5
+  ) {
+    return null;
+  }
+  const size = parseDotsBoxesSize(raw);
+  const firstPlayer = parseFirstPlayer(raw);
+  return {
+    size,
+    ...(firstPlayer === 1 ? { firstPlayer: 1 } : {}),
+  };
+}
+
 export function validateGameOptions(
   slug: OnlineGameSlug,
   raw: unknown
@@ -85,6 +124,8 @@ export function validateGameOptions(
     case "hex":
     case "mancala":
       return parseCommonGameOptions(raw);
+    case "dots-and-boxes":
+      return parseDotsBoxesGameOptions(raw);
   }
 }
 
@@ -115,6 +156,8 @@ export function hasNonDefaultGameOptions(
   switch (slug) {
     case "tic-tac-toe":
       return (options as TicTacToeGameOptions).mode !== "classic";
+    case "dots-and-boxes":
+      return parseDotsBoxesSize(options) !== 4;
     default:
       return Object.keys(options).length > 0;
   }
