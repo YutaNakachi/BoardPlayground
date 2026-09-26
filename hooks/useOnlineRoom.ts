@@ -501,6 +501,11 @@ export function useOnlineRoom(gameSlug: string) {
       setCurrentPlayer(serverCurrentPlayer);
       if (serverState.phase === "game-over") {
         setPhase("finished");
+        setRoom((prev) =>
+          prev && prev.status !== "finished"
+            ? { ...prev, status: "finished" }
+            : prev
+        );
       }
       broadcastGameState(serverState, serverVersion, serverCurrentPlayer);
     },
@@ -529,6 +534,11 @@ export function useOnlineRoom(gameSlug: string) {
           setVersion(serverResult.version);
 
           if (moveQueueRef.current.length > 0) {
+            broadcastGameState(
+              serverResult.state as GameState,
+              serverResult.version,
+              serverResult.currentPlayer
+            );
             const nextMove = moveQueueRef.current.shift()!;
             sendMovePipelineRef.current(nextMove, serverResult.version);
             return;
@@ -596,6 +606,7 @@ export function useOnlineRoom(gameSlug: string) {
       const result = applyMove(slug, liveState, mySeat, move);
       if ("error" in result) return;
 
+      const wasChained = pendingMoveRef.current;
       const optimisticVersion = versionRef.current + 1;
       setGameState(result.state);
       setCurrentPlayer(result.currentPlayer);
@@ -603,14 +614,19 @@ export function useOnlineRoom(gameSlug: string) {
       versionRef.current = optimisticVersion;
       if (result.state.phase === "game-over") {
         setPhase("finished");
+        setRoom((prev) =>
+          prev && prev.status !== "finished"
+            ? { ...prev, status: "finished" }
+            : prev
+        );
       }
-      broadcastGameState(result.state, optimisticVersion, result.currentPlayer);
 
-      if (pendingMoveRef.current) {
+      if (wasChained) {
         moveQueueRef.current.push(move);
         return;
       }
 
+      broadcastGameState(result.state, optimisticVersion, result.currentPlayer);
       sendMovePipeline(move, optimisticVersion - 1);
     },
     [room, mySeat, currentPlayer, broadcastGameState, sendMovePipeline]

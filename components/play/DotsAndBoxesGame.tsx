@@ -130,12 +130,19 @@ export function DotsAndBoxesGame() {
       : state;
   const activePhase =
     isOnline && onlineState
-      ? onlineState.phase
+      ? onlineState.phase === "game-over" || onlineState.over
+        ? "game-over"
+        : "playing"
       : localPhase === "game-over"
         ? "game-over"
         : localPhase === "playing"
           ? "playing"
           : "setup";
+
+  const bannerSeat: number =
+    isOnline && online.currentPlayer !== null
+      ? online.currentPlayer
+      : activeState.current;
 
   const draw = useCallback(
     (edge: Edge) => {
@@ -332,8 +339,8 @@ export function DotsAndBoxesGame() {
 
       {!isGameOver && (
         <TurnBanner
-          playerIndex={activeState.current}
-          playerLabel={formatSeatLabel(roomPlayers, activeState.current)}
+          playerIndex={bannerSeat}
+          playerLabel={formatSeatLabel(roomPlayers, bannerSeat)}
           action={
             isOnline && !online.isMyTurn
               ? "相手の手番です"
