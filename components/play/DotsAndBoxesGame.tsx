@@ -317,7 +317,6 @@ export function DotsAndBoxesGame() {
               </>
             ) : undefined
           }
-          onReplay={() => setLocalPhase("setup")}
           details={
             <ul className="space-y-1 text-slate-400">
               <li>
