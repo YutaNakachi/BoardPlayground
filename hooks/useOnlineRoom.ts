@@ -1,9 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePlayPage } from "@/components/play/PlayPageContext";
+import { joinRoomFlow } from "@/lib/online/join-room-flow";
+import {
+  clearPendingJoin,
+  pendingJoinMatchesUrlCode,
+  readPendingJoin,
+  savePendingJoin,
+} from "@/lib/online/join-room-pending";
 import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
+import { normalizeRoomCodeInput } from "@/lib/online/room-code";
 import {
   createRoom,
   fetchRoom,
@@ -30,6 +45,9 @@ type RoomStateBroadcast = {
 
 export function useOnlineRoom(gameSlug: string) {
   const { registerPlayExit } = usePlayPage();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pendingUrlJoinRef = useRef<string | null>(null);
   const [phase, setPhase] = useState<OnlinePhase>("idle");
   const [room, setRoom] = useState<RoomInfo | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -240,7 +258,13 @@ export function useOnlineRoom(gameSlug: string) {
       setMyPlayerId(playerId);
       setMySeat(seatIndex);
       setRoom(roomInfo);
-      setPhase(roomInfo.status === "waiting" ? "waiting" : "playing");
+      setPhase(
+        roomInfo.status === "waiting"
+          ? "waiting"
+          : roomInfo.status === "finished"
+            ? "finished"
+            : "playing"
+      );
       const cleanup = subscribeRealtime(roomId);
       if (cleanup) {
         realtimeCleanupRef.current = cleanup;
@@ -250,6 +274,117 @@ export function useOnlineRoom(gameSlug: string) {
     },
     [clearRealtime, refreshRoom, subscribeRealtime]
   );
+
+  const reset = useCallback(() => {
+    clearRealtime();
+    setPhase("idle");
+    setRoom(null);
+    setGameState(null);
+    setVersion(0);
+    setCurrentPlayer(null);
+    setMyPlayerId("");
+    setMySeat(-1);
+    setError(null);
+    pendingUrlJoinRef.current = null;
+  }, [clearRealtime]);
+
+  const clearRoomQuery = useCallback(() => {
+    router.replace(`/play/${gameSlug}`, { scroll: false });
+  }, [router, gameSlug]);
+
+  const completeJoinWithCode = useCallback(
+    async (
+      code: string,
+      displayName: string,
+      session?: { roomId: string; playerId: string; seatIndex: number }
+    ) => {
+      setLoading(true);
+      setError(null);
+      try {
+        let roomId: string;
+        let playerId: string;
+        let seatIndex: number;
+        let resolvedCode: string;
+
+        if (session) {
+          roomId = session.roomId;
+          playerId = session.playerId;
+          seatIndex = session.seatIndex;
+          resolvedCode = code;
+        } else {
+          const result = await joinRoom(code, displayName);
+          roomId = result.roomId;
+          playerId = result.playerId;
+          seatIndex = result.seatIndex;
+          resolvedCode = result.code;
+        }
+
+        const data = await fetchRoom(roomId);
+        if (data.room.gameSlug !== gameSlug) {
+          savePendingJoin(resolvedCode, displayName, session);
+          reset();
+          router.replace(
+            `/play/${data.room.gameSlug}?room=${encodeURIComponent(resolvedCode)}`
+          );
+          return;
+        }
+        setupRoom(roomId, playerId, seatIndex, data.room);
+        clearPendingJoin();
+        clearRoomQuery();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "部屋への参加に失敗しました");
+        clearPendingJoin();
+        clearRoomQuery();
+      } finally {
+        setLoading(false);
+        pendingUrlJoinRef.current = null;
+      }
+    },
+    [gameSlug, setupRoom, reset, router, clearRoomQuery]
+  );
+
+  const joinCodeFromUrl = useMemo(() => {
+    const raw = searchParams.get("room");
+    if (!raw) return null;
+    const normalized = normalizeRoomCodeInput(raw);
+    return normalized.length >= 6 ? normalized : null;
+  }, [searchParams]);
+
+  const completingPendingJoin = useMemo(() => {
+    if (room) return false;
+    return (
+      phase === "idle" &&
+      pendingJoinMatchesUrlCode(joinCodeFromUrl) !== null
+    );
+  }, [room, phase, joinCodeFromUrl]);
+
+  useEffect(() => {
+    if (!joinCodeFromUrl || phase !== "idle" || room) return;
+    if (pendingUrlJoinRef.current === joinCodeFromUrl) return;
+
+    const pending = pendingJoinMatchesUrlCode(joinCodeFromUrl);
+    if (!pending) return;
+
+    pendingUrlJoinRef.current = joinCodeFromUrl;
+    queueMicrotask(() => {
+      void completeJoinWithCode(
+        joinCodeFromUrl,
+        pending.displayName,
+        pending.session
+      );
+    });
+  }, [joinCodeFromUrl, phase, room, completeJoinWithCode]);
+
+  useEffect(() => {
+    if (!room || room.gameSlug === gameSlug) return;
+    const existing = readPendingJoin();
+    if (!existing) {
+      savePendingJoin(room.code, "プレイヤー");
+    }
+    const target = `/play/${room.gameSlug}?room=${encodeURIComponent(room.code)}`;
+    clearRealtime();
+    router.replace(target);
+  }, [room, gameSlug, clearRealtime, router]);
 
   const handleCreate = useCallback(
     async (displayName: string, gameOptions?: Record<string, unknown>) => {
@@ -273,16 +408,18 @@ export function useOnlineRoom(gameSlug: string) {
       setLoading(true);
       setError(null);
       try {
-        const result = await joinRoom(code, displayName);
-        const data = await fetchRoom(result.roomId);
-        setupRoom(result.roomId, result.playerId, result.seatIndex, data.room);
+        await joinRoomFlow({
+          code,
+          displayName,
+          navigate: (path) => router.push(path),
+        });
       } catch (e) {
         setError(e instanceof Error ? e.message : "エラーが発生しました");
       } finally {
         setLoading(false);
       }
     },
-    [setupRoom]
+    [router]
   );
 
   const handleUpdateGameOptions = useCallback(
@@ -339,7 +476,7 @@ export function useOnlineRoom(gameSlug: string) {
       if (!room || gameState === null || mySeat < 0) return;
       if (currentPlayer !== mySeat) return;
 
-      const slug = gameSlug as OnlineGameSlug;
+      const slug = room.gameSlug as OnlineGameSlug;
       const result = applyMove(slug, gameState, mySeat, move);
       if ("error" in result) return;
 
@@ -395,24 +532,11 @@ export function useOnlineRoom(gameSlug: string) {
       mySeat,
       currentPlayer,
       phase,
-      gameSlug,
       myPlayerId,
       refreshRoom,
       broadcastGameState,
     ]
   );
-
-  const reset = useCallback(() => {
-    clearRealtime();
-    setPhase("idle");
-    setRoom(null);
-    setGameState(null);
-    setVersion(0);
-    setCurrentPlayer(null);
-    setMyPlayerId("");
-    setMySeat(-1);
-    setError(null);
-  }, [clearRealtime]);
 
   const isHost = room?.hostPlayerId === myPlayerId;
   const isMyTurn = currentPlayer === mySeat;
@@ -441,6 +565,8 @@ export function useOnlineRoom(gameSlug: string) {
       handleMove,
       reset,
       refreshRoom,
+      joinCodeFromUrl,
+      completingPendingJoin,
     }),
     [
       phase,
@@ -463,6 +589,8 @@ export function useOnlineRoom(gameSlug: string) {
       handleMove,
       reset,
       refreshRoom,
+      joinCodeFromUrl,
+      completingPendingJoin,
     ]
   );
 }

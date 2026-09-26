@@ -26,6 +26,8 @@ type Props = {
   createExtra?: ReactNode;
   /** オンライン「部屋に入る」選択時の追加 UI */
   joinExtra?: ReactNode;
+  /** URL の ?room= から部屋コードを事前入力 */
+  initialJoinCode?: string | null;
   /** Waiting room UI */
   waiting?: {
     code: string;
@@ -51,6 +53,7 @@ export function OnlineSetupPanel({
   extra,
   createExtra,
   joinExtra,
+  initialJoinCode,
   waiting,
 }: Props) {
   const [displayName, setDisplayName] = useState("");
@@ -58,10 +61,18 @@ export function OnlineSetupPanel({
   const [joinName, setJoinName] = useState("");
   const [action, setAction] = useState<"create" | "join">("create");
 
+  const urlJoinPrefill =
+    Boolean(initialJoinCode && !waiting) && action !== "create";
+  const shownAction = urlJoinPrefill ? "join" : action;
+  const shownJoinCode = urlJoinPrefill
+    ? joinCode || initialJoinCode || ""
+    : joinCode;
+  const displayMode = urlJoinPrefill ? "online" : mode;
+
   const hasOnlineExtraSplit = createExtra !== undefined || joinExtra !== undefined;
   const onlineExtra =
     hasOnlineExtraSplit
-      ? action === "create"
+      ? shownAction === "create"
         ? createExtra
         : joinExtra
       : extra;
@@ -111,29 +122,29 @@ export function OnlineSetupPanel({
           <button
             type="button"
             onClick={() => onModeChange("local")}
-            className={setupPillClass(mode === "local")}
+            className={setupPillClass(displayMode === "local")}
           >
             ローカル
           </button>
           <button
             type="button"
             onClick={() => onModeChange("online")}
-            className={setupPillClass(mode === "online")}
+            className={setupPillClass(displayMode === "online")}
           >
             オンライン
           </button>
         </div>
       ) : null}
 
-      {mode === "local" && extra ? (
+      {displayMode === "local" && extra ? (
         <div className={onlineSupported ? "mt-8" : "mt-0"}>{extra}</div>
       ) : null}
 
-      {mode === "online" && onlineSupported && onlineExtra ? (
+      {displayMode === "online" && onlineSupported && onlineExtra ? (
         <div className="mt-8">{onlineExtra}</div>
       ) : null}
 
-      {mode === "local" || !onlineSupported ? (
+      {displayMode === "local" || !onlineSupported ? (
         <button type="button" onClick={onStartLocal} className="btn-game mt-8">
           ゲーム開始
         </button>
@@ -143,20 +154,20 @@ export function OnlineSetupPanel({
             <button
               type="button"
               onClick={() => setAction("create")}
-              className={setupPillClass(action === "create")}
+              className={setupPillClass(shownAction === "create")}
             >
               部屋を作る
             </button>
             <button
               type="button"
               onClick={() => setAction("join")}
-              className={setupPillClass(action === "join")}
+              className={setupPillClass(shownAction === "join")}
             >
               部屋に入る
             </button>
           </div>
 
-          {action === "create" ? (
+          {shownAction === "create" ? (
             <form
               className="mx-auto max-w-sm space-y-4 text-left"
               onSubmit={(e) => {
@@ -188,14 +199,14 @@ export function OnlineSetupPanel({
               className="mx-auto max-w-sm space-y-4 text-left"
               onSubmit={(e) => {
                 e.preventDefault();
-                onJoinRoom(joinCode, joinName);
+                onJoinRoom(shownJoinCode, joinName);
               }}
             >
               <label className="block text-sm" htmlFor="online-room-code">
                 <span className="text-slate-400">部屋コード</span>
                 <RoomCodeInput
                   id="online-room-code"
-                  value={joinCode}
+                  value={shownJoinCode}
                   onChange={setJoinCode}
                   required
                 />

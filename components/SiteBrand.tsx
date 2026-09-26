@@ -38,7 +38,7 @@ export function SiteBrand({ variant }: Props) {
           alt={SITE_NAME}
           width={1015}
           height={218}
-          className="h-[1.125rem] w-auto max-w-[8.5rem] object-contain object-left sm:h-5 sm:max-w-[10.5rem]"
+          className="h-[1.125rem] w-auto max-w-[5.75rem] object-contain object-left min-[400px]:max-w-[8.5rem] sm:h-5 sm:max-w-[10.5rem]"
         />
       </span>
     );
