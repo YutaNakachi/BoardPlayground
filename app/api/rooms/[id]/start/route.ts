@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
-import { mergeGameOptions, parseFirstPlayer } from "@/lib/online/game-options";
+import {
+  initialCurrentPlayerSeat,
+  mergeGameOptions,
+} from "@/lib/online/game-options";
 import { createInitialState } from "@/lib/online/moves";
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 import { isOnlineGame } from "@/lib/online/types";
@@ -97,8 +100,8 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Invalid game options" }, { status: 400 });
   }
 
-  const firstPlayer = parseFirstPlayer(gameOptions);
   const initialState = createInitialState(room.game_slug, gameOptions);
+  const openingSeat = initialCurrentPlayerSeat(room.game_slug, gameOptions);
 
   const { data: existingState } = await db
     .from("room_state")
@@ -109,7 +112,7 @@ export async function POST(request: Request, { params }: Params) {
   const statePayload = {
     state: initialState,
     version: 1,
-    current_player: firstPlayer,
+    current_player: openingSeat,
     updated_at: new Date().toISOString(),
   };
 

@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: Params) {
 
   const { data: room } = await db
     .from("rooms")
-    .select("id, game_slug, status")
+    .select("id, game_slug, status, game_options")
     .eq("id", id)
     .maybeSingle();
 
@@ -71,7 +71,8 @@ export async function POST(request: Request, { params }: Params) {
     room.game_slug,
     stateRow.state as import("@/lib/online/moves").GameState,
     player.seat_index,
-    move
+    move,
+    room.game_options ?? undefined
   );
 
   if ("error" in result) {

@@ -59,8 +59,18 @@ import {
 import {
   parseDotsBoxesSize,
   parseFirstPlayer,
+  parseHoundsSeat,
   parseTicTacToeGameOptions,
+  roleForSeat,
+  seatForRole,
 } from "./game-options";
+import {
+  applyFoxHoundsMove,
+  foxHoundsWinner,
+  initialFoxHounds,
+  type FoxHoundsWinReason,
+  type Player as FoxHoundsPlayer,
+} from "@/lib/play/fox-hounds";
 import type { OnlineGameSlug } from "./types";
 
 export type ReversiState = {
@@ -135,6 +145,15 @@ export type MancalaState = {
   lastMove: MancalaLastMove | null;
 };
 
+export type FoxHoundsOnlineState = {
+  board: (FoxHoundsPlayer | null)[];
+  current: FoxHoundsPlayer;
+  stallTurns: number;
+  phase: "playing" | "game-over";
+  winner: FoxHoundsPlayer | null;
+  winReason: FoxHoundsWinReason | null;
+};
+
 export type GameState =
   | ReversiState
   | TttState
@@ -144,7 +163,8 @@ export type GameState =
   | NimState
   | HexState
   | MancalaState
-  | DotsBoxesOnlineState;
+  | DotsBoxesOnlineState
+  | FoxHoundsOnlineState;
 
 export type MovePayload =
   | { type: "place"; index: number }
@@ -152,7 +172,8 @@ export type MovePayload =
   | { type: "nim"; heapIndex: number; count: number }
   | { type: "checkers"; move: CheckersMove }
   | { type: "mancala"; pit: number }
-  | { type: "dots-boxes"; kind: EdgeKind; row: number; col: number };
+  | { type: "dots-boxes"; kind: EdgeKind; row: number; col: number }
+  | { type: "fox-hounds"; from: number; to: number };
 
 function mancalaWinner(pits: number[]): Player | "draw" {
   const p0 = pits[6];
@@ -242,6 +263,17 @@ export function createInitialState(
         phase: "playing",
       };
     }
+    case "fox-hounds": {
+      const base = initialFoxHounds();
+      return {
+        board: base.board,
+        current: base.current,
+        stallTurns: base.stallTurns,
+        phase: "playing",
+        winner: null,
+        winReason: null,
+      };
+    }
   }
 }
 
@@ -259,13 +291,20 @@ export function applyMove(
   slug: OnlineGameSlug,
   state: GameState,
   seatIndex: number,
-  move: MovePayload
+  move: MovePayload,
+  gameOptions?: unknown
 ): { state: GameState; currentPlayer: number | null } | { error: string } {
   if (state.phase === "game-over") {
     return { error: "Game is over" };
   }
 
-  if (state.current !== seatIndex) {
+  if (slug === "fox-hounds") {
+    const houndsSeat = parseHoundsSeat(gameOptions);
+    const s = state as FoxHoundsOnlineState;
+    if (roleForSeat(seatIndex, houndsSeat) !== s.current) {
+      return { error: "Not your turn" };
+    }
+  } else if (state.current !== seatIndex) {
     return { error: "Not your turn" };
   }
 
@@ -518,6 +557,40 @@ export function applyMove(
       return {
         state: { ...next, phase: "playing" },
         currentPlayer: next.current,
+      };
+    }
+
+    case "fox-hounds": {
+      const s = state as FoxHoundsOnlineState;
+      const houndsSeat = parseHoundsSeat(gameOptions);
+      if (move.type !== "fox-hounds") return { error: "Invalid move type" };
+      const next = applyFoxHoundsMove(s, move.from, move.to);
+      if (!next) return { error: "Illegal move" };
+      const outcome = foxHoundsWinner(next, next.current);
+      if (outcome) {
+        return {
+          state: {
+            board: next.board,
+            current: next.current,
+            stallTurns: next.stallTurns,
+            phase: "game-over",
+            winner: outcome.winner,
+            winReason: outcome.reason,
+          },
+          currentPlayer: null,
+        };
+      }
+      const nextRole = next.current;
+      return {
+        state: {
+          board: next.board,
+          current: nextRole,
+          stallTurns: next.stallTurns,
+          phase: "playing",
+          winner: null,
+          winReason: null,
+        },
+        currentPlayer: seatForRole(nextRole, houndsSeat),
       };
     }
 
