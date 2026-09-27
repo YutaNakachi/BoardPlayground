@@ -63,7 +63,9 @@ export function FoxHoundsGame() {
   useEffect(() => {
     if (
       online.room?.code &&
-      (online.phase === "waiting" || online.phase === "playing")
+      (online.phase === "waiting" ||
+        online.phase === "playing" ||
+        online.phase === "finished")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
     } else if (mode === "local") {
@@ -113,17 +115,18 @@ export function FoxHoundsGame() {
 
   const destinations = useMemo(() => {
     if (activePhase !== "playing") return [];
+    if (isOnline && myRole !== null && activeCurrent !== myRole) return [];
     if (activeCurrent === 1) {
       return foxHoundsHareDestinations(activeBoard);
     }
     if (activeSelected === null || activeBoard[activeSelected] !== 0) return [];
     return foxHoundsHoundDestinations(activeBoard, activeSelected);
-  }, [activePhase, activeBoard, activeCurrent, activeSelected]);
+  }, [activePhase, activeBoard, activeCurrent, activeSelected, isOnline, myRole]);
 
   const onNode = useCallback(
     (index: number) => {
       if (activePhase !== "playing") return;
-      if (isOnline && !online.isMyTurn) return;
+      if (isOnline && (!online.isMyTurn || myRole !== activeCurrent)) return;
 
       const from =
         activeCurrent === 1 ? activeBoard.indexOf(1) : activeSelected;
@@ -162,6 +165,7 @@ export function FoxHoundsGame() {
       state,
       activeBoard,
       activeCurrent,
+      myRole,
     ]
   );
 
@@ -347,9 +351,9 @@ export function FoxHoundsGame() {
       >
         <svg
           viewBox={`${FH_VIEW_BOX.x} ${FH_VIEW_BOX.y} ${FH_VIEW_BOX.width} ${FH_VIEW_BOX.height}`}
-          className="block h-auto w-full cursor-pointer touch-manipulation"
+          className={`block h-auto w-full touch-manipulation ${isGameOver ? "" : "cursor-pointer"}`}
           aria-label="ウサギと猟犬の盤"
-          onPointerDown={onBoardPointer}
+          onPointerDown={isGameOver ? undefined : onBoardPointer}
         >
           <rect
             x={FH_VIEW_BOX.x}
@@ -383,7 +387,9 @@ export function FoxHoundsGame() {
             const isDest = destinations.includes(index);
             const isSel =
               activeSelected === index ||
-              (activeCurrent === 1 && index === hareFrom);
+              (activeCurrent === 1 &&
+                index === hareFrom &&
+                (!isOnline || myRole === 1));
             const isHare = piece === 1;
             const isHound = piece === 0;
 

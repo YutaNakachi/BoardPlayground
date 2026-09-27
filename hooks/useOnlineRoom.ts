@@ -608,7 +608,13 @@ export function useOnlineRoom(gameSlug: string) {
 
       if (!chainedExtraTurn && currentPlayer !== mySeat) return;
 
-      const result = applyMove(slug, liveState, mySeat, move);
+      const result = applyMove(
+        slug,
+        liveState,
+        mySeat,
+        move,
+        room.gameOptions
+      );
       if ("error" in result) return;
 
       const wasChained = pendingMoveRef.current;
