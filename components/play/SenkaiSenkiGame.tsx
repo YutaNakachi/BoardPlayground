@@ -214,7 +214,10 @@ export function SenkaiSenkiGame() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const stateRef = useRef(state);
-  stateRef.current = state;
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   const cpuSeat: Player = humanSeat === 0 ? 1 : 0;
 
