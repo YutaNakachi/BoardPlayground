@@ -44,19 +44,28 @@ function JoinRoomIcon() {
       viewBox="0 0 20 20"
       fill="none"
       aria-hidden
-      className="text-current"
+      className="block shrink-0 text-current"
     >
       <path
-        d="M4 7.5V16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M10 11v3M7.5 11 10 8.5 12.5 11"
+        d="M15.5 4.5v11M9 4.5h6.5M9 15.5h6.5"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M7 4.5h6l1 3H6l1-3Z"
+        d="M10.5 14.5V6.5"
         stroke="currentColor"
         strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12.25" cy="10" r="0.7" fill="currentColor" />
+      <path
+        d="M3.5 10H8.5M8.5 10l-2-2M8.5 10l-2 2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
@@ -71,16 +80,22 @@ function GuideIcon() {
       viewBox="0 0 20 20"
       fill="none"
       aria-hidden
-      className="text-current"
+      className="block shrink-0 text-current"
     >
-      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="10" cy="10" r="6.75" stroke="currentColor" strokeWidth="1.5" />
       <path
-        d="M7.75 7.9a2.75 2.75 0 0 1 4.35-.15c.85.85.75 2.1-.2 2.75-.55.4-1 .75-1 1.35V12.5"
+        d="M8 8.25c0-1.1.9-2 2-2s2 .9 2 2c0 .85-.55 1.28-1.1 1.68-.47.34-.9.66-.9 1.32"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <circle cx="10" cy="14.25" r="0.85" fill="currentColor" />
+      <path
+        d="M10 14.25h.01"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
