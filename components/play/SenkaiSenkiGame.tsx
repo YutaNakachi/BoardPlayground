@@ -471,7 +471,7 @@ export function SenkaiSenkiGame() {
         <ResultPanel
           variant="inline"
           winners={[state.winner]}
-          onReplay={() => setPhase("setup")}
+          onReplay={backToSetup}
           details={
             <p className="text-slate-400">{winReasonLabel(state.winReason)}</p>
           }
