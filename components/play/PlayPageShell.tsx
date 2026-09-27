@@ -46,6 +46,8 @@ function PlayPageShellInner({ game, rules, children }: Props) {
             <span className="badge-online">
               オンライン · {playMode.roomCode ?? "接続中"}
             </span>
+          ) : playMode.mode === "cpu" ? (
+            <span className="badge-cpu">CPU対戦</span>
           ) : (
             <span className="badge-local">ローカルプレイ</span>
           )}

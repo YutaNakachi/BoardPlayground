@@ -1,4 +1,4 @@
-export type PlayMode = "local" | "online";
+export type PlayMode = "local" | "online" | "cpu";
 
 export type RoomStatus = "waiting" | "playing" | "finished";
 
