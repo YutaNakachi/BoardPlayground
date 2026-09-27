@@ -103,9 +103,8 @@ export function FoxHoundsGame() {
           ? "playing"
           : "setup";
 
-  useEffect(() => {
-    if (isOnline) setSelected(null);
-  }, [isOnline, online.version]);
+  const activeSelected =
+    isOnline && !online.isMyTurn ? null : selected;
 
   const myRole =
     isOnline && online.mySeat !== null
@@ -117,19 +116,21 @@ export function FoxHoundsGame() {
     if (activeCurrent === 1) {
       return foxHoundsHareDestinations(activeBoard);
     }
-    if (selected === null || activeBoard[selected] !== 0) return [];
-    return foxHoundsHoundDestinations(activeBoard, selected);
-  }, [activePhase, activeBoard, activeCurrent, selected]);
+    if (activeSelected === null || activeBoard[activeSelected] !== 0) return [];
+    return foxHoundsHoundDestinations(activeBoard, activeSelected);
+  }, [activePhase, activeBoard, activeCurrent, activeSelected]);
 
   const onNode = useCallback(
     (index: number) => {
       if (activePhase !== "playing") return;
       if (isOnline && !online.isMyTurn) return;
 
-      const from = activeCurrent === 1 ? activeBoard.indexOf(1) : selected;
+      const from =
+        activeCurrent === 1 ? activeBoard.indexOf(1) : activeSelected;
       if (destinations.includes(index) && from !== null && from >= 0) {
         if (isOnline) {
           void online.handleMove({ type: "fox-hounds", from, to: index });
+          setSelected(null);
           return;
         }
         const next = applyFoxHoundsMove(state, from, index);
@@ -157,7 +158,7 @@ export function FoxHoundsGame() {
       isOnline,
       online,
       destinations,
-      selected,
+      activeSelected,
       state,
       activeBoard,
       activeCurrent,
@@ -381,7 +382,8 @@ export function FoxHoundsGame() {
             const piece = activeBoard[index];
             const isDest = destinations.includes(index);
             const isSel =
-              selected === index || (activeCurrent === 1 && index === hareFrom);
+              activeSelected === index ||
+              (activeCurrent === 1 && index === hareFrom);
             const isHare = piece === 1;
             const isHound = piece === 0;
 
