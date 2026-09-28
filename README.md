@@ -31,6 +31,7 @@ npm run dev
 
 ## 公開
 
+- 本番: https://bodopa.com（正規 URL。DNS・Vercel・Resend・Search Console は [docs/production-domain.md](docs/production-domain.md)）
 - GitHub: https://github.com/YutaNakachi/BoardPlayground
 - Vercel: [このリポジトリをインポート](https://vercel.com/new/clone?repository-url=https://github.com/YutaNakachi/BoardPlayground)（Framework Preset は Next.js が自動検出）
 
@@ -70,9 +71,11 @@ npm run dev
 | `RESEND_FROM_EMAIL` | Resend で検証済みの送信元アドレス |
 | `CONTACT_TO_EMAIL` | 問い合わせの受信先（サーバー専用・リポジトリにコミットしない） |
 
-Vercel の **Settings → Environment Variables** に上記を追加し、Redeploy してください。未設定の場合は `/contact` で受付不可の表示になります。
+Vercel の **Settings → Environment Variables**（Production）に上記を追加し、Redeploy してください。未設定の場合は `/contact` で受付不可の表示になります。`RESEND_FROM_EMAIL` は Resend で認証したドメインのアドレス（例: `noreply@bodopa.com`）。`CONTACT_TO_EMAIL` は Secret にし、README や PR に書かない。
 
-送信者向けの受付確認メールは、Resend で独自ドメインを認証したあとに有効化する予定です（`lib/contact/auto-reply.ts`）。
+ドメイン認証・本番切り替えの手順: [docs/production-domain.md](docs/production-domain.md)。
+
+送信者向けの受付確認メールは、本番で運営宛送信（B）を確認したあと、別 PR で `lib/contact/auto-reply.ts` を API から有効化する。
 
 ## ゲーム
 

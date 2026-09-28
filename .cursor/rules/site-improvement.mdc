@@ -19,5 +19,5 @@ alwaysApply: false
 - 既存ゲームのルール変更（明らかなバグ修正は可）
 - 既存市販ゲームのルール再現
 
-公開 URL: https://board-playground.vercel.app
+公開 URL: https://bodopa.com（手順: docs/production-domain.md）
 `main` に入ると Vercel が自動デプロイする。
