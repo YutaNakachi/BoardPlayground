@@ -46,6 +46,13 @@ export default function GuidePage() {
             トップの一覧でゲームカードを選ぶと、プレイの準備画面へ進みます。ルールを先に読む場合はカード上の「ルール」から詳細ページへ行き、そこから「遊ぶ！」でプレイ画面へ進めます。
           </li>
           <li>同じ画面で順番に操作する<strong className="font-medium text-slate-200">ローカルプレイ</strong>が基本です。2人以上で1台の端末を共有して遊べます。</li>
+          <li>
+            一覧に<strong className="font-medium text-slate-200">CPU戦可</strong>とあるゲームでは、プレイ準備で
+            <strong className="font-medium text-slate-200">CPU対戦</strong>
+            を選べます。コンピュータが相手の手番を進めるので、1人でも雰囲気を味わえます。本格的な対戦向けではなく、ルールや手触りを試す
+            <strong className="font-medium text-slate-200">おまけ程度</strong>
+            の機能です。
+          </li>
           <li>対応ゲームでは、プレイ画面で<strong className="font-medium text-slate-200">オンライン</strong>を選び、部屋コードで離れた相手と対戦できます（サイトのオンライン機能が有効な場合）。</li>
         </ul>
       </section>

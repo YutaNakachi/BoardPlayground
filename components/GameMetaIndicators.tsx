@@ -124,3 +124,13 @@ export function OnlineBadge({ className = "" }: { className?: string }) {
     </span>
   );
 }
+
+export function CpuBadge({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border border-sky-400/30 bg-sky-500/20 px-2.5 py-1 text-xs font-medium text-sky-200 backdrop-blur-sm ${className}`}
+    >
+      CPU戦可
+    </span>
+  );
+}
