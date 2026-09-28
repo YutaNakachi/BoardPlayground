@@ -2,10 +2,17 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { getGameBySlug } from "@/lib/games";
 import {
   PlaySetupCard,
   setupPillClass,
 } from "@/components/play/shared/PlaySetupCard";
+import {
+  PlayModeLocalMatchTabs,
+  type LocalMatchSetupKind,
+} from "@/components/play/shared/PlayModeLocalMatchTabs";
+import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
 import { RoomCodeInput } from "@/components/play/shared/RoomCodeInput";
 import type { PlayMode } from "@/lib/online/types";
 
@@ -56,6 +63,10 @@ export function OnlineSetupPanel({
   initialJoinCode,
   waiting,
 }: Props) {
+  const { gameSlug } = usePlayPage();
+  const cpuSupported = getGameBySlug(gameSlug)?.cpu ?? false;
+  const [localMatchKind, setLocalMatchKind] =
+    useState<LocalMatchSetupKind>("pvp");
   const [displayName, setDisplayName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [joinName, setJoinName] = useState("");
@@ -117,27 +128,24 @@ export function OnlineSetupPanel({
 
   return (
     <PlaySetupCard title={title} description={description}>
-      {onlineSupported ? (
-        <div className="flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => onModeChange("local")}
-            className={setupPillClass(displayMode === "local")}
-          >
-            ローカル
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange("online")}
-            className={setupPillClass(displayMode === "online")}
-          >
-            オンライン
-          </button>
+      <PlayModeLocalOnlineTabs
+        mode={displayMode === "online" ? "online" : "local"}
+        onModeChange={onModeChange}
+        onlineSupported={onlineSupported}
+      />
+
+      {displayMode === "local" ? (
+        <div className="mt-8">
+          <PlayModeLocalMatchTabs
+            kind={localMatchKind}
+            onKindChange={setLocalMatchKind}
+            cpuSupported={cpuSupported}
+          />
         </div>
       ) : null}
 
       {displayMode === "local" && extra ? (
-        <div className={onlineSupported ? "mt-8" : "mt-0"}>{extra}</div>
+        <div className="mt-8">{extra}</div>
       ) : null}
 
       {displayMode === "online" && onlineSupported && onlineExtra ? (

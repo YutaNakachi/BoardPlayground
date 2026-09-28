@@ -113,7 +113,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 12,
     complexity: "normal",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "心理戦"],
     rulesSummary: [

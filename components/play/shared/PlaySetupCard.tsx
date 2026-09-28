@@ -23,3 +23,8 @@ export function setupPillClass(active: boolean): string {
       : "bg-white/10 text-[#c7c7cc] ring-1 ring-white/10 hover:bg-white/15"
   }`;
 }
+
+/** オンライン未対応など、選択不可の pill */
+export function setupPillDisabledClass(): string {
+  return "min-h-11 cursor-not-allowed rounded-full bg-white/5 px-5 text-sm font-medium text-[#636366] opacity-60 ring-1 ring-white/10";
+}

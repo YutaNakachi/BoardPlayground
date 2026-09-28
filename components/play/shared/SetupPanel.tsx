@@ -1,7 +1,18 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { getGameBySlug } from "@/lib/games";
 import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import {
+  PlayModeLocalMatchTabs,
+  type LocalMatchSetupKind,
+} from "@/components/play/shared/PlayModeLocalMatchTabs";
+import {
+  PlayModeLocalOnlineTabs,
+  type SetupLocalOnlineMode,
+} from "@/components/play/shared/PlayModeLocalOnlineTabs";
 
 type Props = {
   title: string;
@@ -11,6 +22,8 @@ type Props = {
   onStart: () => void;
   extra?: ReactNode;
   playerOptions?: number[];
+  /** オンライン部屋対応（未指定時は false＝オンライン pill はグレーアウト） */
+  onlineSupported?: boolean;
 };
 
 export function SetupPanel({
@@ -21,16 +34,49 @@ export function SetupPanel({
   onStart,
   extra,
   playerOptions = [2, 3, 4],
+  onlineSupported = false,
 }: Props) {
+  const { gameSlug } = usePlayPage();
+  const cpuSupported = getGameBySlug(gameSlug)?.cpu ?? false;
+  const showPlayModeTabs = Math.max(...playerOptions) >= 2;
+  const [localOnlineMode, setLocalOnlineMode] =
+    useState<SetupLocalOnlineMode>("local");
+  const [localMatchKind, setLocalMatchKind] =
+    useState<LocalMatchSetupKind>("pvp");
+
+  const showLocalMatchTabs =
+    showPlayModeTabs && localOnlineMode === "local";
+  const showPlayerCountPicker = playerOptions.length > 1;
+  const hasContentAboveStart =
+    showPlayModeTabs || showLocalMatchTabs || showPlayerCountPicker;
+
   return (
     <PlaySetupCard title={title} description={description}>
-      <div className="flex justify-center gap-2">
-        {playerOptions.length === 1 ? (
-          <p className="badge-muted inline-flex min-h-11 items-center px-4 text-sm">
-            {playerOptions[0]}人対戦
-          </p>
-        ) : (
-          playerOptions.map((n) => (
+      {showPlayModeTabs ? (
+        <PlayModeLocalOnlineTabs
+          mode={localOnlineMode}
+          onModeChange={setLocalOnlineMode}
+          onlineSupported={onlineSupported}
+        />
+      ) : null}
+      {showLocalMatchTabs ? (
+        <div className="mt-8">
+          <PlayModeLocalMatchTabs
+            kind={localMatchKind}
+            onKindChange={setLocalMatchKind}
+            cpuSupported={cpuSupported}
+          />
+        </div>
+      ) : null}
+      {showPlayerCountPicker ? (
+        <div
+          className={
+            showPlayModeTabs || showLocalMatchTabs
+              ? "mt-8 flex justify-center gap-2"
+              : "flex justify-center gap-2"
+          }
+        >
+          {playerOptions.map((n) => (
             <button
               key={n}
               type="button"
@@ -39,10 +85,12 @@ export function SetupPanel({
             >
               {n}人
             </button>
-          ))
-        )}
-      </div>
-      {extra}
+          ))}
+        </div>
+      ) : null}
+      {extra ? (
+        <div className={hasContentAboveStart ? "mt-8" : undefined}>{extra}</div>
+      ) : null}
       <button type="button" onClick={onStart} className="btn-game mt-8">
         ゲーム開始
       </button>

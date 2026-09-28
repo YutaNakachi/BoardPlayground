@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { formatWinners } from "@/lib/game-engine";
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { formatResultWinnersLabel } from "@/lib/play/result-winners";
 
 type Props = {
   winners: number[];
@@ -11,7 +12,7 @@ type Props = {
   replayHint?: string;
   /** 再戦ボタンの直前に表示（先手選択など） */
   replayExtra?: ReactNode;
-  /** オンライン対局など、席番号以外の勝者表示名を使う場合 */
+  /** オンライン対局など、席番号以外の勝者表示名を使う場合（指定時は CPU 自動変換より優先） */
   winnersLabel?: string;
   /** 1人用ゲームなど、勝者行を出さない場合 */
   solo?: boolean;
@@ -33,7 +34,10 @@ export function ResultPanel({
   draw = false,
   variant = "default",
 }: Props) {
+  const { playMode } = usePlayPage();
   const inline = variant === "inline";
+  const winnerLine =
+    winnersLabel ?? formatResultWinnersLabel(winners, playMode);
 
   return (
     <div
@@ -48,7 +52,7 @@ export function ResultPanel({
       </h2>
       {!solo ? (
         <p className={inline ? "mt-2 text-base" : "mt-4 text-lg"}>
-          {draw ? "引き分け" : `勝者: ${winnersLabel ?? formatWinners(winners)}`}
+          {draw ? "引き分け" : `勝者: ${winnerLine}`}
         </p>
       ) : null}
       {details ? <div className={inline ? "mt-2" : "mt-4"}>{details}</div> : null}

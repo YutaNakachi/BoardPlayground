@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
+import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import {
+  PlayModeLocalMatchTabs,
+  type LocalMatchSetupKind,
+} from "@/components/play/shared/PlayModeLocalMatchTabs";
+import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
+import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
+import { chooseMove, type CpuDifficulty } from "@/lib/play/senkai-senki/ai";
 import {
   applySenkaiAction,
   initialSenkaiSenki,
@@ -20,11 +27,13 @@ import {
   SS_COLS,
   winReasonLabel,
   type Facing,
+  type Player,
   type SenkaiPiece,
   type SenkaiState,
 } from "@/lib/play/senkai-senki";
 
 type Phase = "setup" | "playing" | "game-over";
+type MatchKind = "pvp" | "cpu";
 
 const FACING_DEG: Record<Facing, number> = {
   0: 0,
@@ -196,19 +205,75 @@ function PieceGlyph({ piece }: { piece: SenkaiPiece }) {
 }
 
 export function SenkaiSenkiGame() {
-  const { recordLocalPlay } = usePlayPage();
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
+  const [setupMatchKind, setSetupMatchKind] =
+    useState<LocalMatchSetupKind>("pvp");
+  const [cpuDifficulty, setCpuDifficulty] = useState<CpuDifficulty>("normal");
+  const [humanSeat, setHumanSeat] = useState<Player>(0);
+  const [matchKind, setMatchKind] = useState<MatchKind>("pvp");
   const [state, setState] = useState<SenkaiState>(() => initialSenkaiSenki());
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const cpuSeat: Player = humanSeat === 0 ? 1 : 0;
 
   const startGame = useCallback(() => {
     recordLocalPlay();
+    setMatchKind(setupMatchKind);
+    setPlayMode(
+      setupMatchKind === "cpu"
+        ? { mode: "cpu", humanSeat }
+        : { mode: "local" }
+    );
     setState(initialSenkaiSenki());
     setSelectedId(null);
     setNotice(null);
     setPhase("playing");
-  }, [recordLocalPlay]);
+  }, [recordLocalPlay, setPlayMode, setupMatchKind, humanSeat]);
+
+  const humanTurn =
+    matchKind !== "cpu" || (phase === "playing" && state.current === humanSeat);
+  const cpuThinking =
+    matchKind === "cpu" &&
+    phase === "playing" &&
+    !state.gameOver &&
+    state.current === cpuSeat;
+
+  useEffect(() => {
+    if (!cpuThinking) return;
+
+    const delayMs =
+      cpuDifficulty === "hard"
+        ? 550 + Math.random() * 250
+        : cpuDifficulty === "normal"
+          ? 400 + Math.random() * 250
+          : 300 + Math.random() * 200;
+
+    const timer = window.setTimeout(() => {
+      const snapshot = stateRef.current;
+      if (snapshot.gameOver || snapshot.current !== cpuSeat) return;
+      const choice = chooseMove(snapshot, cpuDifficulty);
+      if (!choice) return;
+      const next = applySenkaiAction(
+        snapshot,
+        choice.pieceId,
+        choice.action
+      );
+      if (!next) return;
+      setState(next);
+      setSelectedId(next.lockedAfterRotate);
+      setNotice(null);
+      if (next.gameOver) setPhase("game-over");
+    }, delayMs);
+
+    return () => window.clearTimeout(timer);
+  }, [cpuThinking, cpuSeat, cpuDifficulty, state]);
 
   const actingPieceId = state.lockedAfterRotate ?? selectedId;
 
@@ -255,7 +320,7 @@ export function SenkaiSenkiGame() {
 
   const onCell = useCallback(
     (index: number) => {
-      if (phase !== "playing" || state.gameOver) return;
+      if (phase !== "playing" || state.gameOver || !humanTurn) return;
       const occupant = state.cells[index];
       const piece = occupant !== null ? state.pieces[occupant] : null;
 
@@ -333,11 +398,13 @@ export function SenkaiSenkiGame() {
       moveTargets,
       shootIdx,
       apply,
+      humanTurn,
     ]
   );
 
   const onRotateArrow = useCallback(
     (facing: Facing) => {
+      if (!humanTurn) return;
       if (selectedId === null) return;
       if (!rotateOptions.includes(facing)) {
         setNotice("その向きには旋回できません。");
@@ -347,26 +414,72 @@ export function SenkaiSenkiGame() {
         setNotice("旋回できません。");
       }
     },
-    [selectedId, rotateOptions, apply]
+    [selectedId, rotateOptions, apply, humanTurn]
   );
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
+  const backToSetup = useCallback(() => {
+    setPhase("setup");
+    setPlayMode({ mode: "local" });
+  }, [setPlayMode]);
   usePlaySetupNavigation(phase === "setup", backToSetup);
+
+  const setupDescription =
+    "砲塔の向きと役割が異なる戦車で、相手の指揮車を撃破する2人用ゲーム。軽戦車・重戦車は射撃、特攻車は体当たり、指揮車は8方向に動けます。";
 
   if (phase === "setup") {
     return (
-      <SetupPanel
-        title="砲塔戦棋"
-        description="砲塔の向きと役割が異なる戦車で、相手の指揮車を撃破する2人用ゲーム。軽戦車・重戦車は射撃、特攻車は体当たり、指揮車は8方向に動けます。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
-      />
+      <PlaySetupCard title="砲塔戦棋" description={setupDescription}>
+        <PlayModeLocalOnlineTabs
+          mode="local"
+          onModeChange={() => {}}
+          onlineSupported={false}
+        />
+        <div className="mt-8">
+          <PlayModeLocalMatchTabs
+            kind={setupMatchKind}
+            onKindChange={setSetupMatchKind}
+            cpuSupported
+          />
+        </div>
+        {setupMatchKind === "cpu" ? (
+          <div className="mt-8 space-y-6">
+            <div>
+              <p className="mb-2 text-xs text-slate-400">CPUの強さ</p>
+              <CpuDifficultyPicker
+                value={cpuDifficulty}
+                onChange={setCpuDifficulty}
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-xs text-slate-400">あなたの陣</p>
+              <div className="flex justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHumanSeat(0)}
+                  className={setupPillClass(humanSeat === 0)}
+                >
+                  先手（下段）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHumanSeat(1)}
+                  className={setupPillClass(humanSeat === 1)}
+                >
+                  後手（上段）
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        <button type="button" onClick={startGame} className="btn-game mt-8">
+          ゲーム開始
+        </button>
+      </PlaySetupCard>
     );
   }
 
   const isGameOver = phase === "game-over" && state.winner !== null;
+  const boardLocked = isGameOver || !humanTurn;
 
   return (
     <div className="space-y-4">
@@ -374,7 +487,7 @@ export function SenkaiSenkiGame() {
         <ResultPanel
           variant="inline"
           winners={[state.winner]}
-          onReplay={() => setPhase("setup")}
+          onReplay={backToSetup}
           details={
             <p className="text-slate-400">{winReasonLabel(state.winReason)}</p>
           }
@@ -384,14 +497,24 @@ export function SenkaiSenkiGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={state.current}
-          playerLabel={`プレイヤー ${state.current + 1}`}
-          action={turnActionText(selectedPiece, {
-            lockedAfterRotate: state.lockedAfterRotate !== null,
-            edgeStuck:
-              actingPieceId !== null && isEdgeStuck(state, actingPieceId),
-            canRotate: rotateOptions.length > 0,
-          })}
-          notice={notice ?? undefined}
+          playerLabel={
+            matchKind === "cpu" && state.current === cpuSeat
+              ? "CPU"
+              : matchKind === "cpu" && state.current === humanSeat
+                ? "あなた"
+                : `プレイヤー ${state.current + 1}`
+          }
+          action={
+            cpuThinking
+              ? "CPUの手番…"
+              : turnActionText(selectedPiece, {
+                  lockedAfterRotate: state.lockedAfterRotate !== null,
+                  edgeStuck:
+                    actingPieceId !== null && isEdgeStuck(state, actingPieceId),
+                  canRotate: rotateOptions.length > 0,
+                })
+          }
+          notice={humanTurn ? (notice ?? undefined) : undefined}
         />
       )}
 
@@ -415,7 +538,7 @@ export function SenkaiSenkiGame() {
             <button
               key={index}
               type="button"
-              disabled={isGameOver}
+              disabled={boardLocked}
               onClick={() => onCell(index)}
               className={[
                 "relative flex aspect-square items-center justify-center rounded-sm border transition",
@@ -440,6 +563,7 @@ export function SenkaiSenkiGame() {
                         <button
                           key={facing}
                           type="button"
+                          disabled={boardLocked}
                           aria-label={`${FACING_LABEL[facing]}向きへ旋回`}
                           className={[
                             "absolute z-20 flex h-6 w-6 items-center justify-center rounded-md border border-amber-400/80 bg-amber-950/90 text-amber-200 shadow-md hover:bg-amber-900",
