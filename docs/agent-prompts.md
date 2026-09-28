@@ -111,7 +111,7 @@ slug: `fox-hounds`。先手ピッカーではなく **猟犬役の seat**（game
 ```
 note 向け紹介記事 Agent。実装 PR しない。日本語。AGENTS.md に従い商標・作品名を出さない。
 
-A: サイト全体（1,200〜2,000字目安）— 無料・登録不要・ローカル/オンライン・系統ラベル・ランキング・https://board-playground.vercel.app
+A: サイト全体（1,200〜2,000字目安）— 無料・登録不要・ローカル/オンライン・系統ラベル・ランキング・https://bodopa.com
 B: ゲーム単体（600〜1,200字）— listed: true の slug。lib/games.ts + games/{slug}/rules.md。ルールページとプレイ URL をリンク。
 
 出力: タイトル3案、リード、本文、ハッシュタグ、サムネ1行、確認事項。最初はモード A を lib/games.ts の listed 確認のうえ執筆。
