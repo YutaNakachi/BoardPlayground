@@ -108,10 +108,10 @@ export function FoxHoundsGame() {
   const activeSelected =
     isOnline && !online.isMyTurn ? null : selected;
 
-  const myRole =
-    isOnline && online.mySeat !== null
-      ? roleForSeat(online.mySeat, activeHoundsSeat)
-      : null;
+  const myRole = useMemo((): Player | null => {
+    if (!isOnline || online.mySeat < 0) return null;
+    return roleForSeat(online.mySeat, activeHoundsSeat);
+  }, [isOnline, online.mySeat, activeHoundsSeat]);
 
   const destinations = useMemo(() => {
     if (activePhase !== "playing") return [];
