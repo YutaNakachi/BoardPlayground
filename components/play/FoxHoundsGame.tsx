@@ -11,6 +11,7 @@ import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineHoundsSeat } from "@/hooks/useOnlineHoundsSeat";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
 import {
+  type HoundsSeat,
   parseHoundsSeat,
   roleForSeat,
   seatForRole,
@@ -85,9 +86,22 @@ export function FoxHoundsGame() {
   const isOnline =
     online.phase === "playing" || online.phase === "finished";
   const onlineState = online.gameState as FoxHoundsOnlineState | null;
-  const activeHoundsSeat = isOnline
-    ? parseHoundsSeat(online.room?.gameOptions)
-    : 0;
+  const sessionHoundsSeat: HoundsSeat = useMemo(() => {
+    if (!isOnline) return 0;
+    if (
+      onlineState &&
+      (onlineState.houndsSeat === 0 || onlineState.houndsSeat === 1)
+    ) {
+      return onlineState.houndsSeat;
+    }
+    if (
+      onlineState &&
+      (onlineState.phase === "playing" || onlineState.phase === "game-over")
+    ) {
+      return parseHoundsSeat(online.room?.gameOptions);
+    }
+    return houndsSeat;
+  }, [isOnline, onlineState, online.room?.gameOptions, houndsSeat]);
 
   const activeBoard = isOnline && onlineState ? onlineState.board : state.board;
   const activeCurrent = isOnline && onlineState ? onlineState.current : state.current;
@@ -110,8 +124,8 @@ export function FoxHoundsGame() {
 
   const myRole = useMemo((): Player | null => {
     if (!isOnline || online.mySeat < 0) return null;
-    return roleForSeat(online.mySeat, activeHoundsSeat);
-  }, [isOnline, online.mySeat, activeHoundsSeat]);
+    return roleForSeat(online.mySeat, sessionHoundsSeat);
+  }, [isOnline, online.mySeat, sessionHoundsSeat]);
 
   const destinations = useMemo(() => {
     if (activePhase !== "playing") return [];
@@ -270,11 +284,13 @@ export function FoxHoundsGame() {
     );
   }
 
-  const isGameOver = activePhase === "game-over" && activeWinner !== null;
+  const isGameOver = isOnline
+    ? online.phase === "finished" && activeWinner !== null
+    : activePhase === "game-over" && activeWinner !== null;
   const winnerSeats =
     isGameOver && activeWinner !== null
       ? isOnline
-        ? [seatForRole(activeWinner, activeHoundsSeat)]
+        ? [seatForRole(activeWinner, sessionHoundsSeat)]
         : [activeWinner]
       : null;
 
@@ -286,7 +302,7 @@ export function FoxHoundsGame() {
   );
 
   const turnSeat =
-    isOnline ? seatForRole(activeCurrent, activeHoundsSeat) : activeCurrent;
+    isOnline ? seatForRole(activeCurrent, sessionHoundsSeat) : activeCurrent;
 
   return (
     <div className="space-y-6">

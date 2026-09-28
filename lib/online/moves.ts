@@ -57,6 +57,7 @@ import {
   type TttMode,
 } from "@/lib/play/tic-tac-toe";
 import {
+  type HoundsSeat,
   parseDotsBoxesSize,
   parseFirstPlayer,
   parseHoundsSeat,
@@ -149,10 +150,22 @@ export type FoxHoundsOnlineState = {
   board: (FoxHoundsPlayer | null)[];
   current: FoxHoundsPlayer;
   stallTurns: number;
+  /** 対局中の seat↔役割（Realtime 同期用。部屋 options より優先） */
+  houndsSeat: HoundsSeat;
   phase: "playing" | "game-over";
   winner: FoxHoundsPlayer | null;
   winReason: FoxHoundsWinReason | null;
 };
+
+function foxHoundsSeatForState(
+  state: FoxHoundsOnlineState,
+  gameOptions?: unknown
+): HoundsSeat {
+  if (state.houndsSeat === 0 || state.houndsSeat === 1) {
+    return state.houndsSeat;
+  }
+  return parseHoundsSeat(gameOptions);
+}
 
 export type GameState =
   | ReversiState
@@ -269,6 +282,7 @@ export function createInitialState(
         board: base.board,
         current: base.current,
         stallTurns: base.stallTurns,
+        houndsSeat: parseHoundsSeat(gameOptions),
         phase: "playing",
         winner: null,
         winReason: null,
@@ -299,8 +313,8 @@ export function applyMove(
   }
 
   if (slug === "fox-hounds") {
-    const houndsSeat = parseHoundsSeat(gameOptions);
     const s = state as FoxHoundsOnlineState;
+    const houndsSeat = foxHoundsSeatForState(s, gameOptions);
     if (roleForSeat(seatIndex, houndsSeat) !== s.current) {
       return { error: "Not your turn" };
     }
@@ -562,7 +576,7 @@ export function applyMove(
 
     case "fox-hounds": {
       const s = state as FoxHoundsOnlineState;
-      const houndsSeat = parseHoundsSeat(gameOptions);
+      const houndsSeat = foxHoundsSeatForState(s, gameOptions);
       if (move.type !== "fox-hounds") return { error: "Invalid move type" };
       const next = applyFoxHoundsMove(s, move.from, move.to);
       if (!next) return { error: "Illegal move" };
@@ -573,6 +587,7 @@ export function applyMove(
             board: next.board,
             current: next.current,
             stallTurns: next.stallTurns,
+            houndsSeat,
             phase: "game-over",
             winner: outcome.winner,
             winReason: outcome.reason,
@@ -586,6 +601,7 @@ export function applyMove(
           board: next.board,
           current: nextRole,
           stallTurns: next.stallTurns,
+          houndsSeat,
           phase: "playing",
           winner: null,
           winReason: null,

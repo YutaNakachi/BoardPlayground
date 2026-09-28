@@ -29,7 +29,9 @@ export function useOnlineHoundsSeat(online: OnlineRoomSlice) {
   const houndsSeat =
     online.phase === "finished"
       ? (selection ?? rematchDefault)
-      : (selection ?? storedHoundsSeat);
+      : online.phase === "waiting"
+        ? (selection ?? storedHoundsSeat)
+        : storedHoundsSeat;
 
   const onHoundsSeatChange = useCallback(
     (seat: HoundsSeat) => {

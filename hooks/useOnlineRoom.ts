@@ -16,6 +16,7 @@ import {
   readPendingJoin,
   savePendingJoin,
 } from "@/lib/online/join-room-pending";
+import { mergeGameOptions } from "@/lib/online/game-options";
 import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
 import { normalizeRoomCodeInput } from "@/lib/online/room-code";
@@ -438,11 +439,12 @@ export function useOnlineRoom(gameSlug: string) {
     async (partial: Record<string, unknown>) => {
       if (!room || room.hostPlayerId !== myPlayerId) return;
       setError(null);
-      setRoom((prev) =>
-        prev
-          ? { ...prev, gameOptions: { ...prev.gameOptions, ...partial } }
-          : prev
-      );
+      setRoom((prev) => {
+        if (!prev) return prev;
+        const slug = prev.gameSlug as OnlineGameSlug;
+        const merged = mergeGameOptions(slug, prev.gameOptions, partial);
+        return merged ? { ...prev, gameOptions: merged as Record<string, unknown> } : prev;
+      });
       try {
         await updateRoomGameOptions(room.id, myPlayerId, partial);
         await refreshRoom(room.id);
