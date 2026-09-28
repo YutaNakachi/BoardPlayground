@@ -26,14 +26,24 @@ export function SetupPanel({
   playerOptions = [2, 3, 4],
   onlineSupported = false,
 }: Props) {
+  const showPlayModeTabs = Math.max(...playerOptions) >= 2;
+
   return (
     <PlaySetupCard title={title} description={description}>
-      <PlayModeLocalOnlineTabs
-        mode="local"
-        onModeChange={() => {}}
-        onlineSupported={onlineSupported}
-      />
-      <div className="mt-8 flex justify-center gap-2">
+      {showPlayModeTabs ? (
+        <PlayModeLocalOnlineTabs
+          mode="local"
+          onModeChange={() => {}}
+          onlineSupported={onlineSupported}
+        />
+      ) : null}
+      <div
+        className={
+          showPlayModeTabs
+            ? "mt-8 flex justify-center gap-2"
+            : "flex justify-center gap-2"
+        }
+      >
         {playerOptions.length === 1 ? (
           <p className="badge-muted inline-flex min-h-11 items-center px-4 text-sm">
             {playerOptions[0]}人対戦

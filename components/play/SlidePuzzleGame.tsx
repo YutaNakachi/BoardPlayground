@@ -5,7 +5,6 @@ import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation
 import { useCallback, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
-import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
 import {
   isSlideSolved,
   shuffledSlide,
@@ -65,12 +64,7 @@ export function SlidePuzzleGame() {
         title="スライドパズル"
         description={`${size}×${size}の盤で、1〜${lastTile}の数字を順に並べます。空きマスに隣接するタイルをタップして動かします。`}
       >
-        <PlayModeLocalOnlineTabs
-          mode="local"
-          onModeChange={() => {}}
-          onlineSupported={false}
-        />
-        <div className="mt-8 space-y-2">
+        <div className="space-y-2">
           <p className="text-center text-xs text-slate-400">盤面サイズ</p>
           <div className="flex flex-wrap justify-center gap-2">
             {SLIDE_SIZE_OPTIONS.map((option) => (
