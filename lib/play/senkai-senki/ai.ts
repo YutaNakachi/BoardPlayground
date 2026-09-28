@@ -336,7 +336,7 @@ function chooseEasy(
   const top = pickFromTopTier(pool, 90);
   if (top && Math.random() < 0.35) return top;
 
-  return pickFromBottomTier(pool, 55)?.choice ?? pickRandom(legal);
+  return pickFromBottomTier(pool, 55) ?? pickRandom(legal);
 }
 
 export function chooseMove(
@@ -365,7 +365,7 @@ export function chooseMove(
 
   return (
     chooseHard(state, legal, perspective) ??
-    pickFromTopTier(scored, 8)?.choice ??
+    pickFromTopTier(scored, 8) ??
     pickRandom(legal)
   );
 }
