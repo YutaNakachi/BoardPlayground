@@ -5,9 +5,9 @@ export function buildContactAutoReplySubject(): string {
   return `【${SITE_NAME}】お問い合わせを受け付けました`;
 }
 
-/** 受付確認メール末尾の署名（プレーンテキスト） */
+/** 受付確認メール末尾の署名（プレーンテキスト。`--` 単独行は Gmail が署名として折りたたむため使わない） */
 export function buildContactAutoReplySignature(): string {
-  return ["--", SITE_NAME, SITE_URL].join("\n");
+  return ["────────────────", SITE_NAME, SITE_URL].join("\n");
 }
 
 export function buildContactAutoReplyText(name: string): string {
