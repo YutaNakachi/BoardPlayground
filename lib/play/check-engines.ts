@@ -57,6 +57,11 @@ import {
   foxHoundsWinner,
   initialFoxHounds,
 } from "./fox-hounds";
+import {
+  applyMove,
+  createInitialState,
+  type FoxHoundsOnlineState,
+} from "@/lib/online/moves";
 import { gomokuWinner } from "./gomoku";
 import { initialKlondike } from "./klondike";
 import {
@@ -437,6 +442,30 @@ function checkFoxHounds() {
     foxHoundsWinner(stalled, 0)?.reason === "hounds-stalling",
     "fox-hounds stalling limit"
   );
+
+  const onlineStart = createInitialState("fox-hounds", {
+    houndsSeat: 1,
+  }) as FoxHoundsOnlineState;
+  assert(onlineStart.current === 0, "fox-hounds online hounds role opens");
+  assert(onlineStart.houndsSeat === 1, "fox-hounds online stores houndsSeat");
+  assert(onlineStart.phase === "playing", "fox-hounds online playing phase");
+
+  const onlineOpening = foxHoundsMoves(initialFoxHounds(), 0)[0];
+  const houndsOnSeat1 = applyMove(
+    "fox-hounds",
+    onlineStart,
+    1,
+    { type: "fox-hounds", from: onlineOpening.from, to: onlineOpening.to }
+  );
+  assert(!("error" in houndsOnSeat1), "fox-hounds hounds seat can open");
+
+  const wrongSeat = applyMove(
+    "fox-hounds",
+    onlineStart,
+    0,
+    { type: "fox-hounds", from: onlineOpening.from, to: onlineOpening.to }
+  );
+  assert("error" in wrongSeat, "fox-hounds rejects wrong seat turn");
 }
 
 function checkMahjong() {

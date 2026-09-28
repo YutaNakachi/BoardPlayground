@@ -17,10 +17,55 @@ export type DotsBoxesGameOptions = CommonGameOptions & {
   size?: DotsBoxesSize;
 };
 
+export type HoundsSeat = 0 | 1;
+
+export type FoxHoundsGameOptions = {
+  houndsSeat?: HoundsSeat;
+};
+
 export type OnlineGameOptions =
   | TicTacToeGameOptions
   | DotsBoxesGameOptions
+  | FoxHoundsGameOptions
   | CommonGameOptions;
+
+export function parseHoundsSeat(raw: unknown): HoundsSeat {
+  if (raw && typeof raw === "object" && "houndsSeat" in raw) {
+    const houndsSeat = (raw as { houndsSeat: unknown }).houndsSeat;
+    if (houndsSeat === 0 || houndsSeat === 1) {
+      return houndsSeat;
+    }
+  }
+  return 0;
+}
+
+/** 猟犬(0)・ウサギ(1) の役割と seat の対応 */
+export function roleForSeat(seat: number, houndsSeat: HoundsSeat): 0 | 1 {
+  return seat === houndsSeat ? 0 : 1;
+}
+
+export function seatForRole(role: 0 | 1, houndsSeat: HoundsSeat): HoundsSeat {
+  return role === 0 ? houndsSeat : houndsSeat === 0 ? 1 : 0;
+}
+
+export function initialCurrentPlayerSeat(
+  slug: OnlineGameSlug,
+  gameOptions: unknown
+): FirstPlayerSeat {
+  if (slug === "fox-hounds") {
+    return parseHoundsSeat(gameOptions);
+  }
+  return parseFirstPlayer(gameOptions);
+}
+
+function parseFoxHoundsGameOptions(raw: unknown): FoxHoundsGameOptions | null {
+  if (raw == null) return {};
+  if (typeof raw !== "object") return null;
+  const keys = Object.keys(raw as object);
+  if (!keys.every((key) => key === "houndsSeat")) return null;
+  const houndsSeat = parseHoundsSeat(raw);
+  return houndsSeat === 1 ? { houndsSeat: 1 } : {};
+}
 
 export function parseFirstPlayer(raw: unknown): FirstPlayerSeat {
   if (raw && typeof raw === "object" && "firstPlayer" in raw) {
@@ -126,6 +171,8 @@ export function validateGameOptions(
       return parseCommonGameOptions(raw);
     case "dots-and-boxes":
       return parseDotsBoxesGameOptions(raw);
+    case "fox-hounds":
+      return parseFoxHoundsGameOptions(raw);
   }
 }
 
@@ -158,6 +205,8 @@ export function hasNonDefaultGameOptions(
       return (options as TicTacToeGameOptions).mode !== "classic";
     case "dots-and-boxes":
       return parseDotsBoxesSize(options) !== 4;
+    case "fox-hounds":
+      return parseHoundsSeat(options) === 1;
     default:
       return Object.keys(options).length > 0;
   }

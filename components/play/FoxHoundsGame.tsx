@@ -2,10 +2,27 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useState } from "react";
+import { OnlineHoundsSeatPicker } from "@/components/play/shared/OnlineHoundsSeatPicker";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineHoundsSeat } from "@/hooks/useOnlineHoundsSeat";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import {
+  type HoundsSeat,
+  parseHoundsSeat,
+  roleForSeat,
+  seatForRole,
+} from "@/lib/online/game-options";
+import type { FoxHoundsOnlineState } from "@/lib/online/moves";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
 import {
   applyFoxHoundsMove,
   FH_BOARD_LINES,
@@ -21,71 +38,154 @@ import {
   type FoxHoundsWinReason,
   type Player,
 } from "@/lib/play/fox-hounds";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-type Phase = "setup" | "playing" | "game-over";
+type LocalPhase = "setup" | "playing" | "game-over";
 
 const PLAYER_LABELS = ["猟犬", "ウサギ"] as const;
 
+const GAME_DESCRIPTION =
+  "11点の専用盤で、猟犬3匹がウサギ1匹を囲い、ウサギは左端の列を目指します。猟犬が先手です。";
+
 export function FoxHoundsGame() {
-  const { recordLocalPlay } = usePlayPage();
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("fox-hounds");
+  const { houndsSeat, onHoundsSeatChange } = useOnlineHoundsSeat(online);
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [state, setState] = useState<FoxHoundsState>(() => initialFoxHounds());
   const [selected, setSelected] = useState<number | null>(null);
-  const [winner, setWinner] = useState<Player | null>(null);
-  const [winReason, setWinReason] = useState<FoxHoundsWinReason | null>(null);
+  const [localWinner, setLocalWinner] = useState<Player | null>(null);
+  const [localWinReason, setLocalWinReason] = useState<FoxHoundsWinReason | null>(
+    null
+  );
 
-  const startGame = useCallback(() => {
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" ||
+        online.phase === "playing" ||
+        online.phase === "finished")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (mode === "local") {
+      setPlayMode({ mode: "local" });
+    }
+  }, [online.room?.code, online.phase, mode, setPlayMode]);
+
+  const startLocal = useCallback(() => {
     recordLocalPlay();
     setState(initialFoxHounds());
     setSelected(null);
-    setWinner(null);
-    setWinReason(null);
-    setPhase("playing");
+    setLocalWinner(null);
+    setLocalWinReason(null);
+    setLocalPhase("playing");
   }, [recordLocalPlay]);
 
-  const { board, current, stallTurns } = state;
+  const isOnline =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as FoxHoundsOnlineState | null;
+  const sessionHoundsSeat: HoundsSeat = useMemo(() => {
+    if (!isOnline) return 0;
+    if (
+      onlineState &&
+      (onlineState.houndsSeat === 0 || onlineState.houndsSeat === 1)
+    ) {
+      return onlineState.houndsSeat;
+    }
+    if (
+      onlineState &&
+      (onlineState.phase === "playing" || onlineState.phase === "game-over")
+    ) {
+      return parseHoundsSeat(online.room?.gameOptions);
+    }
+    return houndsSeat;
+  }, [isOnline, onlineState, online.room?.gameOptions, houndsSeat]);
+
+  const activeBoard = isOnline && onlineState ? onlineState.board : state.board;
+  const activeCurrent = isOnline && onlineState ? onlineState.current : state.current;
+  const activeStallTurns =
+    isOnline && onlineState ? onlineState.stallTurns : state.stallTurns;
+  const activeWinner = isOnline && onlineState ? onlineState.winner : localWinner;
+  const activeWinReason =
+    isOnline && onlineState ? onlineState.winReason : localWinReason;
+  const activePhase =
+    isOnline && onlineState
+      ? onlineState.phase
+      : localPhase === "game-over"
+        ? "game-over"
+        : localPhase === "playing"
+          ? "playing"
+          : "setup";
+
+  const activeSelected =
+    isOnline && !online.isMyTurn ? null : selected;
+
+  const myRole = useMemo((): Player | null => {
+    if (!isOnline || online.mySeat < 0) return null;
+    return roleForSeat(online.mySeat, sessionHoundsSeat);
+  }, [isOnline, online.mySeat, sessionHoundsSeat]);
 
   const destinations = useMemo(() => {
-    if (phase !== "playing") return [];
-    if (current === 1) {
-      return foxHoundsHareDestinations(board);
+    if (activePhase !== "playing") return [];
+    if (isOnline && myRole !== null && activeCurrent !== myRole) return [];
+    if (activeCurrent === 1) {
+      return foxHoundsHareDestinations(activeBoard);
     }
-    if (selected === null || board[selected] !== 0) return [];
-    return foxHoundsHoundDestinations(board, selected);
-  }, [phase, board, current, selected]);
+    if (activeSelected === null || activeBoard[activeSelected] !== 0) return [];
+    return foxHoundsHoundDestinations(activeBoard, activeSelected);
+  }, [activePhase, activeBoard, activeCurrent, activeSelected, isOnline, myRole]);
 
   const onNode = useCallback(
     (index: number) => {
-      if (phase !== "playing") return;
+      if (activePhase !== "playing") return;
+      if (isOnline && (!online.isMyTurn || myRole !== activeCurrent)) return;
 
-      const from = current === 1 ? board.indexOf(1) : selected;
+      const from =
+        activeCurrent === 1 ? activeBoard.indexOf(1) : activeSelected;
       if (destinations.includes(index) && from !== null && from >= 0) {
+        if (isOnline) {
+          void online.handleMove({ type: "fox-hounds", from, to: index });
+          setSelected(null);
+          return;
+        }
         const next = applyFoxHoundsMove(state, from, index);
         if (!next) return;
         setState(next);
         setSelected(null);
         const outcome = foxHoundsWinner(next, next.current);
         if (outcome) {
-          setWinner(outcome.winner);
-          setWinReason(outcome.reason);
-          setPhase("game-over");
+          setLocalWinner(outcome.winner);
+          setLocalWinReason(outcome.reason);
+          setLocalPhase("game-over");
         }
         return;
       }
 
-      const piece = board[index];
-      if (piece !== current) {
+      const piece = activeBoard[index];
+      if (piece !== activeCurrent) {
         setSelected(null);
         return;
       }
       setSelected(index);
     },
-    [phase, destinations, selected, state, board, current]
+    [
+      activePhase,
+      isOnline,
+      online,
+      destinations,
+      activeSelected,
+      state,
+      activeBoard,
+      activeCurrent,
+      myRole,
+    ]
   );
 
   const onBoardPointer = useCallback(
     (event: React.PointerEvent<SVGSVGElement>) => {
-      if (phase !== "playing") return;
+      if (activePhase !== "playing") return;
       const svg = event.currentTarget;
       const ctm = svg.getScreenCTM();
       if (!ctm) return;
@@ -97,51 +197,137 @@ export function FoxHoundsGame() {
 
       let nearest = -1;
       let nearestDist = FH_HIT_RADIUS * FH_HIT_RADIUS;
-      for (let index = 0; index < FH_NODE_POS.length; index++) {
-        const pos = FH_NODE_POS[index];
+      for (let node = 0; node < FH_NODE_POS.length; node++) {
+        const pos = FH_NODE_POS[node];
         const dx = pos.x - x;
         const dy = pos.y - y;
         const dist = dx * dx + dy * dy;
         if (dist <= nearestDist) {
           nearestDist = dist;
-          nearest = index;
+          nearest = node;
         }
       }
       if (nearest >= 0) onNode(nearest);
     },
-    [phase, onNode]
+    [activePhase, onNode]
   );
 
-  const hareFrom = board.indexOf(1);
+  const hareFrom = activeBoard.indexOf(1);
+  const roomPlayers = isOnline ? online.players : [];
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
-  usePlaySetupNavigation(phase === "setup", backToSetup);
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setSelected(null);
+    setLocalWinner(null);
+    setLocalWinReason(null);
+    setPlayMode({ mode: "local" });
+  }, [online.reset, setPlayMode]);
 
-  if (phase === "setup") {
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") ||
+    online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
+
+  if (online.completingPendingJoin) {
+    return <PendingJoinConnecting />;
+  }
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="ウサギと猟犬"
-        description="11点の専用盤で、猟犬3匹がウサギ1匹を囲い、ウサギは左端の列を目指します。猟犬が先手です。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
+        description={GAME_DESCRIPTION}
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={(displayName) => online.handleCreate(displayName)}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        loading={online.loading}
+        initialJoinCode={online.joinCodeFromUrl}
+        error={online.error}
       />
     );
   }
 
-  const isGameOver = phase === "game-over" && winner !== null;
+  if (online.phase === "waiting" && online.room) {
+    return (
+      <OnlineSetupPanel
+        title="ウサギと猟犬"
+        description={GAME_DESCRIPTION}
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          isHost: online.isHost,
+          onStart: () => online.handleStart({ gameOptions: { houndsSeat } }),
+          canStart: online.players.length >= 2,
+          extra: (
+            <OnlineHoundsSeatPicker
+              players={online.players}
+              value={houndsSeat}
+              onChange={online.isHost ? onHoundsSeatChange : undefined}
+              readOnly={!online.isHost}
+            />
+          ),
+        }}
+      />
+    );
+  }
+
+  const isGameOver = isOnline
+    ? online.phase === "finished" && activeWinner !== null
+    : activePhase === "game-over" && activeWinner !== null;
+  const winnerSeats =
+    isGameOver && activeWinner !== null
+      ? isOnline
+        ? [seatForRole(activeWinner, sessionHoundsSeat)]
+        : [activeWinner]
+      : null;
+
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    () => online.handleRematch({ gameOptions: { houndsSeat } }),
+    reset
+  );
+
+  const turnSeat =
+    isOnline ? seatForRole(activeCurrent, sessionHoundsSeat) : activeCurrent;
 
   return (
     <div className="space-y-6">
-      {isGameOver && winner !== null && (
+      {isGameOver && winnerSeats && activeWinner !== null && (
         <ResultPanel
           variant="inline"
-          winners={[winner]}
-          onReplay={() => setPhase("setup")}
+          winners={winnerSeats}
+          winnersLabel={
+            isOnline
+              ? formatWinnersWithNames(roomPlayers, winnerSeats)
+              : undefined
+          }
+          {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineHoundsSeatPicker
+                players={online.players}
+                value={houndsSeat}
+                onChange={onHoundsSeatChange}
+              />
+            ) : undefined
+          }
           details={
             <p className="text-slate-400">
-              {winReason ? foxHoundsWinMessage(winReason) : null}
+              {activeWinReason ? foxHoundsWinMessage(activeWinReason) : null}
             </p>
           }
         />
@@ -149,12 +335,28 @@ export function FoxHoundsGame() {
 
       {!isGameOver && (
         <TurnBanner
-          playerIndex={current}
-          playerLabel={`プレイヤー ${current + 1}（${PLAYER_LABELS[current]}）`}
-          stats={
-            current === 0 && stallTurns > 0
-              ? `猟犬の停滞 ${stallTurns}/10 手（10手でウサギの勝ち）`
-              : undefined
+          playerIndex={turnSeat}
+          playerLabel={
+            isOnline
+              ? formatSeatLabel(
+                  roomPlayers,
+                  turnSeat,
+                  PLAYER_LABELS[activeCurrent]
+                )
+              : `プレイヤー ${activeCurrent + 1}（${PLAYER_LABELS[activeCurrent]}）`
+          }
+          stats={[
+            isOnline && myRole !== null
+              ? `あなたは${PLAYER_LABELS[myRole]}`
+              : null,
+            activeCurrent === 0 && activeStallTurns > 0
+              ? `猟犬の停滞 ${activeStallTurns}/10 手（10手でウサギの勝ち）`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || undefined}
+          action={
+            isOnline && !online.isMyTurn ? "相手の手番です" : undefined
           }
         />
       )}
@@ -165,9 +367,9 @@ export function FoxHoundsGame() {
       >
         <svg
           viewBox={`${FH_VIEW_BOX.x} ${FH_VIEW_BOX.y} ${FH_VIEW_BOX.width} ${FH_VIEW_BOX.height}`}
-          className="block h-auto w-full cursor-pointer touch-manipulation"
+          className={`block h-auto w-full touch-manipulation ${isGameOver ? "" : "cursor-pointer"}`}
           aria-label="ウサギと猟犬の盤"
-          onPointerDown={onBoardPointer}
+          onPointerDown={isGameOver ? undefined : onBoardPointer}
         >
           <rect
             x={FH_VIEW_BOX.x}
@@ -197,10 +399,13 @@ export function FoxHoundsGame() {
           })}
 
           {FH_NODE_POS.map((pos, index) => {
-            const piece = board[index];
+            const piece = activeBoard[index];
             const isDest = destinations.includes(index);
             const isSel =
-              selected === index || (current === 1 && index === hareFrom);
+              activeSelected === index ||
+              (activeCurrent === 1 &&
+                index === hareFrom &&
+                (!isOnline || myRole === 1));
             const isHare = piece === 1;
             const isHound = piece === 0;
 
@@ -247,12 +452,13 @@ export function FoxHoundsGame() {
               </g>
             );
           })}
-
         </svg>
       </div>
 
       <p className="text-center text-xs text-slate-500">
-        プレイヤー1＝猟犬（先手）／プレイヤー2＝ウサギ
+        {isOnline
+          ? "猟犬が先手（部屋で役割を決めます）"
+          : "プレイヤー1＝猟犬（先手）／プレイヤー2＝ウサギ"}
       </p>
     </div>
   );
