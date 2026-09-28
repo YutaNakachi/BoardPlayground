@@ -1,8 +1,18 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { usePlayPage } from "@/components/play/PlayPageContext";
+import { getGameBySlug } from "@/lib/games";
 import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
-import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
+import {
+  PlayModeLocalMatchTabs,
+  type LocalMatchSetupKind,
+} from "@/components/play/shared/PlayModeLocalMatchTabs";
+import {
+  PlayModeLocalOnlineTabs,
+  type SetupLocalOnlineMode,
+} from "@/components/play/shared/PlayModeLocalOnlineTabs";
 
 type Props = {
   title: string;
@@ -26,16 +36,34 @@ export function SetupPanel({
   playerOptions = [2, 3, 4],
   onlineSupported = false,
 }: Props) {
+  const { gameSlug } = usePlayPage();
+  const cpuSupported = getGameBySlug(gameSlug)?.cpu ?? false;
   const showPlayModeTabs = Math.max(...playerOptions) >= 2;
+  const [localOnlineMode, setLocalOnlineMode] =
+    useState<SetupLocalOnlineMode>("local");
+  const [localMatchKind, setLocalMatchKind] =
+    useState<LocalMatchSetupKind>("pvp");
+
+  const showLocalMatchTabs =
+    showPlayModeTabs && localOnlineMode === "local";
 
   return (
     <PlaySetupCard title={title} description={description}>
       {showPlayModeTabs ? (
         <PlayModeLocalOnlineTabs
-          mode="local"
-          onModeChange={() => {}}
+          mode={localOnlineMode}
+          onModeChange={setLocalOnlineMode}
           onlineSupported={onlineSupported}
         />
+      ) : null}
+      {showLocalMatchTabs ? (
+        <div className="mt-8">
+          <PlayModeLocalMatchTabs
+            kind={localMatchKind}
+            onKindChange={setLocalMatchKind}
+            cpuSupported={cpuSupported}
+          />
+        </div>
       ) : null}
       <div
         className={

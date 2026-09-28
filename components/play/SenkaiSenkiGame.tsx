@@ -6,9 +6,9 @@ import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
 import {
-  PlayModeLocalCpuTabs,
-  type LocalCpuSetupKind,
-} from "@/components/play/shared/PlayModeLocalCpuTabs";
+  PlayModeLocalMatchTabs,
+  type LocalMatchSetupKind,
+} from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
 import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -33,7 +33,7 @@ import {
 } from "@/lib/play/senkai-senki";
 
 type Phase = "setup" | "playing" | "game-over";
-type MatchKind = "local" | "cpu";
+type MatchKind = "pvp" | "cpu";
 
 const FACING_DEG: Record<Facing, number> = {
   0: 0,
@@ -207,10 +207,11 @@ function PieceGlyph({ piece }: { piece: SenkaiPiece }) {
 export function SenkaiSenkiGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
-  const [setupKind, setSetupKind] = useState<LocalCpuSetupKind>("local");
+  const [setupMatchKind, setSetupMatchKind] =
+    useState<LocalMatchSetupKind>("pvp");
   const [cpuDifficulty, setCpuDifficulty] = useState<CpuDifficulty>("normal");
   const [humanSeat, setHumanSeat] = useState<Player>(0);
-  const [matchKind, setMatchKind] = useState<MatchKind>("local");
+  const [matchKind, setMatchKind] = useState<MatchKind>("pvp");
   const [state, setState] = useState<SenkaiState>(() => initialSenkaiSenki());
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -224,13 +225,13 @@ export function SenkaiSenkiGame() {
 
   const startGame = useCallback(() => {
     recordLocalPlay();
-    setMatchKind(setupKind);
-    setPlayMode({ mode: setupKind === "cpu" ? "cpu" : "local" });
+    setMatchKind(setupMatchKind);
+    setPlayMode({ mode: setupMatchKind === "cpu" ? "cpu" : "local" });
     setState(initialSenkaiSenki());
     setSelectedId(null);
     setNotice(null);
     setPhase("playing");
-  }, [recordLocalPlay, setPlayMode, setupKind]);
+  }, [recordLocalPlay, setPlayMode, setupMatchKind]);
 
   const humanTurn =
     matchKind !== "cpu" || (phase === "playing" && state.current === humanSeat);
@@ -430,9 +431,13 @@ export function SenkaiSenkiGame() {
           onlineSupported={false}
         />
         <div className="mt-8">
-          <PlayModeLocalCpuTabs kind={setupKind} onKindChange={setSetupKind} />
+          <PlayModeLocalMatchTabs
+            kind={setupMatchKind}
+            onKindChange={setSetupMatchKind}
+            cpuSupported
+          />
         </div>
-        {setupKind === "cpu" ? (
+        {setupMatchKind === "cpu" ? (
           <div className="mt-8 space-y-6">
             <div>
               <p className="mb-2 text-xs text-slate-400">CPUの強さ</p>
