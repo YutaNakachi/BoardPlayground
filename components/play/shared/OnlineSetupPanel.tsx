@@ -119,7 +119,7 @@ export function OnlineSetupPanel({
   return (
     <PlaySetupCard title={title} description={description}>
       <PlayModeLocalOnlineTabs
-        mode={displayMode}
+        mode={displayMode === "online" ? "online" : "local"}
         onModeChange={onModeChange}
         onlineSupported={onlineSupported}
       />
