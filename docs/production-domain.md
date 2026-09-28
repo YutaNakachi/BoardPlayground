@@ -200,7 +200,7 @@ Gmail → **設定** → **一般** → **署名** に、contact@ 用として�
 
 | 種別 | 署名 |
 |------|------|
-| 受付確認（A） | `lib/contact/auto-reply.ts` の短文（`--` + サイト名 + 正規 URL） |
+| 受付確認（A） | `lib/contact/auto-reply.ts` の短文（区切り線 + サイト名 + 正規 URL。`--` 単独行は Gmail が署名として隠すことがある） |
 | Gmail からの返信（contact@） | 上記 **Gmail の署名（C）** を Gmail に貼る |
 | 運営宛通知（B） | なし |
 
