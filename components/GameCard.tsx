@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { GameCardArt } from "@/components/game-art/GameCardArt";
-import { GameMetaIndicators, OnlineBadge } from "@/components/GameMetaIndicators";
+import { CpuBadge, GameMetaIndicators, OnlineBadge } from "@/components/GameMetaIndicators";
 import { OriginChip } from "@/components/OriginChip";
 import { PlayCountIndicator } from "@/components/PlayCountIndicator";
 import { usePlayStats } from "@/components/PlayStatsProvider";
@@ -22,6 +22,7 @@ export function GameCard({ game, initialPlayCount }: Props) {
   const statsVisible = statsEnabled || initialPlayCount != null;
   const showPlayCount = statsVisible && playCount > 0;
   const showOnline = onlineEnabled && isOnlineGame(game.slug);
+  const showCpu = game.cpu;
   const playable = game.status === "playable";
   const playHref = playable ? `/play/${game.slug}` : `/games/${game.slug}`;
 
@@ -31,9 +32,10 @@ export function GameCard({ game, initialPlayCount }: Props) {
         <GameCardArt game={game} />
       </div>
 
-      {showOnline ? (
-        <div className="pointer-events-none absolute left-3 top-3 z-20">
-          <OnlineBadge />
+      {showOnline || showCpu ? (
+        <div className="pointer-events-none absolute left-3 top-3 z-20 flex flex-col items-start gap-1.5">
+          {showOnline ? <OnlineBadge /> : null}
+          {showCpu ? <CpuBadge /> : null}
         </div>
       ) : null}
 

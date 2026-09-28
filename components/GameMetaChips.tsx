@@ -18,7 +18,7 @@ export function GameMetaChips({
     <div className={className}>
       {includeOrigin ? <OriginChip origin={game.origin} /> : null}
       <GameMetaIndicators game={game} className="contents" />
-      {game.cpu ? <span className={META_CHIP_CLASS}>CPUあり</span> : null}
+      {game.cpu ? <span className={META_CHIP_CLASS}>CPU戦可</span> : null}
       {game.team ? <span className={META_CHIP_CLASS}>チーム可</span> : null}
     </div>
   );

@@ -196,7 +196,7 @@ export function CatalogFilterPanel({
             ) : null}
             {hasCpu ? (
               <FilterChip
-                label="CPUあり"
+                label="CPU戦可"
                 active={filters.cpu}
                 onClick={() => patch({ cpu: !filters.cpu })}
                 layout="stack"
