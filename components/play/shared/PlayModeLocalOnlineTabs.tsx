@@ -22,32 +22,39 @@ export function PlayModeLocalOnlineTabs({
     !onlineSupported && mode === "online" ? "local" : mode;
 
   return (
-    <div className="flex justify-center gap-2">
-      <button
-        type="button"
-        onClick={() => onModeChange("local")}
-        className={setupPillClass(effectiveMode === "local")}
-      >
-        ローカル
-      </button>
-      <button
-        type="button"
-        disabled={!onlineSupported}
-        aria-disabled={!onlineSupported}
-        title={
-          onlineSupported ? undefined : "このゲームはオンライン未対応です"
-        }
-        onClick={() => {
-          if (onlineSupported) onModeChange("online");
-        }}
-        className={
-          onlineSupported
-            ? setupPillClass(effectiveMode === "online")
-            : setupPillDisabledClass()
-        }
-      >
-        オンライン
-      </button>
+    <div>
+      <div className="flex justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => onModeChange("local")}
+          className={setupPillClass(effectiveMode === "local")}
+        >
+          ローカル
+        </button>
+        <button
+          type="button"
+          disabled={!onlineSupported}
+          aria-disabled={!onlineSupported}
+          title={
+            onlineSupported ? undefined : "このゲームはオンライン未対応です"
+          }
+          onClick={() => {
+            if (onlineSupported) onModeChange("online");
+          }}
+          className={
+            onlineSupported
+              ? setupPillClass(effectiveMode === "online")
+              : setupPillDisabledClass()
+          }
+        >
+          オンライン
+        </button>
+      </div>
+      {!onlineSupported ? (
+        <p className="mt-2 text-center text-xs text-slate-500">
+          オンライン未対応
+        </p>
+      ) : null}
     </div>
   );
 }
