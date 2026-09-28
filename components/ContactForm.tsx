@@ -63,7 +63,7 @@ export function ContactForm({ configured }: Props) {
     return (
       <div className="space-y-4">
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm leading-relaxed text-emerald-100">
-          送信が完了しました。
+          送信が完了しました。ご入力のメールアドレス宛に受付確認メールをお送りしました。
           <br />
           内容を確認のうえ、返信が必要な場合はご入力いただいたメールアドレス宛にご連絡いたします。
         </p>

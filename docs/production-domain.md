@@ -43,43 +43,137 @@
 
 ---
 
+## お問い合わせメール運用（noreply / contact）
+
+本番の想定:
+
+| 役割 | アドレス | 設定場所 |
+|------|----------|----------|
+| サイトからの送信 From | `noreply@bodopa.com` | Vercel `RESEND_FROM_EMAIL` + Resend ドメイン認証 |
+| お問い合わせ通知の届け先 To | `contact@bodopa.com` | Vercel `CONTACT_TO_EMAIL` + Cloudflare Email Routing |
+| お客への返信時の From | `contact@bodopa.com` | Gmail「別のアドレスとして送信」（Resend とは別経路） |
+
+メールの流れ: フォーム → Resend が **From: noreply@** / **To: contact@** / **Reply-To: お客** で運営に通知 → 運営が Gmail で返信（**From: contact@**）→ お客に届く。
+
+---
+
 ## Resend（送信元・お問い合わせ B）
 
-### Resend ダッシュボード
+お問い合わせ API は `app/api/contact/route.ts`。**3 つの環境変数**と **ドメイン認証**で本番有効。受付確認メール（A）も同 API から送信する。
 
-- [ ] **Domains** → `bodopa.com` を追加
-- [ ] 表示される **SPF / DKIM** 等を Cloudflare DNS に追加
-- [ ] ドメインが **Verified** になるまで待つ
+### 1. Resend で API キー（未作成なら）
 
-### Vercel Environment Variables（Production）
+1. [Resend](https://resend.com/) にログイン
+2. **API Keys** → **Create API Key**
+3. 名前例: `boardplayground-production`、Permission: **Sending access**（ドメイン限定でも可）
+4. 表示されたキーは **一度だけ**コピー → 次の Vercel 設定へ（チャット・Git に貼らない）
+
+### 2. Resend でドメイン追加
+
+1. **Domains** → **Add Domain**
+2. ドメイン名: **`bodopa.com`**（`www` は不要）
+3. Region はデフォルトで可（日本向け配信は Resend の仕様に従う）
+4. **Add** 後、**DNS Records** 一覧が表示される（件数・ホスト名はアカウントごとに異なる。**Resend 画面の値をそのまま使う**）
+
+### 3. Cloudflare に DNS を追加
+
+**Websites** → `bodopa.com` → **DNS** → **Records** → **Add record**
+
+Resend が示す各行を追加する（典型的には次のような種類。**名前・値は必ず Resend のコピーボタンから**）:
+
+| Resend の種別 | Cloudflare での Type | Name の例 | 注意 |
+|---------------|----------------------|-----------|------|
+| DKIM | CNAME | `resend._domainkey` など | **DNS only**（CNAME はプロキシ不可のことが多い） |
+| SPF / 送信 | TXT または CNAME | `send` または `@` | Resend の指示どおり |
+| （表示されたら）DMARC | TXT | `_dmarc` | 任意だが推奨されることが多い |
+
+- 既存の **同じ Name + Type** がある場合は **上書きせず**、Resend のドキュメントに沿って統合する（SPF TXT は 1 本にまとめる必要がある場合あり）
+- メール用レコードは **灰い雲（DNS only）**。TXT はプロキシの対象外
+
+追加後:
+
+1. Resend の Domains 画面で **Verify** / 自動再チェックを待つ（数分〜最大 48 時間）
+2. ステータスが **Verified** になるまで待つ
+
+### 4. Resend で追加設定は基本不要
+
+- **Domains** で `bodopa.com` が **Verified** なら、`noreply@bodopa.com` は追加登録なしで送信可能（ドメイン単位の認証）。
+- **API Keys**: 既存キーが有効なら作り直し不要。漏洩時のみローテーション。
+- Resend は **`contact@` の受信はしない**（受信は Cloudflare Email Routing → Gmail）。
+
+### 5. Vercel Environment Variables（Production）
+
+**Settings → Environment Variables**。Preview / Development は空でもよい（本番だけ有効にする運用で可）。
 
 | 変数 | 種別 | 内容 |
 |------|------|------|
-| `RESEND_API_KEY` | Secret | Resend API キー |
-| `RESEND_FROM_EMAIL` | 通常 | 認証済みドメインの送信元（例: `noreply@bodopa.com`） |
-| `CONTACT_TO_EMAIL` | Secret | 運営の受信先（リポジトリに書かない） |
+| `RESEND_API_KEY` | **Sensitive** | 手順 1 の API キー |
+| `RESEND_FROM_EMAIL` | 通常 | `noreply@bodopa.com`（表示名は入れない。コード側で `ボドパッ！ <noreply@...>` にする） |
+| `CONTACT_TO_EMAIL` | **Sensitive** | `contact@bodopa.com`（Cloudflare で受信設定後に有効） |
 
-- [ ] `onboarding@resend.dev` 運用をやめ、上記 `RESEND_FROM_EMAIL` に切り替え
-- [ ] **Redeploy**
+- [ ] 以前 `onboarding@resend.dev` を使っていた場合は **Production の `RESEND_FROM_EMAIL` を差し替え**
+- [ ] **Deployments** → 最新 Production → **Redeploy**（環境変数だけ変えた場合も必須）
 
-### 手動テスト（本番）
+### 6. 手動テスト（本番）
 
-- [ ] `/contact` からテスト送信（返信先は自分用の捨てアドレスなど）
-- [ ] 運営宛に届く
-- [ ] メールクライアントで **Reply（返信）** すると、宛先がフォームの返信先になる（`Reply-To`）
+- [ ] https://bodopa.com/contact がフォーム表示（「受け付けられません」が出ない）
+- [ ] テスト送信（返信先は自分用の別アドレス）
+- [ ] **CONTACT_TO_EMAIL** の受信箱に届く
+- [ ] 件名・本文に名前・返信先・本文が含まれる
+- [ ] 受信メールで **返信** → 宛先がフォームの返信先（`Reply-To`）になる
+- [ ] From が `ボドパッ！` + `noreply@bodopa.com`（または設定したアドレス）で、**resend.dev ではない**
 
-### 運営が Gmail で返信する場合
+### うまくいかないとき
 
-受信は Gmail でもよいが、**返信時の From が個人の @gmail.com にならない**ようにする。
+| 症状 | 確認 |
+|------|------|
+| フォームが「受け付けられません」 | Production の 3 変数が揃っているか、Redeploy 済みか |
+| 送信失敗（503） | Vercel **Functions** ログの `contact notify failed`、Resend が Verified か、From が認証ドメインか |
+| 届かない | 迷惑メール、Gmail のフィルタ、`CONTACT_TO_EMAIL` の typo |
+| Domain が Verified にならない | Cloudflare の Name が Resend と完全一致か、プロキシ、反映待ち |
 
-- Gmail → **設定** → **アカウントとインポート** → **他のメールアドレスを追加**（「別のアドレスとして送信」）
-- 認証済みドメインの運用用アドレス（Resend の From と同じか、別の `@bodopa.com`）を追加し、返信時はその From を選ぶ
+### Cloudflare Email Routing（contact@ の受信）
+
+`CONTACT_TO_EMAIL=contact@bodopa.com` にする前に、**contact@ がメールを受け取れる**ようにする。
+
+1. Cloudflare → **bodopa.com** → **Email** → **Email Routing**
+2. 初回は **Enable Email Routing**（必要な MX / TXT を Cloudflare が DNS に追加する流れに従う）
+3. **Routing rules** → **Create address**
+   - **Custom address**: `contact`
+   - **Action**: **Send to an email** → 普段使う Gmail（個人アドレス。ドキュメント・Git に書かない）
+4. **Destination address** の確認メールが Gmail に届く → **Verify**
+5. テスト: 別アドレスから `contact@bodopa.com` に送って Gmail に転送されるか確認
+
+Resend 用の DKIM/SPF と MX（Email Routing）は **別レコード**として共存する（Cloudflare が案内する MX をそのまま使う）。
+
+### Gmail（転送受信・contact@ として返信）
+
+**A. 転送メールを Gmail で受け取る**
+
+- Email Routing の Verify 後、フォーム通知は Gmail に届く（To 表示は `contact@bodopa.com` 経由の転送）
+- 届かない場合: 迷惑メール、Routing のルール、Vercel の `CONTACT_TO_EMAIL` の typo
+
+**B. 返信時の From を contact@ にする（推奨）**
+
+1. Gmail → **設定**（歯車）→ **すべての設定を表示**
+2. **アカウントとインポート** → **他のメールアドレスを追加**（「別のアドレスとして送信」）
+3. 名前: 例 `ボドパッ！`、メール: **`contact@bodopa.com`**
+4. **SMTP サーバー**: Gmail の案内に従う（多くの場合 `smtp.gmail.com`、ポート 587、TLS、**Gmail のアプリパスワード**が必要なことがある）
+5. 届いた確認コードで認証
+6. **デフォルトの送信アドレス**を `contact@bodopa.com` にするか、返信時に From を選ぶ
+
+お問い合わせ通知メールの **返信**は Reply-To がお客のメールになる。**From は contact@** になるよう、上記を設定する（`noreply@` で返信しない）。
+
+**C. noreply@ について**
+
+- Gmail で `noreply@` を「送信用に追加」する必要はない（サイトは Resend が noreply から送るだけ）。
+- お客が noreply に直接返信しても届かない運用にする場合は、受付確認メール（A）の文言で「このアドレスには返信できません」と既に案内する。
 
 ---
 
 ## 受付確認メール（A）
 
-`lib/contact/auto-reply.ts` を `app/api/contact/route.ts` から有効化する PR は、**B の本番テスト成功後**にマージする。
+`app/api/contact/route.ts` で運営宛送信成功後、入力メール宛に自動返信する。運営宛のみ失敗した場合は 503、確認メールのみ失敗した場合は成功を返しログに記録する。
 
 有効化後の手動テスト:
 
