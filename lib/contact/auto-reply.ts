@@ -5,6 +5,11 @@ export function buildContactAutoReplySubject(): string {
   return `【${SITE_NAME}】お問い合わせを受け付けました`;
 }
 
+/** 受付確認メール末尾の署名（プレーンテキスト） */
+export function buildContactAutoReplySignature(): string {
+  return ["--", SITE_NAME, SITE_URL].join("\n");
+}
+
 export function buildContactAutoReplyText(name: string): string {
   const greeting = name ? `${name} 様` : "お客様";
   return [
@@ -17,6 +22,6 @@ export function buildContactAutoReplyText(name: string): string {
     "このメールは送信の自動確認です。このメールアドレスへの返信はお受けできません。",
     "お急ぎの場合は、改めてサイトのお問い合わせフォームからご連絡ください。",
     "",
-    SITE_URL,
+    buildContactAutoReplySignature(),
   ].join("\n");
 }
