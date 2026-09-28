@@ -226,12 +226,16 @@ export function SenkaiSenkiGame() {
   const startGame = useCallback(() => {
     recordLocalPlay();
     setMatchKind(setupMatchKind);
-    setPlayMode({ mode: setupMatchKind === "cpu" ? "cpu" : "local" });
+    setPlayMode(
+      setupMatchKind === "cpu"
+        ? { mode: "cpu", humanSeat }
+        : { mode: "local" }
+    );
     setState(initialSenkaiSenki());
     setSelectedId(null);
     setNotice(null);
     setPhase("playing");
-  }, [recordLocalPlay, setPlayMode, setupMatchKind]);
+  }, [recordLocalPlay, setPlayMode, setupMatchKind, humanSeat]);
 
   const humanTurn =
     matchKind !== "cpu" || (phase === "playing" && state.current === humanSeat);

@@ -15,9 +15,11 @@ import { releaseBodyScrollLock } from "@/lib/body-scroll-lock";
 import { useRecordPlay } from "@/hooks/useRecordPlay";
 import type { PlayMode } from "@/lib/online/types";
 
-type PlayModeInfo = {
+export type PlayModeInfo = {
   mode: PlayMode;
   roomCode?: string;
+  /** CPU 対戦時の人間側 seat（0 始まり） */
+  humanSeat?: number;
 };
 
 type SetupNav = {
