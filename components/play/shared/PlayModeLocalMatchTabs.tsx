@@ -35,7 +35,7 @@ export function PlayModeLocalMatchTabs({
           type="button"
           disabled={!cpuSupported}
           aria-disabled={!cpuSupported}
-          title={cpuSupported ? undefined : "このゲームはCPU未対応です"}
+          title={cpuSupported ? undefined : "このゲームはCPU戦未対応です"}
           onClick={() => {
             if (cpuSupported) onKindChange("cpu");
           }}
@@ -49,7 +49,7 @@ export function PlayModeLocalMatchTabs({
         </button>
       </div>
       {!cpuSupported ? (
-        <p className="mt-2 text-center text-xs text-slate-500">CPU未対応</p>
+        <p className="mt-2 text-center text-xs text-slate-500">CPU戦未対応</p>
       ) : null}
     </div>
   );

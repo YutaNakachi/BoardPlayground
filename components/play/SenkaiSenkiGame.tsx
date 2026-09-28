@@ -454,14 +454,14 @@ export function SenkaiSenkiGame() {
                   onClick={() => setHumanSeat(0)}
                   className={setupPillClass(humanSeat === 0)}
                 >
-                  プレイヤー1（下段）
+                  先手（下段）
                 </button>
                 <button
                   type="button"
                   onClick={() => setHumanSeat(1)}
                   className={setupPillClass(humanSeat === 1)}
                 >
-                  プレイヤー2（上段）
+                  後手（上段）
                 </button>
               </div>
             </div>

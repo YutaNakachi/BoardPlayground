@@ -6,9 +6,9 @@ import type { CpuDifficulty } from "@/lib/play/senkai-senki/ai";
 export type { CpuDifficulty };
 
 const OPTIONS: { value: CpuDifficulty; label: string }[] = [
-  { value: "easy", label: "弱" },
-  { value: "normal", label: "普通" },
-  { value: "hard", label: "強" },
+  { value: "easy", label: "初級" },
+  { value: "normal", label: "中級" },
+  { value: "hard", label: "上級" },
 ];
 
 type Props = {
