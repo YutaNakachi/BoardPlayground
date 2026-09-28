@@ -210,8 +210,10 @@ Gmail → **設定** → **一般** → **署名** に、contact@ 用として�
 
 - [ ] [Search Console](https://search.google.com/search-console) でプロパティ追加
   - **URL プレフィックス**: `https://bodopa.com` のみ（`www` 別登録・`vercel.app` 登録はしない）
-- [ ] 所有権確認: **DNS TXT**（Cloudflare DNS にレコード追加）
-- [ ] **サイトマップ** を送信: `https://bodopa.com/sitemap.xml`
+- [ ] 所有権確認（いずれか）
+  - **HTML ファイル**（採用）: `public/google5e08c2a34587513c.html` をデプロイ後、Search Console で「確認」。検証後もファイルは削除しない
+  - **DNS TXT**: Cloudflare DNS に TXT を追加（HTML を使う場合は不要）
+- [ ] **サイトマップ** を送信: `sitemap.xml`（`https://bodopa.com/sitemap.xml`）
 - [ ] 数日後: **URL 検査** でトップや主要ページのインデックス状況を確認
 
 ---
