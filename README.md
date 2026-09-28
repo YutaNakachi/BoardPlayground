@@ -75,7 +75,7 @@ Vercel の **Settings → Environment Variables**（Production）に上記を追
 
 ドメイン認証・本番切り替えの手順: [docs/production-domain.md](docs/production-domain.md)。
 
-送信者向けの受付確認メールは、本番で運営宛送信（B）を確認したあと、別 PR で `lib/contact/auto-reply.ts` を API から有効化する。
+送信者向けの受付確認メールは、運営宛送信成功後に `lib/contact/auto-reply.ts` の文面で自動送信する（From は `RESEND_FROM_EMAIL`）。
 
 ## ゲーム
 

@@ -1,4 +1,4 @@
-/** 送信者向け受付確認メール（ドメイン認証後に API から有効化予定） */
+/** 送信者向け受付確認メール */
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export function buildContactAutoReplySubject(): string {

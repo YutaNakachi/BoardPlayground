@@ -3,6 +3,10 @@ import { Resend } from "resend";
 import { apiError } from "@/lib/api/errors";
 import { getContactEnv, isContactConfigured } from "@/lib/contact/config";
 import { parseContactBody, validateContactPayload } from "@/lib/contact/validate";
+import {
+  buildContactAutoReplySubject,
+  buildContactAutoReplyText,
+} from "@/lib/contact/auto-reply";
 import { formatContactFrom } from "@/lib/contact/resend-send";
 import { SITE_NAME } from "@/lib/site";
 
@@ -60,6 +64,17 @@ export async function POST(request: Request) {
   if (notifyError) {
     console.error("contact notify failed", notifyError);
     return apiError("送信に失敗しました。時間をおいて再度お試しください", 503);
+  }
+
+  const { error: autoReplyError } = await resend.emails.send({
+    from: formatContactFrom(fromEmail),
+    to: payload.email,
+    subject: buildContactAutoReplySubject(),
+    text: buildContactAutoReplyText(payload.name),
+  });
+
+  if (autoReplyError) {
+    console.error("contact auto-reply failed", autoReplyError);
   }
 
   return NextResponse.json({ ok: true });
