@@ -6,6 +6,7 @@ import {
   PlaySetupCard,
   setupPillClass,
 } from "@/components/play/shared/PlaySetupCard";
+import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
 import { RoomCodeInput } from "@/components/play/shared/RoomCodeInput";
 import type { PlayMode } from "@/lib/online/types";
 
@@ -117,27 +118,14 @@ export function OnlineSetupPanel({
 
   return (
     <PlaySetupCard title={title} description={description}>
-      {onlineSupported ? (
-        <div className="flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => onModeChange("local")}
-            className={setupPillClass(displayMode === "local")}
-          >
-            ローカル
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange("online")}
-            className={setupPillClass(displayMode === "online")}
-          >
-            オンライン
-          </button>
-        </div>
-      ) : null}
+      <PlayModeLocalOnlineTabs
+        mode={displayMode}
+        onModeChange={onModeChange}
+        onlineSupported={onlineSupported}
+      />
 
       {displayMode === "local" && extra ? (
-        <div className={onlineSupported ? "mt-8" : "mt-0"}>{extra}</div>
+        <div className="mt-8">{extra}</div>
       ) : null}
 
       {displayMode === "online" && onlineSupported && onlineExtra ? (

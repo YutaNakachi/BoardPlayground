@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
 
 type Props = {
   title: string;
@@ -11,6 +12,8 @@ type Props = {
   onStart: () => void;
   extra?: ReactNode;
   playerOptions?: number[];
+  /** オンライン部屋対応（未指定時は false＝オンライン pill はグレーアウト） */
+  onlineSupported?: boolean;
 };
 
 export function SetupPanel({
@@ -21,10 +24,16 @@ export function SetupPanel({
   onStart,
   extra,
   playerOptions = [2, 3, 4],
+  onlineSupported = false,
 }: Props) {
   return (
     <PlaySetupCard title={title} description={description}>
-      <div className="flex justify-center gap-2">
+      <PlayModeLocalOnlineTabs
+        mode="local"
+        onModeChange={() => {}}
+        onlineSupported={onlineSupported}
+      />
+      <div className="mt-8 flex justify-center gap-2">
         {playerOptions.length === 1 ? (
           <p className="badge-muted inline-flex min-h-11 items-center px-4 text-sm">
             {playerOptions[0]}人対戦
@@ -42,7 +51,7 @@ export function SetupPanel({
           ))
         )}
       </div>
-      {extra}
+      {extra ? <div className="mt-8">{extra}</div> : null}
       <button type="button" onClick={onStart} className="btn-game mt-8">
         ゲーム開始
       </button>

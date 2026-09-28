@@ -9,6 +9,7 @@ import {
   PlayModeLocalCpuTabs,
   type LocalCpuSetupKind,
 } from "@/components/play/shared/PlayModeLocalCpuTabs";
+import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
 import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
@@ -423,12 +424,15 @@ export function SenkaiSenkiGame() {
   if (phase === "setup") {
     return (
       <PlaySetupCard title="砲塔戦棋" description={setupDescription}>
-        <PlayModeLocalCpuTabs kind={setupKind} onKindChange={setSetupKind} />
-        {setupKind === "local" ? (
-          <p className="badge-muted mt-8 inline-flex min-h-11 items-center px-4 text-sm">
-            2人対戦
-          </p>
-        ) : (
+        <PlayModeLocalOnlineTabs
+          mode="local"
+          onModeChange={() => {}}
+          onlineSupported={false}
+        />
+        <div className="mt-8">
+          <PlayModeLocalCpuTabs kind={setupKind} onKindChange={setSetupKind} />
+        </div>
+        {setupKind === "cpu" ? (
           <div className="mt-8 space-y-6">
             <div>
               <p className="mb-2 text-xs text-slate-400">CPUの強さ</p>
@@ -457,7 +461,7 @@ export function SenkaiSenkiGame() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
         <button type="button" onClick={startGame} className="btn-game mt-8">
           ゲーム開始
         </button>
