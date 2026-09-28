@@ -46,6 +46,9 @@ export function SetupPanel({
 
   const showLocalMatchTabs =
     showPlayModeTabs && localOnlineMode === "local";
+  const showPlayerCountPicker = playerOptions.length > 1;
+  const hasContentAboveStart =
+    showPlayModeTabs || showLocalMatchTabs || showPlayerCountPicker;
 
   return (
     <PlaySetupCard title={title} description={description}>
@@ -65,19 +68,15 @@ export function SetupPanel({
           />
         </div>
       ) : null}
-      <div
-        className={
-          showPlayModeTabs
-            ? "mt-8 flex justify-center gap-2"
-            : "flex justify-center gap-2"
-        }
-      >
-        {playerOptions.length === 1 ? (
-          <p className="badge-muted inline-flex min-h-11 items-center px-4 text-sm">
-            {playerOptions[0]}人対戦
-          </p>
-        ) : (
-          playerOptions.map((n) => (
+      {showPlayerCountPicker ? (
+        <div
+          className={
+            showPlayModeTabs || showLocalMatchTabs
+              ? "mt-8 flex justify-center gap-2"
+              : "flex justify-center gap-2"
+          }
+        >
+          {playerOptions.map((n) => (
             <button
               key={n}
               type="button"
@@ -86,10 +85,12 @@ export function SetupPanel({
             >
               {n}人
             </button>
-          ))
-        )}
-      </div>
-      {extra ? <div className="mt-8">{extra}</div> : null}
+          ))}
+        </div>
+      ) : null}
+      {extra ? (
+        <div className={hasContentAboveStart ? "mt-8" : undefined}>{extra}</div>
+      ) : null}
       <button type="button" onClick={onStart} className="btn-game mt-8">
         ゲーム開始
       </button>
