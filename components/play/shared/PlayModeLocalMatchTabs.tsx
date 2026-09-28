@@ -48,6 +48,9 @@ export function PlayModeLocalMatchTabs({
           CPU戦
         </button>
       </div>
+      {!cpuSupported ? (
+        <p className="mt-2 text-center text-xs text-slate-500">CPU未対応</p>
+      ) : null}
     </div>
   );
 }
