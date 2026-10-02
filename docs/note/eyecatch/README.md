@@ -1,6 +1,6 @@
 # note 用アイキャッチ画像
 
-ゲーム紹介記事（`docs/note/*.md`）向けの見出し画像です。
+ゲーム紹介記事（`docs/note/*.md`）向けの**見出し画像**です。
 
 | ファイル | ゲーム |
 |---|---|
@@ -10,6 +10,24 @@
 | `hex.png` | ヘックス |
 | `mini-shogi.png` | 5五将棋 |
 
+## 仕様
+
 - サイズ: **1280×670**（note の見出し画像向け）
-- デザイン: サイトの `public/brand/logo-symbol.png` とボドパッ！の配色（ダーク背景・アクセントピンク／オレンジ）
-- 再生成: 必要なら Agent に依頼（手元で編集する場合は各記事の「サムネ用キャッチコピー」を差し替え）
+- 内容: **ボドパッ！のプレイ画面の盤面**をキャプチャ（宣伝用の文字オーバーレイはなし）
+- 背景: サイトのダークテーマ色（`#12101a`）でレターボックス
+
+## 再生成手順
+
+1. 開発サーバーを起動: `npm run dev`
+2. Playwright と sharp を用意（初回のみ例）:
+   - `npx playwright install chromium`
+   - `cd /tmp && npm install sharp@0.33.5`
+3. キャプチャ:  
+   `NODE_PATH=/tmp/node_modules node scripts/capture-note-eyecatches.mjs`
+
+任意で本番相当の URL を指定:  
+`NODE_PATH=/tmp/node_modules node scripts/capture-note-eyecatches.mjs https://bodopa.com`
+
+## note での使い方
+
+記事編集画面の「見出し画像」に、該当の PNG をアップロードしてください。
