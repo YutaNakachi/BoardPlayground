@@ -56,6 +56,12 @@
 
 **最後の1個を、どこへ届ける？**
 
+## アイキャッチ
+
+- ファイル: `docs/note/eyecatch/mancala.png`（1280×670・プレイ画面の盤面キャプチャ）
+- note の「見出し画像」にアップロードして使用
+- 差し替え: `scripts/capture-note-eyecatches.mjs`（要 `npm run dev`）
+
 ## オーナー確認事項
 
 - 人数は2人、プレイ時間の目安は約8分です。
