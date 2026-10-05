@@ -67,7 +67,7 @@ function buildFrameHtml(entry, textureFile) {
   <meta charset="utf-8" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700;900&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -135,13 +135,14 @@ function buildFrameHtml(entry, textureFile) {
       margin-bottom: 22px;
     }
     h1 {
-      font-family: "M PLUS Rounded 1c", sans-serif;
-      font-weight: 800;
-      font-size: 64px;
-      line-height: 1.12;
-      letter-spacing: 0.02em;
+      font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+      font-weight: 900;
+      font-size: 84px;
+      line-height: 1.08;
+      letter-spacing: 0.04em;
       color: #fff;
-      text-shadow: 0 2px 24px rgba(255, 92, 138, 0.15);
+      text-shadow: 0 2px 28px rgba(255, 92, 138, 0.12);
+      -webkit-font-smoothing: antialiased;
     }
     .subtitle {
       margin-top: 20px;
