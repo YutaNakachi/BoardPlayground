@@ -74,7 +74,7 @@ function buildFrameHtml(entry, textureFile) {
       width: ${W}px;
       height: ${H}px;
       overflow: hidden;
-      font-family: "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+      font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
       color: #f4f0f8;
       background-color: #0e0c14;
       background-image:
@@ -151,9 +151,10 @@ function buildFrameHtml(entry, textureFile) {
     }
     .subtitle {
       margin-top: 20px;
+      font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
       font-size: 26px;
       line-height: 1.55;
-      font-weight: 500;
+      font-weight: 700;
       color: #b8b2c4;
       max-width: 28em;
     }
@@ -225,7 +226,8 @@ async function composeAll(browser) {
     const tmp = path.join(OUT_DIR, `_frame-${entry.slug}.html`);
     fs.writeFileSync(tmp, html);
     await page.goto(`file://${tmp}`, { waitUntil: "networkidle" });
-    await page.waitForTimeout(400);
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(200);
     const out = path.join(OUT_DIR, `${entry.slug}.png`);
     await page.screenshot({ path: out, type: "png" });
     fs.unlinkSync(tmp);
