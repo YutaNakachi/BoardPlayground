@@ -67,7 +67,7 @@ function buildFrameHtml(entry, textureFile) {
   <meta charset="utf-8" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -134,8 +134,13 @@ function buildFrameHtml(entry, textureFile) {
       background: linear-gradient(90deg, #ff5c8a, #ffb347);
       margin-bottom: 22px;
     }
+    h1,
+    .subtitle {
+      font-feature-settings: "jp90" 1;
+      font-variant-east-asian: jis04;
+    }
     h1 {
-      font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+      font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
       font-weight: 900;
       font-size: 84px;
       line-height: 1.08;
