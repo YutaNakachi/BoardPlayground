@@ -1,31 +1,31 @@
 # note 用アイキャッチ画像
 
-ゲーム紹介記事（`docs/note/*.md`）向けの**見出し画像**です。
+ゲーム紹介記事（`docs/note/*.md`）向けの**見出し画像**です。**全記事で同じレイアウト**を使います。
 
-| ファイル | ゲーム |
+## レイアウト（共通）
+
+| 要素 | 内容 |
 |---|---|
-| `ludo.png` | ルドー |
-| `mancala.png` | マンカラ・カラハ |
-| `fox-hounds.png` | ウサギと猟犬 |
-| `hex.png` | ヘックス |
-| `mini-shogi.png` | 5五将棋 |
+| 背景 | サイト本体と同じダーク＋アクセントの放射グラデーション（`#0e0c14` 基調） |
+| 左 | ロゴ（シンボル＋ワードマーク）、ゲームタイトル、サブタイトル、`Board Game Park` |
+| 右 | プレイ画面の盤を **約10%の不透明度** で薄く（左へフェード） |
 
-## 仕様
+文言は `entries.json` で管理します（各記事の「サムネ用キャッチコピー」と揃えてください）。
 
-- サイズ: **1280×670**（note の見出し画像向け）
-- 内容: **実装済みの盤面 UI**のみをキャプチャ（宣伝用の文字・別途イラストは付けない）
-- トーン: サイトのダーク色（`#12101a` / `#1c1826`）＋ゲームごとの淡いアクセント光、盤にソフトシャドウ
-- UI: ヘッダー・手番バナー・盤下ボタンは非表示。マンカラの数字ラベルも非表示（色面のみ）。ウサギと猟犬は絵文字を出さず線と点のみ
+## ファイル
 
-## 再生成手順
+| パス | 説明 |
+|---|---|
+| `entries.json` | slug・タイトル・サブタイトル |
+| `textures/{slug}.png` | 盤面のみの素材（合成用・再生成可） |
+| `{slug}.png` | note に載せる完成画像（1280×670） |
 
-1. 開発サーバーを起動: `npm run dev`
-2. Playwright を用意（初回のみ）: `npx playwright install chromium`
-3. キャプチャ: `node scripts/capture-note-eyecatches.mjs`
+## 再生成
 
-任意で本番相当の URL を指定:  
-`node scripts/capture-note-eyecatches.mjs https://bodopa.com`
+1. 開発サーバー: `npm run dev`
+2. 盤テクスチャ＋合成: `node scripts/generate-note-eyecatches.mjs`
+3. 文言だけ変えたとき: `entries.json` を編集 → `node scripts/generate-note-eyecatches.mjs --compose-only`
 
 ## note での使い方
 
-記事編集画面の「見出し画像」に、該当の PNG をアップロードしてください。
+記事編集画面の「見出し画像」に、該当の `{slug}.png` をアップロードしてください。
