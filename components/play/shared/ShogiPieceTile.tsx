@@ -1,6 +1,6 @@
 import { getPlayerFill } from "@/lib/player-colors";
 import type { Player } from "@/lib/play/mini-shogi";
-import { Shippori_Mincho } from "next/font/google";
+import { Noto_Sans_JP } from "next/font/google";
 import type { CSSProperties } from "react";
 
 type Props = {
@@ -11,8 +11,8 @@ type Props = {
   className?: string;
 };
 
-const shogiKomaFont = Shippori_Mincho({
-  weight: ["700", "800"],
+const shogiKomaFont = Noto_Sans_JP({
+  weight: ["700", "900"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -66,7 +66,7 @@ export function ShogiPieceTile({
         <span className="translate-y-[6%]">{KOMA_GLYPH}</span>
       </span>
       <span
-        className={`pointer-events-none absolute left-1/2 top-[57%] z-10 -translate-x-1/2 -translate-y-1/2 font-bold text-slate-900 ${labelSize} [text-orientation:upright] [writing-mode:vertical-rl] ${shogiKomaFont.className}`}
+        className={`pointer-events-none absolute left-1/2 top-[57%] z-10 -translate-x-1/2 -translate-y-1/2 font-bold text-slate-900 ${labelSize} [font-feature-settings:"jp90"_1] [text-orientation:upright] [writing-mode:vertical-rl] ${shogiKomaFont.className}`}
       >
         {label}
       </span>

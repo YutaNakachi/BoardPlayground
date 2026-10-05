@@ -56,9 +56,9 @@
 
 ## アイキャッチ
 
-- ファイル: `docs/note/eyecatch/hex.png`（1280×670・プレイ画面の盤面キャプチャ）
-- note の「見出し画像」にアップロードして使用
-- 差し替え: `scripts/capture-note-eyecatches.mjs`（要 `npm run dev`）
+- ファイル: `docs/note/eyecatch/hex.png`（1280×670・**全記事共通レイアウト**）
+- 文言: `docs/note/eyecatch/entries.json` の `title` / `subtitle`
+- 再生成: `node scripts/generate-note-eyecatches.mjs`
 
 ## オーナー確認事項
 

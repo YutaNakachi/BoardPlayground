@@ -1,0 +1,27 @@
+[
+  {
+    "slug": "ludo",
+    "title": "ルドー",
+    "subtitle": "4つのコマを、誰よりも早くゴールへ。"
+  },
+  {
+    "slug": "mancala",
+    "title": "マンカラ・カラハ",
+    "subtitle": "最後の1個を、どこへ届ける？"
+  },
+  {
+    "slug": "fox-hounds",
+    "title": "ウサギと猟犬",
+    "subtitle": "逃げる1匹。追い詰める3匹。"
+  },
+  {
+    "slug": "hex",
+    "title": "ヘックス",
+    "subtitle": "端から端へ、自分だけの道をつなげ。"
+  },
+  {
+    "slug": "mini-shogi",
+    "title": "5五将棋",
+    "subtitle": "5×5盤に、将棋の攻防を凝縮。"
+  }
+]
