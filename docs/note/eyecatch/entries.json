@@ -7,7 +7,10 @@
   {
     "slug": "mancala",
     "title": "マンカラ・カラハ",
-    "subtitle": "最後の1個を、どこへ届ける？"
+    "subtitle": "最後の1個を、どこへ届ける？",
+    "boardOpacity": 0.17,
+    "titleNoWrap": true,
+    "titleFontSize": 68
   },
   {
     "slug": "fox-hounds",

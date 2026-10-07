@@ -60,6 +60,9 @@ function buildFrameHtml(entry, textureFile) {
   const title = escapeHtml(entry.title);
   const subtitle = escapeHtml(entry.subtitle);
   const texUrl = textureFile ? `file://${textureFile}` : "";
+  const boardOpacity = entry.boardOpacity ?? 0.1;
+  const titleFontSize = entry.titleFontSize ?? 80;
+  const titleNoWrap = entry.titleNoWrap === true;
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -94,7 +97,7 @@ function buildFrameHtml(entry, textureFile) {
       background-size: contain;
       background-position: center right;
       background-repeat: no-repeat;
-      opacity: 0.1;
+      opacity: ${boardOpacity};
       -webkit-mask-image: linear-gradient(to left, #000 50%, transparent 92%);
       mask-image: linear-gradient(to left, #000 50%, transparent 92%);
       pointer-events: none;
@@ -143,9 +146,10 @@ function buildFrameHtml(entry, textureFile) {
       font-feature-settings: "jp90" 1, "palt" 1;
       font-variant-east-asian: jis04;
       font-weight: 800;
-      font-size: 80px;
+      font-size: ${titleFontSize}px;
       line-height: 1.06;
       letter-spacing: 0.06em;
+      ${titleNoWrap ? "white-space: nowrap;" : ""}
       background: linear-gradient(
         125deg,
         #ffffff 0%,
