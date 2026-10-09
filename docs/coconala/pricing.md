@@ -4,6 +4,8 @@
 
 **複雑度の正式なチェック表・掲載ゲームの見積一覧**: [complexity-checklist.md](./complexity-checklist.md)
 
+**購入〜着手の流れ・購入のお願い文案**: [purchase-flow.md](./purchase-flow.md)
+
 ## プラン
 
 | プラン | 目安内容 | 目安工数 |
