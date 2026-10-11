@@ -18,7 +18,7 @@ const fontPath = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc";
 
 const W = 1220;
 const H = 1016;
-const CAPTION_H = 100;
+const CAPTION_H = 96;
 
 /** slug, 掲載タイトル, 開始前の任意操作 */
 /** 2・3枚目は手動スクショ。`compose-coconala-screenshot.mjs` で合成。 */
@@ -41,13 +41,13 @@ function captionPng(title) {
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#12101a" stop-opacity="0"/>
-      <stop offset="18%" stop-color="#12101a" stop-opacity="0.88"/>
+      <stop offset="22%" stop-color="#12101a" stop-opacity="0.9"/>
       <stop offset="100%" stop-color="#12101a" stop-opacity="0.98"/>
     </linearGradient>
   </defs>
   <rect width="${W}" height="${CAPTION_H}" fill="url(#g)"/>
-  <text x="${W / 2}" y="42" text-anchor="middle" fill="#f5f3ff" font-family="WenQuanYi Micro Hei" font-size="34" font-weight="700">${title}</text>
-  <text x="${W / 2}" y="78" text-anchor="middle" fill="#c4b5fd" font-family="WenQuanYi Micro Hei" font-size="22">公開中のゲーム画面</text>
+  <text x="${W / 2}" y="40" text-anchor="middle" fill="#f5f3ff" font-family="WenQuanYi Micro Hei" font-size="34" font-weight="700">${title}</text>
+  <text x="${W / 2}" y="74" text-anchor="middle" fill="#c4b5fd" font-family="WenQuanYi Micro Hei" font-size="22">公開中のゲーム画面</text>
 </svg>`;
   const resvg = new Resvg(svg, {
     font: {
@@ -163,27 +163,16 @@ async function captureGame(page, game) {
       .toBuffer();
   }
 
-  const maxContentH = H - CAPTION_H;
-  const overlap = 40;
-  let body = sharp(shot).resize(W, maxContentH, { fit: "inside" });
-  let bodyBuf = await body.png().toBuffer();
-  let { width: contentW, height: contentH } = await sharp(bodyBuf).metadata();
-
-  if (contentH < maxContentH * 0.92) {
-    bodyBuf = await sharp(shot)
-      .resize(W, maxContentH, { fit: "cover", position: "centre" })
-      .png()
-      .toBuffer();
-    contentW = W;
-    contentH = maxContentH;
-  }
-
-  const bodyLeft = Math.max(0, Math.floor((W - contentW) / 2));
+  const bodyH = H - CAPTION_H;
+  const bodyBuf = await sharp(shot)
+    .resize(W, bodyH, { fit: "cover", position: "centre" })
+    .png()
+    .toBuffer();
   const capBuf = await sharp(captionPng(game.title))
     .resize(W, CAPTION_H)
     .png()
     .toBuffer();
-  const captionTop = Math.max(0, contentH - overlap);
+  const captionTop = H - CAPTION_H;
 
   return sharp({
     create: {
@@ -194,7 +183,7 @@ async function captureGame(page, game) {
     },
   })
     .composite([
-      { input: bodyBuf, top: 0, left: bodyLeft },
+      { input: bodyBuf, top: 0, left: 0 },
       { input: capBuf, top: captionTop, left: 0 },
     ])
     .jpeg({ quality: 90, mozjpeg: true })
