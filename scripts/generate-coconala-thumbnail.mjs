@@ -1,3 +1,4 @@
+/** 旧案: 文案のみのサムネ（未採用）。採用画像は docs/coconala/thumbnail-01.jpg */
 import { Resvg } from "@resvg/resvg-js";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
