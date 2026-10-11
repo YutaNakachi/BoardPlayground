@@ -16,6 +16,7 @@
 | 有料オプション | 反映済（2026-10-11） |
 | 価格・納期・納品設定など | 反映済（2026-10-11） |
 | サービス画像（1枚目サムネ） | 採用済 `thumbnail-01.jpg`（2026-10-11） |
+| サービス画像（2〜4枚目） | 公開ゲームプレイ画面 `thumbnail-02`〜`04.jpg`（2026-10-11） |
 
 ---
 
@@ -36,7 +37,19 @@
 - 画像内の URL は **bodopa.com** 表記（パスはイラスト用の例）。標準納品は本文どおり **ボドパッ！掲載URL**（https://bodopa.com/ ）。
 - 旧案: 文案のみのサムネは `scripts/generate-coconala-thumbnail.mjs`（`thumbnail-01.png` 出力・未採用）。
 
-2枚目以降（未作成）の候補: 実プレイ画面スクショ、購入フロー図、複雑度オプションの説明など。
+### 2〜4枚目（採用・実プレイ画面）
+
+ローカル開発サーバー（`npm run dev`）から Playwright でキャプチャ。下帯にゲーム名・系統ラベルを合成（1220×1016 JPEG）。
+
+| # | ファイル | ゲーム（slug） |
+|---|----------|----------------|
+| 2 | [thumbnail-02.jpg](./thumbnail-02.jpg) | ネビュラ・リンク（`nebula-link`） |
+| 3 | [thumbnail-03.jpg](./thumbnail-03.jpg) | 砲塔戦棋（`senkai-senki`） |
+| 4 | [thumbnail-04.jpg](./thumbnail-04.jpg) | 五目並べ（`gomoku`） |
+
+再生成: `npm install playwright sharp @resvg/resvg-js` のあと dev 起動して `node scripts/capture-coconala-play-shots.mjs`
+
+5枚目以降の候補: 購入フロー図、複雑度オプションの説明、別ゲームのスクショ追加。
 
 ---
 
