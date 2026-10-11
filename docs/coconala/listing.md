@@ -30,7 +30,9 @@
 | メイン（2行想定） | オリジナルボードゲームの／Webプレイ版制作 |
 | サブ | ルール・仕様の整理～URL納品まで対応します |
 
-ファイル: [thumbnail-01.png](./thumbnail-01.png)（ダーク背景・サイト系アクセント色。再生成は同ディレクトリの画像を差し替え）
+ファイル: [thumbnail-01.png](./thumbnail-01.png)（ダーク背景・サイト系アクセント色）
+
+再生成: リポジトリ直下で `npm install @resvg/resvg-js` のあと `node scripts/generate-coconala-thumbnail.mjs`（1220×1016 PNG を `docs/coconala/` と上書き用に出力）
 
 2枚目以降（未作成）の候補: 実プレイ画面スクショ、購入フロー図、複雑度オプションの説明など。
 
