@@ -163,27 +163,31 @@ async function captureGame(page, game) {
       .toBuffer();
   }
 
-  const bodyH = H - CAPTION_H;
+  const overlap = 32;
+  const bodyMaxH = H - CAPTION_H + overlap;
   const bodyBuf = await sharp(shot)
-    .resize(W, bodyH, { fit: "cover", position: "centre" })
+    .resize(W, bodyMaxH, { fit: "inside" })
     .png()
     .toBuffer();
+  const { width: contentW, height: contentH } = await sharp(bodyBuf).metadata();
+  const bodyLeft = Math.max(0, Math.floor((W - contentW) / 2));
+  const outH = contentH + CAPTION_H - overlap;
   const capBuf = await sharp(captionPng(game.title))
     .resize(W, CAPTION_H)
     .png()
     .toBuffer();
-  const captionTop = H - CAPTION_H;
+  const captionTop = outH - CAPTION_H;
 
   return sharp({
     create: {
       width: W,
-      height: H,
+      height: outH,
       channels: 3,
       background: "#12101a",
     },
   })
     .composite([
-      { input: bodyBuf, top: 0, left: 0 },
+      { input: bodyBuf, top: 0, left: bodyLeft },
       { input: capBuf, top: captionTop, left: 0 },
     ])
     .jpeg({ quality: 90, mozjpeg: true })

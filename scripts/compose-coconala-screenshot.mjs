@@ -1,5 +1,5 @@
 /**
- * 手元のプレイ画面スクショをココナラ用 6:5 JPEG にする。
+ * 手元のプレイ画面スクショをココナラ用 JPEG にする（切り抜きなし・全体表示）。
  * 用法: node scripts/compose-coconala-screenshot.mjs <入力PNG> <ゲーム名> <出力jpg>
  */
 import sharp from "sharp";
@@ -7,8 +7,9 @@ import { Resvg } from "@resvg/resvg-js";
 import { writeFileSync } from "node:fs";
 
 const W = 1220;
-const H = 1016;
+const MAX_H = 1016;
 const CAPTION_H = 96;
+const overlap = 32;
 const fontPath = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc";
 
 const [input, title, output] = process.argv.slice(2);
@@ -42,24 +43,27 @@ function captionPng() {
   }).render().asPng();
 }
 
-const bodyH = H - CAPTION_H;
+const bodyMaxH = MAX_H - CAPTION_H + overlap;
 const shot = await sharp(input).trim({ threshold: 12 }).png().toBuffer();
 const bodyBuf = await sharp(shot)
-  .resize(W, bodyH, { fit: "cover", position: "centre" })
+  .resize(W, bodyMaxH, { fit: "inside" })
   .png()
   .toBuffer();
-const capBuf = await sharp(captionPng()).resize(W, CAPTION_H).png().toBuffer();
-const captionTop = H - CAPTION_H;
+const { width: contentW, height: contentH } = await sharp(bodyBuf).metadata();
+const bodyLeft = Math.max(0, Math.floor((W - contentW) / 2));
+const outH = contentH + CAPTION_H - overlap;
+const captionTop = outH - CAPTION_H;
 
+const capBuf = await sharp(captionPng()).resize(W, CAPTION_H).png().toBuffer();
 const out = await sharp({
-  create: { width: W, height: H, channels: 3, background: "#12101a" },
+  create: { width: W, height: outH, channels: 3, background: "#12101a" },
 })
   .composite([
-    { input: bodyBuf, top: 0, left: 0 },
+    { input: bodyBuf, top: 0, left: bodyLeft },
     { input: capBuf, top: captionTop, left: 0 },
   ])
   .jpeg({ quality: 92, mozjpeg: true })
   .toBuffer();
 
 writeFileSync(output, out);
-console.log("wrote", output);
+console.log("wrote", output, `${W}x${outH}`);
