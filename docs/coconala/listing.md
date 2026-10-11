@@ -33,7 +33,7 @@
 
 リポ用メモ:
 
-- 画像内の `game.boardplay.net` 等は**イラスト用の例示URL**。標準納品は本文どおり **ボドパッ！掲載URL**（https://bodopa.com/ ）。
+- 画像内の URL は **bodopa.com** 表記（パスはイラスト用の例）。標準納品は本文どおり **ボドパッ！掲載URL**（https://bodopa.com/ ）。
 - 旧案: 文案のみのサムネは `scripts/generate-coconala-thumbnail.mjs`（`thumbnail-01.png` 出力・未採用）。
 
 2枚目以降（未作成）の候補: 実プレイ画面スクショ、購入フロー図、複雑度オプションの説明など。
