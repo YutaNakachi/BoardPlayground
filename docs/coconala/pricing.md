@@ -6,6 +6,8 @@
 
 **購入〜着手の流れ・購入のお願い文案**: [purchase-flow.md](./purchase-flow.md)
 
+**ココナラ出品ページの現行文案**: [listing.md](./listing.md)
+
 ## プラン
 
 | プラン | 目安内容 | 目安工数 |
