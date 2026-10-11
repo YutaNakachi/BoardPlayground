@@ -43,9 +43,11 @@
 
 | # | ファイル | ゲーム（slug） |
 |---|----------|----------------|
-| 2 | [thumbnail-02.jpg](./thumbnail-02.jpg) | ネビュラ・リンク（`nebula-link`） |
-| 3 | [thumbnail-03.jpg](./thumbnail-03.jpg) | 砲塔戦棋（`senkai-senki`） |
-| 4 | [thumbnail-04.jpg](./thumbnail-04.jpg) | 五目並べ（`gomoku`） |
+| 2 | [thumbnail-02.jpg](./thumbnail-02.jpg) | 砲塔戦棋（`senkai-senki`） |
+| 3 | [thumbnail-03.jpg](./thumbnail-03.jpg) | マンカラ・カラハ（`mancala`） |
+| 4 | [thumbnail-04.jpg](./thumbnail-04.jpg) | ルドー（`ludo`） |
+
+※キャプチャ時はサイト共通ヘッダーを除く。下帯は「公開中のゲーム画面」。
 
 再生成: `npm install playwright sharp @resvg/resvg-js` のあと dev 起動して `node scripts/capture-coconala-play-shots.mjs`
 

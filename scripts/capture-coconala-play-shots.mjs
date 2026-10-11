@@ -18,41 +18,27 @@ const fontPath = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc";
 
 const W = 1220;
 const H = 1016;
+const CAPTION_H = 120;
 
-/** slug, 掲載タイトル, 開始後の任意操作 */
+/** slug, 掲載タイトル, 開始前の任意操作 */
 const GAMES = [
+  { slug: "senkai-senki", title: "砲塔戦棋" },
+  { slug: "mancala", title: "マンカラ・カラハ" },
   {
-    slug: "nebula-link",
-    title: "ネビュラ・リンク",
-    tag: "オリジナル",
-  },
-  {
-    slug: "senkai-senki",
-    title: "砲塔戦棋",
-    tag: "オリジナル",
-  },
-  {
-    slug: "gomoku",
-    title: "五目並べ",
-    tag: "クラシック",
-    afterStart: async (page) => {
-      const cell = page.locator("button").filter({ hasText: /^$/ }).first();
-      if (await cell.count()) {
-        const box = page.locator('[class*="grid"]').first();
-        if (await box.count()) {
-          const b = await box.boundingBox();
-          if (b) {
-            await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
-          }
-        }
+    slug: "ludo",
+    title: "ルドー",
+    beforeStart: async (page) => {
+      const four = page.getByRole("button", { name: "4人" });
+      if (await four.isVisible().catch(() => false)) {
+        await four.click();
       }
     },
   },
 ];
 
-function captionPng(title, tag) {
+function captionPng(title) {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="120">
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${CAPTION_H}">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#12101a" stop-opacity="0"/>
@@ -60,9 +46,9 @@ function captionPng(title, tag) {
       <stop offset="100%" stop-color="#12101a" stop-opacity="0.95"/>
     </linearGradient>
   </defs>
-  <rect width="${W}" height="120" fill="url(#g)"/>
-  <text x="${W / 2}" y="52" text-anchor="middle" fill="#f5f3ff" font-family="WenQuanYi Micro Hei" font-size="40" font-weight="700">${title}</text>
-  <text x="${W / 2}" y="92" text-anchor="middle" fill="#c4b5fd" font-family="WenQuanYi Micro Hei" font-size="24">${tag} · ボドパッ！公開ゲームのプレイ画面</text>
+  <rect width="${W}" height="${CAPTION_H}" fill="url(#g)"/>
+  <text x="${W / 2}" y="48" text-anchor="middle" fill="#f5f3ff" font-family="WenQuanYi Micro Hei" font-size="40" font-weight="700">${title}</text>
+  <text x="${W / 2}" y="92" text-anchor="middle" fill="#c4b5fd" font-family="WenQuanYi Micro Hei" font-size="26">公開中のゲーム画面</text>
 </svg>`;
   const resvg = new Resvg(svg, {
     font: {
@@ -74,27 +60,58 @@ function captionPng(title, tag) {
   return resvg.render().asPng();
 }
 
+async function trimSiteChrome(page) {
+  await page.evaluate(() => {
+    document.querySelector("header")?.remove();
+    document.querySelector("footer")?.remove();
+  });
+}
+
 async function captureGame(page, game) {
   const url = `http://localhost:3000/play/${game.slug}`;
   await page.goto(url, { waitUntil: "networkidle" });
+  await trimSiteChrome(page);
+  await page.waitForTimeout(200);
+
+  if (game.beforeStart) {
+    await game.beforeStart(page);
+  }
+
   const start = page.getByRole("button", { name: "ゲーム開始" });
   if (await start.isVisible({ timeout: 8000 }).catch(() => false)) {
     await start.click();
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(700);
   }
+
   if (game.afterStart) {
     await game.afterStart(page);
     await page.waitForTimeout(400);
   }
-  const shot = await page.screenshot({ type: "png", fullPage: false });
+
+  const main = page.locator("#main-content");
+  await main.waitFor({ state: "visible" });
+  const shot = await main.screenshot({ type: "png" });
+  const contentH = H - CAPTION_H;
   const base = await sharp(shot)
-    .resize(W, H, { fit: "cover", position: "centre" })
+    .resize(W, contentH, { fit: "cover", position: "centre" })
     .png()
     .toBuffer();
-  const cap = captionPng(game.title, game.tag);
-  const capBuf = await sharp(cap).resize(W, 120).png().toBuffer();
-  return sharp(base)
-    .composite([{ input: capBuf, top: H - 120, left: 0 }])
+  const capBuf = await sharp(captionPng(game.title))
+    .resize(W, CAPTION_H)
+    .png()
+    .toBuffer();
+  return sharp({
+    create: {
+      width: W,
+      height: H,
+      channels: 3,
+      background: "#12101a",
+    },
+  })
+    .composite([
+      { input: base, top: 0, left: 0 },
+      { input: capBuf, top: contentH, left: 0 },
+    ])
     .jpeg({ quality: 90, mozjpeg: true })
     .toBuffer();
 }
@@ -105,7 +122,7 @@ async function main() {
 
   const browser = await chromium.launch();
   const page = await browser.newPage({
-    viewport: { width: 1280, height: 900 },
+    viewport: { width: 1280, height: 960 },
     deviceScaleFactor: 2,
   });
 
