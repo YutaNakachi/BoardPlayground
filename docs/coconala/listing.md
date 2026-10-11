@@ -44,12 +44,12 @@
 | # | ファイル | ゲーム（slug） |
 |---|----------|----------------|
 | 2 | [thumbnail-02.jpg](./thumbnail-02.jpg) | 砲塔戦棋（手動スクショ → [sources/thumbnail-02-source.png](./sources/thumbnail-02-source.png)） |
-| 3 | [thumbnail-03.jpg](./thumbnail-03.jpg) | マンカラ・カラハ（`mancala`） |
+| 3 | [thumbnail-03.jpg](./thumbnail-03.jpg) | マンカラ・カラハ（手動スクショ → [sources/thumbnail-03-source.png](./sources/thumbnail-03-source.png)） |
 | 4 | [thumbnail-04.jpg](./thumbnail-04.jpg) | ルドー（`ludo`） |
 
 ※キャプチャ時はサイト共通ヘッダーを除く。下帯は「公開中のゲーム画面」。
 
-再生成: `npm install playwright sharp @resvg/resvg-js` のあと dev 起動して `node scripts/capture-coconala-play-shots.mjs`
+再生成: 4枚目は `npm install playwright sharp @resvg/resvg-js` のあと dev 起動して `node scripts/capture-coconala-play-shots.mjs`。2・3枚目は `node scripts/compose-coconala-screenshot.mjs`（元 PNG は `docs/coconala/sources/`）
 
 5枚目以降の候補: 購入フロー図、複雑度オプションの説明、別ゲームのスクショ追加。
 

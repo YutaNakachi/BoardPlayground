@@ -21,9 +21,8 @@ const H = 1016;
 const CAPTION_H = 100;
 
 /** slug, 掲載タイトル, 開始前の任意操作 */
-/** 2枚目（砲塔戦棋）は手動スクショ。`compose-coconala-screenshot.mjs` で合成。 */
+/** 2・3枚目は手動スクショ。`compose-coconala-screenshot.mjs` で合成。 */
 const GAMES = [
-  { slug: "mancala", title: "マンカラ・カラハ" },
   {
     slug: "ludo",
     title: "ルドー",
@@ -212,7 +211,7 @@ async function main() {
     deviceScaleFactor: 2,
   });
 
-  let index = 3;
+  let index = 4;
   for (const game of GAMES) {
     const buf = await captureGame(page, game);
     const name = `thumbnail-0${index}.jpg`;
