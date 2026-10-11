@@ -47,7 +47,7 @@
 | 3 | [thumbnail-03.jpg](./thumbnail-03.jpg) | マンカラ・カラハ（手動スクショ → [sources/thumbnail-03-source.png](./sources/thumbnail-03-source.png)） |
 | 4 | [thumbnail-04.jpg](./thumbnail-04.jpg) | ルドー（手動スクショ → [sources/thumbnail-04-source.png](./sources/thumbnail-04-source.png)） |
 
-※下帯は「公開中のゲーム画面」。合成はスクショ**全体を切り抜かず**幅1220に収め、下帯は下端密着（文言下の余白なし）。高さは内容に応じ最大約1016px。
+※下帯は 1 枚目寄り（グラデのゲーム名・ゴールドの「公開中のゲーム画面」、縁取りなし）。スクショは**全体表示**、下帯は下端密着。
 
 再生成: `node scripts/compose-coconala-screenshot.mjs <sources/*.png> <ゲーム名> docs/coconala/thumbnail-0N.jpg`（要 `sharp` `@resvg/resvg-js`）。自動キャプチャ用は `capture-coconala-play-shots.mjs`（現状未使用）
 
