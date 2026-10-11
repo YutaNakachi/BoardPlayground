@@ -43,7 +43,7 @@
 
 | # | ファイル | ゲーム（slug） |
 |---|----------|----------------|
-| 2 | [thumbnail-02.jpg](./thumbnail-02.jpg) | 砲塔戦棋（`senkai-senki`） |
+| 2 | [thumbnail-02.jpg](./thumbnail-02.jpg) | 砲塔戦棋（手動スクショ → [sources/thumbnail-02-source.png](./sources/thumbnail-02-source.png)） |
 | 3 | [thumbnail-03.jpg](./thumbnail-03.jpg) | マンカラ・カラハ（`mancala`） |
 | 4 | [thumbnail-04.jpg](./thumbnail-04.jpg) | ルドー（`ludo`） |
 
