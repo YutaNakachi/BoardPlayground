@@ -49,21 +49,23 @@ let bodyBuf = await sharp(shot)
   .resize(W, maxContentH, { fit: "inside" })
   .png()
   .toBuffer();
-let { height: contentH } = await sharp(bodyBuf).metadata();
+let { width: contentW, height: contentH } = await sharp(bodyBuf).metadata();
 if (contentH < maxContentH * 0.92) {
   bodyBuf = await sharp(shot)
     .resize(W, maxContentH, { fit: "cover", position: "centre" })
     .png()
     .toBuffer();
+  contentW = W;
   contentH = maxContentH;
 }
+const bodyLeft = Math.max(0, Math.floor((W - contentW) / 2));
 const capBuf = await sharp(captionPng()).resize(W, CAPTION_H).png().toBuffer();
 const captionTop = Math.max(0, contentH - overlap);
 const out = await sharp({
   create: { width: W, height: H, channels: 3, background: "#12101a" },
 })
   .composite([
-    { input: bodyBuf, top: 0, left: 0 },
+    { input: bodyBuf, top: 0, left: bodyLeft },
     { input: capBuf, top: captionTop, left: 0 },
   ])
   .jpeg({ quality: 92, mozjpeg: true })
