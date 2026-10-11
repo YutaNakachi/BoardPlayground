@@ -5,20 +5,22 @@
  */
 import { chromium } from "playwright";
 import sharp from "sharp";
-import { Resvg } from "@resvg/resvg-js";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  CAPTION_H,
+  CAPTION_OVERLAP,
+  captionPng,
+} from "./lib/coconala-caption.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const outDir = join(root, "docs/coconala");
 const artifactsDir = "/opt/cursor/artifacts";
-const fontPath = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc";
 
 const W = 1220;
 const H = 1016;
-const CAPTION_H = 96;
 
 /** slug, 掲載タイトル, 開始前の任意操作 */
 /** 2・3枚目は手動スクショ。`compose-coconala-screenshot.mjs` で合成。 */
@@ -34,30 +36,6 @@ const GAMES = [
     },
   },
 ];
-
-function captionPng(title) {
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${CAPTION_H}">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#12101a" stop-opacity="0"/>
-      <stop offset="22%" stop-color="#12101a" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#12101a" stop-opacity="0.98"/>
-    </linearGradient>
-  </defs>
-  <rect width="${W}" height="${CAPTION_H}" fill="url(#g)"/>
-  <text x="${W / 2}" y="40" text-anchor="middle" fill="#f5f3ff" font-family="WenQuanYi Micro Hei" font-size="34" font-weight="700">${title}</text>
-  <text x="${W / 2}" y="74" text-anchor="middle" fill="#c4b5fd" font-family="WenQuanYi Micro Hei" font-size="22">公開中のゲーム画面</text>
-</svg>`;
-  const resvg = new Resvg(svg, {
-    font: {
-      fontFiles: [fontPath],
-      loadSystemFonts: true,
-      defaultFontFamily: "WenQuanYi Micro Hei",
-    },
-  });
-  return resvg.render().asPng();
-}
 
 async function trimSiteChrome(page) {
   await page.evaluate(() => {
@@ -163,16 +141,15 @@ async function captureGame(page, game) {
       .toBuffer();
   }
 
-  const overlap = 32;
-  const bodyMaxH = H - CAPTION_H + overlap;
+  const bodyMaxH = H - CAPTION_H + CAPTION_OVERLAP;
   const bodyBuf = await sharp(shot)
     .resize(W, bodyMaxH, { fit: "inside" })
     .png()
     .toBuffer();
   const { width: contentW, height: contentH } = await sharp(bodyBuf).metadata();
   const bodyLeft = Math.max(0, Math.floor((W - contentW) / 2));
-  const outH = contentH + CAPTION_H - overlap;
-  const capBuf = await sharp(captionPng(game.title))
+  const outH = contentH + CAPTION_H - CAPTION_OVERLAP;
+  const capBuf = await sharp(captionPng(game.title, W))
     .resize(W, CAPTION_H)
     .png()
     .toBuffer();
