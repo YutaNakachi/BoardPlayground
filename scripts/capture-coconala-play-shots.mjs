@@ -18,7 +18,7 @@ const fontPath = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc";
 
 const W = 1220;
 const H = 1016;
-const CAPTION_H = 120;
+const CAPTION_H = 100;
 
 /** slug, 掲載タイトル, 開始前の任意操作 */
 const GAMES = [
@@ -42,13 +42,13 @@ function captionPng(title) {
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#12101a" stop-opacity="0"/>
-      <stop offset="35%" stop-color="#12101a" stop-opacity="0.85"/>
-      <stop offset="100%" stop-color="#12101a" stop-opacity="0.95"/>
+      <stop offset="18%" stop-color="#12101a" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="#12101a" stop-opacity="0.98"/>
     </linearGradient>
   </defs>
   <rect width="${W}" height="${CAPTION_H}" fill="url(#g)"/>
-  <text x="${W / 2}" y="48" text-anchor="middle" fill="#f5f3ff" font-family="WenQuanYi Micro Hei" font-size="40" font-weight="700">${title}</text>
-  <text x="${W / 2}" y="92" text-anchor="middle" fill="#c4b5fd" font-family="WenQuanYi Micro Hei" font-size="26">公開中のゲーム画面</text>
+  <text x="${W / 2}" y="42" text-anchor="middle" fill="#f5f3ff" font-family="WenQuanYi Micro Hei" font-size="34" font-weight="700">${title}</text>
+  <text x="${W / 2}" y="78" text-anchor="middle" fill="#c4b5fd" font-family="WenQuanYi Micro Hei" font-size="22">公開中のゲーム画面</text>
 </svg>`;
   const resvg = new Resvg(svg, {
     font: {
@@ -64,6 +64,66 @@ async function trimSiteChrome(page) {
   await page.evaluate(() => {
     document.querySelector("header")?.remove();
     document.querySelector("footer")?.remove();
+    document.querySelector("#main-content .mb-6")?.remove();
+    const main = document.getElementById("main-content");
+    if (main) {
+      main.style.minHeight = "auto";
+      main.style.flex = "none";
+      main.style.padding = "0";
+    }
+    const shell = document.querySelector("#main-content .max-w-6xl");
+    if (shell) {
+      shell.style.paddingTop = "8px";
+      shell.style.paddingBottom = "8px";
+    }
+  });
+}
+
+async function tightPlayClip(page) {
+  return page.evaluate(() => {
+    const play = document.querySelector("#main-content .max-w-6xl > *:last-child");
+    if (!play) return null;
+
+    const rects = [];
+    const isTurnBanner = (el) => {
+      const text = (el.textContent || "").replace(/\s+/g, "");
+      return text.includes("手番") && el.classList.contains("rounded-2xl");
+    };
+
+    const visit = (el) => {
+      for (const child of el.children) {
+        const style = window.getComputedStyle(child);
+        if (style.display === "none" || style.visibility === "hidden") continue;
+        if (isTurnBanner(child)) continue;
+        const r = child.getBoundingClientRect();
+        if (r.width >= 40 && r.height >= 28) rects.push(r);
+        visit(child);
+      }
+    };
+    visit(play);
+
+    if (rects.length === 0) {
+      const r = play.getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, height: r.height };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = 0;
+    let maxY = 0;
+    for (const r of rects) {
+      minX = Math.min(minX, r.left);
+      minY = Math.min(minY, r.top);
+      maxX = Math.max(maxX, r.right);
+      maxY = Math.max(maxY, r.bottom);
+    }
+    const pad = 6;
+    return {
+      x: Math.max(0, minX - pad),
+      y: Math.max(0, minY - pad),
+      width: maxX - minX + pad * 2,
+      height: maxY - minY + pad * 2,
+    };
   });
 }
 
@@ -88,18 +148,42 @@ async function captureGame(page, game) {
     await page.waitForTimeout(400);
   }
 
-  const main = page.locator("#main-content");
-  await main.waitFor({ state: "visible" });
-  const shot = await main.screenshot({ type: "png" });
-  const contentH = H - CAPTION_H;
-  const base = await sharp(shot)
-    .resize(W, contentH, { fit: "cover", position: "centre" })
-    .png()
-    .toBuffer();
+  await trimSiteChrome(page);
+
+  const clip = await tightPlayClip(page);
+  if (!clip) throw new Error(`clip failed: ${game.slug}`);
+
+  let shot = await page.screenshot({ type: "png", clip });
+  const shotMeta = await sharp(shot).metadata();
+  if (shotMeta.width / shotMeta.height > 1.35) {
+    const cropW = Math.min(shotMeta.width, Math.floor(shotMeta.height * 1.05));
+    const left = Math.floor((shotMeta.width - cropW) / 2);
+    shot = await sharp(shot)
+      .extract({ left, top: 0, width: cropW, height: shotMeta.height })
+      .png()
+      .toBuffer();
+  }
+
+  const maxContentH = H - CAPTION_H;
+  const overlap = 40;
+  let body = sharp(shot).resize(W, maxContentH, { fit: "inside" });
+  let bodyBuf = await body.png().toBuffer();
+  let { height: contentH } = await sharp(bodyBuf).metadata();
+
+  if (contentH < maxContentH * 0.92) {
+    bodyBuf = await sharp(shot)
+      .resize(W, maxContentH, { fit: "cover", position: "centre" })
+      .png()
+      .toBuffer();
+    contentH = maxContentH;
+  }
+
   const capBuf = await sharp(captionPng(game.title))
     .resize(W, CAPTION_H)
     .png()
     .toBuffer();
+  const captionTop = Math.max(0, contentH - overlap);
+
   return sharp({
     create: {
       width: W,
@@ -109,8 +193,8 @@ async function captureGame(page, game) {
     },
   })
     .composite([
-      { input: base, top: 0, left: 0 },
-      { input: capBuf, top: contentH, left: 0 },
+      { input: bodyBuf, top: 0, left: 0 },
+      { input: capBuf, top: captionTop, left: 0 },
     ])
     .jpeg({ quality: 90, mozjpeg: true })
     .toBuffer();
@@ -122,7 +206,7 @@ async function main() {
 
   const browser = await chromium.launch();
   const page = await browser.newPage({
-    viewport: { width: 1280, height: 960 },
+    viewport: { width: 1280, height: 900 },
     deviceScaleFactor: 2,
   });
 
