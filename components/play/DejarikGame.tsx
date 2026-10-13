@@ -23,6 +23,7 @@ import {
   legalMoveTargets,
   placementPlayer,
   secondPlayer,
+  stallLabelForPlayer,
   type DejarikState,
 } from "@/lib/play/dejarik/state";
 
@@ -199,7 +200,9 @@ export function DejarikGame() {
           winners={[state.winner]}
           details={
             <p className="text-slate-400">
-              プレイヤー {state.winner + 1} が相手のクリーチャーをすべて除去しました。
+              {state.winReason === "stall"
+                ? `プレイヤー ${state.winner! + 1} の勝ち（相手が残り1体のまま3手以内に取れませんでした）`
+                : `プレイヤー ${state.winner! + 1} が相手のクリーチャーをすべて除去しました。`}
             </p>
           }
           onReplay={startLocal}
@@ -213,7 +216,12 @@ export function DejarikGame() {
           stats={
             placement
               ? `配置 ${state.placementStep + 1}/8 · 先攻はプレイヤー ${state.firstPlayer + 1}`
-              : `先攻: プレイヤー ${state.firstPlayer + 1}`
+              : [
+                  `先攻: プレイヤー ${state.firstPlayer + 1}`,
+                  stallLabelForPlayer(state, turnPlayer),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
           }
           action={
             placement

@@ -17,6 +17,10 @@ export type DejarikPiece = {
 
 export type DejarikPhase = "setup" | "placement" | "playing" | "game-over";
 
+export type DejarikWinReason = "elimination" | "stall";
+
+export const STALL_LIMIT = 3;
+
 export type ScoutPartial = {
   pieceId: number;
   didMove: boolean;
@@ -35,6 +39,9 @@ export type DejarikState = {
   placementStep: number;
   unplaced: Record<Player, CreatureType[]>;
   winner: Player | null;
+  winReason: DejarikWinReason | null;
+  /** 残り1体のとき、直近で取っていない手番数（取ったら0） */
+  stallCounters: [number, number];
   scoutPartial: ScoutPartial | null;
 };
 
@@ -63,6 +70,8 @@ export function initialDejarik(firstPlayer: Player = Math.random() < 0.5 ? 0 : 1
       1: [...CREATURE_TYPES],
     },
     winner: null,
+    winReason: null,
+    stallCounters: [0, 0],
     scoutPartial: null,
   };
 }
@@ -118,6 +127,7 @@ export function applyPlacement(
       phase: winner !== null ? "game-over" : "playing",
       current: state.firstPlayer,
       winner,
+      winReason: winner !== null ? "elimination" : null,
       scoutPartial: null,
     };
   }
@@ -145,14 +155,49 @@ function cellOfPiece(state: DejarikState, pieceId: number): number | null {
   return null;
 }
 
-function advanceTurn(state: DejarikState): DejarikState {
-  const winner = checkWinner(state);
-  if (winner !== null) {
-    return { ...state, phase: "game-over", winner, scoutPartial: null };
+function endTurnAfterMove(
+  state: DejarikState,
+  player: Player,
+  capturedThisTurn: boolean
+): DejarikState {
+  const elimination = checkWinner(state);
+  if (elimination !== null) {
+    return {
+      ...state,
+      phase: "game-over",
+      winner: elimination,
+      winReason: "elimination",
+      scoutPartial: null,
+    };
   }
+
+  const stall: [number, number] = [state.stallCounters[0], state.stallCounters[1]];
+  const remaining = countPiecesForOwner(state, player);
+  if (remaining > 1) {
+    stall[player] = 0;
+  } else if (remaining === 1) {
+    if (capturedThisTurn) {
+      stall[player] = 0;
+    } else {
+      stall[player] += 1;
+      if (stall[player] >= STALL_LIMIT) {
+        const winner = player === 0 ? 1 : 0;
+        return {
+          ...state,
+          phase: "game-over",
+          winner,
+          winReason: "stall",
+          stallCounters: stall,
+          scoutPartial: null,
+        };
+      }
+    }
+  }
+
   return {
     ...state,
-    current: state.current === 0 ? 1 : 0,
+    stallCounters: stall,
+    current: player === 0 ? 1 : 0,
     scoutPartial: null,
   };
 }
@@ -179,7 +224,8 @@ function applyMoveOrAttack(
   const cells = [...state.cells];
   const pieces = { ...state.pieces };
 
-  if (mode === "attack") {
+  const capturedThisTurn = mode === "attack";
+  if (capturedThisTurn) {
     const victim = cells[to];
     if (victim === null) return null;
     delete pieces[victim];
@@ -202,15 +248,21 @@ function applyMoveOrAttack(
     next = { ...next, scoutPartial };
     const winner = checkWinner(next);
     if (winner !== null) {
-      return { ...next, phase: "game-over", winner, scoutPartial: null };
+      return {
+        ...next,
+        phase: "game-over",
+        winner,
+        winReason: "elimination",
+        scoutPartial: null,
+      };
     }
     if (scoutPartial.didMove && scoutPartial.didAttack) {
-      return advanceTurn(next);
+      return endTurnAfterMove(next, piece.owner, scoutPartial.didAttack);
     }
     return next;
   }
 
-  return advanceTurn(next);
+  return endTurnAfterMove(next, piece.owner, capturedThisTurn);
 }
 
 export function applyDejarikMove(
@@ -234,7 +286,16 @@ export function endScoutTurn(state: DejarikState): DejarikState | null {
   const piece = pieceAt(state, state.scoutPartial.pieceId);
   if (!piece || piece.type !== "scout" || piece.owner !== state.current) return null;
   if (!state.scoutPartial.didMove && !state.scoutPartial.didAttack) return null;
-  return advanceTurn(state);
+  const captured = Boolean(state.scoutPartial.didAttack);
+  return endTurnAfterMove(state, piece.owner, captured);
+}
+
+export function stallLabelForPlayer(state: DejarikState, player: Player): string | null {
+  if (state.phase !== "playing") return null;
+  if (countPiecesForOwner(state, player) !== 1) return null;
+  const used = state.stallCounters[player];
+  if (used === 0) return "残り1体：3手以内に取る";
+  return `残り1体：あと${STALL_LIMIT - used}手で取れなければ負け`;
 }
 
 export function scoutCanContinue(state: DejarikState, pieceId: number): boolean {

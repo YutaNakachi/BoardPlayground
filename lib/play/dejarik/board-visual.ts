@@ -27,6 +27,13 @@ const CELL_BROWN = "#5c4033";
 const CELL_BLACK = "#1a1410";
 const GROOVE = "#0d0a08";
 
+/** ホーム上下分割が左右の水平線になるよう、外輪マス境界を東西に揃える */
+export const BOARD_ORBIT_OFFSET_DEG = 15;
+
+export function orbitMidAngle(index: number): number {
+  return -90 + index * 30 + BOARD_ORBIT_OFFSET_DEG;
+}
+
 function degToRad(d: number): number {
   return (d * Math.PI) / 180;
 }
@@ -72,22 +79,31 @@ function piePath(
 
 export function cellWedgeAngles(cell: number): { start: number; end: number } {
   if (isOuterCell(cell)) {
-    const i = cell;
-    const mid = -90 + i * 30;
+    const mid = orbitMidAngle(cell);
     return { start: mid - 15, end: mid + 15 };
   }
   if (isMiddleCell(cell)) {
-    const i = cell - OUTER_N;
-    const mid = -90 + i * 30;
+    const mid = orbitMidAngle(cell - OUTER_N);
     return { start: mid - 15, end: mid + 15 };
   }
   const k = cell - OUTER_N * 2;
   return centerWedgeAngles(k);
 }
 
-/** Ck が接続する中輪 M[3k]〜M[3k+2] と同じ90°幅（カードinal 90°ではなく15°ずらす） */
+/** Ck が接続する中輪 M[3k]〜M[3k+2] と同じ90°幅 */
 export function centerWedgeAngles(k: number): { start: number; end: number } {
-  return { start: -105 + k * 90, end: -15 + k * 90 };
+  return {
+    start: orbitMidAngle(3 * k) - 15,
+    end: orbitMidAngle(3 * k + 2) + 15,
+  };
+}
+
+function angleToOrbitIndex(deg: number): number {
+  for (let i = 0; i < OUTER_N; i++) {
+    const { start, end } = { start: orbitMidAngle(i) - 15, end: orbitMidAngle(i) + 15 };
+    if (isAngleInWedge(deg, start, end)) return i;
+  }
+  return 0;
 }
 
 function normalizeDeg(d: number): number {
@@ -150,34 +166,27 @@ export function dejarikCellAtPoint(x: number, y: number): number | null {
   const r = Math.hypot(dx, dy);
   if (r > R_PLAY_OUTER) return null;
 
-  let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
-  let a = deg + 90;
-  if (a < 0) a += 360;
-  if (a >= 360) a -= 360;
+  const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
 
   if (r <= R_CENTER_OUT) {
-    const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
     for (let k = 0; k < 4; k++) {
       const { start, end } = centerWedgeAngles(k);
       if (isAngleInWedge(deg, start, end)) return OUTER_N * 2 + k;
     }
     return OUTER_N * 2;
   }
-  if (r <= R_MIDDLE_OUT) {
-    const i = Math.floor((a + 15) / 30) % OUTER_N;
-    return OUTER_N + i;
-  }
-  const i = Math.floor((a + 15) / 30) % OUTER_N;
+  const i = angleToOrbitIndex(deg);
+  if (r <= R_MIDDLE_OUT) return OUTER_N + i;
   return i;
 }
 
-/** 中央4マスの境界（Ck と Ck+1 の境＝中輪3マス区切り） */
-export const CENTER_RADIAL_DEGS = [-105, -15, 75, 165];
+/** 中央4マスの境界（東西・南北の十字） */
+export const CENTER_RADIAL_DEGS = [-90, 0, 90, 180];
 
-/** 外輪・中輪のマス境界（マス中心ではなく境目） */
+/** 外輪・中輪のマス境界 */
 export const CELL_RADIAL_BOUNDARY_DEGS = Array.from(
   { length: 12 },
-  (_, i) => -90 + i * 30 + 15
+  (_, i) => orbitMidAngle(i) + 15
 );
 
 export function lineFromCenter(deg: number, rEnd: number): [number, number, number, number] {
