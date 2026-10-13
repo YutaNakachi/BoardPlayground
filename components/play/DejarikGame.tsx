@@ -23,8 +23,10 @@ import {
   legalAttackTargets,
   legalMoveTargets,
   placementPlayer,
+  secondPlayer,
   setHomeStart,
   type DejarikState,
+  type Player,
 } from "@/lib/play/dejarik/state";
 
 type LocalPhase = "setup" | "active";
@@ -40,15 +42,18 @@ export function DejarikGame() {
   const [selectedPieceId, setSelectedPieceId] = useState<number | null>(null);
   const [actionMode, setActionMode] = useState<ActionMode>("move");
   const [placementType, setPlacementType] = useState<CreatureType | null>(null);
+  const [firstPlayerChoice, setFirstPlayerChoice] = useState<Player>(0);
+  const [placementHint, setPlacementHint] = useState<string | null>(null);
 
   const startLocal = useCallback(() => {
     recordLocalPlay();
     setPlayMode({ mode: "local" });
-    setState(initialDejarik());
+    setState(initialDejarik(firstPlayerChoice));
     setSelectedPieceId(null);
     setPlacementType(null);
+    setPlacementHint(null);
     setLocalPhase("active");
-  }, [recordLocalPlay, setPlayMode]);
+  }, [recordLocalPlay, setPlayMode, firstPlayerChoice]);
 
   const reset = useCallback(() => {
     setLocalPhase("setup");
@@ -87,15 +92,28 @@ export function DejarikGame() {
         if (!homes) {
           if (validPlacementStarts(player).includes(cell)) {
             const next = setHomeStart(state, player, cell);
-            if (next) setState(next);
+            if (next) {
+              setState(next);
+              setPlacementHint("型を選び、光っているホームの空きマスをタップ");
+            }
+          } else {
+            setPlacementHint("光っているマス（連続4マスの先頭）をタップしてください");
           }
           return;
         }
-        if (!placementType) return;
+        if (!placementType) {
+          setPlacementHint("先に下のボタンで置く型を選んでください");
+          return;
+        }
+        if (!homes.includes(cell) || state.cells[cell] !== null) {
+          setPlacementHint("自分のホームの空きマスをタップしてください");
+          return;
+        }
         const next = applyPlacement(state, placementType, cell);
         if (next) {
           setState(next);
           setPlacementType(null);
+          setPlacementHint(null);
         }
         return;
       }
@@ -107,7 +125,7 @@ export function DejarikGame() {
       }
 
       const pieceId = state.cells[cell];
-      if (pieceId !== null && destinations.includes(cell) && selectedPieceId !== null) {
+      if (selectedPieceId !== null && destinations.includes(cell)) {
         const next =
           actionMode === "move"
             ? applyDejarikMove(state, selectedPieceId, cell)
@@ -155,18 +173,42 @@ export function DejarikGame() {
 
   if (localPhase === "setup") {
     return (
-      <OnlineSetupPanel
-        title="デジャリック"
-        description={DESCRIPTION}
-        mode="local"
-        onModeChange={() => {}}
-        onlineSupported={false}
-        onCreateRoom={() => {}}
-        onJoinRoom={() => {}}
-        onStartLocal={startLocal}
-        loading={false}
-        error={null}
-      />
+      <div className="space-y-4">
+        <OnlineSetupPanel
+          title="デジャリック"
+          description={DESCRIPTION}
+          mode="local"
+          onModeChange={() => {}}
+          onlineSupported={false}
+          onCreateRoom={() => {}}
+          onJoinRoom={() => {}}
+          onStartLocal={startLocal}
+          loading={false}
+          error={null}
+        />
+        <div className="mx-auto max-w-md rounded-xl border border-surface-border bg-surface-raised p-4">
+          <p className="text-center text-sm font-medium text-slate-200">先攻（対局開始後の手番）</p>
+          <div className="mt-3 flex justify-center gap-2">
+            {([0, 1] as Player[]).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setFirstPlayerChoice(p)}
+                className={`rounded-lg px-4 py-2 text-sm ${
+                  firstPlayerChoice === p
+                    ? "bg-accent/25 text-white ring-1 ring-accent/50"
+                    : "bg-white/5 text-slate-400"
+                }`}
+              >
+                プレイヤー {p + 1}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-center text-xs text-slate-500">
+            配置はルールどおり後攻（プレイヤー {secondPlayer(firstPlayerChoice) + 1}）から交互に行います。
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -175,6 +217,7 @@ export function DejarikGame() {
   const turnPlayer = placement ? placementPlayer(state.placementStep) : state.current;
   const placementHomes =
     placement ? homeCellsForPlayer(state, turnPlayer) : null;
+  const placementSecond = secondPlayer(state.firstPlayer);
 
   const highlightCells = new Set<number>();
   if (placement && !placementHomes) {
@@ -186,6 +229,9 @@ export function DejarikGame() {
       if (state.cells[c] === null) highlightCells.add(c);
     }
   } else if (playing && selectedPieceId !== null) {
+    for (let c = 0; c < state.cells.length; c++) {
+      if (state.cells[c] === selectedPieceId) highlightCells.add(c);
+    }
     for (const d of destinations) highlightCells.add(d);
   }
 
@@ -208,20 +254,28 @@ export function DejarikGame() {
         <TurnBanner
           playerIndex={turnPlayer}
           playerLabel={`プレイヤー ${turnPlayer + 1}`}
+          stats={
+            placement
+              ? `配置 ${state.placementStep + 1}/8 · 先攻はプレイヤー ${state.firstPlayer + 1}`
+              : `先攻: プレイヤー ${state.firstPlayer + 1}`
+          }
           action={
             placement
               ? placementHomes
-                ? "型を選び、ホームの空きマスをタップ"
-                : "ホームの連続4マス（開始マス）をタップ"
+                ? "型を選び、光ったホームの空きマスをタップ"
+                : "光った外輪のいずれかをタップ（連続4マスの開始位置）"
               : selectedPieceId === null
-                ? "自分のクリーチャーを選ぶ"
+                ? "自分のクリーチャーをタップ"
                 : actionMode === "move"
-                  ? "移動先をタップ"
-                  : "攻撃先をタップ"
+                  ? "移動先をタップ（光ったマス）"
+                  : "攻撃先をタップ（光ったマス）"
           }
           notice={
             placement
-              ? "非公式フィクションルール"
+              ? placementHint ??
+                (state.placementStep === 0
+                  ? `配置は後攻のプレイヤー ${placementSecond + 1} から（ルールどおり）`
+                  : undefined)
               : scoutEndVisible
                 ? "スカウトはもう1操作できるか、下の「手番終了」"
                 : undefined
@@ -258,11 +312,17 @@ export function DejarikGame() {
 
       {!gameOver && placement && placementHomes && (
         <div className="flex flex-wrap justify-center gap-2">
+          <p className="w-full text-center text-xs text-slate-400">
+            残り {state.unplaced[turnPlayer].length} 体 — 置く型を選ぶ
+          </p>
           {state.unplaced[turnPlayer].map((type) => (
             <button
               key={type}
               type="button"
-              onClick={() => setPlacementType(type)}
+              onClick={() => {
+                setPlacementType(type);
+                setPlacementHint(null);
+              }}
               className={`rounded-lg px-3 py-1.5 text-sm ${
                 placementType === type
                   ? "bg-accent/25 text-white ring-1 ring-accent/50"
