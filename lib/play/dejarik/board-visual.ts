@@ -82,7 +82,26 @@ export function cellWedgeAngles(cell: number): { start: number; end: number } {
     return { start: mid - 15, end: mid + 15 };
   }
   const k = cell - OUTER_N * 2;
-  return { start: -90 + k * 90, end: -90 + (k + 1) * 90 };
+  return centerWedgeAngles(k);
+}
+
+/** Ck が接続する中輪 M[3k]〜M[3k+2] と同じ90°幅（カードinal 90°ではなく15°ずらす） */
+export function centerWedgeAngles(k: number): { start: number; end: number } {
+  return { start: -105 + k * 90, end: -15 + k * 90 };
+}
+
+function normalizeDeg(d: number): number {
+  let x = d % 360;
+  if (x < 0) x += 360;
+  return x;
+}
+
+function isAngleInWedge(deg: number, startDeg: number, endDeg: number): boolean {
+  const d = normalizeDeg(deg);
+  const a = normalizeDeg(startDeg);
+  const b = normalizeDeg(endDeg);
+  if (a < b) return d >= a && d < b;
+  return d >= a || d < b;
 }
 
 /** 周方向・輪方向で隣接マスと色が交互になる */
@@ -137,8 +156,12 @@ export function dejarikCellAtPoint(x: number, y: number): number | null {
   if (a >= 360) a -= 360;
 
   if (r <= R_CENTER_OUT) {
-    const k = Math.floor(a / 90) % 4;
-    return OUTER_N * 2 + k;
+    const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+    for (let k = 0; k < 4; k++) {
+      const { start, end } = centerWedgeAngles(k);
+      if (isAngleInWedge(deg, start, end)) return OUTER_N * 2 + k;
+    }
+    return OUTER_N * 2;
   }
   if (r <= R_MIDDLE_OUT) {
     const i = Math.floor((a + 15) / 30) % OUTER_N;
@@ -148,8 +171,8 @@ export function dejarikCellAtPoint(x: number, y: number): number | null {
   return i;
 }
 
-/** 中央4マスの境界（中心→内輪の縁まで） */
-export const CENTER_RADIAL_DEGS = [-90, 0, 90, 180];
+/** 中央4マスの境界（Ck と Ck+1 の境＝中輪3マス区切り） */
+export const CENTER_RADIAL_DEGS = [-105, -15, 75, 165];
 
 /** 外輪・中輪のマス境界（マス中心ではなく境目） */
 export const CELL_RADIAL_BOUNDARY_DEGS = Array.from(
