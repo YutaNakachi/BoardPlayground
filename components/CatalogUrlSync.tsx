@@ -22,9 +22,14 @@ export function CatalogUrlSync() {
     setSortOrder,
   } = useCatalogSidebar();
   const lastSyncedUrl = useRef<string | null>(null);
+  /** URL → state の反映直後は state → URL の push を1回スキップ（ロゴで `/` に戻ったときの書き戻しを防ぐ） */
+  const skipPushFromUrlRef = useRef(false);
 
   useEffect(() => {
-    if (pathname !== "/") return;
+    if (pathname !== "/") {
+      lastSyncedUrl.current = null;
+      return;
+    }
 
     const url = searchParams.toString();
     if (lastSyncedUrl.current !== null && catalogParamsEqual(url, lastSyncedUrl.current)) {
@@ -32,6 +37,7 @@ export function CatalogUrlSync() {
     }
 
     const parsed = parseCatalogSearchParams(searchParams);
+    skipPushFromUrlRef.current = true;
     setFilters(parsed.filters);
     setSort(parsed.sort);
     setSortOrder(parsed.sortOrder);
@@ -40,6 +46,10 @@ export function CatalogUrlSync() {
 
   useEffect(() => {
     if (pathname !== "/") return;
+    if (skipPushFromUrlRef.current) {
+      skipPushFromUrlRef.current = false;
+      return;
+    }
 
     const built = buildCatalogSearchParams(filters, sort, sortOrder);
     const current = searchParams.toString();
