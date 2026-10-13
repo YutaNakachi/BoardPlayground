@@ -416,7 +416,7 @@ const games: GameMeta[] = [
       "相手のクリーチャーをすべて除去したプレイヤーの勝ち。",
     ],
     status: "playable",
-    listed: false,
+    listed: true,
   },
   {
     slug: "dominoes",

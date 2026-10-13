@@ -85,17 +85,17 @@ export function cellWedgeAngles(cell: number): { start: number; end: number } {
   return { start: -90 + k * 90, end: -90 + (k + 1) * 90 };
 }
 
+/** 周方向・輪方向で隣接マスと色が交互になる */
 export function cellBaseFill(cell: number): string {
   if (isOuterCell(cell)) {
-    const i = cell;
-    return i % 2 === 0 ? CELL_BROWN : CELL_BLACK;
+    return cell % 2 === 0 ? CELL_BROWN : CELL_BLACK;
   }
   if (isMiddleCell(cell)) {
     const i = cell - OUTER_N;
-    return i % 2 === 1 ? CELL_BROWN : CELL_BLACK;
+    return (i + 1) % 2 === 0 ? CELL_BROWN : CELL_BLACK;
   }
   const k = cell - OUTER_N * 2;
-  return k % 2 === 0 ? CELL_BLACK : CELL_BROWN;
+  return (k + 1) % 2 === 0 ? CELL_BROWN : CELL_BLACK;
 }
 
 export function cellSectorPath(cell: number): string {
@@ -148,15 +148,48 @@ export function dejarikCellAtPoint(x: number, y: number): number | null {
   return i;
 }
 
-export const RADIAL_LINE_DEGS = Array.from({ length: 12 }, (_, i) => -90 + i * 30);
+/** 中央4マスの境界（中心→内輪の縁まで） */
+export const CENTER_RADIAL_DEGS = [-90, 0, 90, 180];
 
-export function radialLineEndpoints(deg: number): [number, number, number, number] {
+/** 外輪・中輪のマス境界（マス中心ではなく境目） */
+export const CELL_RADIAL_BOUNDARY_DEGS = Array.from(
+  { length: 12 },
+  (_, i) => -90 + i * 30 + 15
+);
+
+export function lineFromCenter(deg: number, rEnd: number): [number, number, number, number] {
   const rad = degToRad(deg);
-  const x0 = BOARD_CX + R_CENTER_OUT * Math.cos(rad);
-  const y0 = BOARD_CY + R_CENTER_OUT * Math.sin(rad);
-  const x1 = BOARD_CX + R_PLAY_OUTER * Math.cos(rad);
-  const y1 = BOARD_CY + R_PLAY_OUTER * Math.sin(rad);
-  return [x0, y0, x1, y1];
+  return [
+    BOARD_CX,
+    BOARD_CY,
+    BOARD_CX + rEnd * Math.cos(rad),
+    BOARD_CY + rEnd * Math.sin(rad),
+  ];
+}
+
+export function lineFromRadius(
+  deg: number,
+  rStart: number,
+  rEnd: number
+): [number, number, number, number] {
+  const rad = degToRad(deg);
+  return [
+    BOARD_CX + rStart * Math.cos(rad),
+    BOARD_CY + rStart * Math.sin(rad),
+    BOARD_CX + rEnd * Math.cos(rad),
+    BOARD_CY + rEnd * Math.sin(rad),
+  ];
+}
+
+export function ringArcPath(r: number, startDeg: number, endDeg: number): string {
+  const a0 = degToRad(startDeg);
+  const a1 = degToRad(endDeg);
+  const x0 = BOARD_CX + r * Math.cos(a0);
+  const y0 = BOARD_CY + r * Math.sin(a0);
+  const x1 = BOARD_CX + r * Math.cos(a1);
+  const y1 = BOARD_CY + r * Math.sin(a1);
+  const large = endDeg - startDeg > 180 ? 1 : 0;
+  return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;
 }
 
 export { CELL_BROWN, CELL_BLACK, GROOVE };

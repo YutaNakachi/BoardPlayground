@@ -4,15 +4,18 @@ import { DEJARIK_CELL_COUNT, DEJARIK_NODE_POS, type CreatureType } from "@/lib/p
 import {
   BOARD_CX,
   BOARD_CY,
+  CELL_RADIAL_BOUNDARY_DEGS,
+  CENTER_RADIAL_DEGS,
   cellBaseFill,
   cellSectorPath,
+  cellWedgeAngles,
   DEJARIK_VIEW_BOX,
   GROOVE,
-  RADIAL_LINE_DEGS,
-  radialLineEndpoints,
+  lineFromCenter,
+  lineFromRadius,
+  ringArcPath,
   R_CENTER_OUT,
   R_MIDDLE_OUT,
-  R_OUTER_IN,
   R_PLAY_OUTER,
   R_RIM_OUTER,
 } from "@/lib/play/dejarik/board-visual";
@@ -74,11 +77,11 @@ export function DejarikBoard({ state, highlightCells, selectedPieceId, onPointer
             key={`cell-${cell}`}
             d={cellSectorPath(cell)}
             fill={cellBaseFill(cell)}
-            stroke={isSelected ? "#a5b4fc" : GROOVE}
-            strokeWidth={isSelected ? 1.8 : 0.6}
+            stroke={isSelected ? "#a5b4fc" : "none"}
+            strokeWidth={isSelected ? 2 : 0}
             className="transition-[fill-opacity] duration-150"
             style={{
-              fillOpacity: hl ? 1 : 0.95,
+              fillOpacity: hl ? 1 : 1,
             }}
           />
         );
@@ -104,17 +107,47 @@ export function DejarikBoard({ state, highlightCells, selectedPieceId, onPointer
           />
         ))}
 
-      {RADIAL_LINE_DEGS.map((deg) => {
-        const [x0, y0, x1, y1] = radialLineEndpoints(deg);
+      {CENTER_RADIAL_DEGS.map((deg) => {
+        const [x0, y0, x1, y1] = lineFromCenter(deg, R_CENTER_OUT);
         return (
           <line
-            key={`rad-${deg}`}
+            key={`cdiv-${deg}`}
             x1={x0}
             y1={y0}
             x2={x1}
             y2={y1}
             stroke={GROOVE}
-            strokeWidth={0.65}
+            strokeWidth={0.85}
+            pointerEvents="none"
+          />
+        );
+      })}
+
+      {Array.from({ length: 4 }, (_, k) => {
+        const { start, end } = cellWedgeAngles(24 + k);
+        return (
+          <path
+            key={`carc-${k}`}
+            d={ringArcPath(R_CENTER_OUT, start, end)}
+            fill="none"
+            stroke={GROOVE}
+            strokeWidth={0.85}
+            pointerEvents="none"
+          />
+        );
+      })}
+
+      {CELL_RADIAL_BOUNDARY_DEGS.map((deg) => {
+        const [x0, y0, x1, y1] = lineFromRadius(deg, R_CENTER_OUT, R_PLAY_OUTER);
+        return (
+          <line
+            key={`mb-${deg}`}
+            x1={x0}
+            y1={y0}
+            x2={x1}
+            y2={y1}
+            stroke={GROOVE}
+            strokeWidth={0.85}
             pointerEvents="none"
           />
         );
@@ -126,25 +159,7 @@ export function DejarikBoard({ state, highlightCells, selectedPieceId, onPointer
         r={R_MIDDLE_OUT}
         fill="none"
         stroke={GROOVE}
-        strokeWidth={0.75}
-        pointerEvents="none"
-      />
-      <circle
-        cx={BOARD_CX}
-        cy={BOARD_CY}
-        r={R_OUTER_IN}
-        fill="none"
-        stroke={GROOVE}
-        strokeWidth={0.75}
-        pointerEvents="none"
-      />
-      <circle
-        cx={BOARD_CX}
-        cy={BOARD_CY}
-        r={R_CENTER_OUT}
-        fill="none"
-        stroke={GROOVE}
-        strokeWidth={0.65}
+        strokeWidth={0.9}
         pointerEvents="none"
       />
 
