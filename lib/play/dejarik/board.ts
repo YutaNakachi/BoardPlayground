@@ -172,18 +172,9 @@ export function homeOuterIndices(player: Player): number[] {
   return player === 0 ? [0, 1, 2, 3, 4, 5] : [6, 7, 8, 9, 10, 11];
 }
 
-/** 連続4マス配置の開始インデックス（外輪番号） */
-export function validPlacementStarts(player: Player): number[] {
-  const home = homeOuterIndices(player);
-  const starts: number[] = [];
-  for (let s = 0; s <= home.length - 4; s++) {
-    starts.push(home[s]);
-  }
-  return starts;
-}
-
-export function placementCellsFromStart(startOuter: number): number[] {
-  return [0, 1, 2, 3].map((d) => outerIndex(mod(startOuter + d, OUTER_COUNT)));
+/** 初期配置に使える外輪マス（ホーム半円6マス） */
+export function placementHomeCells(player: Player): number[] {
+  return homeOuterIndices(player).map((i) => outerIndex(i));
 }
 
 export { DEJARIK_VIEW_BOX };

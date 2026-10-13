@@ -1,10 +1,9 @@
 import {
   CREATURE_TYPES,
   DEJARIK_CELL_COUNT,
-  placementCellsFromStart,
+  placementHomeCells,
   type CreatureType,
   type Player,
-  validPlacementStarts,
 } from "./board";
 import { attackTargetsFor, moveTargetsFor, type Cells } from "./moves";
 
@@ -34,7 +33,6 @@ export type DejarikState = {
   nextPieceId: number;
   /** 0–7: 後攻から交互に配置 */
   placementStep: number;
-  homeStartOuter: [number | null, number | null];
   unplaced: Record<Player, CreatureType[]>;
   winner: Player | null;
   scoutPartial: ScoutPartial | null;
@@ -60,7 +58,6 @@ export function initialDejarik(firstPlayer: Player = Math.random() < 0.5 ? 0 : 1
     pieces: {},
     nextPieceId: 1,
     placementStep: 0,
-    homeStartOuter: [null, null],
     unplaced: {
       0: [...CREATURE_TYPES],
       1: [...CREATURE_TYPES],
@@ -68,12 +65,6 @@ export function initialDejarik(firstPlayer: Player = Math.random() < 0.5 ? 0 : 1
     winner: null,
     scoutPartial: null,
   };
-}
-
-export function homeCellsForPlayer(state: DejarikState, player: Player): number[] | null {
-  const start = state.homeStartOuter[player];
-  if (start === null) return null;
-  return placementCellsFromStart(start);
 }
 
 export function countPiecesForOwner(state: DejarikState, owner: Player): number {
@@ -92,21 +83,6 @@ export function checkWinner(state: DejarikState): Player | null {
   return null;
 }
 
-export function setHomeStart(
-  state: DejarikState,
-  player: Player,
-  startOuter: number
-): DejarikState | null {
-  if (state.phase !== "placement") return null;
-  if (placementPlayer(state.placementStep) !== player) return null;
-  if (state.homeStartOuter[player] !== null) return null;
-  if (!validPlacementStarts(player).includes(startOuter)) return null;
-  return {
-    ...state,
-    homeStartOuter: player === 0 ? [startOuter, state.homeStartOuter[1]] : [state.homeStartOuter[0], startOuter],
-  };
-}
-
 export function applyPlacement(
   state: DejarikState,
   type: CreatureType,
@@ -114,8 +90,7 @@ export function applyPlacement(
 ): DejarikState | null {
   if (state.phase !== "placement") return null;
   const player = placementPlayer(state.placementStep);
-  const homes = homeCellsForPlayer(state, player);
-  if (!homes) return null;
+  const homes = placementHomeCells(player);
   if (!homes.includes(cell)) return null;
   if (state.cells[cell] !== null) return null;
   const pool = state.unplaced[player];

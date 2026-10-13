@@ -9,8 +9,8 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { DejarikBoard } from "@/components/play/dejarik/DejarikBoard";
 import {
   CREATURE_LABEL,
+  placementHomeCells,
   type CreatureType,
-  validPlacementStarts,
 } from "@/lib/play/dejarik/board";
 import { dejarikCellAtPoint } from "@/lib/play/dejarik/board-visual";
 import {
@@ -18,19 +18,16 @@ import {
   applyDejarikMove,
   applyPlacement,
   endScoutTurn,
-  homeCellsForPlayer,
   initialDejarik,
   legalAttackTargets,
   legalMoveTargets,
   placementPlayer,
   secondPlayer,
-  setHomeStart,
   type DejarikState,
   type Player,
 } from "@/lib/play/dejarik/state";
 
 type LocalPhase = "setup" | "active";
-type ActionMode = "move" | "attack";
 
 const DESCRIPTION =
   "円形のホロ盤で4型のクリーチャーを動かし、相手をすべて除去する2人用ゲーム。フィクション作品のイメージを再現したボドパッ！独自の非公式ルールです。";
@@ -40,7 +37,6 @@ export function DejarikGame() {
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [state, setState] = useState<DejarikState | null>(null);
   const [selectedPieceId, setSelectedPieceId] = useState<number | null>(null);
-  const [actionMode, setActionMode] = useState<ActionMode>("move");
   const [placementType, setPlacementType] = useState<CreatureType | null>(null);
   const [firstPlayerChoice, setFirstPlayerChoice] = useState<Player>(0);
   const [placementHint, setPlacementHint] = useState<string | null>(null);
@@ -69,13 +65,6 @@ export function DejarikGame() {
   const playing = state?.phase === "playing";
   const gameOver = state?.phase === "game-over";
 
-  const destinations = useMemo(() => {
-    if (!state || !playing || selectedPieceId === null) return [];
-    return actionMode === "move"
-      ? legalMoveTargets(state, selectedPieceId)
-      : legalAttackTargets(state, selectedPieceId);
-  }, [state, playing, selectedPieceId, actionMode]);
-
   const scoutEndVisible = useMemo(() => {
     if (!state?.scoutPartial || !playing) return false;
     const p = state.scoutPartial;
@@ -88,25 +77,13 @@ export function DejarikGame() {
 
       if (placement) {
         const player = placementPlayer(state.placementStep);
-        const homes = homeCellsForPlayer(state, player);
-        if (!homes) {
-          if (validPlacementStarts(player).includes(cell)) {
-            const next = setHomeStart(state, player, cell);
-            if (next) {
-              setState(next);
-              setPlacementHint("型を選び、光っているホームの空きマスをタップ");
-            }
-          } else {
-            setPlacementHint("光っているマス（連続4マスの先頭）をタップしてください");
-          }
-          return;
-        }
+        const homes = placementHomeCells(player);
         if (!placementType) {
-          setPlacementHint("先に下のボタンで置く型を選んでください");
+          setPlacementHint("先に盤下で置く型を選んでください");
           return;
         }
         if (!homes.includes(cell) || state.cells[cell] !== null) {
-          setPlacementHint("自分のホームの空きマスをタップしてください");
+          setPlacementHint("自分のホーム半円（光った外輪）の空きマスをタップしてください");
           return;
         }
         const next = applyPlacement(state, placementType, cell);
@@ -124,36 +101,46 @@ export function DejarikGame() {
         return;
       }
 
-      const pieceId = state.cells[cell];
-      if (selectedPieceId !== null && destinations.includes(cell)) {
-        const next =
-          actionMode === "move"
-            ? applyDejarikMove(state, selectedPieceId, cell)
-            : applyDejarikAttack(state, selectedPieceId, cell);
-        if (next) {
-          setState(next);
-          if (next.scoutPartial?.pieceId === selectedPieceId) {
-            setSelectedPieceId(selectedPieceId);
-          } else {
-            setSelectedPieceId(null);
+      const occupantId = state.cells[cell];
+
+      if (selectedPieceId !== null) {
+        const attacks = legalAttackTargets(state, selectedPieceId);
+        const moves = legalMoveTargets(state, selectedPieceId);
+        if (attacks.includes(cell)) {
+          const next = applyDejarikAttack(state, selectedPieceId, cell);
+          if (next) {
+            setState(next);
+            setSelectedPieceId(
+              next.scoutPartial?.pieceId === selectedPieceId ? selectedPieceId : null
+            );
           }
+          return;
         }
-        return;
+        if (moves.includes(cell)) {
+          const next = applyDejarikMove(state, selectedPieceId, cell);
+          if (next) {
+            setState(next);
+            setSelectedPieceId(
+              next.scoutPartial?.pieceId === selectedPieceId ? selectedPieceId : null
+            );
+          }
+          return;
+        }
       }
 
-      if (pieceId === null) {
+      if (occupantId === null) {
         setSelectedPieceId(null);
         return;
       }
-      const piece = state.pieces[pieceId];
+      const piece = state.pieces[occupantId];
       if (!piece || piece.owner !== state.current) {
         setSelectedPieceId(null);
         return;
       }
-      if (state.scoutPartial && state.scoutPartial.pieceId !== pieceId) return;
-      setSelectedPieceId(pieceId);
+      if (state.scoutPartial && state.scoutPartial.pieceId !== occupantId) return;
+      setSelectedPieceId(occupantId);
     },
-    [state, placement, playing, destinations, selectedPieceId, actionMode, placementType]
+    [state, placement, playing, selectedPieceId, placementType]
   );
 
   const onBoardPointer = useCallback(
@@ -215,24 +202,19 @@ export function DejarikGame() {
   if (!state) return null;
 
   const turnPlayer = placement ? placementPlayer(state.placementStep) : state.current;
-  const placementHomes =
-    placement ? homeCellsForPlayer(state, turnPlayer) : null;
   const placementSecond = secondPlayer(state.firstPlayer);
 
   const highlightCells = new Set<number>();
-  if (placement && !placementHomes) {
-    for (const start of validPlacementStarts(turnPlayer)) {
-      highlightCells.add(start);
-    }
-  } else if (placement && placementHomes) {
-    for (const c of placementHomes) {
+  if (placement) {
+    for (const c of placementHomeCells(turnPlayer)) {
       if (state.cells[c] === null) highlightCells.add(c);
     }
   } else if (playing && selectedPieceId !== null) {
     for (let c = 0; c < state.cells.length; c++) {
       if (state.cells[c] === selectedPieceId) highlightCells.add(c);
     }
-    for (const d of destinations) highlightCells.add(d);
+    for (const d of legalMoveTargets(state, selectedPieceId)) highlightCells.add(d);
+    for (const d of legalAttackTargets(state, selectedPieceId)) highlightCells.add(d);
   }
 
   return (
@@ -261,56 +243,37 @@ export function DejarikGame() {
           }
           action={
             placement
-              ? placementHomes
-                ? "型を選び、光ったホームの空きマスをタップ"
-                : "光った外輪のいずれかをタップ（連続4マスの開始位置）"
+              ? "盤下で型を選び、光ったホーム半円の空きマスをタップ"
               : selectedPieceId === null
                 ? "自分のクリーチャーをタップ"
-                : actionMode === "move"
-                  ? "移動先をタップ（光ったマス）"
-                  : "攻撃先をタップ（光ったマス）"
+                : "光った空マスで移動、光った敵マスで攻撃"
           }
           notice={
             placement
               ? placementHint ??
                 (state.placementStep === 0
-                  ? `配置は後攻のプレイヤー ${placementSecond + 1} から（ルールどおり）`
+                  ? `配置は後攻のプレイヤー ${placementSecond + 1} から`
                   : undefined)
               : scoutEndVisible
-                ? "スカウトはもう1操作できるか、下の「手番終了」"
+                ? "スカウト：もう1操作できるか、盤下の「手番終了」"
                 : undefined
           }
         />
       )}
 
-      {!gameOver && playing && (
-        <div className="flex flex-wrap justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActionMode("move")}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              actionMode === "move"
-                ? "bg-accent/25 text-white ring-1 ring-accent/50"
-                : "bg-white/5 text-slate-400"
-            }`}
-          >
-            移動
-          </button>
-          <button
-            type="button"
-            onClick={() => setActionMode("attack")}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              actionMode === "attack"
-                ? "bg-accent/25 text-white ring-1 ring-accent/50"
-                : "bg-white/5 text-slate-400"
-            }`}
-          >
-            攻撃
-          </button>
-        </div>
-      )}
+      <div className="mx-auto max-w-md rounded-full bg-gradient-to-b from-amber-950/40 to-black/60 p-3">
+        <DejarikBoard
+          state={state}
+          highlightCells={highlightCells}
+          selectedPieceId={selectedPieceId}
+          onPointerDown={onBoardPointer}
+        />
+        <p className="mt-2 text-center text-xs text-slate-500">
+          Br=ブルート Pr=プレデター Gu=ガーディアン Sc=スカウト
+        </p>
+      </div>
 
-      {!gameOver && placement && placementHomes && (
+      {!gameOver && placement && (
         <div className="flex flex-wrap justify-center gap-2">
           <p className="w-full text-center text-xs text-slate-400">
             残り {state.unplaced[turnPlayer].length} 体 — 置く型を選ぶ
@@ -334,18 +297,6 @@ export function DejarikGame() {
           ))}
         </div>
       )}
-
-      <div className="mx-auto max-w-md rounded-full bg-gradient-to-b from-amber-950/40 to-black/60 p-3">
-        <DejarikBoard
-          state={state}
-          highlightCells={highlightCells}
-          selectedPieceId={selectedPieceId}
-          onPointerDown={onBoardPointer}
-        />
-        <p className="mt-2 text-center text-xs text-slate-500">
-          Br=ブルート Pr=プレデター Gu=ガーディアン Sc=スカウト
-        </p>
-      </div>
 
       {!gameOver && scoutEndVisible && (
         <div className="flex justify-center">
