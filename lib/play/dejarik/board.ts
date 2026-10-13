@@ -167,9 +167,12 @@ export function bruteWarpTarget(outerCell: number): number {
   return outerIndex(mod(i + 6, OUTER_COUNT));
 }
 
-/** プレイヤー0のホーム外輪インデックス 0–5、プレイヤー1は 6–11 */
+/**
+ * ホーム半円（画面上でプレイヤー1＝上、プレイヤー2＝下）。
+ * 外輪角度は O0 が12時方向（-90°）から30°刻み。
+ */
 export function homeOuterIndices(player: Player): number[] {
-  return player === 0 ? [0, 1, 2, 3, 4, 5] : [6, 7, 8, 9, 10, 11];
+  return player === 0 ? [9, 10, 11, 0, 1, 2] : [3, 4, 5, 6, 7, 8];
 }
 
 /** 初期配置に使える外輪マス（ホーム半円6マス） */

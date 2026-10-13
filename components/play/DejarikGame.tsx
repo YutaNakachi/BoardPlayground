@@ -24,7 +24,6 @@ import {
   placementPlayer,
   secondPlayer,
   type DejarikState,
-  type Player,
 } from "@/lib/play/dejarik/state";
 
 type LocalPhase = "setup" | "active";
@@ -38,18 +37,17 @@ export function DejarikGame() {
   const [state, setState] = useState<DejarikState | null>(null);
   const [selectedPieceId, setSelectedPieceId] = useState<number | null>(null);
   const [placementType, setPlacementType] = useState<CreatureType | null>(null);
-  const [firstPlayerChoice, setFirstPlayerChoice] = useState<Player>(0);
   const [placementHint, setPlacementHint] = useState<string | null>(null);
 
   const startLocal = useCallback(() => {
     recordLocalPlay();
     setPlayMode({ mode: "local" });
-    setState(initialDejarik(firstPlayerChoice));
+    setState(initialDejarik());
     setSelectedPieceId(null);
     setPlacementType(null);
     setPlacementHint(null);
     setLocalPhase("active");
-  }, [recordLocalPlay, setPlayMode, firstPlayerChoice]);
+  }, [recordLocalPlay, setPlayMode]);
 
   const reset = useCallback(() => {
     setLocalPhase("setup");
@@ -160,42 +158,18 @@ export function DejarikGame() {
 
   if (localPhase === "setup") {
     return (
-      <div className="space-y-4">
-        <OnlineSetupPanel
-          title="デジャリック"
-          description={DESCRIPTION}
-          mode="local"
-          onModeChange={() => {}}
-          onlineSupported={false}
-          onCreateRoom={() => {}}
-          onJoinRoom={() => {}}
-          onStartLocal={startLocal}
-          loading={false}
-          error={null}
-        />
-        <div className="mx-auto max-w-md rounded-xl border border-surface-border bg-surface-raised p-4">
-          <p className="text-center text-sm font-medium text-slate-200">先攻（対局開始後の手番）</p>
-          <div className="mt-3 flex justify-center gap-2">
-            {([0, 1] as Player[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setFirstPlayerChoice(p)}
-                className={`rounded-lg px-4 py-2 text-sm ${
-                  firstPlayerChoice === p
-                    ? "bg-accent/25 text-white ring-1 ring-accent/50"
-                    : "bg-white/5 text-slate-400"
-                }`}
-              >
-                プレイヤー {p + 1}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-center text-xs text-slate-500">
-            配置はルールどおり後攻（プレイヤー {secondPlayer(firstPlayerChoice) + 1}）から交互に行います。
-          </p>
-        </div>
-      </div>
+      <OnlineSetupPanel
+        title="デジャリック"
+        description={DESCRIPTION}
+        mode="local"
+        onModeChange={() => {}}
+        onlineSupported={false}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={startLocal}
+        loading={false}
+        error={null}
+      />
     );
   }
 
