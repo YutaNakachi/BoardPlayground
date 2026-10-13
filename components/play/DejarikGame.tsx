@@ -6,15 +6,13 @@ import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { DejarikBoard } from "@/components/play/dejarik/DejarikBoard";
 import {
   CREATURE_LABEL,
-  DEJARIK_CELL_COUNT,
-  DEJARIK_NODE_POS,
-  DEJARIK_VIEW_BOX,
-  getOrthoNeighbors,
   type CreatureType,
   validPlacementStarts,
 } from "@/lib/play/dejarik/board";
+import { dejarikCellAtPoint } from "@/lib/play/dejarik/board-visual";
 import {
   applyDejarikAttack,
   applyDejarikMove,
@@ -28,37 +26,12 @@ import {
   setHomeStart,
   type DejarikState,
 } from "@/lib/play/dejarik/state";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
 
 type LocalPhase = "setup" | "active";
 type ActionMode = "move" | "attack";
 
-const HIT_RADIUS = 14;
 const DESCRIPTION =
   "円形のホロ盤で4型のクリーチャーを動かし、相手をすべて除去する2人用ゲーム。フィクション作品のイメージを再現したボドパッ！独自の非公式ルールです。";
-
-const TYPE_ABBR: Record<CreatureType, string> = {
-  brute: "Br",
-  predator: "Pr",
-  guardian: "Gu",
-  scout: "Sc",
-};
-
-function buildBoardEdges(): [number, number][] {
-  const seen = new Set<string>();
-  const edges: [number, number][] = [];
-  for (let c = 0; c < DEJARIK_CELL_COUNT; c++) {
-    for (const n of getOrthoNeighbors(c)) {
-      const key = c < n ? `${c}-${n}` : `${n}-${c}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      edges.push([c, n]);
-    }
-  }
-  return edges;
-}
-
-const BOARD_EDGES = buildBoardEdges();
 
 export function DejarikGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
@@ -174,19 +147,8 @@ export function DejarikGame() {
       point.x = event.clientX;
       point.y = event.clientY;
       const { x, y } = point.matrixTransform(ctm.inverse());
-      let nearest = -1;
-      let nearestDist = HIT_RADIUS * HIT_RADIUS;
-      for (let i = 0; i < DEJARIK_NODE_POS.length; i++) {
-        const [px, py] = DEJARIK_NODE_POS[i];
-        const dx = px - x;
-        const dy = py - y;
-        const dist = dx * dx + dy * dy;
-        if (dist <= nearestDist) {
-          nearestDist = dist;
-          nearest = i;
-        }
-      }
-      if (nearest >= 0) onCell(nearest);
+      const cell = dejarikCellAtPoint(x, y);
+      if (cell !== null) onCell(cell);
     },
     [onCell]
   );
@@ -313,65 +275,13 @@ export function DejarikGame() {
         </div>
       )}
 
-      <div className="mx-auto max-w-md">
-        <svg
-          viewBox={DEJARIK_VIEW_BOX}
-          className="w-full touch-none select-none"
+      <div className="mx-auto max-w-md rounded-full bg-gradient-to-b from-amber-950/40 to-black/60 p-3">
+        <DejarikBoard
+          state={state}
+          highlightCells={highlightCells}
+          selectedPieceId={selectedPieceId}
           onPointerDown={onBoardPointer}
-          role="img"
-          aria-label="デジャリック盤"
-        >
-          {BOARD_EDGES.map(([a, b]) => {
-            const [x1, y1] = DEJARIK_NODE_POS[a];
-            const [x2, y2] = DEJARIK_NODE_POS[b];
-            return (
-              <line
-                key={`${a}-${b}`}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke="rgb(100 116 139 / 0.45)"
-                strokeWidth={1}
-              />
-            );
-          })}
-          {DEJARIK_NODE_POS.map(([cx, cy], cell) => {
-            const pieceId = state.cells[cell];
-            const piece = pieceId !== null ? state.pieces[pieceId] : null;
-            const hl = highlightCells.has(cell);
-            const isSelected = pieceId !== null && pieceId === selectedPieceId;
-            const owner = piece?.owner;
-            const fill =
-              owner !== undefined ? getPlayerTurnStyle(owner).fill : "rgb(51 65 85)";
-            return (
-              <g key={cell}>
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={hl ? 11 : 9}
-                  fill={hl ? "rgb(99 102 241 / 0.35)" : "rgb(30 41 59 / 0.9)"}
-                  stroke={isSelected ? "rgb(129 140 248)" : "rgb(71 85 105)"}
-                  strokeWidth={isSelected ? 2.5 : 1}
-                />
-                {piece && (
-                  <text
-                    x={cx}
-                    y={cy}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill={fill}
-                    fontSize={8}
-                    fontWeight={700}
-                    className="pointer-events-none"
-                  >
-                    {TYPE_ABBR[piece.type]}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+        />
         <p className="mt-2 text-center text-xs text-slate-500">
           Br=ブルート Pr=プレデター Gu=ガーディアン Sc=スカウト
         </p>

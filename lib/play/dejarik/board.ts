@@ -1,3 +1,5 @@
+import { cellCentroid, DEJARIK_VIEW_BOX } from "./board-visual";
+
 export const OUTER_COUNT = 12;
 export const MIDDLE_COUNT = 12;
 export const CENTER_COUNT = 4;
@@ -184,38 +186,9 @@ export function placementCellsFromStart(startOuter: number): number[] {
   return [0, 1, 2, 3].map((d) => outerIndex(mod(startOuter + d, OUTER_COUNT)));
 }
 
-/** SVG 配置（viewBox 0 0 200 200） */
-export const DEJARIK_VIEW_BOX = "0 0 200 200";
+export { DEJARIK_VIEW_BOX };
 
-function polar(cx: number, cy: number, r: number, deg: number): [number, number] {
-  const rad = (deg * Math.PI) / 180;
-  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
-}
-
-const CX = 100;
-const CY = 100;
-const R_OUTER = 82;
-const R_MIDDLE = 58;
-const R_CENTER = 28;
-
-export const DEJARIK_NODE_POS: [number, number][] = [];
-
-function buildPositions(): void {
-  for (let i = 0; i < DEJARIK_CELL_COUNT; i++) {
-    DEJARIK_NODE_POS.push([0, 0]);
-  }
-  for (let i = 0; i < OUTER_COUNT; i++) {
-    const deg = -90 + i * 30;
-    DEJARIK_NODE_POS[outerIndex(i)] = polar(CX, CY, R_OUTER, deg);
-  }
-  for (let i = 0; i < MIDDLE_COUNT; i++) {
-    const deg = -90 + i * 30;
-    DEJARIK_NODE_POS[middleIndex(i)] = polar(CX, CY, R_MIDDLE, deg);
-  }
-  for (let k = 0; k < CENTER_COUNT; k++) {
-    const deg = -90 + k * 90 + 45;
-    DEJARIK_NODE_POS[centerIndex(k)] = polar(CX, CY, R_CENTER * 0.55, deg);
-  }
-}
-
-buildPositions();
+export const DEJARIK_NODE_POS: [number, number][] = Array.from(
+  { length: DEJARIK_CELL_COUNT },
+  (_, cell) => cellCentroid(cell)
+);
