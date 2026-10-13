@@ -396,6 +396,6 @@
 
 ---
 
-## 実装（予定）
+## 実装
 
-Web 版は未実装。実装時は `components/play/` および `lib/play/dejarik/` を参照する想定。
+Web 版は `components/play/DejarikGame.tsx` および `lib/play/dejarik/` を参照。

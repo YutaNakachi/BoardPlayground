@@ -4,6 +4,7 @@ import { CheckersGame } from "@/components/play/CheckersGame";
 import { ChessGame } from "@/components/play/ChessGame";
 import { ChineseCheckersGame } from "@/components/play/ChineseCheckersGame";
 import { ChronoSplitGame } from "@/components/play/ChronoSplitGame";
+import { DejarikGame } from "@/components/play/DejarikGame";
 import { DominoesGame } from "@/components/play/DominoesGame";
 import { DotsAndBoxesGame } from "@/components/play/DotsAndBoxesGame";
 import { FoxHoundsGame } from "@/components/play/FoxHoundsGame";
@@ -42,6 +43,7 @@ export const playComponents: Record<string, ComponentType> = {
   nim: NimGame,
   hex: HexGame,
   "fox-hounds": FoxHoundsGame,
+  dejarik: DejarikGame,
   dominoes: DominoesGame,
   "chinese-checkers": ChineseCheckersGame,
   ludo: LudoGame,

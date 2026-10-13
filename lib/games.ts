@@ -396,6 +396,29 @@ const games: GameMeta[] = [
     listed: true,
   },
   {
+    slug: "dejarik",
+    title: "デジャリック",
+    description:
+      "円形のホロ盤で4型のクリーチャーを動かし、相手をすべて除去する2人用ゲーム。フィクション作品のイメージを再現した非公式ルールです。",
+    origin: "fiction",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 20,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["ボード", "コマ取り"],
+    rulesSummary: [
+      "外輪・中輪・中央4マスの28マス盤。各プレイヤーはブルート・プレデター・ガーディアン・スカウトの4体をホーム半円の連続4マスに自由配置。",
+      "基本は1ターンに移動または攻撃のどちらか一方。攻撃はパターンに沿って相手のいるマスへ入り除去する。",
+      "スカウトのみ同一ターンで直線2マス移動と隣接1マス攻撃の両方が可能（片方だけでもよい）。",
+      "相手のクリーチャーをすべて除去したプレイヤーの勝ち。",
+    ],
+    status: "playable",
+    listed: false,
+  },
+  {
     slug: "dominoes",
     title: "ドミノ",
     description:
