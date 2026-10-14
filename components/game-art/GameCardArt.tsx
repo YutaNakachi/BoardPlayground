@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { DejarikBoardPreview } from "@/components/game-art/DejarikBoardPreview";
 import { GravityFourBoardPreview } from "@/components/game-art/GravityFourBoardPreview";
 import { HexBoardPreview } from "@/components/game-art/HexBoardPreview";
 import { LudoBoardPreview } from "@/components/game-art/LudoBoardPreview";
@@ -237,6 +238,10 @@ function MorrisPreview() {
 
 function HexPreview() {
   return <HexBoardPreview />;
+}
+
+function DejarikPreview() {
+  return <DejarikBoardPreview />;
 }
 
 function FoxHoundsPreview() {
@@ -843,6 +848,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
   nim: NimPreview,
   hex: HexPreview,
   "fox-hounds": FoxHoundsPreview,
+  dejarik: DejarikPreview,
   dominoes: DominoPreview,
   "chinese-checkers": ChineseCheckersPreview,
   ludo: LudoPreview,
