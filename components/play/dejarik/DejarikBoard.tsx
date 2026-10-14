@@ -22,12 +22,21 @@ import {
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import type { DejarikState } from "@/lib/play/dejarik/state";
 
-const TYPE_ABBR: Record<CreatureType, string> = {
-  brute: "Br",
-  predator: "Pr",
-  guardian: "Gu",
-  scout: "Sc",
+const TOKEN_SRC: Record<CreatureType, string> = {
+  brute: "/games/dejarik/dejarik-brute-token.jpg",
+  predator: "/games/dejarik/dejarik-predator-token.jpg",
+  guardian: "/games/dejarik/dejarik-guardian-token.jpg",
+  scout: "/games/dejarik/dejarik-scout-token.jpg",
 };
+
+const TOKEN_SIZE = 22;
+
+/** 画像は上向き。盤中心方向へ回転（度） */
+function facingCenterDeg(cx: number, cy: number): number {
+  const dx = BOARD_CX - cx;
+  const dy = BOARD_CY - cy;
+  return (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+}
 
 type Props = {
   state: DejarikState;
@@ -188,32 +197,40 @@ export function DejarikBoard({
         if (pieceId === null) return null;
         const piece = state.pieces[pieceId];
         if (!piece) return null;
-        const { fill } = getPlayerTurnStyle(piece.owner);
+        const ownerStyle = getPlayerTurnStyle(piece.owner);
         const isSelected = pieceId === selectedPieceId;
+        const face = facingCenterDeg(cx, cy);
+        const half = TOKEN_SIZE / 2;
         return (
           <g key={`piece-${pieceId}`} filter="url(#dejarik-piece-shadow)">
             <circle
               cx={cx}
               cy={cy}
-              r={isSelected ? 9.5 : 8.5}
-              fill={fill}
-              stroke={isSelected ? turnStyle.fill : "#1e1b18"}
-              strokeWidth={isSelected ? 2 : 1.2}
+              r={isSelected ? 11 : 9.5}
+              fill={ownerStyle.fill}
+              opacity={0.35}
             />
-            <circle cx={cx - 2} cy={cy - 2.5} r={2.2} fill="white" opacity={0.22} />
-            <text
-              x={cx}
-              y={cy}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill="#0f0a08"
-              fontSize={7}
-              fontWeight={800}
-              className="pointer-events-none"
-              style={{ fontFamily: "system-ui, sans-serif" }}
-            >
-              {TYPE_ABBR[piece.type]}
-            </text>
+            {isSelected && (
+              <circle
+                cx={cx}
+                cy={cy}
+                r={12}
+                fill="none"
+                stroke={ownerStyle.fill}
+                strokeWidth={1.6}
+              />
+            )}
+            <g transform={`translate(${cx}, ${cy}) rotate(${face})`}>
+              <image
+                href={TOKEN_SRC[piece.type]}
+                x={-half}
+                y={-half}
+                width={TOKEN_SIZE}
+                height={TOKEN_SIZE}
+                preserveAspectRatio="xMidYMid meet"
+                className="pointer-events-none"
+              />
+            </g>
           </g>
         );
       })}

@@ -252,7 +252,7 @@ export function DejarikGame() {
           onPointerDown={onBoardPointer}
         />
         <p className="mt-2 text-center text-xs text-slate-500">
-          Br=ブルート Pr=プレデター Gu=ガーディアン Sc=スカウト
+          クリーチャーは常に盤の中心を向きます
         </p>
       </div>
 
