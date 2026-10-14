@@ -214,7 +214,6 @@ export function DejarikBoard({
 
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         {pieces.map(({ pieceId, piece, cx, cy }) => {
-          const ownerStyle = getPlayerTurnStyle(piece.owner);
           const face = facingCenterDeg(cx, cy);
           return (
             <div
@@ -226,11 +225,7 @@ export function DejarikBoard({
                 width: `${TOKEN_SIZE_PCT}%`,
               }}
             >
-              <DejarikCreatureToken
-                type={piece.type}
-                fill={ownerStyle.fill}
-                faceDeg={face}
-              />
+              <DejarikCreatureToken type={piece.type} faceDeg={face} />
             </div>
           );
         })}
