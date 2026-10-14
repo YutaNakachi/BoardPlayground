@@ -153,6 +153,7 @@ import {
   tttRotatingOldest,
   tttWinner,
 } from "./tic-tac-toe";
+import { runDejarikChecks } from "./dejarik/dejarik.test";
 import { runSenkaiSenkiChecks } from "./senkai-senki.test";
 
 function assert(cond: boolean, message: string) {
@@ -1067,6 +1068,7 @@ export function runPlayEngineChecks() {
   checkNebulaLink();
   checkChronoSplit();
   checkStarTrade();
+  runDejarikChecks(assert);
   runSenkaiSenkiChecks(assert);
 }
 
