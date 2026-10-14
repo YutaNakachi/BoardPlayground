@@ -24,7 +24,7 @@ import type { DejarikState } from "@/lib/play/dejarik/state";
 import { DejarikCreatureToken } from "@/components/play/dejarik/DejarikCreatureToken";
 
 const VIEW_SIZE = 200;
-const TOKEN_SIZE_PCT = (26 / VIEW_SIZE) * 100;
+const TOKEN_SIZE_PCT = (34 / VIEW_SIZE) * 100;
 
 /** 画像は上向き。盤中心方向へ回転（度） */
 function facingCenterDeg(cx: number, cy: number): number {
@@ -214,6 +214,7 @@ export function DejarikBoard({
 
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         {pieces.map(({ pieceId, piece, cx, cy }) => {
+          const ownerStyle = getPlayerTurnStyle(piece.owner);
           const face = facingCenterDeg(cx, cy);
           return (
             <div
@@ -225,7 +226,11 @@ export function DejarikBoard({
                 width: `${TOKEN_SIZE_PCT}%`,
               }}
             >
-              <DejarikCreatureToken type={piece.type} faceDeg={face} />
+              <DejarikCreatureToken
+                type={piece.type}
+                faceDeg={face}
+                baseColor={ownerStyle.fill}
+              />
             </div>
           );
         })}
