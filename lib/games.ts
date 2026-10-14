@@ -404,7 +404,7 @@ const games: GameMeta[] = [
     players: "2",
     playersMin: 2,
     playersMax: 2,
-    durationMinutes: 20,
+    durationMinutes: 10,
     complexity: "normal",
     cpu: false,
     team: false,
@@ -416,7 +416,7 @@ const games: GameMeta[] = [
       "相手のクリーチャー4体をすべて除去したプレイヤーの勝ち。残り1体になったら3手以内に取れなければ負け（取ればカウントはリセット）。",
     ],
     status: "playable",
-    listed: false,
+    listed: true,
   },
   {
     slug: "dominoes",
