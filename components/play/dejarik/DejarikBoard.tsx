@@ -1,6 +1,6 @@
 "use client";
 
-import { DEJARIK_CELL_COUNT, DEJARIK_NODE_POS, type CreatureType } from "@/lib/play/dejarik/board";
+import { DEJARIK_CELL_COUNT, DEJARIK_NODE_POS } from "@/lib/play/dejarik/board";
 import {
   BOARD_CX,
   BOARD_CY,
@@ -21,15 +21,9 @@ import {
 } from "@/lib/play/dejarik/board-visual";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import type { DejarikState } from "@/lib/play/dejarik/state";
+import { DejarikCreatureToken } from "@/components/play/dejarik/DejarikCreatureToken";
 
-const TOKEN_SRC: Record<CreatureType, string> = {
-  brute: "/games/dejarik/dejarik-brute-token.jpg",
-  predator: "/games/dejarik/dejarik-predator-token.jpg",
-  guardian: "/games/dejarik/dejarik-guardian-token.jpg",
-  scout: "/games/dejarik/dejarik-scout-token.jpg",
-};
-
-const TOKEN_SIZE = 22;
+const TOKEN_SIZE = 24;
 
 /** 画像は上向き。盤中心方向へ回転（度） */
 function facingCenterDeg(cx: number, cy: number): number {
@@ -200,35 +194,24 @@ export function DejarikBoard({
         const ownerStyle = getPlayerTurnStyle(piece.owner);
         const isSelected = pieceId === selectedPieceId;
         const face = facingCenterDeg(cx, cy);
-        const half = TOKEN_SIZE / 2;
         return (
           <g key={`piece-${pieceId}`} filter="url(#dejarik-piece-shadow)">
-            <circle
-              cx={cx}
-              cy={cy}
-              r={isSelected ? 11 : 9.5}
-              fill={ownerStyle.fill}
-              opacity={0.35}
-            />
             {isSelected && (
               <circle
                 cx={cx}
                 cy={cy}
-                r={12}
+                r={13}
                 fill="none"
                 stroke={ownerStyle.fill}
-                strokeWidth={1.6}
+                strokeWidth={1.8}
+                opacity={0.95}
               />
             )}
             <g transform={`translate(${cx}, ${cy}) rotate(${face})`}>
-              <image
-                href={TOKEN_SRC[piece.type]}
-                x={-half}
-                y={-half}
-                width={TOKEN_SIZE}
-                height={TOKEN_SIZE}
-                preserveAspectRatio="xMidYMid meet"
-                className="pointer-events-none"
+              <DejarikCreatureToken
+                type={piece.type}
+                fill={ownerStyle.fill}
+                size={TOKEN_SIZE}
               />
             </g>
           </g>
