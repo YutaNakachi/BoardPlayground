@@ -32,11 +32,31 @@ const TYPE_ABBR: Record<CreatureType, string> = {
 type Props = {
   state: DejarikState;
   highlightCells: Set<number>;
+  /** ハイライト色（手番プレイヤー） */
+  highlightPlayer: number;
   selectedPieceId: number | null;
   onPointerDown: (event: React.PointerEvent<SVGSVGElement>) => void;
 };
 
-export function DejarikBoard({ state, highlightCells, selectedPieceId, onPointerDown }: Props) {
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function DejarikBoard({
+  state,
+  highlightCells,
+  highlightPlayer,
+  selectedPieceId,
+  onPointerDown,
+}: Props) {
+  const turnStyle = getPlayerTurnStyle(highlightPlayer);
+  const hlFill = hexToRgba(turnStyle.fill, 0.42);
+  const hlStroke = hexToRgba(turnStyle.fill, 0.88);
+  const selectedStroke = turnStyle.fill;
   return (
     <svg
       viewBox={DEJARIK_VIEW_BOX}
@@ -77,7 +97,7 @@ export function DejarikBoard({ state, highlightCells, selectedPieceId, onPointer
             key={`cell-${cell}`}
             d={cellSectorPath(cell)}
             fill={cellBaseFill(cell)}
-            stroke={isSelected ? "#a5b4fc" : "none"}
+            stroke={isSelected ? selectedStroke : "none"}
             strokeWidth={isSelected ? 2 : 0}
             className="transition-[fill-opacity] duration-150"
             style={{
@@ -100,8 +120,8 @@ export function DejarikBoard({ state, highlightCells, selectedPieceId, onPointer
           <path
             key={`hl-${cell}`}
             d={cellSectorPath(cell)}
-            fill="rgb(99 102 241 / 0.48)"
-            stroke="rgb(199 210 254 / 0.85)"
+            fill={hlFill}
+            stroke={hlStroke}
             strokeWidth={1.1}
             pointerEvents="none"
           />
@@ -177,7 +197,7 @@ export function DejarikBoard({ state, highlightCells, selectedPieceId, onPointer
               cy={cy}
               r={isSelected ? 9.5 : 8.5}
               fill={fill}
-              stroke={isSelected ? "#e0e7ff" : "#1e1b18"}
+              stroke={isSelected ? turnStyle.fill : "#1e1b18"}
               strokeWidth={isSelected ? 2 : 1.2}
             />
             <circle cx={cx - 2} cy={cy - 2.5} r={2.2} fill="white" opacity={0.22} />

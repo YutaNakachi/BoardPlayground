@@ -247,6 +247,7 @@ export function DejarikGame() {
         <DejarikBoard
           state={state}
           highlightCells={highlightCells}
+          highlightPlayer={turnPlayer}
           selectedPieceId={selectedPieceId}
           onPointerDown={onBoardPointer}
         />
