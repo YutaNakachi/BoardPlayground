@@ -416,7 +416,7 @@ const games: GameMeta[] = [
       "相手のクリーチャーをすべて除去したプレイヤーの勝ち。残り1体になったら3手以内に取れなければ負け（取ればリセット）。",
     ],
     status: "playable",
-    listed: true,
+    listed: false,
   },
   {
     slug: "dominoes",
