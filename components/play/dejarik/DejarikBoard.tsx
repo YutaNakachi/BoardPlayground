@@ -23,7 +23,8 @@ import { getPlayerTurnStyle } from "@/lib/player-colors";
 import type { DejarikState } from "@/lib/play/dejarik/state";
 import { DejarikCreatureToken } from "@/components/play/dejarik/DejarikCreatureToken";
 
-const TOKEN_SIZE = 24;
+const VIEW_SIZE = 200;
+const TOKEN_SIZE_PCT = (26 / VIEW_SIZE) * 100;
 
 /** 画像は上向き。盤中心方向へ回転（度） */
 function facingCenterDeg(cx: number, cy: number): number {
@@ -60,14 +61,23 @@ export function DejarikBoard({
   const hlFill = hexToRgba(turnStyle.fill, 0.42);
   const hlStroke = hexToRgba(turnStyle.fill, 0.88);
   const selectedStroke = turnStyle.fill;
+  const pieces = DEJARIK_NODE_POS.flatMap(([cx, cy], cell) => {
+    const pieceId = state.cells[cell];
+    if (pieceId === null) return [];
+    const piece = state.pieces[pieceId];
+    if (!piece) return [];
+    return [{ pieceId, piece, cx, cy, cell }];
+  });
+
   return (
-    <svg
-      viewBox={DEJARIK_VIEW_BOX}
-      className="w-full touch-none select-none drop-shadow-lg"
-      onPointerDown={onPointerDown}
-      role="img"
-      aria-label="デジャリック盤"
-    >
+    <div className="relative w-full touch-none select-none drop-shadow-lg">
+      <svg
+        viewBox={DEJARIK_VIEW_BOX}
+        className="block h-auto w-full"
+        onPointerDown={onPointerDown}
+        role="img"
+        aria-label="デジャリック盤"
+      >
       <defs>
         <radialGradient id="dejarik-rim" cx="50%" cy="45%" r="55%">
           <stop offset="0%" stopColor="#c4a574" />
@@ -78,9 +88,6 @@ export function DejarikBoard({
           <stop offset="0%" stopColor="#3d2e24" stopOpacity="0.15" />
           <stop offset="100%" stopColor="#000" stopOpacity="0.35" />
         </radialGradient>
-        <filter id="dejarik-piece-shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="1.2" floodOpacity="0.55" />
-        </filter>
       </defs>
 
       <circle cx={BOARD_CX} cy={BOARD_CY} r={R_RIM_OUTER} fill="url(#dejarik-rim)" />
@@ -186,37 +193,48 @@ export function DejarikBoard({
         pointerEvents="none"
       />
 
-      {DEJARIK_NODE_POS.map(([cx, cy], cell) => {
-        const pieceId = state.cells[cell];
-        if (pieceId === null) return null;
-        const piece = state.pieces[pieceId];
-        if (!piece) return null;
+      {pieces.map(({ pieceId, piece, cx, cy }) => {
         const ownerStyle = getPlayerTurnStyle(piece.owner);
         const isSelected = pieceId === selectedPieceId;
-        const face = facingCenterDeg(cx, cy);
-        return (
-          <g key={`piece-${pieceId}`} filter="url(#dejarik-piece-shadow)">
-            {isSelected && (
-              <circle
-                cx={cx}
-                cy={cy}
-                r={13}
-                fill="none"
-                stroke={ownerStyle.fill}
-                strokeWidth={1.8}
-                opacity={0.95}
-              />
-            )}
-            <g transform={`translate(${cx}, ${cy}) rotate(${face})`}>
+        return isSelected ? (
+          <circle
+            key={`sel-${pieceId}`}
+            cx={cx}
+            cy={cy}
+            r={13}
+            fill="none"
+            stroke={ownerStyle.fill}
+            strokeWidth={1.8}
+            opacity={0.95}
+            pointerEvents="none"
+          />
+        ) : null;
+      })}
+      </svg>
+
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        {pieces.map(({ pieceId, piece, cx, cy }) => {
+          const ownerStyle = getPlayerTurnStyle(piece.owner);
+          const face = facingCenterDeg(cx, cy);
+          return (
+            <div
+              key={`tok-${pieceId}`}
+              className="absolute aspect-square -translate-x-1/2 -translate-y-1/2"
+              style={{
+                left: `${(cx / VIEW_SIZE) * 100}%`,
+                top: `${(cy / VIEW_SIZE) * 100}%`,
+                width: `${TOKEN_SIZE_PCT}%`,
+              }}
+            >
               <DejarikCreatureToken
                 type={piece.type}
                 fill={ownerStyle.fill}
-                size={TOKEN_SIZE}
+                faceDeg={face}
               />
-            </g>
-          </g>
-        );
-      })}
-    </svg>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

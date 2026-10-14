@@ -12,11 +12,12 @@ export const DEJARIK_TOKEN_SRC: Record<CreatureType, string> = {
 type Props = {
   type: CreatureType;
   fill: string;
-  size: number;
+  /** 盤面に対する回転（中心向き） */
+  faceDeg: number;
 };
 
-/** 砲塔戦棋と同様、透過PNGをマスクしてプレイヤー色のクリーチャーにする */
-export function DejarikCreatureToken({ type, fill, size }: Props) {
+/** 砲塔戦棋と同様、透過PNGをマスクしてプレイヤー色のクリーチャーにする（HTMLレイヤー） */
+export function DejarikCreatureToken({ type, fill, faceDeg }: Props) {
   const src = DEJARIK_TOKEN_SRC[type];
   const maskStyle = {
     backgroundColor: fill,
@@ -28,26 +29,17 @@ export function DejarikCreatureToken({ type, fill, size }: Props) {
     maskRepeat: "no-repeat",
     WebkitMaskPosition: "center",
     maskPosition: "center",
-    width: "100%",
-    height: "100%",
-    filter: "drop-shadow(0 1px 2px rgb(0 0 0 / 0.5))",
   } as const;
 
   return (
-    <foreignObject
-      x={-size / 2}
-      y={-size / 2}
-      width={size}
-      height={size}
-      className="pointer-events-none overflow-visible"
+    <div
+      className="h-full w-full"
+      style={{
+        transform: `rotate(${faceDeg}deg)`,
+        filter: "drop-shadow(0 1px 2px rgb(0 0 0 / 0.45))",
+      }}
     >
-      <div
-        // @ts-expect-error xmlns for SVG foreignObject HTML
-        xmlns="http://www.w3.org/1999/xhtml"
-        style={{ width: size, height: size }}
-      >
-        <div style={maskStyle} />
-      </div>
-    </foreignObject>
+      <div className="h-full w-full" style={maskStyle} />
+    </div>
   );
 }
