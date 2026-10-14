@@ -1,4 +1,6 @@
 import {
+  bruteWarpTarget,
+  centerIndex,
   DEJARIK_CELL_COUNT,
   homeOuterIndices,
   middleIndex,
@@ -8,6 +10,11 @@ import {
   type Player,
 } from "./board";
 import {
+  bruteMoveTargets,
+  guardianAttackTargets,
+  predatorMoveTargets,
+} from "./moves";
+import {
   applyDejarikAttack,
   applyDejarikMove,
   applyPlacement,
@@ -16,7 +23,9 @@ import {
   legalAttackTargets,
   legalMoveTargets,
   placementPlayer,
+  scoutCanContinue,
   secondPlayer,
+  stallLabelForPlayer,
   STALL_LIMIT,
   type DejarikPiece,
   type DejarikState,
@@ -62,6 +71,10 @@ function addPiece(
 ) {
   pieces[id] = { id, owner, type };
   cells[cell] = id;
+}
+
+function sortedCells(cells: number[]): string {
+  return [...cells].sort((a, b) => a - b).join(",");
 }
 
 function completePlacement(firstPlayer: Player = 0): DejarikState {
@@ -252,6 +265,212 @@ export function runDejarikChecks(assert: AssertFn) {
 
   const fullGame = completePlacement(0);
   assert(fullGame.pieces && Object.keys(fullGame.pieces).length === 8, "dejarik 4v4 after setup");
+
+  const o4 = outerIndex(4);
+  const bruteWarpBoard = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 90, o4, 0, "brute");
+    addPiece(cells, pieces, 91, outerIndex(8), 1, "scout");
+  });
+  const warpDest = bruteWarpTarget(o4);
+  assert(warpDest === outerIndex(10), "dejarik brute warp half orbit");
+  assert(
+    legalMoveTargets(bruteWarpBoard, 90).includes(warpDest),
+    "dejarik brute can warp to opposite outer"
+  );
+  const bruteCenterBack = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 92, centerIndex(1), 0, "brute");
+    addPiece(cells, pieces, 93, outerIndex(0), 1, "scout");
+  });
+  assert(
+    sortedCells(legalMoveTargets(bruteCenterBack, 92)) ===
+      sortedCells([middleIndex(2), middleIndex(6), centerIndex(0), centerIndex(2), middleIndex(3), middleIndex(4), middleIndex(5)]),
+    "dejarik brute on C1 moves include diagonal back M2 M6"
+  );
+  const bruteFriendly = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 94, o4, 0, "brute");
+    addPiece(cells, pieces, 95, middleIndex(4), 0, "guardian");
+    addPiece(cells, pieces, 96, outerIndex(0), 1, "scout");
+  });
+  assert(
+    !legalMoveTargets(bruteFriendly, 94).includes(middleIndex(4)),
+    "dejarik brute cannot move onto friendly"
+  );
+
+  const predOuter = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 100, o4, 0, "predator");
+    addPiece(cells, pieces, 101, middleIndex(4), 1, "brute");
+    addPiece(cells, pieces, 102, outerIndex(0), 1, "scout");
+  });
+  assert(
+    sortedCells(legalMoveTargets(predOuter, 100)) ===
+      sortedCells([middleIndex(2), middleIndex(6)]),
+    "dejarik predator outer jump to two middles"
+  );
+  assert(
+    !legalMoveTargets(predOuter, 100).includes(outerIndex(2)),
+    "dejarik predator outer no backward outer targets"
+  );
+  const predMiddle = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 110, middleIndex(4), 0, "predator");
+    addPiece(cells, pieces, 111, outerIndex(0), 1, "scout");
+  });
+  assert(
+    sortedCells(legalMoveTargets(predMiddle, 110)) ===
+      sortedCells([centerIndex(3), outerIndex(2), outerIndex(6)]),
+    "dejarik predator middle three jump targets"
+  );
+  const predCenter = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 120, centerIndex(1), 0, "predator");
+    addPiece(cells, pieces, 121, outerIndex(0), 1, "scout");
+  });
+  assert(
+    sortedCells(legalMoveTargets(predCenter, 120)) ===
+      sortedCells([
+        middleIndex(1),
+        middleIndex(2),
+        middleIndex(3),
+        middleIndex(5),
+        middleIndex(6),
+        middleIndex(7),
+      ]),
+    "dejarik predator C1 six middle targets"
+  );
+  const cellsPred = predOuter.cells;
+  const piecesPred = predOuter.pieces;
+  assert(
+    sortedCells(
+      predatorMoveTargets(cellsPred, piecesPred, 0, 100, o4)
+    ) === sortedCells([middleIndex(2), middleIndex(6)]),
+    "dejarik predator ignores blocker on skipped middle ray"
+  );
+
+  const guardOuter = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 130, o4, 0, "guardian");
+    addPiece(cells, pieces, 131, outerIndex(0), 1, "scout");
+  });
+  assert(
+    legalMoveTargets(guardOuter, 130).includes(middleIndex(4)),
+    "dejarik guardian outer forward"
+  );
+  assert(
+    !legalMoveTargets(guardOuter, 130).includes(warpDest),
+    "dejarik guardian no warp"
+  );
+  const guardAtkNear = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 132, o4, 0, "guardian");
+    addPiece(cells, pieces, 133, outerIndex(5), 1, "brute");
+    addPiece(cells, pieces, 134, outerIndex(0), 1, "scout");
+  });
+  assert(
+    !legalAttackTargets(guardAtkNear, 132).includes(outerIndex(5)),
+    "dejarik guardian cannot attack adjacent"
+  );
+  const guardAtkFar = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 135, o4, 0, "guardian");
+    addPiece(cells, pieces, 136, outerIndex(6), 1, "brute");
+    addPiece(cells, pieces, 137, outerIndex(0), 1, "scout");
+  });
+  assert(
+    legalAttackTargets(guardAtkFar, 135).includes(outerIndex(6)),
+    "dejarik guardian attacks orbit 2"
+  );
+  const guardBlocked = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 138, o4, 0, "guardian");
+    addPiece(cells, pieces, 139, outerIndex(5), 1, "brute");
+    addPiece(cells, pieces, 140, outerIndex(6), 1, "predator");
+    addPiece(cells, pieces, 141, outerIndex(0), 1, "scout");
+  });
+  const gCells = guardBlocked.cells;
+  const gPieces = guardBlocked.pieces;
+  assert(
+    !guardianAttackTargets(gCells, gPieces, 0, 138, o4).includes(outerIndex(6)),
+    "dejarik guardian attack blocked on path"
+  );
+  const guardCenterAtk = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 142, centerIndex(1), 0, "guardian");
+    addPiece(cells, pieces, 143, centerIndex(3), 1, "brute");
+    addPiece(cells, pieces, 144, outerIndex(0), 1, "scout");
+  });
+  assert(
+    legalAttackTargets(guardCenterAtk, 142).includes(centerIndex(3)),
+    "dejarik guardian center ring attack"
+  );
+
+  const scoutMiddleOnly = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 150, middleIndex(4), 0, "scout");
+    addPiece(cells, pieces, 151, outerIndex(0), 1, "brute");
+  });
+  assert(
+    sortedCells(legalMoveTargets(scoutMiddleOnly, 150)) ===
+      sortedCells([middleIndex(2), middleIndex(6)]),
+    "dejarik scout middle only orbit 2"
+  );
+  assert(
+    !legalMoveTargets(scoutMiddleOnly, 150).includes(outerIndex(4)),
+    "dejarik scout middle no single-step to outer"
+  );
+  const scoutCenter = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 152, centerIndex(1), 0, "scout");
+    addPiece(cells, pieces, 153, outerIndex(0), 1, "brute");
+  });
+  assert(
+    legalMoveTargets(scoutCenter, 152).includes(centerIndex(3)),
+    "dejarik scout center inner orbit 2"
+  );
+  assert(
+    legalMoveTargets(scoutCenter, 152).includes(outerIndex(4)),
+    "dejarik scout center ray2 to outer via M4"
+  );
+
+  const dualStall = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 160, outerIndex(0), 0, "brute");
+    addPiece(cells, pieces, 161, outerIndex(6), 1, "brute");
+  });
+  let ds = applyDejarikMove(dualStall, 160, outerIndex(1))!;
+  assert(ds.stallCounters[0] === 1 && ds.stallCounters[1] === 0, "dejarik dual 1v1 P0 stall only");
+  ds = applyDejarikMove({ ...ds, current: 1 }, 161, outerIndex(7))!;
+  assert(ds.stallCounters[1] === 1, "dejarik dual 1v1 P1 stall independent");
+  ds = applyDejarikMove({ ...ds, current: 0 }, 160, outerIndex(2))!;
+  ds = applyDejarikMove({ ...ds, current: 1 }, 161, outerIndex(8))!;
+  ds = applyDejarikMove({ ...ds, current: 0 }, 160, outerIndex(3))!;
+  assert(
+    ds.phase === "game-over" && ds.winner === 1 && ds.winReason === "stall",
+    "dejarik dual 1v1 first to exhaust stall loses"
+  );
+
+  const loneLabel = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 170, outerIndex(0), 0, "brute");
+    addPiece(cells, pieces, 171, outerIndex(6), 1, "brute");
+    addPiece(cells, pieces, 172, outerIndex(7), 1, "predator");
+    addPiece(cells, pieces, 173, outerIndex(8), 1, "guardian");
+    addPiece(cells, pieces, 174, outerIndex(9), 1, "scout");
+  }, { stallCounters: [1, 0] });
+  assert(
+    stallLabelForPlayer(loneLabel, 0)?.includes("あと2手"),
+    "dejarik stall label shows remaining turns"
+  );
+
+  const scoutDone = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 180, outerIndex(4), 0, "scout");
+    addPiece(cells, pieces, 181, outerIndex(8), 1, "brute");
+  }, {
+    scoutPartial: { pieceId: 180, didMove: true, didAttack: true },
+  });
+  assert(!scoutCanContinue(scoutDone, 180), "dejarik scout cannot continue after both");
+
+  const occupied = applyPlacement(first0, "brute", placementHomeCells(1)[0]);
+  assert(occupied !== null, "dejarik first placement ok");
+  const dupType = applyPlacement(occupied!, "brute", placementHomeCells(1)[1]);
+  assert(dupType === null, "dejarik rejects placing same type twice");
+
+  assert(
+    applyDejarikAttack(moveAttackBoard, 1, outerIndex(3)) === null,
+    "dejarik attack on empty rejected"
+  );
+  assert(
+    applyDejarikMove(moveAttackBoard, 1, outerIndex(5)) === null,
+    "dejarik move onto enemy rejected"
+  );
 }
 
 if (typeof process !== "undefined" && process.argv[1]?.includes("dejarik.test")) {
