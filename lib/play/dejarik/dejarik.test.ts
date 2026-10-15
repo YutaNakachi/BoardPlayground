@@ -365,6 +365,15 @@ export function runDejarikChecks(assert: AssertFn) {
     !legalAttackTargets(guardAtkNear, 132).includes(outerIndex(5)),
     "dejarik guardian cannot attack adjacent"
   );
+  const guardMoveBlocked = withPlaying(0, (cells, pieces) => {
+    addPiece(cells, pieces, 145, o4, 0, "guardian");
+    addPiece(cells, pieces, 146, outerIndex(5), 0, "scout");
+    addPiece(cells, pieces, 147, outerIndex(0), 1, "brute");
+  });
+  assert(
+    !legalMoveTargets(guardMoveBlocked, 145).includes(outerIndex(6)),
+    "dejarik guardian outer orbit2 blocked by piece on step 1"
+  );
   const guardAtkFar = withPlaying(0, (cells, pieces) => {
     addPiece(cells, pieces, 135, o4, 0, "guardian");
     addPiece(cells, pieces, 136, outerIndex(6), 1, "brute");
