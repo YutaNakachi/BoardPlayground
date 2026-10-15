@@ -406,7 +406,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 10,
     complexity: "normal",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "コマ取り"],
     rulesSummary: [

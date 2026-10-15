@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
@@ -8,6 +8,12 @@ import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
+import {
+  PlaySetupSection,
+  setupPillClass,
+} from "@/components/play/shared/PlaySetupCard";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
@@ -27,6 +33,11 @@ import {
 } from "@/lib/play/dejarik/board";
 import { dejarikCellAtPoint } from "@/lib/play/dejarik/board-visual";
 import {
+  chooseMove,
+  type CpuDifficulty,
+  type DejarikCpuMove,
+} from "@/lib/play/dejarik/ai";
+import {
   applyDejarikAttack,
   applyDejarikMove,
   applyPlacement,
@@ -38,12 +49,41 @@ import {
   secondPlayer,
   stallLabelForPlayer,
   type DejarikState,
+  type Player,
 } from "@/lib/play/dejarik/state";
 
 type LocalPhase = "setup" | "active";
+type MatchKind = "pvp" | "cpu";
 
 const DESCRIPTION =
   "スター・ウォーズに登場するデジャリック（ホロチェス）を、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。";
+
+function applyCpuMove(
+  state: DejarikState,
+  choice: DejarikCpuMove
+): DejarikState | null {
+  switch (choice.kind) {
+    case "placement":
+      return applyPlacement(state, choice.creatureType, choice.cell);
+    case "move":
+      return applyDejarikMove(state, choice.pieceId, choice.to);
+    case "attack":
+      return applyDejarikAttack(state, choice.pieceId, choice.to);
+    case "endScoutTurn":
+      return endScoutTurn(state);
+    default:
+      return null;
+  }
+}
+
+function scoutContinuesTurn(state: DejarikState): boolean {
+  const partial = state.scoutPartial;
+  if (!partial) return false;
+  return (
+    (partial.didMove || partial.didAttack) &&
+    !(partial.didMove && partial.didAttack)
+  );
+}
 
 export function DejarikGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
@@ -52,6 +92,9 @@ export function DejarikGame() {
   const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
   const [mode, setMode] = useState<PlayMode>("local");
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
+  const [matchKind, setMatchKind] = useState<MatchKind>("pvp");
+  const [cpuDifficulty, setCpuDifficulty] = useState<CpuDifficulty>("normal");
+  const [humanSeat, setHumanSeat] = useState<Player>(0);
   const [state, setState] = useState<DejarikState | null>(null);
   const [pieceSelection, setPieceSelection] = useState<{
     turnPlayer: number;
@@ -59,6 +102,13 @@ export function DejarikGame() {
   } | null>(null);
   const [placementType, setPlacementType] = useState<CreatureType | null>(null);
   const [placementHint, setPlacementHint] = useState<string | null>(null);
+  const stateRef = useRef(state);
+
+  const cpuSeat: Player = humanSeat === 0 ? 1 : 0;
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     if (
@@ -68,20 +118,36 @@ export function DejarikGame() {
         online.phase === "finished")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (mode === "local" && localPhase === "active" && matchKind === "cpu") {
+      setPlayMode({ mode: "cpu", humanSeat });
     } else if (mode === "local") {
       setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [
+    online.room?.code,
+    online.phase,
+    mode,
+    localPhase,
+    matchKind,
+    humanSeat,
+    setPlayMode,
+  ]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setPlayMode({ mode: "local" });
-    setState(initialDejarik());
-    setPieceSelection(null);
-    setPlacementType(null);
-    setPlacementHint(null);
-    setLocalPhase("active");
-  }, [recordLocalPlay, setPlayMode]);
+  const startMatch = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      setMatchKind(kind);
+      setPlayMode(
+        kind === "cpu" ? { mode: "cpu", humanSeat } : { mode: "local" }
+      );
+      setState(initialDejarik());
+      setPieceSelection(null);
+      setPlacementType(null);
+      setPlacementHint(null);
+      setLocalPhase("active");
+    },
+    [recordLocalPlay, setPlayMode, humanSeat]
+  );
 
   const isOnline =
     online.phase === "playing" || online.phase === "finished";
@@ -103,29 +169,68 @@ export function DejarikGame() {
       ? pieceSelection.pieceId
       : null;
 
-  const activeSelectedPieceId = useMemo(() => {
-    if (isOnline && !online.isMyTurn) return null;
-    if (activeState?.scoutPartial) return activeState.scoutPartial.pieceId;
+  const scoutContinues = activeState ? scoutContinuesTurn(activeState) : false;
+
+  const actingPieceId = useMemo(() => {
+    if (!activeState) return null;
+    if (scoutContinues && activeState.scoutPartial) {
+      return selectedPieceId ?? activeState.scoutPartial.pieceId;
+    }
     return selectedPieceId;
-  }, [
-    isOnline,
-    online.isMyTurn,
-    activeState?.scoutPartial,
-    selectedPieceId,
-  ]);
+  }, [activeState, scoutContinues, selectedPieceId]);
+
+  const humanTurn =
+    isOnline || matchKind !== "cpu" || turnPlayer === humanSeat;
+
+  const cpuThinking =
+    !isOnline &&
+    matchKind === "cpu" &&
+    localPhase === "active" &&
+    !gameOver &&
+    turnPlayer === cpuSeat;
+
+  const canInteract = !gameOver && (isOnline ? online.isMyTurn : humanTurn);
+
+  useEffect(() => {
+    if (isOnline || !cpuThinking) return;
+
+    const delayMs =
+      cpuDifficulty === "hard"
+        ? 550 + Math.random() * 250
+        : cpuDifficulty === "normal"
+          ? 400 + Math.random() * 250
+          : 300 + Math.random() * 200;
+
+    const timer = window.setTimeout(() => {
+      const snapshot = stateRef.current;
+      if (!snapshot || snapshot.phase === "game-over") return;
+      const actor =
+        snapshot.phase === "placement"
+          ? placementPlayer(snapshot.placementStep, snapshot.firstPlayer)
+          : snapshot.current;
+      if (actor !== cpuSeat) return;
+
+      const choice = chooseMove(snapshot, cpuDifficulty, cpuSeat);
+      if (!choice) return;
+      const next = applyCpuMove(snapshot, choice);
+      if (!next) return;
+      setState(next);
+      setPieceSelection(null);
+      setPlacementType(null);
+      setPlacementHint(null);
+    }, delayMs);
+
+    return () => window.clearTimeout(timer);
+  }, [cpuThinking, cpuSeat, cpuDifficulty, state, isOnline]);
 
   const placementSecond = activeState
     ? secondPlayer(activeState.firstPlayer)
     : 1;
 
-  const canInteract =
-    !gameOver && (isOnline ? online.isMyTurn : true);
-
   const scoutEndVisible = useMemo(() => {
-    if (!activeState?.scoutPartial || !playing) return false;
-    const p = activeState.scoutPartial;
-    return (p.didMove || p.didAttack) && !(p.didMove && p.didAttack);
-  }, [activeState, playing]);
+    if (!activeState?.scoutPartial || !playing || !canInteract) return false;
+    return scoutContinuesTurn(activeState);
+  }, [activeState, playing, canInteract]);
 
   const onCell = useCallback(
     (cell: number) => {
@@ -168,32 +273,26 @@ export function DejarikGame() {
 
       if (!playing) return;
 
-      const selected = activeSelectedPieceId;
-
-      if (activeState.scoutPartial && selected !== activeState.scoutPartial.pieceId) {
-        return;
-      }
-
       const occupantId = activeState.cells[cell];
 
-      if (selected !== null) {
-        const attacks = legalAttackTargets(activeState, selected);
-        const moves = legalMoveTargets(activeState, selected);
+      if (actingPieceId !== null) {
+        const attacks = legalAttackTargets(activeState, actingPieceId);
+        const moves = legalMoveTargets(activeState, actingPieceId);
         if (attacks.includes(cell)) {
           if (isOnline) {
             void online.handleMove({
               type: "dejarik-attack",
-              pieceId: selected,
+              pieceId: actingPieceId,
               to: cell,
             });
             return;
           }
-          const next = applyDejarikAttack(activeState, selected, cell);
+          const next = applyDejarikAttack(activeState, actingPieceId, cell);
           if (next) {
             setState(next);
             setPieceSelection(
-              next.scoutPartial?.pieceId === selected
-                ? { turnPlayer, pieceId: selected }
+              next.scoutPartial?.pieceId === actingPieceId
+                ? { turnPlayer, pieceId: actingPieceId }
                 : null
             );
           }
@@ -203,17 +302,17 @@ export function DejarikGame() {
           if (isOnline) {
             void online.handleMove({
               type: "dejarik-move",
-              pieceId: selected,
+              pieceId: actingPieceId,
               to: cell,
             });
             return;
           }
-          const next = applyDejarikMove(activeState, selected, cell);
+          const next = applyDejarikMove(activeState, actingPieceId, cell);
           if (next) {
             setState(next);
             setPieceSelection(
-              next.scoutPartial?.pieceId === selected
-                ? { turnPlayer, pieceId: selected }
+              next.scoutPartial?.pieceId === actingPieceId
+                ? { turnPlayer, pieceId: actingPieceId }
                 : null
             );
           }
@@ -241,7 +340,7 @@ export function DejarikGame() {
       placement,
       playing,
       placementType,
-      activeSelectedPieceId,
+      actingPieceId,
       turnPlayer,
       isOnline,
       online,
@@ -250,6 +349,7 @@ export function DejarikGame() {
 
   const onBoardPointer = useCallback(
     (event: React.PointerEvent<SVGSVGElement>) => {
+      if (!canInteract) return;
       const svg = event.currentTarget;
       const ctm = svg.getScreenCTM();
       if (!ctm) return;
@@ -260,7 +360,7 @@ export function DejarikGame() {
       const cell = dejarikCellAtPoint(x, y);
       if (cell !== null) onCell(cell);
     },
-    [onCell]
+    [onCell, canInteract]
   );
 
   const reset = useCallback(() => {
@@ -271,6 +371,7 @@ export function DejarikGame() {
     setPlacementType(null);
     setPlacementHint(null);
     setMode("local");
+    setMatchKind("pvp");
     setPlayMode({ mode: "local" });
   }, [online.reset, setPlayMode]);
 
@@ -280,18 +381,18 @@ export function DejarikGame() {
 
   const highlightCells = new Set<number>();
   if (activeState) {
-    if (placement) {
+    if (placement && canInteract) {
       for (const c of placementHomeCells(turnPlayer)) {
         if (activeState.cells[c] === null) highlightCells.add(c);
       }
-    } else if (playing && activeSelectedPieceId !== null && canInteract) {
+    } else if (playing && actingPieceId !== null && canInteract) {
       for (let c = 0; c < activeState.cells.length; c++) {
-        if (activeState.cells[c] === activeSelectedPieceId) highlightCells.add(c);
+        if (activeState.cells[c] === actingPieceId) highlightCells.add(c);
       }
-      for (const d of legalMoveTargets(activeState, activeSelectedPieceId)) {
+      for (const d of legalMoveTargets(activeState, actingPieceId)) {
         highlightCells.add(d);
       }
-      for (const d of legalAttackTargets(activeState, activeSelectedPieceId)) {
+      for (const d of legalAttackTargets(activeState, actingPieceId)) {
         highlightCells.add(d);
       }
     }
@@ -313,8 +414,16 @@ export function DejarikGame() {
           ? `${getSeatDisplayName(roomPlayers, activeState!.winner!)} の勝ち（相手が残り1体のまま3手以内に取れませんでした）。`
           : `${getSeatDisplayName(roomPlayers, activeState!.winner!)} が相手のクリーチャーをすべて除去しました。`
         : activeState!.winReason === "stall"
-          ? `プレイヤー ${activeState!.winner! + 1} の勝ち（相手が残り1体のまま3手以内に取れませんでした）。`
-          : `プレイヤー ${activeState!.winner! + 1} が相手のクリーチャーをすべて除去しました。`
+          ? matchKind === "cpu" && activeState!.winner === humanSeat
+            ? "あなたの勝ち（相手が残り1体のまま3手以内に取れませんでした）。"
+            : matchKind === "cpu" && activeState!.winner === cpuSeat
+              ? "CPUの勝ち（相手が残り1体のまま3手以内に取れませんでした）。"
+              : `プレイヤー ${activeState!.winner! + 1} の勝ち（相手が残り1体のまま3手以内に取れませんでした）。`
+          : matchKind === "cpu" && activeState!.winner === humanSeat
+            ? "あなたが相手のクリーチャーをすべて除去しました。"
+            : matchKind === "cpu" && activeState!.winner === cpuSeat
+              ? "CPUがあなたのクリーチャーをすべて除去しました。"
+              : `プレイヤー ${activeState!.winner! + 1} が相手のクリーチャーをすべて除去しました。`
       : null;
 
   if (online.completingPendingJoin) {
@@ -331,10 +440,40 @@ export function DejarikGame() {
         onlineSupported={onlineEnabled}
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
-        onStartLocal={startLocal}
+        onStartLocal={startMatch}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
+        extra={(kind) =>
+          kind === "cpu" ? (
+            <>
+              <PlaySetupSection label="CPUの強さ">
+                <CpuDifficultyPicker
+                  value={cpuDifficulty}
+                  onChange={setCpuDifficulty}
+                />
+              </PlaySetupSection>
+              <PlaySetupSection label="あなたの陣">
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHumanSeat(0)}
+                    className={setupPillClass(humanSeat === 0)}
+                  >
+                    先手（下段）
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHumanSeat(1)}
+                    className={setupPillClass(humanSeat === 1)}
+                  >
+                    後手（上段）
+                  </button>
+                </div>
+              </PlaySetupSection>
+            </>
+          ) : null
+        }
       />
     );
   }
@@ -373,15 +512,29 @@ export function DejarikGame() {
 
   if (!activeState) return null;
 
+  const localPlayerLabel =
+    matchKind === "cpu" && turnPlayer === cpuSeat
+      ? "CPU"
+      : matchKind === "cpu" && turnPlayer === humanSeat
+        ? "あなた"
+        : `プレイヤー ${turnPlayer + 1}`;
+
+  const defaultPlayingAction =
+    scoutEndVisible && selectedPieceId === null
+      ? "スカウトをタップするか、光ったマスで続けて操作してください。"
+      : actingPieceId === null
+        ? "自分のクリーチャーをタップしてください。"
+        : "光った空マスで移動、光った敵マスで攻撃してください。";
+
   const turnAction = isOnline
     ? !online.isMyTurn
       ? "相手の手番です"
       : placement
         ? "盤下で型を選び、光ったホーム半円の空きマスをタップしてください。"
-        : activeSelectedPieceId === null
-          ? "自分のクリーチャーをタップしてください。"
-          : "光った空マスで移動、光った敵マスで攻撃してください。"
-    : undefined;
+        : defaultPlayingAction
+    : cpuThinking
+      ? "CPUの手番…"
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -397,7 +550,7 @@ export function DejarikGame() {
           details={
             winDetails ? <p className="text-slate-400">{winDetails}</p> : undefined
           }
-          onReplay={isOnline ? undefined : startLocal}
+          onReplay={isOnline ? undefined : () => startMatch(matchKind)}
           {...replayProps}
           replayExtra={
             isOnline && online.isHost ? (
@@ -417,7 +570,7 @@ export function DejarikGame() {
           playerLabel={
             isOnline
               ? formatSeatLabel(roomPlayers, turnPlayer)
-              : `プレイヤー ${turnPlayer + 1}`
+              : localPlayerLabel
           }
           stats={
             placement
@@ -427,7 +580,9 @@ export function DejarikGame() {
                     : `プレイヤー ${activeState.firstPlayer + 1}`
                 }`
               : [
-                  `先攻: プレイヤー ${activeState.firstPlayer + 1}`,
+                  isOnline
+                    ? `先攻: ${formatSeatLabel(roomPlayers, activeState.firstPlayer)}`
+                    : `先攻: プレイヤー ${activeState.firstPlayer + 1}`,
                   stallLabelForPlayer(activeState, turnPlayer),
                 ]
                   .filter(Boolean)
@@ -437,9 +592,7 @@ export function DejarikGame() {
             turnAction ??
             (placement
               ? "盤下で型を選び、光ったホーム半円の空きマスをタップしてください。"
-              : activeSelectedPieceId === null
-                ? "自分のクリーチャーをタップしてください。"
-                : "光った空マスで移動、光った敵マスで攻撃してください。")
+              : defaultPlayingAction)
           }
           notice={
             placement
@@ -456,13 +609,18 @@ export function DejarikGame() {
         />
       )}
 
-      <div className="mx-auto max-w-md rounded-full bg-gradient-to-b from-amber-950/40 to-black/60 p-3">
+      <div
+        className={[
+          "mx-auto max-w-md rounded-full bg-gradient-to-b from-amber-950/40 to-black/60 p-3",
+          !canInteract ? "pointer-events-none opacity-95" : "",
+        ].join(" ")}
+      >
         <DejarikBoard
           state={activeState}
           highlightCells={highlightCells}
           highlightPlayer={turnPlayer}
-          selectedPieceId={canInteract ? activeSelectedPieceId : null}
-          onPointerDown={canInteract ? onBoardPointer : () => {}}
+          selectedPieceId={canInteract ? actingPieceId : null}
+          onPointerDown={onBoardPointer}
         />
         <p className="mt-2 text-center text-xs text-slate-500">
           クリーチャーは常に盤の中心を向きます。
@@ -494,7 +652,7 @@ export function DejarikGame() {
         </div>
       )}
 
-      {!gameOver && scoutEndVisible && canInteract && (
+      {!gameOver && scoutEndVisible && (
         <div className="flex justify-center">
           <button
             type="button"
