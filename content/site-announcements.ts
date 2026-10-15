@@ -26,6 +26,12 @@ export type SiteAnnouncement = {
  */
 export const SITE_ANNOUNCEMENTS: SiteAnnouncement[] = [
   {
+    id: "official-note",
+    body: "ボドパッ！の公式noteを開設しました",
+    href: "https://note.com/bodopa",
+    startsAt: "2026-10-15",
+  },
+  {
     id: "new-game-dejarik",
     title: "新ゲーム",
     body: "デジャリックを追加しました。ブラウザで遊べます",
