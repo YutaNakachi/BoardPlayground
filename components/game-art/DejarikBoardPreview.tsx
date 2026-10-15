@@ -23,7 +23,7 @@ function postPlacementPreviewState(): DejarikState {
     outerIndex(10),
   ];
   for (let step = 0; step < 8; step++) {
-    const player = placementPlayer(step);
+    const player = placementPlayer(step, state.firstPlayer);
     const type = state.unplaced[player][0];
     const cell = cellsByStep[step];
     const next = applyPlacement(state, type, cell);

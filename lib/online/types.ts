@@ -36,6 +36,7 @@ export const ONLINE_GAME_SLUGS = [
   "mancala",
   "dots-and-boxes",
   "fox-hounds",
+  "dejarik",
 ] as const;
 
 export type OnlineGameSlug = (typeof ONLINE_GAME_SLUGS)[number];
