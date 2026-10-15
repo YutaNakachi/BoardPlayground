@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { SiteAnnouncement } from "@/content/site-announcements";
 import {
   formatAnnouncementDisplayDate,
   formatAnnouncementLine,
 } from "@/lib/site-announcements";
+import { AnnouncementScrollingText } from "@/components/AnnouncementScrollingText";
 
 const ROTATE_MS = 6000;
 const SLIDE_MS = 400;
@@ -14,45 +14,6 @@ const SLIDE_MS = 400;
 type Props = {
   items: SiteAnnouncement[];
 };
-
-function AnnouncementLink({
-  item,
-  line,
-  className,
-}: {
-  item: SiteAnnouncement;
-  line: string;
-  className: string;
-}) {
-  if (!item.href) {
-    return (
-      <span className={className} title={line}>
-        {line}
-      </span>
-    );
-  }
-
-  const external = /^https?:\/\//i.test(item.href);
-  if (external) {
-    return (
-      <a
-        href={item.href}
-        className={className}
-        title={line}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {line}
-      </a>
-    );
-  }
-
-  return (
-    <Link href={item.href} className={className} title={line}>
-      {line}
-    </Link>
-  );
-}
 
 function AnnouncementRow({
   item,
@@ -62,11 +23,9 @@ function AnnouncementRow({
   line: string;
 }) {
   const dateLabel = formatAnnouncementDisplayDate(item);
-  const linkClass =
-    "min-w-0 truncate text-slate-200 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
   return (
-    <div className="flex h-5 shrink-0 items-center gap-3">
+    <div className="flex h-5 w-full shrink-0 items-center gap-3">
       {dateLabel ? (
         <time
           dateTime={item.startsAt}
@@ -75,11 +34,7 @@ function AnnouncementRow({
           {dateLabel}
         </time>
       ) : null}
-      <AnnouncementLink
-        item={item}
-        line={line}
-        className={item.href ? linkClass : "min-w-0 truncate text-slate-200"}
-      />
+      <AnnouncementScrollingText item={item} line={line} />
     </div>
   );
 }

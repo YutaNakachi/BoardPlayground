@@ -11,7 +11,7 @@ export default async function HomePage() {
   return (
     <>
       <SiteAnnouncementBar />
-      <PageContainer>
+      <PageContainer padding="home">
         <GameCatalog games={games} initialPlayCounts={initialPlayCounts} />
       </PageContainer>
     </>
