@@ -24,4 +24,12 @@ export type SiteAnnouncement = {
  *   endsAt: "2026-12-31",
  * }
  */
-export const SITE_ANNOUNCEMENTS: SiteAnnouncement[] = [];
+export const SITE_ANNOUNCEMENTS: SiteAnnouncement[] = [
+  {
+    id: "new-game-dejarik",
+    title: "新ゲーム",
+    body: "デジャリックを追加しました。ブラウザで遊べます",
+    href: "/play/dejarik",
+    startsAt: "2026-10-15",
+  },
+];
