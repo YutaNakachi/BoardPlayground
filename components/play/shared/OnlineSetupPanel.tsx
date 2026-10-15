@@ -6,6 +6,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { getGameBySlug } from "@/lib/games";
 import {
   PlaySetupCard,
+  PlaySetupStack,
   setupPillClass,
 } from "@/components/play/shared/PlaySetupCard";
 import {
@@ -24,11 +25,16 @@ type Props = {
   onlineSupported: boolean;
   onCreateRoom: (displayName: string) => void;
   onJoinRoom: (code: string, displayName: string) => void;
-  onStartLocal: () => void;
+  onStartLocal: (kind: LocalMatchSetupKind) => void;
+  /** ローカル対人/CPU タブの変更（extra の出し分け用） */
+  onLocalMatchKindChange?: (kind: LocalMatchSetupKind) => void;
   loading?: boolean;
   error?: string | null;
-  /** ローカル開始ボタンの上に表示する追加 UI（ルール選択など） */
-  extra?: ReactNode;
+  /**
+   * ローカル開始ボタンの上に表示する追加 UI。
+   * 関数のときは対人/CPU タブの `kind` を渡す（CPU 専用 UI の出し分け用）。
+   */
+  extra?: ReactNode | ((kind: LocalMatchSetupKind) => ReactNode);
   /** オンライン「部屋を作る」選択時の追加 UI */
   createExtra?: ReactNode;
   /** オンライン「部屋に入る」選択時の追加 UI */
@@ -55,6 +61,7 @@ export function OnlineSetupPanel({
   onCreateRoom,
   onJoinRoom,
   onStartLocal,
+  onLocalMatchKindChange,
   loading,
   error,
   extra,
@@ -81,12 +88,21 @@ export function OnlineSetupPanel({
   const displayMode = urlJoinPrefill ? "online" : mode;
 
   const hasOnlineExtraSplit = createExtra !== undefined || joinExtra !== undefined;
+  const extraForOnline =
+    typeof extra === "function" ? undefined : extra;
   const onlineExtra =
     hasOnlineExtraSplit
       ? shownAction === "create"
         ? createExtra
         : joinExtra
-      : extra;
+      : extraForOnline;
+
+  const resolvedLocalExtra =
+    extra === undefined
+      ? null
+      : typeof extra === "function"
+        ? extra(localMatchKind)
+        : extra;
 
   if (waiting) {
     return (
@@ -98,7 +114,7 @@ export function OnlineSetupPanel({
           {waiting.code}
         </p>
         {waiting.extra}
-        <ul className="mt-6 space-y-2 text-sm text-slate-300">
+        <ul className="space-y-2 text-sm text-slate-300">
           {waiting.players.map((p) => (
             <li key={p.seatIndex}>
               席 {p.seatIndex + 1}: {p.displayName}
@@ -111,12 +127,12 @@ export function OnlineSetupPanel({
             type="button"
             onClick={waiting.onStart}
             disabled={loading}
-            className="btn-game mt-8"
+            className="btn-game"
           >
             {loading ? "開始中…" : "ゲーム開始"}
           </button>
         ) : (
-          <p className="mt-8 text-sm text-slate-400">
+          <p className="text-sm text-slate-400">
             {waiting.players.length < 2
               ? "相手の参加を待っています…"
               : "ホストの開始を待っています…"}
@@ -135,29 +151,32 @@ export function OnlineSetupPanel({
       />
 
       {displayMode === "local" ? (
-        <div className="mt-8">
-          <PlayModeLocalMatchTabs
-            kind={localMatchKind}
-            onKindChange={setLocalMatchKind}
-            cpuSupported={cpuSupported}
-          />
-        </div>
+        <PlayModeLocalMatchTabs
+          kind={localMatchKind}
+          onKindChange={(kind) => {
+            setLocalMatchKind(kind);
+            onLocalMatchKindChange?.(kind);
+          }}
+          cpuSupported={cpuSupported}
+        />
       ) : null}
 
-      {displayMode === "local" && extra ? (
-        <div className="mt-8">{extra}</div>
-      ) : null}
+      {displayMode === "local" && resolvedLocalExtra ? resolvedLocalExtra : null}
 
-      {displayMode === "online" && onlineSupported && onlineExtra ? (
-        <div className="mt-8">{onlineExtra}</div>
-      ) : null}
+      {displayMode === "online" && onlineSupported && onlineExtra
+        ? onlineExtra
+        : null}
 
       {displayMode === "local" || !onlineSupported ? (
-        <button type="button" onClick={onStartLocal} className="btn-game mt-8">
+        <button
+          type="button"
+          onClick={() => onStartLocal(localMatchKind)}
+          className="btn-game"
+        >
           ゲーム開始
         </button>
       ) : (
-        <div className="mt-8 space-y-6">
+        <PlaySetupStack>
           <div className="flex justify-center gap-2">
             <button
               type="button"
@@ -238,10 +257,10 @@ export function OnlineSetupPanel({
               </button>
             </form>
           )}
-        </div>
+        </PlaySetupStack>
       )}
 
-      {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
+      {error ? <p className="text-sm text-red-300">{error}</p> : null}
     </PlaySetupCard>
   );
 }

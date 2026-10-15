@@ -283,7 +283,7 @@ export function NebulaLinkGame() {
         onPlayerCount={setPlayerCount}
         onStart={startGame}
         extra={
-          <p className="mt-4 text-xs text-slate-500">
+          <p className="text-xs text-slate-500">
             2人は北・南、3人は北・東・西（南は中立）、4人は四辺。初手はホーム辺から、2手目以降は自分のブロックに角だけでつなぎます。
           </p>
         }

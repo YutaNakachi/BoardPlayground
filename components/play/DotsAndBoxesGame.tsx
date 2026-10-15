@@ -6,7 +6,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
-import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import {
+  PlaySetupSection,
+  PlaySetupStack,
+  setupPillClass,
+} from "@/components/play/shared/PlaySetupCard";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
@@ -64,8 +68,7 @@ function DotsBoxesSizePicker({
   readOnly?: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-center text-xs text-slate-400">盤面サイズ</p>
+    <PlaySetupSection label="盤面サイズ">
       {readOnly ? (
         <p className="text-center text-sm font-medium text-white">
           {value}×{value}
@@ -84,7 +87,7 @@ function DotsBoxesSizePicker({
           ))}
         </div>
       )}
-    </div>
+    </PlaySetupSection>
   );
 }
 
@@ -211,28 +214,22 @@ export function DotsAndBoxesGame() {
   };
 
   const hostLobbyExtra = (
-    <>
+    <PlaySetupStack>
       <DotsBoxesSizePicker
         value={onlineSize}
         onChange={online.isHost ? onOnlineSizeChange : undefined}
         readOnly={!online.isHost}
       />
-      <div className="mt-6">
-        <OnlineFirstPlayerPicker
-          players={online.players}
-          value={firstPlayer}
-          onChange={online.isHost ? onFirstPlayerChange : undefined}
-          readOnly={!online.isHost}
-        />
-      </div>
-    </>
+      <OnlineFirstPlayerPicker
+        players={online.players}
+        value={firstPlayer}
+        onChange={online.isHost ? onFirstPlayerChange : undefined}
+        readOnly={!online.isHost}
+      />
+    </PlaySetupStack>
   );
 
-  const sizeSelector = (
-    <div className="mt-6">
-      <DotsBoxesSizePicker value={size} onChange={setSize} />
-    </div>
-  );
+  const sizeSelector = <DotsBoxesSizePicker value={size} onChange={setSize} />;
 
   if (online.completingPendingJoin) {
     return <PendingJoinConnecting />;
