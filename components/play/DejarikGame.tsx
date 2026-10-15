@@ -85,13 +85,18 @@ export function DejarikGame() {
   const onlineState = online.gameState as DejarikOnlineState | null;
   const activeState = isOnline && onlineState ? onlineState : state;
 
+  useEffect(() => {
+    if (!isOnline || !onlineState?.scoutPartial) return;
+    setSelectedPieceId(onlineState.scoutPartial.pieceId);
+  }, [isOnline, onlineState?.scoutPartial]);
+
   const placement = activeState?.phase === "placement";
   const playing = activeState?.phase === "playing";
   const gameOver = activeState?.phase === "game-over";
 
   const turnPlayer = activeState
     ? placement
-      ? placementPlayer(activeState.placementStep)
+      ? placementPlayer(activeState.placementStep, activeState.firstPlayer)
       : activeState.current
     : 0;
 
@@ -113,7 +118,10 @@ export function DejarikGame() {
       if (!activeState || !canInteract) return;
 
       if (placement) {
-        const player = placementPlayer(activeState.placementStep);
+        const player = placementPlayer(
+          activeState.placementStep,
+          activeState.firstPlayer
+        );
         const homes = placementHomeCells(player);
         if (!placementType) {
           setPlacementHint("先に盤下で置く型を選んでください。");
@@ -165,9 +173,6 @@ export function DejarikGame() {
               pieceId: selected,
               to: cell,
             });
-            setSelectedPieceId(
-              activeState.scoutPartial?.pieceId === selected ? selected : null
-            );
             return;
           }
           const next = applyDejarikAttack(activeState, selected, cell);
@@ -186,9 +191,6 @@ export function DejarikGame() {
               pieceId: selected,
               to: cell,
             });
-            setSelectedPieceId(
-              activeState.scoutPartial?.pieceId === selected ? selected : null
-            );
             return;
           }
           const next = applyDejarikMove(activeState, selected, cell);

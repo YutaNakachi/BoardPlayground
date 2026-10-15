@@ -1,5 +1,5 @@
 import type { DotsBoxesSize } from "@/lib/play/dots-and-boxes";
-import { placementPlayer } from "@/lib/play/dejarik/state";
+import { secondPlayer } from "@/lib/play/dejarik/state";
 import type { TttMode } from "@/lib/play/tic-tac-toe";
 import type { OnlineGameSlug } from "./types";
 
@@ -57,7 +57,7 @@ export function initialCurrentPlayerSeat(
     return parseHoundsSeat(gameOptions);
   }
   if (slug === "dejarik") {
-    return placementPlayer(0);
+    return secondPlayer(parseFirstPlayer(gameOptions));
   }
   return parseFirstPlayer(gameOptions);
 }

@@ -17,7 +17,13 @@ import {
   savePendingJoin,
 } from "@/lib/online/join-room-pending";
 import { mergeGameOptions } from "@/lib/online/game-options";
-import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
+import {
+  applyMove,
+  type DejarikOnlineState,
+  type GameState,
+  type MovePayload,
+} from "@/lib/online/moves";
+import { placementPlayer } from "@/lib/play/dejarik/state";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
 import { normalizeRoomCodeInput } from "@/lib/online/room-code";
 import {
@@ -603,12 +609,27 @@ export function useOnlineRoom(gameSlug: string) {
       if (!liveState) return;
 
       const slug = room.gameSlug as OnlineGameSlug;
+      const dejarikActorSeat =
+        slug === "dejarik"
+          ? (() => {
+              const s = liveState as DejarikOnlineState;
+              if (s.phase === "game-over") return null;
+              if (s.phase === "placement") {
+                return placementPlayer(s.placementStep, s.firstPlayer);
+              }
+              return s.current;
+            })()
+          : null;
+      const actorSeat =
+        dejarikActorSeat !== null ? dejarikActorSeat : liveState.current;
       const chainedExtraTurn =
         pendingMoveRef.current &&
         liveState.phase !== "game-over" &&
-        liveState.current === mySeat;
+        actorSeat === mySeat;
 
-      if (!chainedExtraTurn && currentPlayer !== mySeat) return;
+      const onTurn =
+        chainedExtraTurn || currentPlayer === mySeat || actorSeat === mySeat;
+      if (!onTurn) return;
 
       const result = applyMove(
         slug,

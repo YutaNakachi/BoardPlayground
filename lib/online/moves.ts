@@ -172,7 +172,7 @@ export type DejarikOnlineState = DejarikState;
 
 function dejarikActivePlayer(state: DejarikOnlineState): DejarikPlayer {
   if (state.phase === "placement") {
-    return placementPlayer(state.placementStep);
+    return placementPlayer(state.placementStep, state.firstPlayer);
   }
   return state.current;
 }

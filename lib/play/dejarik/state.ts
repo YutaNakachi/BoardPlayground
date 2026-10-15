@@ -45,14 +45,14 @@ export type DejarikState = {
   scoutPartial: ScoutPartial | null;
 };
 
-const PLACEMENT_ORDER: Player[] = [1, 0, 1, 0, 1, 0, 1, 0];
-
 export function secondPlayer(first: Player): Player {
   return first === 0 ? 1 : 0;
 }
 
-export function placementPlayer(step: number): Player {
-  return PLACEMENT_ORDER[step] ?? 0;
+/** 配置 step の手番プレイヤー（step 0 は後攻 = secondPlayer(firstPlayer) から交互） */
+export function placementPlayer(step: number, firstPlayer: Player): Player {
+  const starter = secondPlayer(firstPlayer);
+  return step % 2 === 0 ? starter : secondPlayer(starter);
 }
 
 export function initialDejarik(firstPlayer: Player = Math.random() < 0.5 ? 0 : 1): DejarikState {
@@ -98,7 +98,7 @@ export function applyPlacement(
   cell: number
 ): DejarikState | null {
   if (state.phase !== "placement") return null;
-  const player = placementPlayer(state.placementStep);
+  const player = placementPlayer(state.placementStep, state.firstPlayer);
   const homes = placementHomeCells(player);
   if (!homes.includes(cell)) return null;
   if (state.cells[cell] !== null) return null;
@@ -139,7 +139,7 @@ export function applyPlacement(
     nextPieceId: id + 1,
     placementStep,
     unplaced,
-    current: placementPlayer(placementStep),
+    current: placementPlayer(placementStep, state.firstPlayer),
     scoutPartial: null,
   };
 }
