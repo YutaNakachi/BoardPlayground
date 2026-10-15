@@ -30,7 +30,7 @@ import {
 type LocalPhase = "setup" | "active";
 
 const DESCRIPTION =
-  "スター・ウォーズに登場するデジャリック（ホロチェス）を、ボドパッ！独自の非公式ルールで再現した2人用ゲーム。円形のホロ盤で4型のクリーチャーを動かし、相手をすべて除去します。";
+  "スター・ウォーズに登場するデジャリック（ホロチェス）を、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。";
 
 export function DejarikGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
