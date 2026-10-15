@@ -123,7 +123,9 @@ export function enumerateLegalMoves(
   if (state.phase === "game-over") return [];
 
   if (state.phase === "placement") {
-    if (placementPlayer(state.placementStep) !== actor) return [];
+    if (placementPlayer(state.placementStep, state.firstPlayer) !== actor) {
+      return [];
+    }
     const moves: DejarikCpuMove[] = [];
     const pool = state.unplaced[actor];
     const homes = placementHomeCells(actor);
@@ -235,7 +237,7 @@ export function chooseMove(
 ): DejarikCpuMove | null {
   const actor =
     state.phase === "placement"
-      ? placementPlayer(state.placementStep)
+      ? placementPlayer(state.placementStep, state.firstPlayer)
       : state.current;
   if (actor !== cpuPlayer) return null;
 

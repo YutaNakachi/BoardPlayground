@@ -81,7 +81,7 @@ function completePlacement(firstPlayer: Player = 0): DejarikState {
   let state = initialDejarik(firstPlayer);
   const types: CreatureType[] = ["brute", "predator", "guardian", "scout"];
   for (let step = 0; step < 8; step++) {
-    const player = placementPlayer(step);
+    const player = placementPlayer(step, state.firstPlayer);
     const homes = placementHomeCells(player);
     const type = state.unplaced[player][0];
     const cell = homes.find((c) => state.cells[c] === null)!;
@@ -98,8 +98,10 @@ export function runDejarikChecks(assert: AssertFn) {
   const first0 = initialDejarik(0);
   assert(first0.phase === "placement", "dejarik starts placement");
   assert(first0.current === 1, "dejarik placement current is second player");
-  assert(placementPlayer(0) === 1, "dejarik step0 is second player");
-  assert(placementPlayer(1) === 0, "dejarik step1 alternates to first");
+  assert(placementPlayer(0, 0) === 1, "dejarik step0 is second player when P0 first");
+  assert(placementPlayer(1, 0) === 0, "dejarik step1 alternates to first when P0 first");
+  assert(placementPlayer(0, 1) === 0, "dejarik step0 is second player when P1 first");
+  assert(placementPlayer(1, 1) === 1, "dejarik step1 alternates when P1 first");
   assert(
     JSON.stringify(homeOuterIndices(0)) === JSON.stringify([9, 10, 11, 0, 1, 2]),
     "dejarik P0 home semicircle top"
@@ -120,8 +122,8 @@ export function runDejarikChecks(assert: AssertFn) {
   let placementOrder: Player[] = [];
   let s = initialDejarik(0);
   for (let step = 0; step < 8; step++) {
-    placementOrder.push(placementPlayer(step));
-    const player = placementPlayer(step);
+    placementOrder.push(placementPlayer(step, s.firstPlayer));
+    const player = placementPlayer(step, s.firstPlayer);
     const cell = placementHomeCells(player).find((c) => s.cells[c] === null)!;
     s = applyPlacement(s, s.unplaced[player][0], cell)!;
   }
@@ -134,6 +136,20 @@ export function runDejarikChecks(assert: AssertFn) {
   const p1Second = initialDejarik(1);
   assert(p1Second.current === 0, "dejarik when P1 first, second is P0 for placement");
   assert(secondPlayer(1) === 0, "dejarik secondPlayer helper");
+
+  let placementOrderP1: Player[] = [];
+  let s1 = initialDejarik(1);
+  for (let step = 0; step < 8; step++) {
+    placementOrderP1.push(placementPlayer(step, s1.firstPlayer));
+    const player = placementPlayer(step, s1.firstPlayer);
+    const cell = placementHomeCells(player).find((c) => s1.cells[c] === null)!;
+    s1 = applyPlacement(s1, s1.unplaced[player][0], cell)!;
+  }
+  assert(
+    placementOrderP1.join("") === "01010101",
+    "dejarik placement alternates from second when P1 first"
+  );
+  assert(s1.current === 1, "dejarik after placement current is first player when P1 first");
 
   const moveAttackBoard = withPlaying(0, (cells, pieces) => {
     addPiece(cells, pieces, 1, outerIndex(4), 0, "brute");

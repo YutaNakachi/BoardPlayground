@@ -17,7 +17,13 @@ import {
   savePendingJoin,
 } from "@/lib/online/join-room-pending";
 import { mergeGameOptions } from "@/lib/online/game-options";
-import { applyMove, type GameState, type MovePayload } from "@/lib/online/moves";
+import {
+  applyMove,
+  dejarikTurnSeat,
+  type DejarikOnlineState,
+  type GameState,
+  type MovePayload,
+} from "@/lib/online/moves";
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
 import { normalizeRoomCodeInput } from "@/lib/online/room-code";
 import {
@@ -66,6 +72,11 @@ export function useOnlineRoom(gameSlug: string) {
   const gameStateRef = useRef<GameState | null>(null);
   const pendingMoveRef = useRef(false);
   const moveQueueRef = useRef<MovePayload[]>([]);
+  const roomRef = useRef(room);
+
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
 
   const broadcastGameState = useCallback(
     (state: GameState, remoteVersion: number, remoteCurrentPlayer: number | null) => {
@@ -125,8 +136,13 @@ export function useOnlineRoom(gameSlug: string) {
       setGameState(state);
       setVersion(remoteVersion);
       versionRef.current = remoteVersion;
-      setCurrentPlayer(remoteCurrentPlayer);
-      if (state.phase === "playing") {
+      let resolvedCurrentPlayer = remoteCurrentPlayer;
+      if (roomRef.current?.gameSlug === "dejarik") {
+        const seat = dejarikTurnSeat(state as DejarikOnlineState);
+        if (seat !== null) resolvedCurrentPlayer = seat;
+      }
+      setCurrentPlayer(resolvedCurrentPlayer);
+      if (state.phase === "playing" || state.phase === "placement") {
         setPhase("playing");
       } else if (state.phase === "game-over") {
         setPhase("finished");
@@ -509,7 +525,12 @@ export function useOnlineRoom(gameSlug: string) {
       versionRef.current = serverVersion;
       setVersion(serverVersion);
       setGameState(serverState);
-      setCurrentPlayer(serverCurrentPlayer);
+      let resolvedCurrentPlayer = serverCurrentPlayer;
+      if (roomRef.current?.gameSlug === "dejarik") {
+        const seat = dejarikTurnSeat(serverState as DejarikOnlineState);
+        if (seat !== null) resolvedCurrentPlayer = seat;
+      }
+      setCurrentPlayer(resolvedCurrentPlayer);
       if (serverState.phase === "game-over") {
         setPhase("finished");
         setRoom((prev) =>
@@ -518,7 +539,7 @@ export function useOnlineRoom(gameSlug: string) {
             : prev
         );
       }
-      broadcastGameState(serverState, serverVersion, serverCurrentPlayer);
+      broadcastGameState(serverState, serverVersion, resolvedCurrentPlayer);
     },
     [broadcastGameState]
   );
@@ -603,12 +624,20 @@ export function useOnlineRoom(gameSlug: string) {
       if (!liveState) return;
 
       const slug = room.gameSlug as OnlineGameSlug;
+      const dejarikActorSeat =
+        slug === "dejarik"
+          ? dejarikTurnSeat(liveState as DejarikOnlineState)
+          : null;
+      const actorSeat =
+        dejarikActorSeat !== null ? dejarikActorSeat : liveState.current;
       const chainedExtraTurn =
         pendingMoveRef.current &&
         liveState.phase !== "game-over" &&
-        liveState.current === mySeat;
+        actorSeat === mySeat;
 
-      if (!chainedExtraTurn && currentPlayer !== mySeat) return;
+      const onTurn =
+        chainedExtraTurn || currentPlayer === mySeat || actorSeat === mySeat;
+      if (!onTurn) return;
 
       const result = applyMove(
         slug,
@@ -621,8 +650,13 @@ export function useOnlineRoom(gameSlug: string) {
 
       const wasChained = pendingMoveRef.current;
       const optimisticVersion = versionRef.current + 1;
+      let optimisticCurrent = result.currentPlayer;
+      if (slug === "dejarik") {
+        const seat = dejarikTurnSeat(result.state as DejarikOnlineState);
+        if (seat !== null) optimisticCurrent = seat;
+      }
       setGameState(result.state);
-      setCurrentPlayer(result.currentPlayer);
+      setCurrentPlayer(optimisticCurrent);
       setVersion(optimisticVersion);
       versionRef.current = optimisticVersion;
       if (result.state.phase === "game-over") {
@@ -636,18 +670,25 @@ export function useOnlineRoom(gameSlug: string) {
 
       if (wasChained) {
         moveQueueRef.current.push(move);
-        broadcastGameState(result.state, optimisticVersion, result.currentPlayer);
+        broadcastGameState(result.state, optimisticVersion, optimisticCurrent);
         return;
       }
 
-      broadcastGameState(result.state, optimisticVersion, result.currentPlayer);
+      broadcastGameState(result.state, optimisticVersion, optimisticCurrent);
       sendMovePipeline(move, optimisticVersion - 1);
     },
     [room, mySeat, currentPlayer, broadcastGameState, sendMovePipeline]
   );
 
   const isHost = room?.hostPlayerId === myPlayerId;
-  const isMyTurn = currentPlayer === mySeat;
+  const isMyTurn = useMemo(() => {
+    if (mySeat < 0) return false;
+    if (room?.gameSlug === "dejarik" && gameState) {
+      const seat = dejarikTurnSeat(gameState as DejarikOnlineState);
+      if (seat !== null) return seat === mySeat;
+    }
+    return currentPlayer === mySeat;
+  }, [room?.gameSlug, gameState, mySeat, currentPlayer]);
   const resolvedPlayerId = myPlayerId || getOrCreatePlayerId();
   const players = room?.players ?? EMPTY_PLAYERS;
 

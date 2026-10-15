@@ -1,4 +1,5 @@
 import type { DotsBoxesSize } from "@/lib/play/dots-and-boxes";
+import { secondPlayer } from "@/lib/play/dejarik/state";
 import type { TttMode } from "@/lib/play/tic-tac-toe";
 import type { OnlineGameSlug } from "./types";
 
@@ -54,6 +55,9 @@ export function initialCurrentPlayerSeat(
 ): FirstPlayerSeat {
   if (slug === "fox-hounds") {
     return parseHoundsSeat(gameOptions);
+  }
+  if (slug === "dejarik") {
+    return secondPlayer(parseFirstPlayer(gameOptions));
   }
   return parseFirstPlayer(gameOptions);
 }
@@ -168,6 +172,7 @@ export function validateGameOptions(
     case "nim":
     case "hex":
     case "mancala":
+    case "dejarik":
       return parseCommonGameOptions(raw);
     case "dots-and-boxes":
       return parseDotsBoxesGameOptions(raw);

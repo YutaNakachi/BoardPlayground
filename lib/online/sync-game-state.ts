@@ -16,6 +16,10 @@ function isGameOverState(state: GameState | null): boolean {
   return state?.phase === "game-over";
 }
 
+function isActivePlayPhase(state: GameState): boolean {
+  return state.phase === "playing" || state.phase === "placement";
+}
+
 function isRematchStart(
   remoteVersion: number,
   remoteState: GameState,
@@ -23,7 +27,7 @@ function isRematchStart(
 ): boolean {
   return (
     remoteVersion === 1 &&
-    remoteState.phase === "playing" &&
+    isActivePlayPhase(remoteState) &&
     isGameOverState(currentState)
   );
 }
@@ -38,7 +42,7 @@ export function shouldApplyRemoteGameVersion(
     return true;
   }
 
-  if (isGameOverState(currentState) && remoteState.phase === "playing") {
+  if (isGameOverState(currentState) && isActivePlayPhase(remoteState)) {
     return false;
   }
 
@@ -56,7 +60,7 @@ export function shouldApplyRemoteGameVersion(
     if (
       remoteVersion === currentVersion &&
       isGameOverState(currentState) &&
-      remoteState.phase === "playing"
+      isActivePlayPhase(remoteState)
     ) {
       return false;
     }
