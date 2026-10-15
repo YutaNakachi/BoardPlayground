@@ -145,11 +145,6 @@ export function predatorAttackTargets(
   );
 }
 
-function guardianOrbit2(from: number, ring: "outer" | "middle" | "center"): number[] {
-  const i = orbitIndex(from);
-  return [stepOrbit(ring, i, -2), stepOrbit(ring, i, 2)];
-}
-
 export function guardianMoveTargets(
   cells: Cells,
   pieces: Record<number, { owner: number }>,
@@ -160,8 +155,12 @@ export function guardianMoveTargets(
   const raw = new Set<number>();
   if (isOuter(from)) {
     const i = orbitIndex(from);
-    raw.add(middleIndex(i));
-    for (const t of guardianOrbit2(from, "outer")) raw.add(t);
+    if (isEmpty(cells, middleIndex(i))) raw.add(middleIndex(i));
+    for (const d of [-2, 2] as const) {
+      const step1 = stepOrbit("outer", i, d > 0 ? 1 : -1);
+      const to = stepOrbit("outer", i, d);
+      if (isEmpty(cells, step1)) raw.add(to);
+    }
   } else if (isMiddle(from)) {
     const i = orbitIndex(from);
     raw.add(centerForMiddle(from));
