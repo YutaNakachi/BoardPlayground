@@ -91,10 +91,8 @@ export function AnnouncementRotator({ items }: Props) {
   );
   const [index, setIndex] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    setIndex(0);
-  }, [items]);
+  const activeIndex =
+    items.length > 0 ? ((index % items.length) + items.length) % items.length : 0;
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -113,8 +111,8 @@ export function AnnouncementRotator({ items }: Props) {
   }, [items.length, reduceMotion]);
 
   const slide = items.length > 1 && !reduceMotion;
-  const current = items[index] ?? items[0];
-  const currentLine = lines[index] ?? lines[0];
+  const current = items[activeIndex] ?? items[0];
+  const currentLine = lines[activeIndex] ?? lines[0];
 
   return (
     <div
@@ -125,7 +123,7 @@ export function AnnouncementRotator({ items }: Props) {
         <div
           className="flex flex-col transition-transform ease-out"
           style={{
-            transform: `translateY(calc(-${index} * 1.25rem))`,
+            transform: `translateY(calc(-${activeIndex} * 1.25rem))`,
             transitionDuration: `${SLIDE_MS}ms`,
           }}
         >
