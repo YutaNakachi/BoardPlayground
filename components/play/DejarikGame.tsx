@@ -191,31 +191,35 @@ export function DejarikGame() {
 
       if (!playing) return;
 
-      if (state.scoutPartial && selectedPieceId !== state.scoutPartial.pieceId) {
-        return;
-      }
+      const partial = state.scoutPartial;
+      const scoutContinues =
+        partial &&
+        (partial.didMove || partial.didAttack) &&
+        !(partial.didMove && partial.didAttack);
+      const actingPieceId =
+        selectedPieceId ?? (scoutContinues ? partial.pieceId : null);
 
       const occupantId = state.cells[cell];
 
-      if (selectedPieceId !== null) {
-        const attacks = legalAttackTargets(state, selectedPieceId);
-        const moves = legalMoveTargets(state, selectedPieceId);
+      if (actingPieceId !== null) {
+        const attacks = legalAttackTargets(state, actingPieceId);
+        const moves = legalMoveTargets(state, actingPieceId);
         if (attacks.includes(cell)) {
-          const next = applyDejarikAttack(state, selectedPieceId, cell);
+          const next = applyDejarikAttack(state, actingPieceId, cell);
           if (next) {
             setState(next);
             setSelectedPieceId(
-              next.scoutPartial?.pieceId === selectedPieceId ? selectedPieceId : null
+              next.scoutPartial?.pieceId === actingPieceId ? actingPieceId : null
             );
           }
           return;
         }
         if (moves.includes(cell)) {
-          const next = applyDejarikMove(state, selectedPieceId, cell);
+          const next = applyDejarikMove(state, actingPieceId, cell);
           if (next) {
             setState(next);
             setSelectedPieceId(
-              next.scoutPartial?.pieceId === selectedPieceId ? selectedPieceId : null
+              next.scoutPartial?.pieceId === actingPieceId ? actingPieceId : null
             );
           }
           return;
@@ -310,12 +314,17 @@ export function DejarikGame() {
     for (const c of placementHomeCells(turnPlayer)) {
       if (state.cells[c] === null) highlightCells.add(c);
     }
-  } else if (playing && selectedPieceId !== null && humanTurn) {
-    for (let c = 0; c < state.cells.length; c++) {
-      if (state.cells[c] === selectedPieceId) highlightCells.add(c);
+  } else if (playing && humanTurn) {
+    const highlightPieceId =
+      selectedPieceId ??
+      (scoutEndVisible && state.scoutPartial ? state.scoutPartial.pieceId : null);
+    if (highlightPieceId !== null) {
+      for (let c = 0; c < state.cells.length; c++) {
+        if (state.cells[c] === highlightPieceId) highlightCells.add(c);
+      }
+      for (const d of legalMoveTargets(state, highlightPieceId)) highlightCells.add(d);
+      for (const d of legalAttackTargets(state, highlightPieceId)) highlightCells.add(d);
     }
-    for (const d of legalMoveTargets(state, selectedPieceId)) highlightCells.add(d);
-    for (const d of legalAttackTargets(state, selectedPieceId)) highlightCells.add(d);
   }
 
   const playerLabel =
@@ -328,9 +337,11 @@ export function DejarikGame() {
   const defaultPlacementAction =
     "盤下で型を選び、光ったホーム半円の空きマスをタップしてください。";
   const defaultPlayingAction =
-    selectedPieceId === null
-      ? "自分のクリーチャーをタップしてください。"
-      : "光った空マスで移動、光った敵マスで攻撃してください。";
+    scoutEndVisible && selectedPieceId === null
+      ? "スカウトをタップするか、光ったマスで続けて操作してください。"
+      : selectedPieceId === null
+        ? "自分のクリーチャーをタップしてください。"
+        : "光った空マスで移動、光った敵マスで攻撃してください。";
 
   return (
     <div className="space-y-6">
