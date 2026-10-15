@@ -423,6 +423,7 @@ export function SenkaiSenkiGame() {
 
   const backToSetup = useCallback(() => {
     setPhase("setup");
+    setSetupMatchKind("pvp");
     setPlayMode({ mode: "local" });
   }, [setPlayMode]);
   usePlaySetupNavigation(phase === "setup", backToSetup);
