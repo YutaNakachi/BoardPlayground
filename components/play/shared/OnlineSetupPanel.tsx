@@ -30,8 +30,11 @@ type Props = {
   onLocalMatchKindChange?: (kind: LocalMatchSetupKind) => void;
   loading?: boolean;
   error?: string | null;
-  /** ローカル開始ボタンの上に表示する追加 UI（ルール選択など） */
-  extra?: ReactNode;
+  /**
+   * ローカル開始ボタンの上に表示する追加 UI。
+   * 関数のときは対人/CPU タブの `kind` を渡す（CPU 専用 UI の出し分け用）。
+   */
+  extra?: ReactNode | ((kind: LocalMatchSetupKind) => ReactNode);
   /** オンライン「部屋を作る」選択時の追加 UI */
   createExtra?: ReactNode;
   /** オンライン「部屋に入る」選択時の追加 UI */
@@ -85,12 +88,21 @@ export function OnlineSetupPanel({
   const displayMode = urlJoinPrefill ? "online" : mode;
 
   const hasOnlineExtraSplit = createExtra !== undefined || joinExtra !== undefined;
+  const extraForOnline =
+    typeof extra === "function" ? undefined : extra;
   const onlineExtra =
     hasOnlineExtraSplit
       ? shownAction === "create"
         ? createExtra
         : joinExtra
-      : extra;
+      : extraForOnline;
+
+  const resolvedLocalExtra =
+    extra === undefined
+      ? null
+      : typeof extra === "function"
+        ? extra(localMatchKind)
+        : extra;
 
   if (waiting) {
     return (
@@ -149,7 +161,7 @@ export function OnlineSetupPanel({
         />
       ) : null}
 
-      {displayMode === "local" && extra ? extra : null}
+      {displayMode === "local" && resolvedLocalExtra ? resolvedLocalExtra : null}
 
       {displayMode === "online" && onlineSupported && onlineExtra
         ? onlineExtra

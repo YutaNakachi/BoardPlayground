@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /** 準備画面でブロック間の縦間隔（PlaySetupCard 直下の子要素） */
-export const PLAY_SETUP_STACK_CLASS = "flex flex-col gap-8";
+export const PLAY_SETUP_STACK_CLASS = "flex flex-col items-center gap-8";
 
 type Props = {
   title: string;

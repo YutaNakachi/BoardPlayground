@@ -66,8 +66,6 @@ function applyCpuMove(
 export function DejarikGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
-  const [setupMatchKind, setSetupMatchKind] =
-    useState<LocalMatchSetupKind>("pvp");
   const [cpuDifficulty, setCpuDifficulty] = useState<CpuDifficulty>("normal");
   const [humanSeat, setHumanSeat] = useState<Player>(0);
   const [matchKind, setMatchKind] = useState<MatchKind>("pvp");
@@ -265,22 +263,19 @@ export function DejarikGame() {
         onlineSupported={false}
         onCreateRoom={() => {}}
         onJoinRoom={() => {}}
-        onLocalMatchKindChange={setSetupMatchKind}
         onStartLocal={startMatch}
         loading={false}
         error={null}
-        extra={
-          setupMatchKind === "cpu" ? (
-            <div className="space-y-6">
-              <div>
-                <p className="mb-2 text-xs text-slate-400">CPUの強さ</p>
+        extra={(kind) =>
+          kind === "cpu" ? (
+            <>
+              <PlaySetupSection label="CPUの強さ">
                 <CpuDifficultyPicker
                   value={cpuDifficulty}
                   onChange={setCpuDifficulty}
                 />
-              </div>
-              <div>
-                <p className="mb-2 text-xs text-slate-400">あなたの陣</p>
+              </PlaySetupSection>
+              <PlaySetupSection label="あなたの陣">
                 <div className="flex justify-center gap-2">
                   <button
                     type="button"
@@ -297,8 +292,8 @@ export function DejarikGame() {
                     後手（上段）
                   </button>
                 </div>
-              </div>
-            </div>
+              </PlaySetupSection>
+            </>
           ) : null
         }
       />
