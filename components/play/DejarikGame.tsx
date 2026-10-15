@@ -60,10 +60,6 @@ function applyCpuMove(
   }
 }
 
-function seatHomeLabel(seat: Player): string {
-  return seat === 0 ? "上半円ホーム" : "下半円ホーム";
-}
-
 export function DejarikGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
@@ -288,14 +284,14 @@ export function DejarikGame() {
                     onClick={() => setHumanSeat(0)}
                     className={setupPillClass(humanSeat === 0)}
                   >
-                    プレイヤー1（{seatHomeLabel(0)}）
+                    先手（下段）
                   </button>
                   <button
                     type="button"
                     onClick={() => setHumanSeat(1)}
                     className={setupPillClass(humanSeat === 1)}
                   >
-                    プレイヤー2（{seatHomeLabel(1)}）
+                    後手（上段）
                   </button>
                 </div>
               </div>
