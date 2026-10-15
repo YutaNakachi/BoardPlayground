@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { SiteAnnouncement } from "@/content/site-announcements";
-import { formatAnnouncementLine } from "@/lib/site-announcements";
+import {
+  formatAnnouncementDisplayDate,
+  formatAnnouncementLine,
+} from "@/lib/site-announcements";
 
 const ROTATE_MS = 6000;
+const SLIDE_MS = 400;
 
 type Props = {
   items: SiteAnnouncement[];
@@ -21,7 +25,11 @@ function AnnouncementLink({
   className: string;
 }) {
   if (!item.href) {
-    return <span className={className} title={line}>{line}</span>;
+    return (
+      <span className={className} title={line}>
+        {line}
+      </span>
+    );
   }
 
   const external = /^https?:\/\//i.test(item.href);
@@ -46,6 +54,36 @@ function AnnouncementLink({
   );
 }
 
+function AnnouncementRow({
+  item,
+  line,
+}: {
+  item: SiteAnnouncement;
+  line: string;
+}) {
+  const dateLabel = formatAnnouncementDisplayDate(item);
+  const linkClass =
+    "min-w-0 truncate text-slate-200 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
+  return (
+    <div className="flex h-5 shrink-0 items-center gap-3">
+      {dateLabel ? (
+        <time
+          dateTime={item.startsAt}
+          className="shrink-0 tabular-nums text-xs text-slate-500"
+        >
+          {dateLabel}
+        </time>
+      ) : null}
+      <AnnouncementLink
+        item={item}
+        line={line}
+        className={item.href ? linkClass : "min-w-0 truncate text-slate-200"}
+      />
+    </div>
+  );
+}
+
 export function AnnouncementRotator({ items }: Props) {
   const lines = useMemo(
     () => items.map((item) => formatAnnouncementLine(item)),
@@ -53,6 +91,10 @@ export function AnnouncementRotator({ items }: Props) {
   );
   const [index, setIndex] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [items]);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -70,26 +112,30 @@ export function AnnouncementRotator({ items }: Props) {
     return () => window.clearInterval(id);
   }, [items.length, reduceMotion]);
 
-  const item = items[index] ?? items[0];
-  const line = lines[index] ?? lines[0];
-  const linkClass =
-    "min-w-0 truncate text-slate-200 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  const slide = items.length > 1 && !reduceMotion;
+  const current = items[index] ?? items[0];
+  const currentLine = lines[index] ?? lines[0];
 
   return (
     <div
-      className="flex min-w-0 flex-1 items-center gap-2"
-      aria-live={items.length > 1 && !reduceMotion ? "polite" : undefined}
+      className="h-5 min-w-0 flex-1 overflow-hidden"
+      aria-live={slide ? "polite" : undefined}
     >
-      <AnnouncementLink
-        item={item}
-        line={line}
-        className={item.href ? linkClass : "min-w-0 truncate text-slate-200"}
-      />
-      {items.length > 1 && !reduceMotion ? (
-        <span className="shrink-0 tabular-nums text-xs text-slate-500">
-          {index + 1}/{items.length}
-        </span>
-      ) : null}
+      {slide ? (
+        <div
+          className="flex flex-col transition-transform ease-out"
+          style={{
+            transform: `translateY(calc(-${index} * 1.25rem))`,
+            transitionDuration: `${SLIDE_MS}ms`,
+          }}
+        >
+          {items.map((item, i) => (
+            <AnnouncementRow key={item.id} item={item} line={lines[i]} />
+          ))}
+        </div>
+      ) : (
+        <AnnouncementRow item={current} line={currentLine} />
+      )}
     </div>
   );
 }

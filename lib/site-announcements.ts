@@ -38,6 +38,16 @@ export function formatAnnouncementLine(item: SiteAnnouncement): string {
   return text;
 }
 
+/** 帯左に出す掲載日（startsAt）。未設定なら null */
+export function formatAnnouncementDisplayDate(
+  item: SiteAnnouncement,
+): string | null {
+  if (!item.startsAt) return null;
+  const [y, m, d] = item.startsAt.split("-");
+  if (!y || !m || !d) return item.startsAt;
+  return `${y}/${m}/${d}`;
+}
+
 export function getActiveAnnouncements(
   now: Date = new Date(),
 ): SiteAnnouncement[] {
