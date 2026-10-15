@@ -78,11 +78,11 @@ export function DejarikGame() {
         const player = placementPlayer(state.placementStep);
         const homes = placementHomeCells(player);
         if (!placementType) {
-          setPlacementHint("先に盤下で置く型を選んでください");
+          setPlacementHint("先に盤下で置く型を選んでください。");
           return;
         }
         if (!homes.includes(cell) || state.cells[cell] !== null) {
-          setPlacementHint("自分のホーム半円（光った外輪）の空きマスをタップしてください");
+          setPlacementHint("自分のホーム半円（光った外輪）の空きマスをタップしてください。");
           return;
         }
         const next = applyPlacement(state, placementType, cell);
@@ -201,7 +201,7 @@ export function DejarikGame() {
           details={
             <p className="text-slate-400">
               {state.winReason === "stall"
-                ? `プレイヤー ${state.winner! + 1} の勝ち（相手が残り1体のまま3手以内に取れませんでした）`
+                ? `プレイヤー ${state.winner! + 1} の勝ち（相手が残り1体のまま3手以内に取れませんでした）。`
                 : `プレイヤー ${state.winner! + 1} が相手のクリーチャーをすべて除去しました。`}
             </p>
           }
@@ -225,19 +225,19 @@ export function DejarikGame() {
           }
           action={
             placement
-              ? "盤下で型を選び、光ったホーム半円の空きマスをタップ"
+              ? "盤下で型を選び、光ったホーム半円の空きマスをタップしてください。"
               : selectedPieceId === null
-                ? "自分のクリーチャーをタップ"
-                : "光った空マスで移動、光った敵マスで攻撃"
+                ? "自分のクリーチャーをタップしてください。"
+                : "光った空マスで移動、光った敵マスで攻撃してください。"
           }
           notice={
             placement
               ? placementHint ??
                 (state.placementStep === 0
-                  ? `配置は後攻のプレイヤー ${placementSecond + 1} から`
+                  ? `配置は後攻のプレイヤー ${placementSecond + 1} からです。`
                   : undefined)
               : scoutEndVisible
-                ? "スカウト：もう1操作できるか、盤下の「手番終了」"
+                ? "スカウト：もう1操作できるか、盤下の「手番終了」を押してください。"
                 : undefined
           }
         />
@@ -252,14 +252,14 @@ export function DejarikGame() {
           onPointerDown={onBoardPointer}
         />
         <p className="mt-2 text-center text-xs text-slate-500">
-          クリーチャーは常に盤の中心を向きます
+          クリーチャーは常に盤の中心を向きます。
         </p>
       </div>
 
       {!gameOver && placement && (
         <div className="flex flex-wrap justify-center gap-2">
           <p className="w-full text-center text-xs text-slate-400">
-            残り {state.unplaced[turnPlayer].length} 体 — 置く型を選ぶ
+            残り {state.unplaced[turnPlayer].length} 体。置く型を選んでください。
           </p>
           {state.unplaced[turnPlayer].map((type) => (
             <button
