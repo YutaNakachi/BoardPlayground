@@ -24,7 +24,9 @@ type Props = {
   onlineSupported: boolean;
   onCreateRoom: (displayName: string) => void;
   onJoinRoom: (code: string, displayName: string) => void;
-  onStartLocal: () => void;
+  onStartLocal: (kind: LocalMatchSetupKind) => void;
+  /** ローカル対人/CPU タブの変更（extra の出し分け用） */
+  onLocalMatchKindChange?: (kind: LocalMatchSetupKind) => void;
   loading?: boolean;
   error?: string | null;
   /** ローカル開始ボタンの上に表示する追加 UI（ルール選択など） */
@@ -55,6 +57,7 @@ export function OnlineSetupPanel({
   onCreateRoom,
   onJoinRoom,
   onStartLocal,
+  onLocalMatchKindChange,
   loading,
   error,
   extra,
@@ -138,7 +141,10 @@ export function OnlineSetupPanel({
         <div className="mt-8">
           <PlayModeLocalMatchTabs
             kind={localMatchKind}
-            onKindChange={setLocalMatchKind}
+            onKindChange={(kind) => {
+              setLocalMatchKind(kind);
+              onLocalMatchKindChange?.(kind);
+            }}
             cpuSupported={cpuSupported}
           />
         </div>
@@ -153,7 +159,11 @@ export function OnlineSetupPanel({
       ) : null}
 
       {displayMode === "local" || !onlineSupported ? (
-        <button type="button" onClick={onStartLocal} className="btn-game mt-8">
+        <button
+          type="button"
+          onClick={() => onStartLocal(localMatchKind)}
+          className="btn-game mt-8"
+        >
           ゲーム開始
         </button>
       ) : (

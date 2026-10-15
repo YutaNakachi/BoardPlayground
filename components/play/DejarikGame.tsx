@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
+import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { DejarikBoard } from "@/components/play/dejarik/DejarikBoard";
 import {
   CREATURE_LABEL,
@@ -13,6 +16,11 @@ import {
   type CreatureType,
 } from "@/lib/play/dejarik/board";
 import { dejarikCellAtPoint } from "@/lib/play/dejarik/board-visual";
+import {
+  chooseMove,
+  type CpuDifficulty,
+  type DejarikCpuMove,
+} from "@/lib/play/dejarik/ai";
 import {
   applyDejarikAttack,
   applyDejarikMove,
@@ -25,36 +33,79 @@ import {
   secondPlayer,
   stallLabelForPlayer,
   type DejarikState,
+  type Player,
 } from "@/lib/play/dejarik/state";
 
 type LocalPhase = "setup" | "active";
+type MatchKind = "pvp" | "cpu";
 
 const DESCRIPTION =
   "スター・ウォーズに登場するデジャリック（ホロチェス）を、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。";
 
+function applyCpuMove(
+  state: DejarikState,
+  choice: DejarikCpuMove
+): DejarikState | null {
+  switch (choice.kind) {
+    case "placement":
+      return applyPlacement(state, choice.creatureType, choice.cell);
+    case "move":
+      return applyDejarikMove(state, choice.pieceId, choice.to);
+    case "attack":
+      return applyDejarikAttack(state, choice.pieceId, choice.to);
+    case "endScoutTurn":
+      return endScoutTurn(state);
+    default:
+      return null;
+  }
+}
+
+function seatHomeLabel(seat: Player): string {
+  return seat === 0 ? "上半円ホーム" : "下半円ホーム";
+}
+
 export function DejarikGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
+  const [setupMatchKind, setSetupMatchKind] =
+    useState<LocalMatchSetupKind>("pvp");
+  const [cpuDifficulty, setCpuDifficulty] = useState<CpuDifficulty>("normal");
+  const [humanSeat, setHumanSeat] = useState<Player>(0);
+  const [matchKind, setMatchKind] = useState<MatchKind>("pvp");
   const [state, setState] = useState<DejarikState | null>(null);
   const [selectedPieceId, setSelectedPieceId] = useState<number | null>(null);
   const [placementType, setPlacementType] = useState<CreatureType | null>(null);
   const [placementHint, setPlacementHint] = useState<string | null>(null);
+  const stateRef = useRef(state);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setPlayMode({ mode: "local" });
-    setState(initialDejarik());
-    setSelectedPieceId(null);
-    setPlacementType(null);
-    setPlacementHint(null);
-    setLocalPhase("active");
-  }, [recordLocalPlay, setPlayMode]);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const cpuSeat: Player = humanSeat === 0 ? 1 : 0;
+
+  const startMatch = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      setMatchKind(kind);
+      setPlayMode(
+        kind === "cpu" ? { mode: "cpu", humanSeat } : { mode: "local" }
+      );
+      setState(initialDejarik());
+      setSelectedPieceId(null);
+      setPlacementType(null);
+      setPlacementHint(null);
+      setLocalPhase("active");
+    },
+    [recordLocalPlay, setPlayMode, humanSeat]
+  );
 
   const reset = useCallback(() => {
     setLocalPhase("setup");
     setState(null);
     setSelectedPieceId(null);
     setPlacementType(null);
+    setPlacementHint(null);
     setPlayMode({ mode: "local" });
   }, [setPlayMode]);
 
@@ -64,15 +115,62 @@ export function DejarikGame() {
   const playing = state?.phase === "playing";
   const gameOver = state?.phase === "game-over";
 
+  const turnPlayer =
+    state && placement
+      ? placementPlayer(state.placementStep)
+      : state?.current ?? 0;
+
+  const humanTurn =
+    matchKind !== "cpu" ||
+    (localPhase === "active" && !gameOver && turnPlayer === humanSeat);
+
+  const cpuThinking =
+    matchKind === "cpu" &&
+    localPhase === "active" &&
+    !gameOver &&
+    turnPlayer === cpuSeat;
+
+  useEffect(() => {
+    if (!cpuThinking) return;
+
+    const delayMs =
+      cpuDifficulty === "hard"
+        ? 550 + Math.random() * 250
+        : cpuDifficulty === "normal"
+          ? 400 + Math.random() * 250
+          : 300 + Math.random() * 200;
+
+    const timer = window.setTimeout(() => {
+      const snapshot = stateRef.current;
+      if (!snapshot || snapshot.phase === "game-over") return;
+      const actor =
+        snapshot.phase === "placement"
+          ? placementPlayer(snapshot.placementStep)
+          : snapshot.current;
+      if (actor !== cpuSeat) return;
+
+      const choice = chooseMove(snapshot, cpuDifficulty, cpuSeat);
+      if (!choice) return;
+      const next = applyCpuMove(snapshot, choice);
+      if (!next) return;
+      setState(next);
+      setSelectedPieceId(null);
+      setPlacementType(null);
+      setPlacementHint(null);
+    }, delayMs);
+
+    return () => window.clearTimeout(timer);
+  }, [cpuThinking, cpuSeat, cpuDifficulty, state]);
+
   const scoutEndVisible = useMemo(() => {
-    if (!state?.scoutPartial || !playing) return false;
+    if (!state?.scoutPartial || !playing || !humanTurn) return false;
     const p = state.scoutPartial;
     return (p.didMove || p.didAttack) && !(p.didMove && p.didAttack);
-  }, [state, playing]);
+  }, [state, playing, humanTurn]);
 
   const onCell = useCallback(
     (cell: number) => {
-      if (!state) return;
+      if (!state || !humanTurn) return;
 
       if (placement) {
         const player = placementPlayer(state.placementStep);
@@ -139,11 +237,12 @@ export function DejarikGame() {
       if (state.scoutPartial && state.scoutPartial.pieceId !== occupantId) return;
       setSelectedPieceId(occupantId);
     },
-    [state, placement, playing, selectedPieceId, placementType]
+    [state, placement, playing, selectedPieceId, placementType, humanTurn]
   );
 
   const onBoardPointer = useCallback(
     (event: React.PointerEvent<SVGSVGElement>) => {
+      if (!humanTurn) return;
       const svg = event.currentTarget;
       const ctm = svg.getScreenCTM();
       if (!ctm) return;
@@ -154,7 +253,7 @@ export function DejarikGame() {
       const cell = dejarikCellAtPoint(x, y);
       if (cell !== null) onCell(cell);
     },
-    [onCell]
+    [onCell, humanTurn]
   );
 
   if (localPhase === "setup") {
@@ -167,30 +266,77 @@ export function DejarikGame() {
         onlineSupported={false}
         onCreateRoom={() => {}}
         onJoinRoom={() => {}}
-        onStartLocal={startLocal}
+        onLocalMatchKindChange={setSetupMatchKind}
+        onStartLocal={startMatch}
         loading={false}
         error={null}
+        extra={
+          setupMatchKind === "cpu" ? (
+            <div className="space-y-6">
+              <div>
+                <p className="mb-2 text-xs text-slate-400">CPUの強さ</p>
+                <CpuDifficultyPicker
+                  value={cpuDifficulty}
+                  onChange={setCpuDifficulty}
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-slate-400">あなたの陣</p>
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHumanSeat(0)}
+                    className={setupPillClass(humanSeat === 0)}
+                  >
+                    プレイヤー1（{seatHomeLabel(0)}）
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHumanSeat(1)}
+                    className={setupPillClass(humanSeat === 1)}
+                  >
+                    プレイヤー2（{seatHomeLabel(1)}）
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null
+        }
       />
     );
   }
 
   if (!state) return null;
 
-  const turnPlayer = placement ? placementPlayer(state.placementStep) : state.current;
   const placementSecond = secondPlayer(state.firstPlayer);
+  const boardLocked = gameOver || !humanTurn;
 
   const highlightCells = new Set<number>();
-  if (placement) {
+  if (placement && humanTurn) {
     for (const c of placementHomeCells(turnPlayer)) {
       if (state.cells[c] === null) highlightCells.add(c);
     }
-  } else if (playing && selectedPieceId !== null) {
+  } else if (playing && selectedPieceId !== null && humanTurn) {
     for (let c = 0; c < state.cells.length; c++) {
       if (state.cells[c] === selectedPieceId) highlightCells.add(c);
     }
     for (const d of legalMoveTargets(state, selectedPieceId)) highlightCells.add(d);
     for (const d of legalAttackTargets(state, selectedPieceId)) highlightCells.add(d);
   }
+
+  const playerLabel =
+    matchKind === "cpu" && turnPlayer === cpuSeat
+      ? "CPU"
+      : matchKind === "cpu" && turnPlayer === humanSeat
+        ? "あなた"
+        : `プレイヤー ${turnPlayer + 1}`;
+
+  const defaultPlacementAction =
+    "盤下で型を選び、光ったホーム半円の空きマスをタップしてください。";
+  const defaultPlayingAction =
+    selectedPieceId === null
+      ? "自分のクリーチャーをタップしてください。"
+      : "光った空マスで移動、光った敵マスで攻撃してください。";
 
   return (
     <div className="space-y-6">
@@ -201,18 +347,26 @@ export function DejarikGame() {
           details={
             <p className="text-slate-400">
               {state.winReason === "stall"
-                ? `プレイヤー ${state.winner! + 1} の勝ち（相手が残り1体のまま3手以内に取れませんでした）。`
-                : `プレイヤー ${state.winner! + 1} が相手のクリーチャーをすべて除去しました。`}
+                ? matchKind === "cpu" && state.winner === humanSeat
+                  ? "あなたの勝ち（相手が残り1体のまま3手以内に取れませんでした）。"
+                  : matchKind === "cpu" && state.winner === cpuSeat
+                    ? "CPUの勝ち（相手が残り1体のまま3手以内に取れませんでした）。"
+                    : `プレイヤー ${state.winner! + 1} の勝ち（相手が残り1体のまま3手以内に取れませんでした）。`
+                : matchKind === "cpu" && state.winner === humanSeat
+                  ? "あなたが相手のクリーチャーをすべて除去しました。"
+                  : matchKind === "cpu" && state.winner === cpuSeat
+                    ? "CPUがあなたのクリーチャーをすべて除去しました。"
+                    : `プレイヤー ${state.winner! + 1} が相手のクリーチャーをすべて除去しました。`}
             </p>
           }
-          onReplay={startLocal}
+          onReplay={reset}
         />
       )}
 
       {!gameOver && (
         <TurnBanner
           playerIndex={turnPlayer}
-          playerLabel={`プレイヤー ${turnPlayer + 1}`}
+          playerLabel={playerLabel}
           stats={
             placement
               ? `配置 ${state.placementStep + 1}/8 · 先攻はプレイヤー ${state.firstPlayer + 1}`
@@ -224,18 +378,20 @@ export function DejarikGame() {
                   .join(" · ")
           }
           action={
-            placement
-              ? "盤下で型を選び、光ったホーム半円の空きマスをタップしてください。"
-              : selectedPieceId === null
-                ? "自分のクリーチャーをタップしてください。"
-                : "光った空マスで移動、光った敵マスで攻撃してください。"
+            cpuThinking
+              ? "CPUの手番…"
+              : placement
+                ? defaultPlacementAction
+                : defaultPlayingAction
           }
           notice={
             placement
-              ? placementHint ??
-                (state.placementStep === 0
-                  ? `配置は後攻のプレイヤー ${placementSecond + 1} からです。`
-                  : undefined)
+              ? humanTurn
+                ? placementHint ??
+                  (state.placementStep === 0
+                    ? `配置は後攻のプレイヤー ${placementSecond + 1} からです。`
+                    : undefined)
+                : undefined
               : scoutEndVisible
                 ? "スカウト：もう1操作できるか、盤下の「手番終了」を押してください。"
                 : undefined
@@ -243,7 +399,12 @@ export function DejarikGame() {
         />
       )}
 
-      <div className="mx-auto max-w-md rounded-full bg-gradient-to-b from-amber-950/40 to-black/60 p-3">
+      <div
+        className={[
+          "mx-auto max-w-md rounded-full bg-gradient-to-b from-amber-950/40 to-black/60 p-3",
+          boardLocked ? "pointer-events-none opacity-95" : "",
+        ].join(" ")}
+      >
         <DejarikBoard
           state={state}
           highlightCells={highlightCells}
@@ -256,7 +417,7 @@ export function DejarikGame() {
         </p>
       </div>
 
-      {!gameOver && placement && (
+      {!gameOver && placement && humanTurn && (
         <div className="flex flex-wrap justify-center gap-2">
           <p className="w-full text-center text-xs text-slate-400">
             残り {state.unplaced[turnPlayer].length} 体。置く型を選んでください。
