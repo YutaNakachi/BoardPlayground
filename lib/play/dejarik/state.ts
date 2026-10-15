@@ -294,8 +294,8 @@ export function stallLabelForPlayer(state: DejarikState, player: Player): string
   if (state.phase !== "playing") return null;
   if (countPiecesForOwner(state, player) !== 1) return null;
   const used = state.stallCounters[player];
-  if (used === 0) return "残り1体：3手以内に取る";
-  return `残り1体：あと${STALL_LIMIT - used}手で取れなければ負け`;
+  if (used === 0) return "残り1体：3手以内に取ってください。";
+  return `残り1体：あと${STALL_LIMIT - used}手で取れなければ負けです。`;
 }
 
 export function scoutCanContinue(state: DejarikState, pieceId: number): boolean {
