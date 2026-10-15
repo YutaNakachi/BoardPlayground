@@ -4,7 +4,11 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import {
+  PlaySetupCard,
+  PlaySetupSection,
+  setupPillClass,
+} from "@/components/play/shared/PlaySetupCard";
 import {
   isSlideSolved,
   shuffledSlide,
@@ -64,8 +68,7 @@ export function SlidePuzzleGame() {
         title="スライドパズル"
         description={`${size}×${size}の盤で、1〜${lastTile}の数字を順に並べます。空きマスに隣接するタイルをタップして動かします。`}
       >
-        <div className="space-y-2">
-          <p className="text-center text-xs text-slate-400">盤面サイズ</p>
+        <PlaySetupSection label="盤面サイズ">
           <div className="flex flex-wrap justify-center gap-2">
             {SLIDE_SIZE_OPTIONS.map((option) => (
               <button
@@ -78,8 +81,8 @@ export function SlidePuzzleGame() {
               </button>
             ))}
           </div>
-        </div>
-        <button type="button" onClick={startGame} className="btn-game mt-8">
+        </PlaySetupSection>
+        <button type="button" onClick={startGame} className="btn-game">
           ゲーム開始
         </button>
       </PlaySetupCard>

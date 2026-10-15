@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import {
+  PlaySetupCard,
+  PlaySetupSection,
+  setupPillClass,
+} from "@/components/play/shared/PlaySetupCard";
 import {
   PlayModeLocalMatchTabs,
   type LocalMatchSetupKind,
@@ -434,24 +438,20 @@ export function SenkaiSenkiGame() {
           onModeChange={() => {}}
           onlineSupported={false}
         />
-        <div className="mt-8">
-          <PlayModeLocalMatchTabs
-            kind={setupMatchKind}
-            onKindChange={setSetupMatchKind}
-            cpuSupported
-          />
-        </div>
+        <PlayModeLocalMatchTabs
+          kind={setupMatchKind}
+          onKindChange={setSetupMatchKind}
+          cpuSupported
+        />
         {setupMatchKind === "cpu" ? (
-          <div className="mt-8 space-y-6">
-            <div>
-              <p className="mb-2 text-xs text-slate-400">CPUの強さ</p>
+          <>
+            <PlaySetupSection label="CPUの強さ">
               <CpuDifficultyPicker
                 value={cpuDifficulty}
                 onChange={setCpuDifficulty}
               />
-            </div>
-            <div>
-              <p className="mb-2 text-xs text-slate-400">あなたの陣</p>
+            </PlaySetupSection>
+            <PlaySetupSection label="あなたの陣">
               <div className="flex justify-center gap-2">
                 <button
                   type="button"
@@ -468,10 +468,10 @@ export function SenkaiSenkiGame() {
                   後手（上段）
                 </button>
               </div>
-            </div>
-          </div>
+            </PlaySetupSection>
+          </>
         ) : null}
-        <button type="button" onClick={startGame} className="btn-game mt-8">
+        <button type="button" onClick={startGame} className="btn-game">
           ゲーム開始
         </button>
       </PlaySetupCard>

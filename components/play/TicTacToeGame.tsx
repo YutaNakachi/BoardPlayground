@@ -6,7 +6,11 @@ import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
-import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import {
+  PlaySetupSection,
+  PlaySetupStack,
+  setupPillClass,
+} from "@/components/play/shared/PlaySetupCard";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
@@ -58,8 +62,7 @@ function modeSetupExtra(
 ) {
   const selected = TTT_MODE_OPTIONS.find((o) => o.value === gameMode)!;
   return (
-    <div className="mt-6 space-y-2">
-      <p className="text-center text-xs text-slate-400">ルール</p>
+    <PlaySetupSection label="ルール" hint={selected.description}>
       {readOnly ? (
         <p className="text-center text-sm font-medium text-white">{selected.label}</p>
       ) : (
@@ -76,8 +79,7 @@ function modeSetupExtra(
           ))}
         </div>
       )}
-      <p className="text-center text-xs text-slate-500">{selected.description}</p>
-    </div>
+    </PlaySetupSection>
   );
 }
 
@@ -196,21 +198,19 @@ export function TicTacToeGame() {
   };
 
   const hostLobbyExtra = (
-    <>
+    <PlaySetupStack>
       {modeSetupExtra(
         onlineTttMode,
         onOnlineTttModeChange,
         !online.isHost
       )}
-      <div className="mt-6">
-        <OnlineFirstPlayerPicker
-          players={online.players}
-          value={firstPlayer}
-          onChange={online.isHost ? onFirstPlayerChange : undefined}
-          readOnly={!online.isHost}
-        />
-      </div>
-    </>
+      <OnlineFirstPlayerPicker
+        players={online.players}
+        value={firstPlayer}
+        onChange={online.isHost ? onFirstPlayerChange : undefined}
+        readOnly={!online.isHost}
+      />
+    </PlaySetupStack>
   );
 
   if (online.completingPendingJoin) {
