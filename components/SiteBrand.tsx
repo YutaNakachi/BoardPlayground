@@ -3,25 +3,10 @@ import { BRAND_ASSETS } from "@/lib/brand";
 import { SITE_NAME, SITE_NAME_EN } from "@/lib/site";
 
 type Props = {
-  variant: "hero" | "header" | "footer";
+  variant: "header" | "footer";
 };
 
 export function SiteBrand({ variant }: Props) {
-  if (variant === "hero") {
-    return (
-      <div className="mx-auto flex justify-center">
-        <Image
-          src={BRAND_ASSETS.fullLight}
-          alt={SITE_NAME}
-          width={1015}
-          height={307}
-          className="h-auto w-full max-w-sm sm:max-w-md"
-          priority
-        />
-      </div>
-    );
-  }
-
   if (variant === "header") {
     return (
       <span className="flex min-w-0 items-center gap-2">
