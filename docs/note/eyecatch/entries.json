@@ -26,5 +26,11 @@
     "slug": "mini-shogi",
     "title": "5五将棋",
     "subtitle": "5×5盤に、将棋の攻防を凝縮。"
+  },
+  {
+    "slug": "dejarik",
+    "title": "デジャリック",
+    "subtitle": "円形ホロ盤で、4タイプを動かして相手を取り尽くす。",
+    "boardOpacity": 0.14
   }
 ]
