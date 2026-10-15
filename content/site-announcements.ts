@@ -33,7 +33,7 @@ export const SITE_ANNOUNCEMENTS: SiteAnnouncement[] = [
   },
   {
     id: "new-game-dejarik",
-    body: "【New】 STAR WARSに登場したホログラムチェスを再現！『デジャリック』リリース！",
+    body: "【New】 『デジャリック』リリース！STAR WARSに登場したあのホログラムチェスを再現！",
     href: "/play/dejarik",
     startsAt: "2026-10-15",
   },
