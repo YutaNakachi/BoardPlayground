@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SiteAnnouncement } from "@/content/site-announcements";
 import {
   formatAnnouncementDisplayDate,
   formatAnnouncementLine,
 } from "@/lib/site-announcements";
 import { AnnouncementScrollingText } from "@/components/AnnouncementScrollingText";
+import { ANNOUNCEMENT_STATIC_ROTATE_MS } from "@/lib/announcement-display";
 
-const ROTATE_MS = 6000;
 const SLIDE_MS = 400;
 
 type Props = {
@@ -18,9 +18,15 @@ type Props = {
 function AnnouncementRow({
   item,
   line,
+  active,
+  loop,
+  onDisplayComplete,
 }: {
   item: SiteAnnouncement;
   line: string;
+  active: boolean;
+  loop: boolean;
+  onDisplayComplete?: () => void;
 }) {
   const dateLabel = formatAnnouncementDisplayDate(item);
 
@@ -34,7 +40,13 @@ function AnnouncementRow({
           {dateLabel}
         </time>
       ) : null}
-      <AnnouncementScrollingText item={item} line={line} />
+      <AnnouncementScrollingText
+        item={item}
+        line={line}
+        active={active}
+        loop={loop}
+        onDisplayComplete={onDisplayComplete}
+      />
     </div>
   );
 }
@@ -57,17 +69,32 @@ export function AnnouncementRotator({ items }: Props) {
     return () => mq.removeEventListener("change", update);
   }, []);
 
+  const advance = useCallback(() => {
+    setIndex((i) => (i + 1) % items.length);
+  }, [items.length]);
+
+  /** 動きを減らすときは横流れなし・固定6秒で縦ローテのみ */
   useEffect(() => {
-    if (reduceMotion || items.length <= 1) return;
-    const id = window.setInterval(() => {
-      setIndex((i) => (i + 1) % items.length);
-    }, ROTATE_MS);
+    if (!reduceMotion || items.length <= 1) return;
+    const id = window.setInterval(advance, ANNOUNCEMENT_STATIC_ROTATE_MS);
     return () => window.clearInterval(id);
-  }, [items.length, reduceMotion]);
+  }, [items.length, reduceMotion, advance]);
 
   const slide = items.length > 1 && !reduceMotion;
+  const loopSingle = items.length === 1 && !reduceMotion;
+  const onDisplayComplete =
+    !reduceMotion && items.length > 1 ? advance : undefined;
+
   const current = items[activeIndex] ?? items[0];
   const currentLine = lines[activeIndex] ?? lines[0];
+
+  const rowProps = (i: number) => ({
+    item: items[i],
+    line: lines[i],
+    active: slide ? i === activeIndex : true,
+    loop: loopSingle,
+    onDisplayComplete,
+  });
 
   return (
     <div
@@ -83,11 +110,11 @@ export function AnnouncementRotator({ items }: Props) {
           }}
         >
           {items.map((item, i) => (
-            <AnnouncementRow key={item.id} item={item} line={lines[i]} />
+            <AnnouncementRow key={item.id} {...rowProps(i)} />
           ))}
         </div>
       ) : (
-        <AnnouncementRow item={current} line={currentLine} />
+        <AnnouncementRow key={current.id} {...rowProps(activeIndex)} item={current} line={currentLine} />
       )}
     </div>
   );
