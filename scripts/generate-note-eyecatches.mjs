@@ -30,6 +30,7 @@ const BOARD_CAPTURE = {
   "fox-hounds": '[aria-label="ウサギと猟犬の盤面"]',
   hex: 'div.relative:has(svg[aria-label="ヘックスの盤"])',
   "mini-shogi": "div.mx-auto.grid.max-w-xs.grid-cols-5.rounded-xl",
+  dejarik: 'div.relative.w-full.touch-none:has(svg[aria-label="デジャリック盤"])',
 };
 
 const HIDE_PLAY_CSS = `
