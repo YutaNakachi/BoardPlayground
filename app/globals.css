@@ -52,13 +52,9 @@ body {
     12% {
       transform: translateX(0);
     }
-    45%,
-    55% {
-      transform: translateX(var(--announcement-scroll-distance, 0));
-    }
     88%,
     100% {
-      transform: translateX(0);
+      transform: translateX(var(--announcement-scroll-distance, 0));
     }
   }
 
