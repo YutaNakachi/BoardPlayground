@@ -22,7 +22,9 @@ type Props = {
   onDisplayComplete?: () => void;
 };
 
-function delay(ms: number, signal: { cancelled: boolean }): Promise<void> {
+type CycleSignal = { cancelled: boolean; timeouts: number[] };
+
+function delay(ms: number, signal: CycleSignal): Promise<void> {
   return new Promise((resolve) => {
     if (signal.cancelled) return;
     const id = window.setTimeout(() => {
@@ -30,6 +32,10 @@ function delay(ms: number, signal: { cancelled: boolean }): Promise<void> {
     }, ms);
     signal.timeouts.push(id);
   });
+}
+
+function resetTrackTransform(track: HTMLDivElement | null) {
+  if (track) track.style.transform = "translateX(0)";
 }
 
 export function AnnouncementScrollingText({
@@ -42,7 +48,6 @@ export function AnnouncementScrollingText({
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const [offsetX, setOffsetX] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
 
   const linkClass =
@@ -70,10 +75,7 @@ export function AnnouncementScrollingText({
   }, []);
 
   useEffect(() => {
-    if (!active) {
-      setOffsetX(0);
-      return;
-    }
+    if (!active) return;
 
     const signal = { cancelled: false, timeouts: [] as number[] };
     let animation: Animation | null = null;
@@ -82,7 +84,7 @@ export function AnnouncementScrollingText({
       signal.cancelled = true;
       for (const id of signal.timeouts) window.clearTimeout(id);
       animation?.cancel();
-      setOffsetX(0);
+      resetTrackTransform(trackRef.current);
     };
 
     const runMarqueeOnce = async (distance: number) => {
@@ -90,8 +92,7 @@ export function AnnouncementScrollingText({
       if (!track) return;
 
       const scrollMs = announcementMarqueeDurationMs(distance);
-      setOffsetX(0);
-      track.style.transform = "translateX(0)";
+      resetTrackTransform(track);
 
       await delay(ANNOUNCEMENT_MARQUEE_START_HOLD_MS, signal);
       if (signal.cancelled) return;
@@ -114,8 +115,7 @@ export function AnnouncementScrollingText({
       if (signal.cancelled) return;
 
       animation.cancel();
-      setOffsetX(0);
-      track.style.transform = "translateX(0)";
+      resetTrackTransform(track);
 
       await delay(ANNOUNCEMENT_BEFORE_VERTICAL_ROTATE_MS, signal);
     };
@@ -126,7 +126,7 @@ export function AnnouncementScrollingText({
         const useMarquee = distance !== null && !reduceMotion;
 
         if (!useMarquee) {
-          setOffsetX(0);
+          resetTrackTransform(trackRef.current);
           await delay(ANNOUNCEMENT_STATIC_ROTATE_MS, signal);
           if (signal.cancelled) return;
           if (!loop) {
@@ -167,11 +167,7 @@ export function AnnouncementScrollingText({
         {line}
       </span>
       {useTrack ? (
-        <div
-          ref={trackRef}
-          className="w-max will-change-transform"
-          style={{ transform: `translateX(${offsetX}px)` }}
-        >
+        <div ref={trackRef} className="w-max will-change-transform">
           <AnnouncementLink item={item} line={line} className={linkClass} />
         </div>
       ) : (
