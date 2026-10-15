@@ -30,7 +30,7 @@ import {
 type LocalPhase = "setup" | "active";
 
 const DESCRIPTION =
-  "円形のホロ盤で4型のクリーチャーを動かし、相手のクリーチャーをすべて除去する2人用ゲーム。SF作品に登場する円盤のホロ戦棋を、ボドパッ！独自の非公式ルールで再現しています。";
+  "円形のホロ盤で4型のクリーチャーを動かし、相手のクリーチャーをすべて除去する2人用ゲーム。スター・ウォーズに登場するデジャリック（ホロチェス）を、ボドパッ！独自の非公式ルールで再現しています。";
 
 export function DejarikGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
