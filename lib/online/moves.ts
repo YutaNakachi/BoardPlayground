@@ -72,6 +72,17 @@ import {
   type FoxHoundsWinReason,
   type Player as FoxHoundsPlayer,
 } from "@/lib/play/fox-hounds";
+import type { CreatureType } from "@/lib/play/dejarik/board";
+import {
+  applyDejarikAttack,
+  applyDejarikMove,
+  applyPlacement,
+  endScoutTurn,
+  initialDejarik,
+  placementPlayer,
+  type DejarikState,
+  type Player as DejarikPlayer,
+} from "@/lib/play/dejarik/state";
 import type { OnlineGameSlug } from "./types";
 
 export type ReversiState = {
@@ -157,6 +168,20 @@ export type FoxHoundsOnlineState = {
   winReason: FoxHoundsWinReason | null;
 };
 
+export type DejarikOnlineState = DejarikState;
+
+function dejarikActivePlayer(state: DejarikOnlineState): DejarikPlayer {
+  if (state.phase === "placement") {
+    return placementPlayer(state.placementStep);
+  }
+  return state.current;
+}
+
+function dejarikSeatForState(state: DejarikOnlineState): number | null {
+  if (state.phase === "game-over") return null;
+  return dejarikActivePlayer(state);
+}
+
 function foxHoundsSeatForState(
   state: FoxHoundsOnlineState,
   gameOptions?: unknown
@@ -177,7 +202,8 @@ export type GameState =
   | HexState
   | MancalaState
   | DotsBoxesOnlineState
-  | FoxHoundsOnlineState;
+  | FoxHoundsOnlineState
+  | DejarikOnlineState;
 
 export type MovePayload =
   | { type: "place"; index: number }
@@ -186,7 +212,11 @@ export type MovePayload =
   | { type: "checkers"; move: CheckersMove }
   | { type: "mancala"; pit: number }
   | { type: "dots-boxes"; kind: EdgeKind; row: number; col: number }
-  | { type: "fox-hounds"; from: number; to: number };
+  | { type: "fox-hounds"; from: number; to: number }
+  | { type: "dejarik-place"; creature: CreatureType; cell: number }
+  | { type: "dejarik-move"; pieceId: number; to: number }
+  | { type: "dejarik-attack"; pieceId: number; to: number }
+  | { type: "dejarik-scout-end" };
 
 function mancalaWinner(pits: number[]): Player | "draw" {
   const p0 = pits[6];
@@ -288,6 +318,8 @@ export function createInitialState(
         winReason: null,
       };
     }
+    case "dejarik":
+      return initialDejarik(firstPlayer);
   }
 }
 
@@ -316,6 +348,11 @@ export function applyMove(
     const s = state as FoxHoundsOnlineState;
     const houndsSeat = foxHoundsSeatForState(s, gameOptions);
     if (roleForSeat(seatIndex, houndsSeat) !== s.current) {
+      return { error: "Not your turn" };
+    }
+  } else if (slug === "dejarik") {
+    const s = state as DejarikOnlineState;
+    if (dejarikActivePlayer(s) !== seatIndex) {
       return { error: "Not your turn" };
     }
   } else if (state.current !== seatIndex) {
@@ -607,6 +644,42 @@ export function applyMove(
           winReason: null,
         },
         currentPlayer: seatForRole(nextRole, houndsSeat),
+      };
+    }
+
+    case "dejarik": {
+      const s = state as DejarikOnlineState;
+      let next: DejarikOnlineState | null = null;
+
+      if (move.type === "dejarik-place") {
+        if (s.phase !== "placement") return { error: "Invalid move type" };
+        next = applyPlacement(s, move.creature, move.cell);
+      } else if (move.type === "dejarik-move") {
+        if (s.phase !== "playing") return { error: "Invalid move type" };
+        next = applyDejarikMove(s, move.pieceId, move.to);
+      } else if (move.type === "dejarik-attack") {
+        if (s.phase !== "playing") return { error: "Invalid move type" };
+        next = applyDejarikAttack(s, move.pieceId, move.to);
+      } else if (move.type === "dejarik-scout-end") {
+        if (s.phase !== "playing") return { error: "Invalid move type" };
+        next = endScoutTurn(s);
+      } else {
+        return { error: "Invalid move type" };
+      }
+
+      if (!next) return { error: "Illegal move" };
+
+      if (next.phase === "game-over") {
+        return {
+          state: next,
+          currentPlayer: null,
+        };
+      }
+
+      const seat = dejarikSeatForState(next);
+      return {
+        state: next,
+        currentPlayer: seat,
       };
     }
 
