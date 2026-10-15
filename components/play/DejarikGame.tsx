@@ -408,7 +408,11 @@ export function DejarikGame() {
           }
           stats={
             placement
-              ? `配置 ${activeState.placementStep + 1}/8 · 先攻はプレイヤー ${activeState.firstPlayer + 1}`
+              ? `配置 ${activeState.placementStep + 1}/8 · 先攻は${
+                  isOnline
+                    ? formatSeatLabel(roomPlayers, activeState.firstPlayer)
+                    : `プレイヤー ${activeState.firstPlayer + 1}`
+                }`
               : [
                   `先攻: プレイヤー ${activeState.firstPlayer + 1}`,
                   stallLabelForPlayer(activeState, turnPlayer),
@@ -428,7 +432,9 @@ export function DejarikGame() {
             placement
               ? placementHint ??
                 (activeState.placementStep === 0
-                  ? `配置は後攻のプレイヤー ${placementSecond + 1} からです。`
+                  ? isOnline
+                    ? `配置は後攻の${formatSeatLabel(roomPlayers, placementSecond)} からです。`
+                    : `配置は後攻のプレイヤー ${placementSecond + 1} からです。`
                   : undefined)
               : scoutEndVisible
                 ? "スカウト：もう1操作できるか、盤下の「手番終了」を押してください。"

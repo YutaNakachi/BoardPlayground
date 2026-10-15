@@ -170,7 +170,9 @@ export type FoxHoundsOnlineState = {
 
 export type DejarikOnlineState = DejarikState;
 
-function dejarikActivePlayer(state: DejarikOnlineState): DejarikPlayer {
+/** 手番の seat（配置中は placementPlayer、対局中は current） */
+export function dejarikTurnSeat(state: DejarikOnlineState): number | null {
+  if (state.phase === "game-over") return null;
   if (state.phase === "placement") {
     return placementPlayer(state.placementStep, state.firstPlayer);
   }
@@ -178,8 +180,7 @@ function dejarikActivePlayer(state: DejarikOnlineState): DejarikPlayer {
 }
 
 function dejarikSeatForState(state: DejarikOnlineState): number | null {
-  if (state.phase === "game-over") return null;
-  return dejarikActivePlayer(state);
+  return dejarikTurnSeat(state);
 }
 
 function foxHoundsSeatForState(
@@ -352,7 +353,7 @@ export function applyMove(
     }
   } else if (slug === "dejarik") {
     const s = state as DejarikOnlineState;
-    if (dejarikActivePlayer(s) !== seatIndex) {
+    if (dejarikTurnSeat(s) !== seatIndex) {
       return { error: "Not your turn" };
     }
   } else if (state.current !== seatIndex) {
