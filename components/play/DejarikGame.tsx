@@ -53,7 +53,10 @@ export function DejarikGame() {
   const [mode, setMode] = useState<PlayMode>("local");
   const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [state, setState] = useState<DejarikState | null>(null);
-  const [selectedPieceId, setSelectedPieceId] = useState<number | null>(null);
+  const [pieceSelection, setPieceSelection] = useState<{
+    turnPlayer: number;
+    pieceId: number;
+  } | null>(null);
   const [placementType, setPlacementType] = useState<CreatureType | null>(null);
   const [placementHint, setPlacementHint] = useState<string | null>(null);
 
@@ -74,7 +77,7 @@ export function DejarikGame() {
     recordLocalPlay();
     setPlayMode({ mode: "local" });
     setState(initialDejarik());
-    setSelectedPieceId(null);
+    setPieceSelection(null);
     setPlacementType(null);
     setPlacementHint(null);
     setLocalPhase("active");
@@ -84,6 +87,21 @@ export function DejarikGame() {
     online.phase === "playing" || online.phase === "finished";
   const onlineState = online.gameState as DejarikOnlineState | null;
   const activeState = isOnline && onlineState ? onlineState : state;
+
+  const placement = activeState?.phase === "placement";
+  const playing = activeState?.phase === "playing";
+  const gameOver = activeState?.phase === "game-over";
+
+  const turnPlayer = activeState
+    ? placement
+      ? placementPlayer(activeState.placementStep, activeState.firstPlayer)
+      : activeState.current
+    : 0;
+
+  const selectedPieceId =
+    pieceSelection !== null && pieceSelection.turnPlayer === turnPlayer
+      ? pieceSelection.pieceId
+      : null;
 
   const activeSelectedPieceId = useMemo(() => {
     if (isOnline && !online.isMyTurn) return null;
@@ -95,16 +113,6 @@ export function DejarikGame() {
     activeState?.scoutPartial,
     selectedPieceId,
   ]);
-
-  const placement = activeState?.phase === "placement";
-  const playing = activeState?.phase === "playing";
-  const gameOver = activeState?.phase === "game-over";
-
-  const turnPlayer = activeState
-    ? placement
-      ? placementPlayer(activeState.placementStep, activeState.firstPlayer)
-      : activeState.current
-    : 0;
 
   const placementSecond = activeState
     ? secondPlayer(activeState.firstPlayer)
@@ -183,8 +191,10 @@ export function DejarikGame() {
           const next = applyDejarikAttack(activeState, selected, cell);
           if (next) {
             setState(next);
-            setSelectedPieceId(
-              next.scoutPartial?.pieceId === selected ? selected : null
+            setPieceSelection(
+              next.scoutPartial?.pieceId === selected
+                ? { turnPlayer, pieceId: selected }
+                : null
             );
           }
           return;
@@ -201,8 +211,10 @@ export function DejarikGame() {
           const next = applyDejarikMove(activeState, selected, cell);
           if (next) {
             setState(next);
-            setSelectedPieceId(
-              next.scoutPartial?.pieceId === selected ? selected : null
+            setPieceSelection(
+              next.scoutPartial?.pieceId === selected
+                ? { turnPlayer, pieceId: selected }
+                : null
             );
           }
           return;
@@ -210,18 +222,18 @@ export function DejarikGame() {
       }
 
       if (occupantId === null) {
-        setSelectedPieceId(null);
+        setPieceSelection(null);
         return;
       }
       const piece = activeState.pieces[occupantId];
       if (!piece || piece.owner !== activeState.current) {
-        setSelectedPieceId(null);
+        setPieceSelection(null);
         return;
       }
       if (activeState.scoutPartial && activeState.scoutPartial.pieceId !== occupantId) {
         return;
       }
-      setSelectedPieceId(occupantId);
+      setPieceSelection({ turnPlayer, pieceId: occupantId });
     },
     [
       activeState,
@@ -230,6 +242,7 @@ export function DejarikGame() {
       playing,
       placementType,
       activeSelectedPieceId,
+      turnPlayer,
       isOnline,
       online,
     ]
@@ -254,7 +267,7 @@ export function DejarikGame() {
     online.reset();
     setLocalPhase("setup");
     setState(null);
-    setSelectedPieceId(null);
+    setPieceSelection(null);
     setPlacementType(null);
     setPlacementHint(null);
     setMode("local");
@@ -489,13 +502,13 @@ export function DejarikGame() {
             onClick={() => {
               if (isOnline) {
                 void online.handleMove({ type: "dejarik-scout-end" });
-                setSelectedPieceId(null);
+                setPieceSelection(null);
                 return;
               }
               const next = endScoutTurn(activeState);
               if (next) {
                 setState(next);
-                setSelectedPieceId(null);
+                setPieceSelection(null);
               }
             }}
           >
