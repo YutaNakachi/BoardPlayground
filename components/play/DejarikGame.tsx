@@ -7,7 +7,10 @@ import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
-import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import {
+  PlaySetupSection,
+  setupPillClass,
+} from "@/components/play/shared/PlaySetupCard";
 import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { DejarikBoard } from "@/components/play/dejarik/DejarikBoard";
 import {

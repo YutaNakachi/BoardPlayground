@@ -6,6 +6,7 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { getGameBySlug } from "@/lib/games";
 import {
   PlaySetupCard,
+  PlaySetupStack,
   setupPillClass,
 } from "@/components/play/shared/PlaySetupCard";
 import {
@@ -101,7 +102,7 @@ export function OnlineSetupPanel({
           {waiting.code}
         </p>
         {waiting.extra}
-        <ul className="mt-6 space-y-2 text-sm text-slate-300">
+        <ul className="space-y-2 text-sm text-slate-300">
           {waiting.players.map((p) => (
             <li key={p.seatIndex}>
               席 {p.seatIndex + 1}: {p.displayName}
@@ -114,12 +115,12 @@ export function OnlineSetupPanel({
             type="button"
             onClick={waiting.onStart}
             disabled={loading}
-            className="btn-game mt-8"
+            className="btn-game"
           >
             {loading ? "開始中…" : "ゲーム開始"}
           </button>
         ) : (
-          <p className="mt-8 text-sm text-slate-400">
+          <p className="text-sm text-slate-400">
             {waiting.players.length < 2
               ? "相手の参加を待っています…"
               : "ホストの開始を待っています…"}
@@ -138,36 +139,32 @@ export function OnlineSetupPanel({
       />
 
       {displayMode === "local" ? (
-        <div className="mt-8">
-          <PlayModeLocalMatchTabs
-            kind={localMatchKind}
-            onKindChange={(kind) => {
-              setLocalMatchKind(kind);
-              onLocalMatchKindChange?.(kind);
-            }}
-            cpuSupported={cpuSupported}
-          />
-        </div>
+        <PlayModeLocalMatchTabs
+          kind={localMatchKind}
+          onKindChange={(kind) => {
+            setLocalMatchKind(kind);
+            onLocalMatchKindChange?.(kind);
+          }}
+          cpuSupported={cpuSupported}
+        />
       ) : null}
 
-      {displayMode === "local" && extra ? (
-        <div className="mt-8">{extra}</div>
-      ) : null}
+      {displayMode === "local" && extra ? extra : null}
 
-      {displayMode === "online" && onlineSupported && onlineExtra ? (
-        <div className="mt-8">{onlineExtra}</div>
-      ) : null}
+      {displayMode === "online" && onlineSupported && onlineExtra
+        ? onlineExtra
+        : null}
 
       {displayMode === "local" || !onlineSupported ? (
         <button
           type="button"
           onClick={() => onStartLocal(localMatchKind)}
-          className="btn-game mt-8"
+          className="btn-game"
         >
           ゲーム開始
         </button>
       ) : (
-        <div className="mt-8 space-y-6">
+        <PlaySetupStack>
           <div className="flex justify-center gap-2">
             <button
               type="button"
@@ -248,10 +245,10 @@ export function OnlineSetupPanel({
               </button>
             </form>
           )}
-        </div>
+        </PlaySetupStack>
       )}
 
-      {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
+      {error ? <p className="text-sm text-red-300">{error}</p> : null}
     </PlaySetupCard>
   );
 }
