@@ -85,10 +85,16 @@ export function DejarikGame() {
   const onlineState = online.gameState as DejarikOnlineState | null;
   const activeState = isOnline && onlineState ? onlineState : state;
 
-  useEffect(() => {
-    if (!isOnline || !onlineState?.scoutPartial) return;
-    setSelectedPieceId(onlineState.scoutPartial.pieceId);
-  }, [isOnline, onlineState?.scoutPartial]);
+  const activeSelectedPieceId = useMemo(() => {
+    if (isOnline && !online.isMyTurn) return null;
+    if (activeState?.scoutPartial) return activeState.scoutPartial.pieceId;
+    return selectedPieceId;
+  }, [
+    isOnline,
+    online.isMyTurn,
+    activeState?.scoutPartial,
+    selectedPieceId,
+  ]);
 
   const placement = activeState?.phase === "placement";
   const playing = activeState?.phase === "playing";
@@ -154,8 +160,7 @@ export function DejarikGame() {
 
       if (!playing) return;
 
-      const selected =
-        isOnline && !online.isMyTurn ? null : selectedPieceId;
+      const selected = activeSelectedPieceId;
 
       if (activeState.scoutPartial && selected !== activeState.scoutPartial.pieceId) {
         return;
@@ -224,7 +229,7 @@ export function DejarikGame() {
       placement,
       playing,
       placementType,
-      selectedPieceId,
+      activeSelectedPieceId,
       isOnline,
       online,
     ]
@@ -266,14 +271,14 @@ export function DejarikGame() {
       for (const c of placementHomeCells(turnPlayer)) {
         if (activeState.cells[c] === null) highlightCells.add(c);
       }
-    } else if (playing && selectedPieceId !== null && canInteract) {
+    } else if (playing && activeSelectedPieceId !== null && canInteract) {
       for (let c = 0; c < activeState.cells.length; c++) {
-        if (activeState.cells[c] === selectedPieceId) highlightCells.add(c);
+        if (activeState.cells[c] === activeSelectedPieceId) highlightCells.add(c);
       }
-      for (const d of legalMoveTargets(activeState, selectedPieceId)) {
+      for (const d of legalMoveTargets(activeState, activeSelectedPieceId)) {
         highlightCells.add(d);
       }
-      for (const d of legalAttackTargets(activeState, selectedPieceId)) {
+      for (const d of legalAttackTargets(activeState, activeSelectedPieceId)) {
         highlightCells.add(d);
       }
     }
@@ -360,7 +365,7 @@ export function DejarikGame() {
       ? "相手の手番です"
       : placement
         ? "盤下で型を選び、光ったホーム半円の空きマスをタップしてください。"
-        : selectedPieceId === null
+        : activeSelectedPieceId === null
           ? "自分のクリーチャーをタップしてください。"
           : "光った空マスで移動、光った敵マスで攻撃してください。"
     : undefined;
@@ -415,7 +420,7 @@ export function DejarikGame() {
             turnAction ??
             (placement
               ? "盤下で型を選び、光ったホーム半円の空きマスをタップしてください。"
-              : selectedPieceId === null
+              : activeSelectedPieceId === null
                 ? "自分のクリーチャーをタップしてください。"
                 : "光った空マスで移動、光った敵マスで攻撃してください。")
           }
@@ -437,7 +442,7 @@ export function DejarikGame() {
           state={activeState}
           highlightCells={highlightCells}
           highlightPlayer={turnPlayer}
-          selectedPieceId={canInteract ? selectedPieceId : null}
+          selectedPieceId={canInteract ? activeSelectedPieceId : null}
           onPointerDown={canInteract ? onBoardPointer : () => {}}
         />
         <p className="mt-2 text-center text-xs text-slate-500">
