@@ -514,3 +514,14 @@ export function needsPromotionChoice(moves: MiniShogiMove[]): boolean {
     moves[0].promote !== moves[1].promote
   );
 }
+
+export function sameMiniShogiMove(a: MiniShogiMove, b: MiniShogiMove): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "drop" && b.kind === "drop") {
+    return a.piece === b.piece && a.to === b.to;
+  }
+  if (a.kind === "move" && b.kind === "move") {
+    return a.from === b.from && a.to === b.to && a.promote === b.promote;
+  }
+  return false;
+}
