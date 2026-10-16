@@ -456,7 +456,6 @@ export function SenkaiSenkiGame() {
             <LocalCpuHumanSeatPicker
               humanSeat={humanSeat}
               onHumanSeatChange={setHumanSeat}
-              labels={{ first: "先手（下段）", second: "後手（上段）" }}
             />
           </>
         ) : null}
