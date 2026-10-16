@@ -53,6 +53,8 @@ export type GameMeta = {
   status: "playable" | "coming-soon";
   /** サイト掲載。ブラウザ実装済みで公開するゲームだけ true。 */
   listed: boolean;
+  /** 一覧掲載日 YYYY-MM-DD（listed: true のとき必須） */
+  listedAt?: string;
 };
 
 const games: GameMeta[] = [
@@ -101,6 +103,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-08-01",
   },
   {
     slug: "senkai-senki",
@@ -124,6 +127,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2026-03-01",
   },
   {
     slug: "chrono-split",
@@ -169,6 +173,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-08-29",
   },
   {
     slug: "mancala",
@@ -192,6 +197,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-09-12",
   },
   {
     slug: "gomoku",
@@ -215,6 +221,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-09-26",
   },
   {
     slug: "checkers",
@@ -238,6 +245,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-10-10",
   },
   {
     slug: "nine-mens-morris",
@@ -261,6 +269,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-10-24",
   },
   {
     slug: "tic-tac-toe",
@@ -283,6 +292,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-11-07",
   },
   {
     slug: "gravity-four",
@@ -305,6 +315,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-11-21",
   },
   {
     slug: "dots-and-boxes",
@@ -327,6 +338,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-12-05",
   },
   {
     slug: "nim",
@@ -349,6 +361,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2024-12-19",
   },
   {
     slug: "hex",
@@ -371,6 +384,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2025-01-02",
   },
   {
     slug: "fox-hounds",
@@ -394,6 +408,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2025-01-16",
   },
   {
     slug: "dejarik",
@@ -417,6 +432,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2026-10-10",
   },
   {
     slug: "dominoes",
@@ -486,6 +502,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2025-02-13",
   },
   {
     slug: "backgammon",
@@ -578,6 +595,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2025-02-27",
   },
   {
     slug: "klondike",
@@ -670,6 +688,7 @@ const games: GameMeta[] = [
     ],
     status: "playable",
     listed: true,
+    listedAt: "2025-03-13",
   },
 ];
 

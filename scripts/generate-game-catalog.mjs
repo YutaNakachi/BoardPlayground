@@ -20,7 +20,8 @@ function row(game) {
   const cpu = game.cpu ? "はい" : "—";
   const online = isOnlineGame(game.slug) ? "はい" : "—";
   const tags = game.tags.join("・");
-  return `| ${listed} | ${escCell(game.title)} | \`${game.slug}\` | ${ORIGIN_LABEL[game.origin]} | ${game.players} | ${game.durationMinutes} | ${COMPLEXITY_LABEL[game.complexity]} | ${cpu} | ${online} | ${escCell(tags)} | ${game.status} |`;
+  const listedAt = game.listedAt ?? "—";
+  return `| ${listed} | ${listedAt} | ${escCell(game.title)} | \`${game.slug}\` | ${ORIGIN_LABEL[game.origin]} | ${game.players} | ${game.durationMinutes} | ${COMPLEXITY_LABEL[game.complexity]} | ${cpu} | ${online} | ${escCell(tags)} | ${game.status} |`;
 }
 
 const all = [...getAllRegisteredGames()];
@@ -41,8 +42,8 @@ const lines = [
   "",
   "## 掲載中（サイト一覧に出る）",
   "",
-  "| 掲載 | タイトル | slug | 系統 | 人数 | 分 | 難易度 | CPU | オンライン | タグ | status |",
-  "| --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- |",
+  "| 掲載 | 掲載日 | タイトル | slug | 系統 | 人数 | 分 | 難易度 | CPU | オンライン | タグ | status |",
+  "| --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- |",
   ...listed.map(row),
   "",
 ];
@@ -50,8 +51,8 @@ const lines = [
 if (unlisted.length > 0) {
   lines.push("## 非掲載（実装はあるが一覧に出ない）", "");
   lines.push(
-    "| 掲載 | タイトル | slug | 系統 | 人数 | 分 | 難易度 | CPU | オンライン | タグ | status |",
-    "| --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- |",
+    "| 掲載 | 掲載日 | タイトル | slug | 系統 | 人数 | 分 | 難易度 | CPU | オンライン | タグ | status |",
+    "| --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- | --- |",
     ...unlisted.map(row),
     ""
   );

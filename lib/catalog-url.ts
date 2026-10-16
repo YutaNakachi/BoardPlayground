@@ -20,7 +20,13 @@ const COMPLEXITIES = new Set<GameComplexity>(["easy", "normal", "hard"]);
 const PLAYER_BUCKETS = new Set<PlayerBucket>(["solo", "two", "threePlus"]);
 const DURATION_BUCKETS = new Set<DurationBucket>(["short", "medium", "long"]);
 const TAGS = new Set<GameTag>(GAME_TAGS);
-const SORTS = new Set<CatalogSort>(["play_count", "duration", "listed"]);
+const SORTS = new Set<CatalogSort>(["play_count", "duration", "newest"]);
+
+function normalizeSortParam(param: string | null): CatalogSort | null {
+  if (!param) return null;
+  if (param === "listed") return "newest";
+  return SORTS.has(param as CatalogSort) ? (param as CatalogSort) : null;
+}
 
 function splitList(value: string | null): string[] {
   if (!value) return [];
@@ -51,11 +57,8 @@ export function parseCatalogSearchParams(
     online: searchParams.get("online") === "1",
   };
 
-  const sortParam = searchParams.get("sort");
-  const sort: CatalogSort =
-    sortParam && SORTS.has(sortParam as CatalogSort)
-      ? (sortParam as CatalogSort)
-      : DEFAULT_CATALOG_SORT;
+  const sortParam = normalizeSortParam(searchParams.get("sort"));
+  const sort: CatalogSort = sortParam ?? DEFAULT_CATALOG_SORT;
 
   const orderParam = searchParams.get("order");
   const defaultOrder = DEFAULT_CATALOG_SORT_ORDER[sort];
