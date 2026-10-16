@@ -89,7 +89,7 @@ export function ShogiGame() {
 
   const inCheck = useMemo(
     () => phase === "playing" && isShogiKingInCheck(state.board, state.current),
-    [phase, state]
+    [phase, state.board, state.current]
   );
 
   const finishIfNeeded = useCallback((next: ShogiState) => {
@@ -153,7 +153,7 @@ export function ShogiGame() {
       if (!moves.some((m) => m.kind === "move" && m.from === index)) return;
       setSelected(index);
     },
-    [phase, destinations, apply, dropPiece, state, moves, humanTurn, cpuThinking]
+    [phase, destinations, apply, dropPiece, state.board, state.current, moves, humanTurn, cpuThinking]
   );
 
   const onHandPiece = useCallback(
@@ -163,7 +163,7 @@ export function ShogiGame() {
       setSelected(null);
       setDropPiece((prev) => (prev === piece ? null : piece));
     },
-    [phase, state, humanTurn, cpuThinking]
+    [phase, state.hands, state.current, humanTurn, cpuThinking]
   );
 
   const backToSetup = useCallback(() => {

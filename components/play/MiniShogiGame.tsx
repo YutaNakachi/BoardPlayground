@@ -172,7 +172,7 @@ export function MiniShogiGame() {
 
   const inCheck = useMemo(
     () => phase === "playing" && isMiniKingInCheck(state.board, state.current),
-    [phase, state]
+    [phase, state.board, state.current]
   );
 
   const finishIfNeeded = useCallback((next: MiniShogiState) => {
@@ -264,7 +264,8 @@ export function MiniShogiGame() {
       selected,
       moves,
       apply,
-      state,
+      state.board,
+      state.current,
       humanTurn,
       cpuThinking,
     ]
@@ -278,7 +279,7 @@ export function MiniShogiGame() {
       setPendingPromotion(null);
       setDropPiece((prev) => (prev === piece ? null : piece));
     },
-    [phase, state, humanTurn, cpuThinking]
+    [phase, state.hands, state.current, humanTurn, cpuThinking]
   );
 
   const backToSetup = useCallback(() => {

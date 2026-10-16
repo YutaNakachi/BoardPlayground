@@ -82,7 +82,7 @@ export function ChessGame() {
 
   const inCheck = useMemo(
     () => phase === "playing" && isInCheck(state.board, state.current),
-    [phase, state]
+    [phase, state.board, state.current]
   );
 
   const finishIfNeeded = useCallback((next: ChessState) => {
@@ -154,7 +154,7 @@ export function ChessGame() {
       if (!moves.some((m) => m.from === index)) return;
       setSelected(index);
     },
-    [phase, destinations, apply, state, moves, humanTurn, cpuThinking]
+    [phase, destinations, apply, state.board, state.current, moves, humanTurn, cpuThinking]
   );
 
   const backToSetup = useCallback(() => {
