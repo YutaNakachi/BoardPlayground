@@ -72,6 +72,16 @@ import {
   type FoxHoundsWinReason,
   type Player as FoxHoundsPlayer,
 } from "@/lib/play/fox-hounds";
+import {
+  applyMiniShogiMove,
+  initialMiniShogiState,
+  miniShogiMoves,
+  miniShogiPositionKey,
+  miniShogiStatus,
+  sameMiniShogiMove,
+  type MiniShogiMove,
+  type MiniShogiState,
+} from "@/lib/play/mini-shogi";
 import type { CreatureType } from "@/lib/play/dejarik/board";
 import {
   applyDejarikAttack,
@@ -170,6 +180,11 @@ export type FoxHoundsOnlineState = {
 
 export type DejarikOnlineState = DejarikState;
 
+export type MiniShogiOnlineState = MiniShogiState & {
+  phase: "playing" | "game-over";
+  winner: Player | null;
+};
+
 /** 手番の seat（配置中は placementPlayer、対局中は current） */
 export function dejarikTurnSeat(state: DejarikOnlineState): number | null {
   if (state.phase === "game-over") return null;
@@ -204,7 +219,8 @@ export type GameState =
   | MancalaState
   | DotsBoxesOnlineState
   | FoxHoundsOnlineState
-  | DejarikOnlineState;
+  | DejarikOnlineState
+  | MiniShogiOnlineState;
 
 export type MovePayload =
   | { type: "place"; index: number }
@@ -217,7 +233,8 @@ export type MovePayload =
   | { type: "dejarik-place"; creature: CreatureType; cell: number }
   | { type: "dejarik-move"; pieceId: number; to: number }
   | { type: "dejarik-attack"; pieceId: number; to: number }
-  | { type: "dejarik-scout-end" };
+  | { type: "dejarik-scout-end" }
+  | { type: "mini-shogi"; move: MiniShogiMove };
 
 function mancalaWinner(pits: number[]): Player | "draw" {
   const p0 = pits[6];
@@ -321,7 +338,24 @@ export function createInitialState(
     }
     case "dejarik":
       return initialDejarik(firstPlayer);
+    case "mini-shogi": {
+      let base = initialMiniShogiState();
+      if (firstPlayer !== base.current) {
+        base = { ...base, current: firstPlayer };
+        const key = miniShogiPositionKey(base);
+        base = { ...base, positionCounts: { [key]: 1 } };
+      }
+      return { ...base, phase: "playing", winner: null };
+    }
   }
+}
+
+function miniShogiWinnerFromStatus(
+  status: ReturnType<typeof miniShogiStatus>
+): Player | null {
+  if (status.kind === "playing") return null;
+  if (status.kind === "repetition") return 1;
+  return status.winner;
 }
 
 function checkersGameOver(board: CheckersBoard, nextPlayer: Player): Player | null {
@@ -681,6 +715,38 @@ export function applyMove(
       return {
         state: next,
         currentPlayer: seat,
+      };
+    }
+
+    case "mini-shogi": {
+      const s = state as MiniShogiOnlineState;
+      if (move.type !== "mini-shogi") return { error: "Invalid move type" };
+      const legal = miniShogiMoves(s);
+      if (!legal.some((m) => sameMiniShogiMove(m, move.move))) {
+        return { error: "Illegal move" };
+      }
+      const { phase: _phase, winner: _winner, ...core } = s;
+      const nextCore = applyMiniShogiMove(core, move.move);
+      const status = miniShogiStatus(nextCore);
+      const winner = miniShogiWinnerFromStatus(status);
+      if (winner !== null) {
+        return {
+          state: {
+            ...nextCore,
+            phase: "game-over",
+            winner,
+          },
+          currentPlayer: null,
+        };
+      }
+      const nextPlayer = nextCore.current;
+      return {
+        state: {
+          ...nextCore,
+          phase: "playing",
+          winner: null,
+        },
+        currentPlayer: nextPlayer,
       };
     }
 

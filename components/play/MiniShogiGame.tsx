@@ -2,21 +2,32 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useState } from "react";
-import { ResultPanel } from "@/components/play/shared/ResultPanel";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
 import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
+import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
+import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { ShogiPieceTile } from "@/components/play/shared/ShogiPieceTile";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
+import type { MiniShogiOnlineState } from "@/lib/online/moves";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
 import {
   useCpuTurnScheduler,
   useLocalCpuMatch,
   useStateRef,
   localCpuTurnLabel,
 } from "@/hooks/useLocalCpuMatch";
-import type { PlayMode } from "@/lib/online/types";
 import { chooseMiniShogiMove } from "@/lib/play/ai/mini-shogi";
-import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyMiniShogiMove,
@@ -34,7 +45,10 @@ import {
   type MiniShogiStatus,
 } from "@/lib/play/mini-shogi";
 
-type Phase = "setup" | "playing" | "game-over";
+type LocalPhase = "setup" | "playing" | "game-over";
+
+const SETUP_DESCRIPTION =
+  "5×5の将棋です。敵陣の最奥段に入る・出るとき成れます。玉を詰めるか取れば勝ち。同一局面4回で後手勝ち。";
 
 const PLAYER_LABELS = ["先手（▲）", "後手（▽）"] as const;
 
@@ -49,6 +63,15 @@ function resultMessage(status: MiniShogiStatus): string {
     default:
       return "";
   }
+}
+
+function endReasonFromWinner(
+  state: MiniShogiState,
+  winner: number
+): string {
+  const status = miniShogiStatus(state);
+  if (status.kind !== "playing") return resultMessage(status);
+  return winner === 0 ? "先手の勝ちです。" : "後手の勝ちです。";
 }
 
 function HandPanel({
@@ -113,14 +136,20 @@ function HandPanel({
 
 export function MiniShogiGame() {
   const { recordLocalPlay, setPlayMode } = usePlayPage();
-  const [mode] = useState<PlayMode>("local");
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("mini-shogi");
+  const { firstPlayer, onFirstPlayerChange } = useOnlineFirstPlayer(online);
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [localPhase, setLocalPhase] = useState<LocalPhase>("setup");
   const [state, setState] = useState<MiniShogiState>(initialMiniShogiState);
   const [selected, setSelected] = useState<number | null>(null);
   const [dropPiece, setDropPiece] = useState<Droppable | null>(null);
-  const [winner, setWinner] = useState<number | null>(null);
+  const [localWinner, setLocalWinner] = useState<number | null>(null);
   const [endReason, setEndReason] = useState<string>("");
   const [pendingPromotion, setPendingPromotion] = useState<MiniShogiMove[] | null>(null);
+
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
 
   const {
     matchKind,
@@ -135,34 +164,64 @@ export function MiniShogiGame() {
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
-    isOnline: false,
-    localActive: phase === "playing" || phase === "game-over",
-    gameOver: phase === "game-over",
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
     turnPlayer: state.current,
   });
 
   const localSnapshotRef = useStateRef(state);
 
-  const startGame = useCallback(
-    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
-      setCpuDifficulty(difficulty);
-      setHumanSeat(seat);
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    }
+  }, [online.room?.code, online.phase, setPlayMode]);
+
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
       recordLocalPlay();
       prepareLocalStart(kind);
       setState(initialMiniShogiState());
       setSelected(null);
       setDropPiece(null);
-      setWinner(null);
+      setLocalWinner(null);
       setEndReason("");
       setPendingPromotion(null);
-      setPhase("playing");
+      setLocalPhase("playing");
     },
-    [recordLocalPlay, prepareLocalStart, setCpuDifficulty]
+    [recordLocalPlay, prepareLocalStart]
   );
 
+  const isOnline =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as MiniShogiOnlineState | null;
+
+  const activePhase =
+    isOnline && onlineState
+      ? onlineState.phase
+      : localPhase === "game-over"
+        ? "game-over"
+        : localPhase === "playing"
+          ? "playing"
+          : "setup";
+  const activeWinner =
+    isOnline && onlineState ? onlineState.winner : localWinner;
+
+  const boardState: MiniShogiState =
+    isOnline && onlineState
+      ? onlineState
+      : state;
+
   const moves = useMemo(
-    () => (phase === "playing" ? miniShogiMoves(state) : []),
-    [phase, state]
+    () =>
+      activePhase === "playing"
+        ? miniShogiMoves(boardState)
+        : [],
+    [activePhase, boardState]
   );
 
   const destinations = useMemo(() => {
@@ -174,22 +233,24 @@ export function MiniShogiGame() {
   }, [moves, selected, dropPiece]);
 
   const inCheck = useMemo(
-    () => phase === "playing" && isMiniKingInCheck(state.board, state.current),
-    [phase, state.board, state.current]
+    () =>
+      activePhase === "playing" &&
+      isMiniKingInCheck(boardState.board, boardState.current),
+    [activePhase, boardState.board, boardState.current]
   );
 
   const finishIfNeeded = useCallback((next: MiniShogiState) => {
     const status = miniShogiStatus(next);
     if (status.kind !== "playing") {
-      setWinner(status.winner);
+      setLocalWinner(status.winner);
       setEndReason(resultMessage(status));
-      setPhase("game-over");
+      setLocalPhase("game-over");
       return true;
     }
     return false;
   }, []);
 
-  const apply = useCallback(
+  const applyLocal = useCallback(
     (move: MiniShogiMove) => {
       const next = applyMiniShogiMove(state, move);
       setState(next);
@@ -201,9 +262,23 @@ export function MiniShogiGame() {
     [state, finishIfNeeded]
   );
 
+  const applyMove = useCallback(
+    (move: MiniShogiMove) => {
+      if (isOnline) {
+        void online.handleMove({ type: "mini-shogi", move });
+        setSelected(null);
+        setDropPiece(null);
+        setPendingPromotion(null);
+        return;
+      }
+      applyLocal(move);
+    },
+    [isOnline, online, applyLocal]
+  );
+
   const applyCpuMiniShogi = useCallback(
     (snapshot: MiniShogiState, move: MiniShogiMove) => {
-      if (phase !== "playing") return;
+      if (localPhase !== "playing") return;
       const next = applyMiniShogiMove(snapshot, move);
       setState(next);
       setSelected(null);
@@ -211,7 +286,7 @@ export function MiniShogiGame() {
       setPendingPromotion(null);
       finishIfNeeded(next);
     },
-    [phase, finishIfNeeded]
+    [localPhase, finishIfNeeded]
   );
 
   useCpuTurnScheduler({
@@ -227,8 +302,9 @@ export function MiniShogiGame() {
 
   const onSquare = useCallback(
     (index: number) => {
-      if (phase !== "playing" || pendingPromotion || !humanTurn || cpuThinking)
-        return;
+      if (activePhase !== "playing" || pendingPromotion) return;
+      if (isOnline && !online.isMyTurn) return;
+      if (!isOnline && (!humanTurn || cpuThinking)) return;
 
       const destMoves = dropPiece
         ? destinations.filter((m) => m.to === index)
@@ -237,7 +313,7 @@ export function MiniShogiGame() {
           : [];
 
       if (destMoves.length === 1) {
-        apply(destMoves[0]);
+        applyMove(destMoves[0]);
         return;
       }
       if (destMoves.length === 2 && needsPromotionChoice(destMoves)) {
@@ -245,8 +321,8 @@ export function MiniShogiGame() {
         return;
       }
 
-      const piece = state.board[index];
-      if (piece && piece.player === state.current) {
+      const piece = boardState.board[index];
+      if (piece && piece.player === boardState.current) {
         if (moves.some((m) => m.kind === "move" && m.from === index)) {
           setDropPiece(null);
           setPendingPromotion(null);
@@ -260,15 +336,17 @@ export function MiniShogiGame() {
       setPendingPromotion(null);
     },
     [
-      phase,
+      activePhase,
       pendingPromotion,
+      isOnline,
+      online.isMyTurn,
       dropPiece,
       destinations,
       selected,
       moves,
-      apply,
-      state.board,
-      state.current,
+      applyMove,
+      boardState.board,
+      boardState.current,
       humanTurn,
       cpuThinking,
     ]
@@ -276,37 +354,123 @@ export function MiniShogiGame() {
 
   const onHandPiece = useCallback(
     (piece: Droppable) => {
-      if (phase !== "playing" || !humanTurn || cpuThinking) return;
-      if (state.hands[state.current][piece] <= 0) return;
+      if (activePhase !== "playing") return;
+      if (isOnline && !online.isMyTurn) return;
+      if (!isOnline && (!humanTurn || cpuThinking)) return;
+      if (boardState.hands[boardState.current][piece] <= 0) return;
       setSelected(null);
       setPendingPromotion(null);
       setDropPiece((prev) => (prev === piece ? null : piece));
     },
-    [phase, state.hands, state.current, humanTurn, cpuThinking]
+    [
+      activePhase,
+      isOnline,
+      online.isMyTurn,
+      boardState.hands,
+      boardState.current,
+      humanTurn,
+      cpuThinking,
+    ]
   );
 
-  const backToSetup = useCallback(() => {
-    setPhase("setup");
-    setPlayMode({ mode: "local" });
-  }, [setPlayMode]);
-  usePlaySetupNavigation(phase === "setup", backToSetup);
+  const roomPlayers = isOnline ? online.players : [];
 
-  if (phase === "setup") {
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setSelected(null);
+    setDropPiece(null);
+    setLocalWinner(null);
+    setEndReason("");
+    setPendingPromotion(null);
+    setPlayMode({ mode: "local" });
+  }, [online.reset, setPlayMode]);
+
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") || online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
+
+  if (online.completingPendingJoin) {
+    return <PendingJoinConnecting />;
+  }
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="5五将棋"
-        description="5×5の将棋です。敵陣の最奥段に入る・出るとき成れます。玉を詰めるか取れば勝ち。同一局面4回で後手勝ち。"
-        playerCount={2}
-        playerOptions={[2]}
-        onPlayerCount={() => {}}
-        onStart={startGame}
+        description={SETUP_DESCRIPTION}
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={(displayName) => online.handleCreate(displayName)}
+        onJoinRoom={online.handleJoin}
+        onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+          />
+        )}
+        loading={online.loading}
+        initialJoinCode={online.joinCodeFromUrl}
+        error={online.error}
       />
     );
   }
 
-  const isGameOver = phase === "game-over" && winner !== null;
-  const winners = isGameOver ? [winner!] : null;
-  const current = state.current;
+  if (online.phase === "waiting" && online.room) {
+    return (
+      <OnlineSetupPanel
+        title="5五将棋"
+        description={SETUP_DESCRIPTION}
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          isHost: online.isHost,
+          onStart: () => online.handleStart({ firstPlayer }),
+          canStart: online.players.length >= 2,
+          extra: (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              onChange={online.isHost ? onFirstPlayerChange : undefined}
+              readOnly={!online.isHost}
+            />
+          ),
+        }}
+      />
+    );
+  }
+
+  const isGameOver = activePhase === "game-over" && activeWinner !== null;
+  const winners = isGameOver ? [activeWinner!] : null;
+  const current = boardState.current;
+  const canInteract =
+    (isOnline ? online.isMyTurn : humanTurn && !cpuThinking) && !isGameOver;
+
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    () => online.handleRematch({ firstPlayer }),
+    reset
+  );
+
+  const displayEndReason =
+    isOnline && onlineState && activeWinner !== null
+      ? endReasonFromWinner(onlineState, activeWinner)
+      : endReason;
 
   return (
     <div className="space-y-6">
@@ -314,21 +478,44 @@ export function MiniShogiGame() {
         <ResultPanel
           variant="inline"
           winners={winners}
-          onReplay={() => setPhase("setup")}
-          details={<p className="text-slate-400">{endReason}</p>}
+          winnersLabel={
+            isOnline
+              ? formatWinnersWithNames(roomPlayers, winners)
+              : undefined
+          }
+          {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                onChange={onFirstPlayerChange}
+              />
+            ) : undefined
+          }
+          details={<p className="text-slate-400">{displayEndReason}</p>}
         />
       )}
 
       {!isGameOver && (
         <TurnBanner
           playerIndex={current}
-          playerLabel={localCpuTurnLabel(matchKind, current, humanSeat,
-            PLAYER_LABELS[current]
-          )}
+          playerLabel={
+            isOnline
+              ? formatSeatLabel(roomPlayers, current, PLAYER_LABELS[current])
+              : localCpuTurnLabel(
+                  matchKind,
+                  current,
+                  humanSeat,
+                  PLAYER_LABELS[current]
+                )
+          }
           action={
             cpuThinking
               ? "CPUの手番…"
-              : inCheck
+              : isOnline && !online.isMyTurn
+                ? "相手の手番です"
+                : inCheck
                 ? "王手"
                 : dropPiece
                   ? `${miniShogiHandLabel(dropPiece)}を打つ`
@@ -339,14 +526,14 @@ export function MiniShogiGame() {
 
       <HandPanel
         playerIndex={1}
-        hand={state.hands[1]}
-        isCurrent={current === 1 && !isGameOver}
+        hand={boardState.hands[1]}
+        isCurrent={current === 1 && !isGameOver && canInteract}
         dropPiece={dropPiece}
         onHandPiece={onHandPiece}
       />
 
       <div className="mx-auto grid max-w-xs grid-cols-5 gap-0.5 rounded-xl border border-surface-border bg-amber-900/30 p-1.5 sm:max-w-sm">
-        {state.board.map((piece, index) => {
+        {boardState.board.map((piece, index) => {
           const isDest = destinations.some((m) => m.to === index);
           const isFrom = selected === index;
           return (
@@ -375,8 +562,8 @@ export function MiniShogiGame() {
 
       <HandPanel
         playerIndex={0}
-        hand={state.hands[0]}
-        isCurrent={current === 0 && !isGameOver}
+        hand={boardState.hands[0]}
+        isCurrent={current === 0 && !isGameOver && canInteract}
         dropPiece={dropPiece}
         onHandPiece={onHandPiece}
       />
@@ -399,7 +586,7 @@ export function MiniShogiGame() {
                   const move = pendingPromotion.find(
                     (m) => m.kind === "move" && m.promote
                   );
-                  if (move) apply(move);
+                  if (move) applyMove(move);
                 }}
                 className="flex-1 rounded-lg bg-accent px-4 py-3 text-sm font-medium text-white hover:bg-accent/90"
               >
@@ -411,7 +598,7 @@ export function MiniShogiGame() {
                   const move = pendingPromotion.find(
                     (m) => m.kind === "move" && !m.promote
                   );
-                  if (move) apply(move);
+                  if (move) applyMove(move);
                 }}
                 className="flex-1 rounded-lg border border-surface-border bg-surface px-4 py-3 text-sm font-medium text-slate-200 hover:bg-surface-border/30"
               >

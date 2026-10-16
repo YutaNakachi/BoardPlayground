@@ -173,6 +173,7 @@ export function validateGameOptions(
     case "hex":
     case "mancala":
     case "dejarik":
+    case "mini-shogi":
       return parseCommonGameOptions(raw);
     case "dots-and-boxes":
       return parseDotsBoxesGameOptions(raw);
