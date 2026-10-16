@@ -1,7 +1,7 @@
 "use client";
 
 import { setupPillClass } from "@/components/play/shared/PlaySetupCard";
-import type { CpuDifficulty } from "@/lib/play/senkai-senki/ai";
+import type { CpuDifficulty } from "@/lib/play/cpu/types";
 
 export type { CpuDifficulty };
 

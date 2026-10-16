@@ -5,8 +5,21 @@ import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DiceFace } from "@/components/play/shared/DiceFace";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import type { PlayMode } from "@/lib/online/types";
+import {
+  applyBackgammonCpuAction,
+  chooseBackgammonAction,
+} from "@/lib/play/ai/backgammon";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyBackgammonMove,
@@ -22,17 +35,77 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 export function BackgammonGame() {
-  const { recordLocalPlay } = usePlayPage();
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const [mode] = useState<PlayMode>("local");
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<BackgammonState>(initialBackgammon);
   const [selected, setSelected] = useState<number | "bar" | null>(null);
+  const [diceFaces, setDiceFaces] = useState<[number, number]>([1, 1]);
+  const [isRolling, setIsRolling] = useState(false);
+  const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startGame = useCallback(() => {
-    recordLocalPlay();
-    setState(initialBackgammon());
-    setSelected(null);
-    setPhase("playing");
-  }, [recordLocalPlay]);
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: false,
+    localActive: phase === "playing" || phase === "game-over",
+    gameOver: phase === "game-over",
+    turnPlayer: state.current,
+  });
+
+  const localSnapshotRef = useStateRef(state);
+
+  const startGame = useCallback(
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
+      setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setState(initialBackgammon());
+      setSelected(null);
+      setPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart, setCpuDifficulty]
+  );
+
+  const applyCpuBackgammon = useCallback(
+    (
+      snapshot: BackgammonState,
+      action: BackgammonMove | "roll" | "end-turn"
+    ) => {
+      if (phase !== "playing") return;
+      const next = applyBackgammonCpuAction(snapshot, action);
+      setState(next);
+      setSelected(null);
+      if (action === "roll" && next.dice) {
+        setDiceFaces([next.dice[0], next.dice[1]]);
+      }
+      if (next.winner != null) setPhase("game-over");
+    },
+    [phase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking && !isRolling,
+    difficulty: cpuDifficulty,
+    state,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseBackgammonAction(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuBackgammon,
+    canActOnSnapshot: (snapshot) =>
+      snapshot.winner === null && snapshot.current === cpuSeat,
+  });
 
   const moves = useMemo(
     () => (phase === "playing" ? backgammonMoves(state) : []),
@@ -44,10 +117,6 @@ export function BackgammonGame() {
     return moves.filter((m) => m.from === selected);
   }, [moves, selected]);
 
-  const [diceFaces, setDiceFaces] = useState<[number, number]>([1, 1]);
-  const [isRolling, setIsRolling] = useState(false);
-  const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
     return () => {
       if (rollTimerRef.current) clearInterval(rollTimerRef.current);
@@ -55,6 +124,7 @@ export function BackgammonGame() {
   }, []);
 
   const onRoll = useCallback(() => {
+    if (!humanTurn || cpuThinking) return;
     if (isRolling || state.dice || state.winner != null) return;
 
     setIsRolling(true);
@@ -76,7 +146,7 @@ export function BackgammonGame() {
         });
       }
     }, 70);
-  }, [isRolling, state.dice, state.winner]);
+  }, [isRolling, state.dice, state.winner, humanTurn, cpuThinking]);
 
   const apply = useCallback(
     (move: BackgammonMove) => {
@@ -91,7 +161,7 @@ export function BackgammonGame() {
 
   const onPoint = useCallback(
     (point: number) => {
-      if (phase !== "playing") return;
+      if (phase !== "playing" || !humanTurn || cpuThinking) return;
       const dest = destinations.find((m) => m.to === point);
       if (dest && selected != null) {
         apply(dest);
@@ -105,10 +175,13 @@ export function BackgammonGame() {
       if (checkerCount(state, player, point) > 0) setSelected(point);
       else setSelected(null);
     },
-    [phase, destinations, selected, apply, state]
+    [phase, destinations, selected, apply, state, humanTurn, cpuThinking]
   );
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
+  const backToSetup = useCallback(() => {
+    setPhase("setup");
+    setPlayMode({ mode: "local" });
+  }, [setPlayMode]);
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
@@ -143,8 +216,16 @@ export function BackgammonGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={player}
-        playerLabel={`プレイヤー ${player + 1}`}
-        action={state.dice ? `残りダイス: ${state.movesLeft.join(", ")}` : "サイコロを振る"}
+        playerLabel={localCpuTurnLabel(matchKind, player, humanSeat,
+          `プレイヤー ${player + 1}`
+        )}
+        action={
+          cpuThinking
+            ? "CPUの手番…"
+            : state.dice
+              ? `残りダイス: ${state.movesLeft.join(", ")}`
+              : "サイコロを振る"
+        }
       />
       )}
 
@@ -236,7 +317,7 @@ export function BackgammonGame() {
             </div>
           )}
 
-          {!state.dice && !isRolling ? (
+          {!state.dice && !isRolling && humanTurn && !cpuThinking ? (
             <button type="button" onClick={onRoll} className="btn-game">
               サイコロを振る
             </button>
@@ -244,7 +325,7 @@ export function BackgammonGame() {
         </div>
       ) : null}
 
-      {state.dice && moves.length === 0 && !isGameOver ? (
+      {state.dice && moves.length === 0 && !isGameOver && humanTurn && !cpuThinking ? (
         <div className="text-center">
           <button
             type="button"

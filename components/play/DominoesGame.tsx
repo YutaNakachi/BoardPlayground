@@ -4,8 +4,21 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import type { PlayMode } from "@/lib/online/types";
+import {
+  applyDominoCpuChoice,
+  chooseDominoMove,
+} from "@/lib/play/ai/dominoes";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import {
   applyDominoPlay,
   dominoPlays,
@@ -28,22 +41,85 @@ function DominoTileView({ high, low }: { high: number; low: number }) {
 }
 
 export function DominoesGame() {
-  const { recordLocalPlay } = usePlayPage();
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const [mode] = useState<PlayMode>("local");
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<DominoesState>(initialDominoes);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const startGame = useCallback(() => {
-    recordLocalPlay();
-    setState(initialDominoes());
-    setNotice(null);
-    setPhase("playing");
-  }, [recordLocalPlay]);
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: false,
+    localActive: phase === "playing" || phase === "game-over",
+    gameOver: phase === "game-over",
+    turnPlayer: state.current,
+  });
+
+  const localSnapshotRef = useStateRef(state);
+
+  const startGame = useCallback(
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
+      setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setState(initialDominoes());
+      setNotice(null);
+      setPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart, setCpuDifficulty]
+  );
+
+  const applyCpuDomino = useCallback(
+    (
+      snapshot: DominoesState,
+      choice: DominoPlay | "draw" | "pass"
+    ) => {
+      if (phase !== "playing") return;
+      const next = applyDominoCpuChoice(snapshot, choice);
+      if (!next) return;
+      setState(next);
+      setNotice(
+        choice === "draw"
+          ? "CPUが山札から1枚引きました"
+          : choice === "pass"
+            ? "CPUは出せないため手番を交代しました"
+            : null
+      );
+      if (next.winner != null) setPhase("game-over");
+    },
+    [phase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseDominoMove(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuDomino,
+    canActOnSnapshot: (snapshot) =>
+      snapshot.winner === null && snapshot.current === cpuSeat,
+  });
 
   const plays = useMemo(
     () => (phase === "playing" ? dominoPlays(state, state.current) : []),
     [phase, state]
   );
+
+  const canInteract = humanTurn && !cpuThinking;
 
   const play = useCallback(
     (p: DominoPlay) => {
@@ -57,6 +133,7 @@ export function DominoesGame() {
   );
 
   const onDraw = useCallback(() => {
+    if (!canInteract) return;
     const next = drawDomino(state);
     if (!next) return;
     setState(next);
@@ -64,9 +141,12 @@ export function DominoesGame() {
     if (dominoPlays(next, next.current).length === 0 && !next.boneyard.length) {
       setNotice("どちらも出せません。手番を交代します");
     }
-  }, [state]);
+  }, [state, canInteract]);
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
+  const backToSetup = useCallback(() => {
+    setPhase("setup");
+    setPlayMode({ mode: "local" });
+  }, [setPlayMode]);
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
@@ -101,8 +181,16 @@ export function DominoesGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
-        playerLabel={`プレイヤー ${state.current + 1}`}
-        action={plays.length === 0 ? "出せないときは山札から引く" : undefined}
+        playerLabel={localCpuTurnLabel(matchKind, state.current, humanSeat,
+          `プレイヤー ${state.current + 1}`
+        )}
+        action={
+          cpuThinking
+            ? "CPUの手番…"
+            : plays.length === 0
+              ? "出せないときは山札から引く"
+              : undefined
+        }
         notice={notice ?? undefined}
       />
       )}
@@ -124,12 +212,12 @@ export function DominoesGame() {
         <p className="text-center text-sm text-slate-400">あなたの手札</p>
         <div className="flex flex-wrap justify-center gap-2">
           {hand.map((tile) => {
-            const canPlay = plays.some((p) => p.tileId === tile.id);
+            const canPlayTile = canInteract && plays.some((p) => p.tileId === tile.id);
             return (
               <button
                 key={tile.id}
                 type="button"
-                disabled={!canPlay || isGameOver}
+                disabled={!canPlayTile || isGameOver}
                 onClick={() => {
                   const options = plays.filter((x) => x.tileId === tile.id);
                   if (options.length === 1) play(options[0]);
@@ -138,7 +226,7 @@ export function DominoesGame() {
                     play(left ?? options[0]);
                   }
                 }}
-                className={`transition ${canPlay ? "ring-2 ring-lime-300" : "opacity-60"}`}
+                className={`transition ${canPlayTile ? "ring-2 ring-lime-300" : "opacity-60"}`}
               >
                 <DominoTileView high={tile.high} low={tile.low} />
               </button>
@@ -147,7 +235,7 @@ export function DominoesGame() {
         </div>
       </div>
 
-      {plays.length === 0 && !isGameOver ? (
+      {plays.length === 0 && !isGameOver && canInteract ? (
         <div className="text-center">
           <button type="button" onClick={onDraw} className="btn-game">
             山札から引く

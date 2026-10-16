@@ -4,7 +4,9 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { ShogiPieceTile } from "@/components/play/shared/ShogiPieceTile";
@@ -19,6 +21,13 @@ import {
   formatWinnersWithNames,
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { chooseMiniShogiMove } from "@/lib/play/ai/mini-shogi";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyMiniShogiMove,
@@ -139,27 +148,53 @@ export function MiniShogiGame() {
   const [endReason, setEndReason] = useState<string>("");
   const [pendingPromotion, setPendingPromotion] = useState<MiniShogiMove[] | null>(null);
 
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: state.current,
+  });
+
+  const localSnapshotRef = useStateRef(state);
+
   useEffect(() => {
     if (
       online.room?.code &&
       (online.phase === "waiting" || online.phase === "playing")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [online.room?.code, online.phase, setPlayMode]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setState(initialMiniShogiState());
-    setSelected(null);
-    setDropPiece(null);
-    setLocalWinner(null);
-    setEndReason("");
-    setPendingPromotion(null);
-    setLocalPhase("playing");
-  }, [recordLocalPlay]);
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setState(initialMiniShogiState());
+      setSelected(null);
+      setDropPiece(null);
+      setLocalWinner(null);
+      setEndReason("");
+      setPendingPromotion(null);
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart]
+  );
 
   const isOnline =
     online.phase === "playing" || online.phase === "finished";
@@ -198,8 +233,10 @@ export function MiniShogiGame() {
   }, [moves, selected, dropPiece]);
 
   const inCheck = useMemo(
-    () => activePhase === "playing" && isMiniKingInCheck(boardState.board, boardState.current),
-    [activePhase, boardState]
+    () =>
+      activePhase === "playing" &&
+      isMiniKingInCheck(boardState.board, boardState.current),
+    [activePhase, boardState.board, boardState.current]
   );
 
   const finishIfNeeded = useCallback((next: MiniShogiState) => {
@@ -239,10 +276,35 @@ export function MiniShogiGame() {
     [isOnline, online, applyLocal]
   );
 
+  const applyCpuMiniShogi = useCallback(
+    (snapshot: MiniShogiState, move: MiniShogiMove) => {
+      if (localPhase !== "playing") return;
+      const next = applyMiniShogiMove(snapshot, move);
+      setState(next);
+      setSelected(null);
+      setDropPiece(null);
+      setPendingPromotion(null);
+      finishIfNeeded(next);
+    },
+    [localPhase, finishIfNeeded]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseMiniShogiMove(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuMiniShogi,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
   const onSquare = useCallback(
     (index: number) => {
       if (activePhase !== "playing" || pendingPromotion) return;
       if (isOnline && !online.isMyTurn) return;
+      if (!isOnline && (!humanTurn || cpuThinking)) return;
 
       const destMoves = dropPiece
         ? destinations.filter((m) => m.to === index)
@@ -283,7 +345,10 @@ export function MiniShogiGame() {
       selected,
       moves,
       applyMove,
-      boardState,
+      boardState.board,
+      boardState.current,
+      humanTurn,
+      cpuThinking,
     ]
   );
 
@@ -291,12 +356,21 @@ export function MiniShogiGame() {
     (piece: Droppable) => {
       if (activePhase !== "playing") return;
       if (isOnline && !online.isMyTurn) return;
+      if (!isOnline && (!humanTurn || cpuThinking)) return;
       if (boardState.hands[boardState.current][piece] <= 0) return;
       setSelected(null);
       setPendingPromotion(null);
       setDropPiece((prev) => (prev === piece ? null : piece));
     },
-    [activePhase, isOnline, online.isMyTurn, boardState]
+    [
+      activePhase,
+      isOnline,
+      online.isMyTurn,
+      boardState.hands,
+      boardState.current,
+      humanTurn,
+      cpuThinking,
+    ]
   );
 
   const roomPlayers = isOnline ? online.players : [];
@@ -332,6 +406,15 @@ export function MiniShogiGame() {
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+          />
+        )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
@@ -374,7 +457,8 @@ export function MiniShogiGame() {
   const isGameOver = activePhase === "game-over" && activeWinner !== null;
   const winners = isGameOver ? [activeWinner!] : null;
   const current = boardState.current;
-  const canInteract = !isOnline || online.isMyTurn;
+  const canInteract =
+    (isOnline ? online.isMyTurn : humanTurn && !cpuThinking) && !isGameOver;
 
   const replayProps = getOnlineResultReplayProps(
     isOnline,
@@ -419,12 +503,19 @@ export function MiniShogiGame() {
           playerLabel={
             isOnline
               ? formatSeatLabel(roomPlayers, current, PLAYER_LABELS[current])
-              : PLAYER_LABELS[current]
+              : localCpuTurnLabel(
+                  matchKind,
+                  current,
+                  humanSeat,
+                  PLAYER_LABELS[current]
+                )
           }
           action={
-            isOnline && !online.isMyTurn
-              ? "相手の手番です"
-              : inCheck
+            cpuThinking
+              ? "CPUの手番…"
+              : isOnline && !online.isMyTurn
+                ? "相手の手番です"
+                : inCheck
                 ? "王手"
                 : dropPiece
                   ? `${miniShogiHandLabel(dropPiece)}を打つ`

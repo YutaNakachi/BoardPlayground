@@ -12,7 +12,9 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -28,6 +30,13 @@ import {
   localizePlayerNotice,
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { chooseMancalaMove } from "@/lib/play/ai/mancala";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   inferMancalaSourcePit,
@@ -120,31 +129,90 @@ export function MancalaGame() {
   const onlineStateRef = useRef<MancalaState | null>(null);
   const opponentAnimTokenRef = useRef(0);
 
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: current,
+  });
+
+  const localSnapshotRef = useStateRef({ pits, current });
+
   useEffect(() => {
     if (
       online.room?.code &&
       (online.phase === "waiting" || online.phase === "playing")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [online.room?.code, online.phase, setPlayMode]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    const initial = initialMancala();
-    setPits(initial);
-    setAnimatedPits(initial);
-    setCurrent(0);
-    setNotice(null);
-    setPulseIndex(null);
-    setIsAnimating(false);
-    setLocalPhase("playing");
-  }, [recordLocalPlay]);
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      const initial = initialMancala();
+      setPits(initial);
+      setAnimatedPits(initial);
+      setCurrent(0);
+      setNotice(null);
+      setPulseIndex(null);
+      setIsAnimating(false);
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart]
+  );
 
-  const isOnline =
-    online.phase === "playing" || online.phase === "finished";
+  const applyCpuMancala = useCallback(
+    (snapshot: { pits: number[]; current: Player }, move: { pit: number }) => {
+      if (localPhase !== "playing" || isAnimating) return;
+      const result = sowMancala(snapshot.pits, snapshot.current, move.pit);
+      if (!result) return;
+      setPits(result.pits);
+      setAnimatedPits(result.pits);
+      setPulseIndex(null);
+      if (result.over) {
+        setLocalPhase("game-over");
+        setNotice(null);
+        return;
+      }
+      if (result.extraTurn) {
+        setNotice("最後の石が自分のゴールに入ったので、もう一度");
+        return;
+      }
+      setNotice(result.captured ? "向かいの石を取りました" : null);
+      setCurrent(snapshot.current === 0 ? 1 : 0);
+    },
+    [localPhase, isAnimating]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking && !isAnimating,
+    difficulty: cpuDifficulty,
+    state: { pits, current },
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseMancalaMove(snapshot.pits, snapshot.current, difficulty, cpuSeat),
+    applyMove: applyCpuMancala,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
+  const isOnline = isOnlinePlay;
   const onlineState = online.gameState as MancalaState | null;
 
   useEffect(() => {
@@ -426,7 +494,8 @@ export function MancalaGame() {
   const serverGameOver = activePhase === "game-over" && winners !== null;
   const isGameOver = serverGameOver && !(isOnline && onlineSowVisual);
   const showTurnBanner = !serverGameOver || (isOnline && onlineSowVisual);
-  const canPlayLocal = localPhase === "playing" && !isAnimating;
+  const canPlayLocal =
+    localPhase === "playing" && !isAnimating && humanTurn && !cpuThinking;
   const canPlayOnline =
     isOnline &&
     online.isMyTurn &&
@@ -473,6 +542,15 @@ export function MancalaGame() {
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+            />
+        )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
@@ -554,9 +632,17 @@ export function MancalaGame() {
       {showTurnBanner && (
         <TurnBanner
           playerIndex={bannerCurrent}
-          playerLabel={formatSeatLabel(roomPlayers, bannerCurrent)}
+          playerLabel={localCpuTurnLabel(matchKind, bannerCurrent, humanSeat,
+            formatSeatLabel(roomPlayers, bannerCurrent)
+          )}
           notice={activeNotice ?? undefined}
-          action={showTurnAction ? "相手の手番です" : undefined}
+          action={
+            cpuThinking
+              ? "CPUの手番…"
+              : showTurnAction
+                ? "相手の手番です"
+                : undefined
+          }
         />
       )}
 

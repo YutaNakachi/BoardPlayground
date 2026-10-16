@@ -15,6 +15,7 @@ import {
 } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
 import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
+import { LocalCpuHumanSeatPicker } from "@/components/play/shared/LocalCpuHumanSeatPicker";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import { chooseMove, type CpuDifficulty } from "@/lib/play/senkai-senki/ai";
@@ -452,24 +453,11 @@ export function SenkaiSenkiGame() {
                 onChange={setCpuDifficulty}
               />
             </PlaySetupSection>
-            <PlaySetupSection label="あなたの陣">
-              <div className="flex justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setHumanSeat(0)}
-                  className={setupPillClass(humanSeat === 0)}
-                >
-                  先手（下段）
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHumanSeat(1)}
-                  className={setupPillClass(humanSeat === 1)}
-                >
-                  後手（上段）
-                </button>
-              </div>
-            </PlaySetupSection>
+            <LocalCpuHumanSeatPicker
+              humanSeat={humanSeat}
+              onHumanSeatChange={setHumanSeat}
+              labels={{ first: "先手（下段）", second: "後手（上段）" }}
+            />
           </>
         ) : null}
         <button type="button" onClick={startGame} className="btn-game">

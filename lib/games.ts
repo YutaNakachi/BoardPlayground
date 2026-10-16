@@ -162,7 +162,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 8,
     complexity: "normal",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "コマ取り", "心理戦"],
     rulesSummary: [
@@ -186,7 +186,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 6,
     complexity: "normal",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "あつめる"],
     rulesSummary: [
@@ -210,7 +210,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 6,
     complexity: "easy",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "そろえる", "心理戦"],
     rulesSummary: [
@@ -234,7 +234,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 8,
     complexity: "normal",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "コマ取り"],
     rulesSummary: [
@@ -258,7 +258,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 10,
     complexity: "hard",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "コマ取り", "そろえる"],
     rulesSummary: [
@@ -282,7 +282,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 3,
     complexity: "easy",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "そろえる"],
     rulesSummary: [
@@ -305,7 +305,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 5,
     complexity: "easy",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "そろえる", "心理戦"],
     rulesSummary: [
@@ -328,7 +328,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 6,
     complexity: "easy",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "あつめる"],
     rulesSummary: [
@@ -351,7 +351,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 5,
     complexity: "easy",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "あつめる"],
     rulesSummary: [
@@ -374,7 +374,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 8,
     complexity: "hard",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "そろえる", "心理戦"],
     rulesSummary: [
@@ -397,7 +397,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 5,
     complexity: "easy",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "心理戦"],
     rulesSummary: [
@@ -445,7 +445,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 8,
     complexity: "easy",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["カード", "心理戦", "運要素"],
     rulesSummary: [
@@ -515,7 +515,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 12,
     complexity: "normal",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "すごろく", "運要素"],
     rulesSummary: [
@@ -538,7 +538,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 25,
     complexity: "hard",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "コマ取り", "心理戦"],
     rulesSummary: [
@@ -561,7 +561,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 40,
     complexity: "hard",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "コマ取り", "心理戦"],
     rulesSummary: [
@@ -584,7 +584,7 @@ const games: GameMeta[] = [
     playersMax: 2,
     durationMinutes: 12,
     complexity: "normal",
-    cpu: false,
+    cpu: true,
     team: false,
     tags: ["ボード", "コマ取り", "心理戦"],
     rulesSummary: [

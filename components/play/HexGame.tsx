@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -20,6 +22,13 @@ import {
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { applyHexCpuChoice, chooseHexMove } from "@/lib/play/ai/hex";
+import {
   applyHexSwap,
   declineHexSwap,
   HEX_GRID_STROKE,
@@ -32,6 +41,7 @@ import {
   hexPolygonPoints,
   hexViewBox,
   hexWinPath,
+  hexWinResult,
   initialHexState,
   placeHexStone,
   stoneForPlayer,
@@ -188,25 +198,78 @@ export function HexGame() {
   const [lastPlaced, setLastPlaced] = useState<number | null>(null);
   const [winResult, setWinResult] = useState<HexWinResult | null>(null);
 
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: game.current,
+  });
+
+  const localSnapshotRef = useStateRef(game);
+
   useEffect(() => {
     if (
       online.room?.code &&
       (online.phase === "waiting" || online.phase === "playing")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [online.room?.code, online.phase, setPlayMode]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setGame(initialHexState());
-    setHoverIndex(null);
-    setLastPlaced(null);
-    setWinResult(null);
-    setLocalPhase("playing");
-  }, [recordLocalPlay]);
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setGame(initialHexState());
+      setHoverIndex(null);
+      setLastPlaced(null);
+      setWinResult(null);
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart]
+  );
+
+  const applyCpuHex = useCallback(
+    (snapshot: LocalHexState, choice: number | "decline-swap") => {
+      if (localPhase !== "playing") return;
+      const next = applyHexCpuChoice(snapshot, choice);
+      if (!next) return;
+      setGame(next);
+      if (typeof choice === "number") setLastPlaced(choice);
+      const win = hexWinResult(next.board);
+      if (win) {
+        setWinResult(win);
+        setLocalPhase("game-over");
+      }
+    },
+    [localPhase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state: game,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseHexMove(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuHex,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
 
   const resetLocal = useCallback(() => {
     setGame(initialHexState());
@@ -216,8 +279,7 @@ export function HexGame() {
     setLocalPhase("playing");
   }, []);
 
-  const isOnline =
-    online.phase === "playing" || online.phase === "finished";
+  const isOnline = isOnlinePlay;
   const onlineState = online.gameState as OnlineHexState | null;
 
   const activeBoard = isOnline && onlineState ? onlineState.board : game.board;
@@ -294,7 +356,11 @@ export function HexGame() {
   usePlaySetupNavigation(isSetupScreen, reset);
 
   const isGameOver = activePhase === "game-over" && winners !== null;
-  const canPlace = (isOnline ? online.isMyTurn : true) && !isGameOver && !game.swapPending;
+  const canPlace =
+    (isOnline ? online.isMyTurn : humanTurn) &&
+    !isGameOver &&
+    !game.swapPending &&
+    !cpuThinking;
   const previewStone = isOnline
     ? (activeCurrent as Stone)
     : stoneForPlayer(game, game.current);
@@ -315,6 +381,15 @@ export function HexGame() {
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+            />
+        )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
@@ -361,17 +436,19 @@ export function HexGame() {
     reset
   );
 
-  const turnAction = isOnline
-    ? !online.isMyTurn
-      ? "相手の手番です"
-      : activeCurrent === 0
-        ? "南北の辺をつなぐ"
-        : "東西の辺をつなぐ"
-    : game.swapPending
-      ? "スワップするか、そのまま打ってください"
-      : previewStone === 0
-        ? "南北の辺をつなぐ"
-        : "東西の辺をつなぐ";
+  const turnAction = cpuThinking
+    ? "CPUの手番…"
+    : isOnline
+      ? !online.isMyTurn
+        ? "相手の手番です"
+        : activeCurrent === 0
+          ? "南北の辺をつなぐ"
+          : "東西の辺をつなぐ"
+      : game.swapPending
+        ? "スワップするか、そのまま打ってください"
+        : previewStone === 0
+          ? "南北の辺をつなぐ"
+          : "東西の辺をつなぐ";
 
   const winDetails = isOnline && onlineState?.winner !== null
     ? `${getSeatDisplayName(roomPlayers, onlineState!.winner!)} が両端をつなぎました。`
@@ -411,7 +488,9 @@ export function HexGame() {
           playerLabel={
             isOnline
               ? formatSeatLabel(roomPlayers, activeCurrent)
-              : stoneLabel(game, game.current)
+              : localCpuTurnLabel(matchKind, game.current, humanSeat,
+                  stoneLabel(game, game.current)
+                )
           }
           action={turnAction}
         />

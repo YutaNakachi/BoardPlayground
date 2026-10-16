@@ -4,7 +4,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { getGameBySlug } from "@/lib/games";
-import { PlaySetupCard, setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
+import { LocalCpuHumanSeatPicker } from "@/components/play/shared/LocalCpuHumanSeatPicker";
+import { PlaySetupCard, PlaySetupSection, setupPillClass } from "@/components/play/shared/PlaySetupCard";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import {
   PlayModeLocalMatchTabs,
   type LocalMatchSetupKind,
@@ -19,7 +22,11 @@ type Props = {
   description: string;
   playerCount: number;
   onPlayerCount: (n: number) => void;
-  onStart: () => void;
+  onStart: (
+    kind: LocalMatchSetupKind,
+    cpuDifficulty: CpuDifficulty,
+    humanSeat: BinaryPlayer
+  ) => void;
   extra?: ReactNode;
   playerOptions?: number[];
   /** オンライン部屋対応（未指定時は false＝オンライン pill はグレーアウト） */
@@ -43,6 +50,8 @@ export function SetupPanel({
     useState<SetupLocalOnlineMode>("local");
   const [localMatchKind, setLocalMatchKind] =
     useState<LocalMatchSetupKind>("pvp");
+  const [cpuDifficulty, setCpuDifficulty] = useState<CpuDifficulty>("normal");
+  const [humanSeat, setHumanSeat] = useState<BinaryPlayer>(0);
 
   const showLocalMatchTabs =
     showPlayModeTabs && localOnlineMode === "local";
@@ -79,7 +88,25 @@ export function SetupPanel({
         </div>
       ) : null}
       {extra ?? null}
-      <button type="button" onClick={onStart} className="btn-game">
+      {showLocalMatchTabs && localMatchKind === "cpu" ? (
+        <>
+          <PlaySetupSection label="CPUの強さ">
+            <CpuDifficultyPicker
+              value={cpuDifficulty}
+              onChange={setCpuDifficulty}
+            />
+          </PlaySetupSection>
+          <LocalCpuHumanSeatPicker
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+          />
+        </>
+      ) : null}
+      <button
+        type="button"
+        onClick={() => onStart(localMatchKind, cpuDifficulty, humanSeat)}
+        className="btn-game"
+      >
         ゲーム開始
       </button>
     </PlaySetupCard>

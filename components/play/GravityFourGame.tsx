@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -20,6 +22,13 @@ import {
   getSeatDisplayName,
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { chooseGravityFourMove } from "@/lib/play/ai/gravity-four";
 import {
   dropGravityFour,
   emptyGravityFourBoard,
@@ -46,27 +55,85 @@ export function GravityFourGame() {
   const [current, setCurrent] = useState<Player>(0);
   const [winner, setWinner] = useState<Player | "draw" | null>(null);
 
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: current,
+  });
+
+  const localSnapshotRef = useStateRef({ board, current });
+
   useEffect(() => {
     if (
       online.room?.code &&
       (online.phase === "waiting" || online.phase === "playing")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [online.room?.code, online.phase, setPlayMode]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setBoard(emptyGravityFourBoard());
-    setCurrent(0);
-    setWinner(null);
-    setLocalPhase("playing");
-  }, [recordLocalPlay]);
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setBoard(emptyGravityFourBoard());
+      setCurrent(0);
+      setWinner(null);
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart]
+  );
 
-  const isOnline =
-    online.phase === "playing" || online.phase === "finished";
+  const applyCpuDrop = useCallback(
+    (snapshot: { board: Board; current: Player }, col: number) => {
+      if (localPhase !== "playing") return;
+      const next = dropGravityFour(snapshot.board, col, snapshot.current);
+      if (!next) return;
+      setBoard(next);
+      const won = gravityFourWinner(next);
+      if (won !== null) {
+        setWinner(won);
+        setLocalPhase("game-over");
+        return;
+      }
+      if (gravityFourBoardFull(next)) {
+        setWinner("draw");
+        setLocalPhase("game-over");
+        return;
+      }
+      setCurrent(snapshot.current === 0 ? 1 : 0);
+    },
+    [localPhase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state: { board, current },
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseGravityFourMove(snapshot.board, snapshot.current, difficulty, cpuSeat),
+    applyMove: applyCpuDrop,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
+  const isOnline = isOnlinePlay;
   const onlineState = online.gameState as GravityFourState | null;
 
   const activeBoard = isOnline && onlineState ? onlineState.board : board;
@@ -147,6 +214,15 @@ export function GravityFourGame() {
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+            />
+        )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
@@ -187,7 +263,8 @@ export function GravityFourGame() {
   }
 
   const isGameOver = activePhase === "game-over" && winners !== null;
-  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const canInteract =
+    (isOnline ? online.isMyTurn : humanTurn) && !isGameOver && !cpuThinking;
   const replayProps = getOnlineResultReplayProps(
     isOnline,
     online.isHost,
@@ -228,11 +305,15 @@ export function GravityFourGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={activeCurrent}
-          playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+          playerLabel={localCpuTurnLabel(matchKind, activeCurrent, humanSeat,
+            formatSeatLabel(roomPlayers, activeCurrent)
+          )}
           action={
-            isOnline && !online.isMyTurn
-              ? "相手の手番です"
-              : "列をタップして石を落とす"
+            cpuThinking
+              ? "CPUの手番…"
+              : isOnline && !online.isMyTurn
+                ? "相手の手番です"
+                : "列をタップして石を落とす"
           }
         />
       )}

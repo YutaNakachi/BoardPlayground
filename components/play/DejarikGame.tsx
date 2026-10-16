@@ -9,6 +9,7 @@ import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConne
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { CpuDifficultyPicker } from "@/components/play/shared/CpuDifficultyPicker";
+import { LocalCpuHumanSeatPicker } from "@/components/play/shared/LocalCpuHumanSeatPicker";
 import {
   PlaySetupSection,
   setupPillClass,
@@ -453,24 +454,11 @@ export function DejarikGame() {
                   onChange={setCpuDifficulty}
                 />
               </PlaySetupSection>
-              <PlaySetupSection label="あなたの陣">
-                <div className="flex justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setHumanSeat(0)}
-                    className={setupPillClass(humanSeat === 0)}
-                  >
-                    先手（下段）
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHumanSeat(1)}
-                    className={setupPillClass(humanSeat === 1)}
-                  >
-                    後手（上段）
-                  </button>
-                </div>
-              </PlaySetupSection>
+              <LocalCpuHumanSeatPicker
+                humanSeat={humanSeat}
+                onHumanSeatChange={setHumanSeat}
+                labels={{ first: "先手（下段）", second: "後手（上段）" }}
+              />
             </>
           ) : null
         }

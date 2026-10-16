@@ -4,8 +4,18 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import type { PlayMode } from "@/lib/online/types";
+import { chooseMorrisMove } from "@/lib/play/ai/nine-mens-morris";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import { playerPieceClasses } from "@/lib/player-colors";
 import {
   clickMorris,
@@ -22,15 +32,63 @@ import {
 type Phase = "setup" | "playing";
 
 export function NineMensMorrisGame() {
-  const { recordLocalPlay } = usePlayPage();
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const [mode] = useState<PlayMode>("local");
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<MorrisState>(initialMorrisState);
 
-  const startGame = useCallback(() => {
-    recordLocalPlay();
-    setState(initialMorrisState());
-    setPhase("playing");
-  }, [recordLocalPlay]);
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: false,
+    localActive: phase === "playing",
+    gameOver: state.over,
+    turnPlayer: state.current,
+  });
+
+  const localSnapshotRef = useStateRef(state);
+
+  const startGame = useCallback(
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
+      setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setState(initialMorrisState());
+      setPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart, setCpuDifficulty]
+  );
+
+  const applyCpuMorris = useCallback(
+    (snapshot: MorrisState, action: { point: number }) => {
+      if (phase !== "playing" || snapshot.over) return;
+      setState(clickMorris(snapshot, action.point));
+    },
+    [phase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseMorrisMove(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuMorris,
+    canActOnSnapshot: (snapshot) =>
+      !snapshot.over && snapshot.current === cpuSeat,
+  });
 
   const dests = useMemo(() => {
     if (state.selected == null || state.removing) return [];
@@ -45,13 +103,16 @@ export function NineMensMorrisGame() {
 
   const onPoint = useCallback(
     (index: number) => {
-      if (phase !== "playing" || state.over) return;
+      if (phase !== "playing" || state.over || !humanTurn || cpuThinking) return;
       setState((prev) => clickMorris(prev, index));
     },
-    [phase, state.over]
+    [phase, state.over, humanTurn, cpuThinking]
   );
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
+  const backToSetup = useCallback(() => {
+    setPhase("setup");
+    setPlayMode({ mode: "local" });
+  }, [setPlayMode]);
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
@@ -98,8 +159,10 @@ export function NineMensMorrisGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
-        playerLabel={`プレイヤー ${state.current + 1}`}
-        action={right}
+        playerLabel={localCpuTurnLabel(matchKind, state.current, humanSeat,
+          `プレイヤー ${state.current + 1}`
+        )}
+        action={cpuThinking ? "CPUの手番…" : right}
         notice={state.notice ?? undefined}
       />
       )}

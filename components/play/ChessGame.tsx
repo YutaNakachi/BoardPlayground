@@ -6,6 +6,16 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import type { PlayMode } from "@/lib/online/types";
+import { chooseChessMove } from "@/lib/play/ai/chess";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import { playerPieceClasses } from "@/lib/player-colors";
 import {
   applyChessMove,
@@ -21,19 +31,47 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 export function ChessGame() {
-  const { recordLocalPlay } = usePlayPage();
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const [mode] = useState<PlayMode>("local");
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<ChessState>(initialChessState);
   const [selected, setSelected] = useState<number | null>(null);
   const [result, setResult] = useState<{ winners: number[]; message: string } | null>(null);
 
-  const startGame = useCallback(() => {
-    recordLocalPlay();
-    setState(initialChessState());
-    setSelected(null);
-    setResult(null);
-    setPhase("playing");
-  }, [recordLocalPlay]);
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: false,
+    localActive: phase === "playing" || phase === "game-over",
+    gameOver: phase === "game-over",
+    turnPlayer: state.current,
+  });
+
+  const localSnapshotRef = useStateRef(state);
+
+  const startGame = useCallback(
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
+      setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setState(initialChessState());
+      setSelected(null);
+      setResult(null);
+      setPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart, setCpuDifficulty, setHumanSeat]
+  );
 
   const moves = useMemo(
     () => (phase === "playing" ? chessMoves(state) : []),
@@ -47,7 +85,7 @@ export function ChessGame() {
 
   const inCheck = useMemo(
     () => phase === "playing" && isInCheck(state.board, state.current),
-    [phase, state]
+    [phase, state.board, state.current]
   );
 
   const finishIfNeeded = useCallback((next: ChessState) => {
@@ -81,9 +119,31 @@ export function ChessGame() {
     [state, finishIfNeeded]
   );
 
+  const applyCpuChess = useCallback(
+    (snapshot: ChessState, move: ChessMove) => {
+      if (phase !== "playing") return;
+      const next = applyChessMove(snapshot, move);
+      setState(next);
+      setSelected(null);
+      finishIfNeeded(next);
+    },
+    [phase, finishIfNeeded]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseChessMove(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuChess,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
   const onSquare = useCallback(
     (index: number) => {
-      if (phase !== "playing") return;
+      if (phase !== "playing" || !humanTurn || cpuThinking) return;
       const dest = destinations.find((m) => m.to === index);
       if (dest) {
         apply(dest);
@@ -97,10 +157,13 @@ export function ChessGame() {
       if (!moves.some((m) => m.from === index)) return;
       setSelected(index);
     },
-    [phase, destinations, apply, state, moves]
+    [phase, destinations, apply, state.board, state.current, moves, humanTurn, cpuThinking]
   );
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
+  const backToSetup = useCallback(() => {
+    setPhase("setup");
+    setPlayMode({ mode: "local" });
+  }, [setPlayMode]);
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
@@ -135,8 +198,12 @@ export function ChessGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}`}
-        action={inCheck ? "チェック" : undefined}
+        playerLabel={localCpuTurnLabel(matchKind, current, humanSeat,
+          `プレイヤー ${current + 1}`
+        )}
+        action={
+          cpuThinking ? "CPUの手番…" : inCheck ? "チェック" : undefined
+        }
       />
       )}
 
