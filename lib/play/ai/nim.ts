@@ -39,12 +39,12 @@ export function chooseNimMove(
   const optimal = optimalNimMove(heaps);
 
   if (difficulty === "easy") {
-    if (optimal && Math.random() < 0.35) return optimal;
+    if (optimal && Math.random() < 0.78) return optimal;
     return pickRandom(legal);
   }
 
   if (difficulty === "normal") {
-    if (optimal && Math.random() < 0.85) return optimal;
+    if (optimal) return optimal;
     return pickRandom(legal);
   }
 

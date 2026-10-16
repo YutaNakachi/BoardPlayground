@@ -209,6 +209,8 @@ export function HexGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -384,7 +386,9 @@ export function HexGame() {
             kind={kind}
             difficulty={cpuDifficulty}
             onDifficultyChange={setCpuDifficulty}
-          />
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+            />
         )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
@@ -484,10 +488,7 @@ export function HexGame() {
           playerLabel={
             isOnline
               ? formatSeatLabel(roomPlayers, activeCurrent)
-              : localCpuTurnLabel(
-                  matchKind,
-                  game.current,
-                  0,
+              : localCpuTurnLabel(matchKind, game.current, humanSeat,
                   stoneLabel(game, game.current)
                 )
           }

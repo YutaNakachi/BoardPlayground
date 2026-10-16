@@ -140,6 +140,8 @@ export function MancalaGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -545,7 +547,9 @@ export function MancalaGame() {
             kind={kind}
             difficulty={cpuDifficulty}
             onDifficultyChange={setCpuDifficulty}
-          />
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+            />
         )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
@@ -628,10 +632,7 @@ export function MancalaGame() {
       {showTurnBanner && (
         <TurnBanner
           playerIndex={bannerCurrent}
-          playerLabel={localCpuTurnLabel(
-            matchKind,
-            bannerCurrent,
-            0,
+          playerLabel={localCpuTurnLabel(matchKind, bannerCurrent, humanSeat,
             formatSeatLabel(roomPlayers, bannerCurrent)
           )}
           notice={activeNotice ?? undefined}

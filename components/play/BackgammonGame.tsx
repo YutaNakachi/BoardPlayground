@@ -19,7 +19,7 @@ import {
   applyBackgammonCpuAction,
   chooseBackgammonAction,
 } from "@/lib/play/ai/backgammon";
-import type { CpuDifficulty } from "@/lib/play/cpu/types";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyBackgammonMove,
@@ -52,6 +52,8 @@ export function BackgammonGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -64,8 +66,9 @@ export function BackgammonGame() {
   const localSnapshotRef = useStateRef(state);
 
   const startGame = useCallback(
-    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty) => {
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
       setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
       recordLocalPlay();
       prepareLocalStart(kind);
       setState(initialBackgammon());
@@ -213,10 +216,7 @@ export function BackgammonGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={player}
-        playerLabel={localCpuTurnLabel(
-          matchKind,
-          player,
-          0,
+        playerLabel={localCpuTurnLabel(matchKind, player, humanSeat,
           `プレイヤー ${player + 1}`
         )}
         action={

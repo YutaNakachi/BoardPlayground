@@ -64,6 +64,8 @@ export function ReversiGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -226,7 +228,9 @@ export function ReversiGame() {
             kind={kind}
             difficulty={cpuDifficulty}
             onDifficultyChange={setCpuDifficulty}
-          />
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+            />
         )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
@@ -303,10 +307,7 @@ export function ReversiGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={localCpuTurnLabel(
-          matchKind,
-          activeCurrent,
-          0,
+        playerLabel={localCpuTurnLabel(matchKind, activeCurrent, humanSeat,
           formatSeatLabel(roomPlayers, activeCurrent)
         )}
         action={

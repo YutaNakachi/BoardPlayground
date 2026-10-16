@@ -96,7 +96,10 @@ export function chooseTttMove(
   const legal = legalCells(snapshot.board);
   if (legal.length === 0) return null;
 
-  if (difficulty === "hard" && snapshot.mode === "classic") {
+  if (
+    (difficulty === "hard" || difficulty === "normal") &&
+    snapshot.mode === "classic"
+  ) {
     let bestIndex: number | null = null;
     let best = -Infinity;
     for (const index of legal) {

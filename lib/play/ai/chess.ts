@@ -70,7 +70,7 @@ export function chooseChessMove(
   const legal = chessMoves(state);
   if (legal.length === 0) return null;
 
-  const depth = difficulty === "hard" ? 3 : difficulty === "normal" ? 2 : 1;
+  const depth = difficulty === "hard" ? 4 : difficulty === "normal" ? 3 : 2;
 
   if (difficulty !== "easy") {
     let best: ChessMove | null = null;

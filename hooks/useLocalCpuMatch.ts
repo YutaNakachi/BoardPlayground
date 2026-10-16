@@ -19,7 +19,6 @@ type UseLocalCpuMatchOptions = {
   localActive: boolean;
   gameOver: boolean;
   turnPlayer: BinaryPlayer;
-  humanSeat?: BinaryPlayer;
 };
 
 export function useLocalCpuMatch({
@@ -29,11 +28,10 @@ export function useLocalCpuMatch({
   localActive,
   gameOver,
   turnPlayer,
-  humanSeat: humanSeatProp = 0,
 }: UseLocalCpuMatchOptions) {
   const [matchKind, setMatchKind] = useState<LocalMatchSetupKind>("pvp");
   const [cpuDifficulty, setCpuDifficulty] = useState<CpuDifficulty>("normal");
-  const humanSeat = humanSeatProp;
+  const [humanSeat, setHumanSeat] = useState<BinaryPlayer>(0);
   const cpuSeat: BinaryPlayer = humanSeat === 0 ? 1 : 0;
 
   const prepareLocalStart = useCallback(
@@ -69,6 +67,7 @@ export function useLocalCpuMatch({
     cpuDifficulty,
     setCpuDifficulty,
     humanSeat,
+    setHumanSeat,
     cpuSeat,
     humanTurn,
     cpuThinking,

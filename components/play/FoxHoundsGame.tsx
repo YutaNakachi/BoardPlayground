@@ -81,6 +81,8 @@ export function FoxHoundsGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -316,6 +318,9 @@ export function FoxHoundsGame() {
             kind={kind}
             difficulty={cpuDifficulty}
             onDifficultyChange={setCpuDifficulty}
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+            seatLabels={{ first: "猟犬（先手）", second: "ウサギ（後手）" }}
           />
         )}
         loading={online.loading}
@@ -416,10 +421,7 @@ export function FoxHoundsGame() {
                   turnSeat,
                   PLAYER_LABELS[activeCurrent]
                 )
-              : localCpuTurnLabel(
-                  matchKind,
-                  activeCurrent,
-                  0,
+              : localCpuTurnLabel(matchKind, activeCurrent, humanSeat,
                   `プレイヤー ${activeCurrent + 1}（${PLAYER_LABELS[activeCurrent]}）`
                 )
           }

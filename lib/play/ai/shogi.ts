@@ -1,4 +1,4 @@
-import { chooseScoredMove } from "@/lib/play/cpu/difficulty";
+import { chooseScoredMove, cpuSearchDepth } from "@/lib/play/cpu/difficulty";
 import { pickRandom } from "@/lib/play/cpu/random";
 import type { CpuDifficulty } from "@/lib/play/cpu/types";
 import {
@@ -45,6 +45,31 @@ function evaluate(state: ShogiState, perspective: 0 | 1): number {
   );
 }
 
+function search(state: ShogiState, depth: number, perspective: 0 | 1): number {
+  const status = shogiStatus(state);
+  if (depth === 0 || status.kind === "checkmate") {
+    return evaluate(state, perspective);
+  }
+  const moves = shogiMoves(state);
+  if (moves.length === 0) return evaluate(state, perspective);
+
+  if (state.current === perspective) {
+    let best = -Infinity;
+    for (const move of moves) {
+      const next = applyShogiMove(state, move);
+      best = Math.max(best, search(next, depth - 1, perspective));
+    }
+    return best;
+  }
+
+  let best = Infinity;
+  for (const move of moves) {
+    const next = applyShogiMove(state, move);
+    best = Math.min(best, search(next, depth - 1, perspective));
+  }
+  return best;
+}
+
 export function chooseShogiMove(
   state: ShogiState,
   difficulty: CpuDifficulty,
@@ -53,6 +78,21 @@ export function chooseShogiMove(
   if (state.current !== cpuPlayer) return null;
   const legal = shogiMoves(state);
   if (legal.length === 0) return null;
+
+  const depth = cpuSearchDepth(difficulty, { easy: 0, normal: 1, hard: 2 });
+  if (depth > 0) {
+    let best: ShogiMove | null = null;
+    let bestScore = -Infinity;
+    for (const move of legal) {
+      const next = applyShogiMove(state, move);
+      const score = search(next, depth - 1, cpuPlayer);
+      if (score > bestScore) {
+        bestScore = score;
+        best = move;
+      }
+    }
+    return best;
+  }
 
   return (
     chooseScoredMove(difficulty, legal, (move) => {

@@ -63,9 +63,9 @@ export function chooseCheckersMove(
   const captures = legal.filter((m) => m.capture !== undefined);
   const pool = captures.length > 0 ? captures : legal;
 
-  const depth = difficulty === "hard" ? 4 : difficulty === "normal" ? 3 : 2;
+  const depth = difficulty === "hard" ? 6 : difficulty === "normal" ? 4 : 2;
 
-  if (difficulty === "hard") {
+  if (difficulty === "hard" || difficulty === "normal") {
     let best: CheckersMove | null = null;
     let bestScore = -Infinity;
     for (const move of pool) {

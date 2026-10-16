@@ -126,6 +126,8 @@ export function DotsAndBoxesGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -313,7 +315,9 @@ export function DotsAndBoxesGame() {
                     kind={kind}
                     difficulty={cpuDifficulty}
                     onDifficultyChange={setCpuDifficulty}
-                  />
+                    humanSeat={humanSeat}
+                    onHumanSeatChange={setHumanSeat}
+                    />
                 </PlaySetupStack>
               )
             : undefined
@@ -403,10 +407,7 @@ export function DotsAndBoxesGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={bannerSeat}
-          playerLabel={localCpuTurnLabel(
-            matchKind,
-            bannerSeat as 0 | 1,
-            0,
+          playerLabel={localCpuTurnLabel(matchKind, bannerSeat as 0 | 1, humanSeat,
             formatSeatLabel(roomPlayers, bannerSeat)
           )}
           action={

@@ -15,7 +15,7 @@ import {
 } from "@/hooks/useLocalCpuMatch";
 import type { PlayMode } from "@/lib/online/types";
 import { chooseMorrisMove } from "@/lib/play/ai/nine-mens-morris";
-import type { CpuDifficulty } from "@/lib/play/cpu/types";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import { playerPieceClasses } from "@/lib/player-colors";
 import {
   clickMorris,
@@ -45,6 +45,8 @@ export function NineMensMorrisGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -57,8 +59,9 @@ export function NineMensMorrisGame() {
   const localSnapshotRef = useStateRef(state);
 
   const startGame = useCallback(
-    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty) => {
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
       setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
       recordLocalPlay();
       prepareLocalStart(kind);
       setState(initialMorrisState());
@@ -156,10 +159,7 @@ export function NineMensMorrisGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
-        playerLabel={localCpuTurnLabel(
-          matchKind,
-          state.current,
-          0,
+        playerLabel={localCpuTurnLabel(matchKind, state.current, humanSeat,
           `プレイヤー ${state.current + 1}`
         )}
         action={cpuThinking ? "CPUの手番…" : right}

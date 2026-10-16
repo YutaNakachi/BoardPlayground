@@ -68,7 +68,7 @@ export function chooseFoxHoundsMove(
   const legal = foxHoundsMoves(state, state.current);
   if (legal.length === 0) return null;
 
-  const depth = difficulty === "hard" ? 5 : difficulty === "normal" ? 4 : 2;
+  const depth = difficulty === "hard" ? 7 : difficulty === "normal" ? 5 : 3;
 
   if (difficulty !== "easy") {
     let best: FoxHoundsMove | null = null;

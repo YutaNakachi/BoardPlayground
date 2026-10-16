@@ -87,7 +87,22 @@ export function chooseReversiMove(
     for (const move of legal) {
       const after = playReversiMove(board, move, current);
       if (!after) continue;
-      const score = minimax(after, current, cpuPlayer, 3);
+      const score = minimax(after, current, cpuPlayer, 6);
+      if (score > bestScore) {
+        bestScore = score;
+        best = move;
+      }
+    }
+    return best;
+  }
+
+  if (difficulty === "normal") {
+    let best: number | null = null;
+    let bestScore = -Infinity;
+    for (const move of legal) {
+      const after = playReversiMove(board, move, current);
+      if (!after) continue;
+      const score = minimax(after, current, cpuPlayer, 4);
       if (score > bestScore) {
         bestScore = score;
         best = move;

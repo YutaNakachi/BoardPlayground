@@ -18,7 +18,7 @@ import {
   applyDominoCpuChoice,
   chooseDominoMove,
 } from "@/lib/play/ai/dominoes";
-import type { CpuDifficulty } from "@/lib/play/cpu/types";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import {
   applyDominoPlay,
   dominoPlays,
@@ -55,6 +55,8 @@ export function DominoesGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -67,8 +69,9 @@ export function DominoesGame() {
   const localSnapshotRef = useStateRef(state);
 
   const startGame = useCallback(
-    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty) => {
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
       setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
       recordLocalPlay();
       prepareLocalStart(kind);
       setState(initialDominoes());
@@ -178,10 +181,7 @@ export function DominoesGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={state.current}
-        playerLabel={localCpuTurnLabel(
-          matchKind,
-          state.current,
-          0,
+        playerLabel={localCpuTurnLabel(matchKind, state.current, humanSeat,
           `プレイヤー ${state.current + 1}`
         )}
         action={

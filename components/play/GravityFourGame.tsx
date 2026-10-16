@@ -66,6 +66,8 @@ export function GravityFourGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -217,7 +219,9 @@ export function GravityFourGame() {
             kind={kind}
             difficulty={cpuDifficulty}
             onDifficultyChange={setCpuDifficulty}
-          />
+            humanSeat={humanSeat}
+            onHumanSeatChange={setHumanSeat}
+            />
         )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
@@ -301,10 +305,7 @@ export function GravityFourGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={activeCurrent}
-          playerLabel={localCpuTurnLabel(
-            matchKind,
-            activeCurrent,
-            0,
+          playerLabel={localCpuTurnLabel(matchKind, activeCurrent, humanSeat,
             formatSeatLabel(roomPlayers, activeCurrent)
           )}
           action={

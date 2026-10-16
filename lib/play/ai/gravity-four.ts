@@ -39,7 +39,7 @@ export function chooseGravityFourMove(
   const legal = gfLegalColumns(board);
   if (legal.length === 0) return null;
 
-  const depth = difficulty === "hard" ? 6 : difficulty === "normal" ? 4 : 2;
+  const depth = difficulty === "hard" ? 8 : difficulty === "normal" ? 6 : 3;
 
   if (difficulty === "hard" || difficulty === "normal") {
     let bestCol: number | null = null;

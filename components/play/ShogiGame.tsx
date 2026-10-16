@@ -15,7 +15,7 @@ import {
 } from "@/hooks/useLocalCpuMatch";
 import type { PlayMode } from "@/lib/online/types";
 import { chooseShogiMove } from "@/lib/play/ai/shogi";
-import type { CpuDifficulty } from "@/lib/play/cpu/types";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyShogiMove,
@@ -49,6 +49,8 @@ export function ShogiGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -61,8 +63,9 @@ export function ShogiGame() {
   const localSnapshotRef = useStateRef(state);
 
   const startGame = useCallback(
-    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty) => {
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
       setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
       recordLocalPlay();
       prepareLocalStart(kind);
       setState(initialShogiState());
@@ -206,10 +209,7 @@ export function ShogiGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
-        playerLabel={localCpuTurnLabel(
-          matchKind,
-          current,
-          0,
+        playerLabel={localCpuTurnLabel(matchKind, current, humanSeat,
           `プレイヤー ${current + 1}`
         )}
         action={

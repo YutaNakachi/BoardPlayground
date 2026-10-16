@@ -16,7 +16,7 @@ import {
 } from "@/hooks/useLocalCpuMatch";
 import type { PlayMode } from "@/lib/online/types";
 import { chooseMiniShogiMove } from "@/lib/play/ai/mini-shogi";
-import type { CpuDifficulty } from "@/lib/play/cpu/types";
+import type { BinaryPlayer, CpuDifficulty } from "@/lib/play/cpu/types";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyMiniShogiMove,
@@ -130,6 +130,8 @@ export function MiniShogiGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -142,8 +144,9 @@ export function MiniShogiGame() {
   const localSnapshotRef = useStateRef(state);
 
   const startGame = useCallback(
-    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty) => {
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty, seat: BinaryPlayer) => {
       setCpuDifficulty(difficulty);
+      setHumanSeat(seat);
       recordLocalPlay();
       prepareLocalStart(kind);
       setState(initialMiniShogiState());
@@ -319,10 +322,7 @@ export function MiniShogiGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={current}
-          playerLabel={localCpuTurnLabel(
-            matchKind,
-            current,
-            0,
+          playerLabel={localCpuTurnLabel(matchKind, current, humanSeat,
             PLAYER_LABELS[current]
           )}
           action={

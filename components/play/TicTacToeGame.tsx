@@ -118,6 +118,8 @@ export function TicTacToeGame() {
     cpuThinking,
     cpuSeat,
     prepareLocalStart,
+    humanSeat,
+    setHumanSeat,
   } = useLocalCpuMatch({
     mode,
     setPlayMode,
@@ -325,7 +327,9 @@ export function TicTacToeGame() {
                     kind={kind}
                     difficulty={cpuDifficulty}
                     onDifficultyChange={setCpuDifficulty}
-                  />
+                    humanSeat={humanSeat}
+                    onHumanSeatChange={setHumanSeat}
+                    />
                 </PlaySetupStack>
               )
             : undefined
@@ -398,10 +402,7 @@ export function TicTacToeGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={activeCurrent}
-          playerLabel={localCpuTurnLabel(
-            matchKind,
-            activeCurrent,
-            0,
+          playerLabel={localCpuTurnLabel(matchKind, activeCurrent, humanSeat,
             formatSeatLabel(roomPlayers, activeCurrent)
           )}
           action={
