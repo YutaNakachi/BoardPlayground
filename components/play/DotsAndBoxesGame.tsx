@@ -4,7 +4,9 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import {
   PlaySetupSection,
@@ -25,6 +27,13 @@ import {
   getSeatDisplayName,
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { chooseDotsBoxesMove } from "@/lib/play/ai/dots-and-boxes";
 import { getPlayerFill } from "@/lib/player-colors";
 import {
   DOTS_BOXES_SIZE_OPTIONS,
@@ -106,25 +115,71 @@ export function DotsAndBoxesGame() {
   const [size, setSize] = useState<DotsBoxesSize>(4);
   const [state, setState] = useState<DotsBoxesState>(() => initialDotsBoxes(4));
 
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: state.current,
+  });
+
+  const localSnapshotRef = useStateRef(state);
+
   useEffect(() => {
     if (
       online.room?.code &&
       (online.phase === "waiting" || online.phase === "playing")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [online.room?.code, online.phase, setPlayMode]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setState(initialDotsBoxes(size));
-    setLocalPhase("playing");
-  }, [recordLocalPlay, size]);
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setState(initialDotsBoxes(size));
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart, size]
+  );
 
-  const isOnline =
-    online.phase === "playing" || online.phase === "finished";
+  const applyCpuDraw = useCallback(
+    (snapshot: DotsBoxesState, edge: Edge) => {
+      if (localPhase !== "playing" || snapshot.over) return;
+      const next = drawDotsBoxesEdge(snapshot, edge);
+      if (!next) return;
+      setState(next);
+      if (next.over) setLocalPhase("game-over");
+    },
+    [localPhase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseDotsBoxesMove(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuDraw,
+    canActOnSnapshot: (snapshot) =>
+      !snapshot.over && snapshot.current === cpuSeat,
+  });
+
+  const isOnline = isOnlinePlay;
   const onlineState = online.gameState as DotsBoxesOnlineState | null;
 
   const activeState: DotsBoxesState =
@@ -249,7 +304,20 @@ export function DotsAndBoxesGame() {
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
-        extra={mode === "local" ? sizeSelector : undefined}
+        extra={
+          mode === "local"
+            ? (kind) => (
+                <PlaySetupStack>
+                  {sizeSelector}
+                  <LocalCpuSetupExtra
+                    kind={kind}
+                    difficulty={cpuDifficulty}
+                    onDifficultyChange={setCpuDifficulty}
+                  />
+                </PlaySetupStack>
+              )
+            : undefined
+        }
       />
     );
   }
@@ -280,7 +348,8 @@ export function DotsAndBoxesGame() {
   }
 
   const isGameOver = activePhase === "game-over" && winners !== null;
-  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const canInteract =
+    (isOnline ? online.isMyTurn : humanTurn) && !isGameOver && !cpuThinking;
   const totalBoxes = rows * cols;
   const replayProps = getOnlineResultReplayProps(
     isOnline,
@@ -334,11 +403,18 @@ export function DotsAndBoxesGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={bannerSeat}
-          playerLabel={formatSeatLabel(roomPlayers, bannerSeat)}
+          playerLabel={localCpuTurnLabel(
+            matchKind,
+            bannerSeat as 0 | 1,
+            0,
+            formatSeatLabel(roomPlayers, bannerSeat)
+          )}
           action={
-            isOnline && !online.isMyTurn
-              ? "相手の手番です"
-              : "線を1本引く"
+            cpuThinking
+              ? "CPUの手番…"
+              : isOnline && !online.isMyTurn
+                ? "相手の手番です"
+                : "線を1本引く"
           }
         />
       )}

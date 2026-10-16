@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -20,6 +22,13 @@ import {
   getSeatDisplayName,
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { chooseGomokuMove } from "@/lib/play/ai/gomoku";
 import {
   emptyGomokuBoard,
   GOMOKU_SIZE,
@@ -42,27 +51,84 @@ export function GomokuGame() {
   const [current, setCurrent] = useState<Player>(0);
   const [winner, setWinner] = useState<Player | "draw" | null>(null);
 
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: current,
+  });
+
+  const localSnapshotRef = useStateRef({ board, current });
+
   useEffect(() => {
     if (
       online.room?.code &&
       (online.phase === "waiting" || online.phase === "playing")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [online.room?.code, online.phase, setPlayMode]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setBoard(emptyGomokuBoard());
-    setCurrent(0);
-    setWinner(null);
-    setLocalPhase("playing");
-  }, [recordLocalPlay]);
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setBoard(emptyGomokuBoard());
+      setCurrent(0);
+      setWinner(null);
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart]
+  );
 
-  const isOnline =
-    online.phase === "playing" || online.phase === "finished";
+  const applyCpuPlace = useCallback(
+    (snapshot: { board: Board; current: Player }, index: number) => {
+      if (localPhase !== "playing" || snapshot.board[index] !== null) return;
+      const next = snapshot.board.map((cell, i) =>
+        i === index ? snapshot.current : cell
+      );
+      setBoard(next);
+      const won = gomokuWinner(next);
+      if (won !== null) {
+        setWinner(won);
+        setLocalPhase("game-over");
+        return;
+      }
+      if (gomokuBoardFull(next)) {
+        setWinner("draw");
+        setLocalPhase("game-over");
+        return;
+      }
+      setCurrent(snapshot.current === 0 ? 1 : 0);
+    },
+    [localPhase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state: { board, current },
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseGomokuMove(snapshot.board, snapshot.current, difficulty, cpuSeat),
+    applyMove: applyCpuPlace,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
+  const isOnline = isOnlinePlay;
   const onlineState = online.gameState as GomokuState | null;
 
   const activeBoard = isOnline && onlineState ? onlineState.board : board;
@@ -137,6 +203,13 @@ export function GomokuGame() {
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+          />
+        )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
@@ -177,7 +250,8 @@ export function GomokuGame() {
   }
 
   const isGameOver = activePhase === "game-over" && winners !== null;
-  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const canInteract =
+    (isOnline ? online.isMyTurn : humanTurn) && !isGameOver && !cpuThinking;
   const replayProps = getOnlineResultReplayProps(
     isOnline,
     online.isHost,
@@ -218,8 +292,19 @@ export function GomokuGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
-        action={isOnline && !online.isMyTurn ? "相手の手番です" : undefined}
+        playerLabel={localCpuTurnLabel(
+          matchKind,
+          activeCurrent,
+          0,
+          formatSeatLabel(roomPlayers, activeCurrent)
+        )}
+        action={
+          cpuThinking
+            ? "CPUの手番…"
+            : isOnline && !online.isMyTurn
+              ? "相手の手番です"
+              : undefined
+        }
       />
       )}
 

@@ -12,7 +12,9 @@ import {
   type DejarikState,
 } from "./state";
 
-export type CpuDifficulty = "easy" | "normal" | "hard";
+import type { CpuDifficulty } from "@/lib/play/cpu/types";
+
+export type { CpuDifficulty };
 
 export type DejarikCpuMove =
   | { kind: "placement"; creatureType: CreatureType; cell: number }

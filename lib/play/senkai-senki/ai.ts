@@ -9,7 +9,9 @@ import {
   type SenkaiState,
 } from "@/lib/play/senkai-senki";
 
-export type CpuDifficulty = "easy" | "normal" | "hard";
+import type { CpuDifficulty } from "@/lib/play/cpu/types";
+
+export type { CpuDifficulty };
 
 export type SenkaiMoveChoice = {
   pieceId: number;

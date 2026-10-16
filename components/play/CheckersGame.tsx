@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -20,6 +22,13 @@ import {
   getSeatDisplayName,
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { chooseCheckersMove } from "@/lib/play/ai/checkers";
 import {
   applyCheckersMove,
   checkersMoves,
@@ -48,31 +57,54 @@ export function CheckersGame() {
   const [winner, setWinner] = useState<Player | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: current,
+  });
+
+  const localSnapshotRef = useStateRef({ board, current, lockFrom });
+
   useEffect(() => {
     if (
       online.room?.code &&
       (online.phase === "waiting" || online.phase === "playing")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [online.room?.code, online.phase, setPlayMode]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setBoard(initialCheckersBoard());
-    setCurrent(0);
-    setSelected(null);
-    setLocalSelected(null);
-    setLockFrom(null);
-    setWinner(null);
-    setNotice(null);
-    setLocalPhase("playing");
-  }, [recordLocalPlay]);
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setBoard(initialCheckersBoard());
+      setCurrent(0);
+      setSelected(null);
+      setLocalSelected(null);
+      setLockFrom(null);
+      setWinner(null);
+      setNotice(null);
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart]
+  );
 
-  const isOnline =
-    online.phase === "playing" || online.phase === "finished";
+  const isOnline = isOnlinePlay;
   const onlineState = online.gameState as CheckersState | null;
 
   const activeBoard = isOnline && onlineState ? onlineState.board : board;
@@ -146,10 +178,56 @@ export function CheckersGame() {
     [board, current, finishIfNeeded]
   );
 
+  const applyCpuCheckers = useCallback(
+    (
+      snapshot: { board: Board; current: Player; lockFrom: number | null },
+      move: CheckersMove
+    ) => {
+      if (localPhase !== "playing") return;
+      const { board: nextBoard, continueFrom } = applyCheckersMove(
+        snapshot.board,
+        move
+      );
+      setBoard(nextBoard);
+      if (continueFrom != null) {
+        setLockFrom(continueFrom);
+        setLocalSelected(continueFrom);
+        setNotice("同じ駒でジャンプを続けてください");
+        return;
+      }
+      const nextPlayer: Player = snapshot.current === 0 ? 1 : 0;
+      setLockFrom(null);
+      setLocalSelected(null);
+      setNotice(null);
+      if (!finishIfNeeded(nextBoard, nextPlayer)) {
+        setCurrent(nextPlayer);
+      }
+    },
+    [localPhase, finishIfNeeded]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state: { board, current, lockFrom },
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseCheckersMove(
+        snapshot.board,
+        snapshot.current,
+        snapshot.lockFrom,
+        difficulty,
+        cpuSeat
+      ),
+    applyMove: applyCpuCheckers,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
   const onSquare = useCallback(
     (index: number) => {
       if (activePhase !== "playing") return;
       if (isOnline && !online.isMyTurn) return;
+      if (!isOnline && (!humanTurn || cpuThinking)) return;
 
       const dest = destinations.find((m) => m.to === index);
       if (dest) {
@@ -182,6 +260,8 @@ export function CheckersGame() {
       activeCurrent,
       moves,
       applyLocal,
+      humanTurn,
+      cpuThinking,
     ]
   );
 
@@ -218,6 +298,13 @@ export function CheckersGame() {
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+          />
+        )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
@@ -298,15 +385,22 @@ export function CheckersGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={activeCurrent}
-        playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+        playerLabel={localCpuTurnLabel(
+          matchKind,
+          activeCurrent,
+          0,
+          formatSeatLabel(roomPlayers, activeCurrent)
+        )}
         action={
-          isOnline && !online.isMyTurn
-            ? "相手の手番です"
-            : activeLockFrom != null
-              ? "ジャンプ継続"
-              : mustCapture
-                ? "ジャンプ必須"
-                : undefined
+          cpuThinking
+            ? "CPUの手番…"
+            : isOnline && !online.isMyTurn
+              ? "相手の手番です"
+              : activeLockFrom != null
+                ? "ジャンプ継続"
+                : mustCapture
+                  ? "ジャンプ必須"
+                  : undefined
         }
         notice={activeNotice ?? undefined}
       />

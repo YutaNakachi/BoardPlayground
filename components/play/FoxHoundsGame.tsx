@@ -3,7 +3,9 @@
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineHoundsSeatPicker } from "@/components/play/shared/OnlineHoundsSeatPicker";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
@@ -23,6 +25,13 @@ import {
   formatWinnersWithNames,
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { chooseFoxHoundsMove } from "@/lib/play/ai/fox-hounds";
 import {
   applyFoxHoundsMove,
   FH_BOARD_LINES,
@@ -61,6 +70,28 @@ export function FoxHoundsGame() {
     null
   );
 
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: state.current,
+  });
+
+  const localSnapshotRef = useStateRef(state);
+
   useEffect(() => {
     if (
       online.room?.code &&
@@ -69,22 +100,54 @@ export function FoxHoundsGame() {
         online.phase === "finished")
     ) {
       setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
     }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
+  }, [online.room?.code, online.phase, setPlayMode]);
 
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setState(initialFoxHounds());
-    setSelected(null);
-    setLocalWinner(null);
-    setLocalWinReason(null);
-    setLocalPhase("playing");
-  }, [recordLocalPlay]);
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setState(initialFoxHounds());
+      setSelected(null);
+      setLocalWinner(null);
+      setLocalWinReason(null);
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart]
+  );
 
-  const isOnline =
-    online.phase === "playing" || online.phase === "finished";
+  const applyCpuFoxHounds = useCallback(
+    (
+      snapshot: FoxHoundsState,
+      move: { from: number; to: number }
+    ) => {
+      if (localPhase !== "playing") return;
+      const next = applyFoxHoundsMove(snapshot, move.from, move.to);
+      if (!next) return;
+      setState(next);
+      setSelected(null);
+      const outcome = foxHoundsWinner(next, next.current);
+      if (outcome) {
+        setLocalWinner(outcome.winner);
+        setLocalWinReason(outcome.reason);
+        setLocalPhase("game-over");
+      }
+    },
+    [localPhase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseFoxHoundsMove(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuFoxHounds,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
+  const isOnline = isOnlinePlay;
   const onlineState = online.gameState as FoxHoundsOnlineState | null;
   const sessionHoundsSeat: HoundsSeat = useMemo(() => {
     if (!isOnline) return 0;
@@ -141,6 +204,7 @@ export function FoxHoundsGame() {
     (index: number) => {
       if (activePhase !== "playing") return;
       if (isOnline && (!online.isMyTurn || myRole !== activeCurrent)) return;
+      if (!isOnline && (!humanTurn || cpuThinking)) return;
 
       const from =
         activeCurrent === 1 ? activeBoard.indexOf(1) : activeSelected;
@@ -180,6 +244,8 @@ export function FoxHoundsGame() {
       activeBoard,
       activeCurrent,
       myRole,
+      humanTurn,
+      cpuThinking,
     ]
   );
 
@@ -245,6 +311,13 @@ export function FoxHoundsGame() {
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+          />
+        )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
@@ -343,7 +416,12 @@ export function FoxHoundsGame() {
                   turnSeat,
                   PLAYER_LABELS[activeCurrent]
                 )
-              : `プレイヤー ${activeCurrent + 1}（${PLAYER_LABELS[activeCurrent]}）`
+              : localCpuTurnLabel(
+                  matchKind,
+                  activeCurrent,
+                  0,
+                  `プレイヤー ${activeCurrent + 1}（${PLAYER_LABELS[activeCurrent]}）`
+                )
           }
           stats={[
             isOnline && myRole !== null
@@ -356,7 +434,11 @@ export function FoxHoundsGame() {
             .filter(Boolean)
             .join(" · ") || undefined}
           action={
-            isOnline && !online.isMyTurn ? "相手の手番です" : undefined
+            cpuThinking
+              ? "CPUの手番…"
+              : isOnline && !online.isMyTurn
+                ? "相手の手番です"
+                : undefined
           }
         />
       )}

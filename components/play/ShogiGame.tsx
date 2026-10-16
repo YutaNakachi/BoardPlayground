@@ -6,6 +6,16 @@ import { useCallback, useMemo, useState } from "react";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
+import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import type { PlayMode } from "@/lib/online/types";
+import { chooseShogiMove } from "@/lib/play/ai/shogi";
+import type { CpuDifficulty } from "@/lib/play/cpu/types";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   applyShogiMove,
@@ -23,21 +33,46 @@ import {
 type Phase = "setup" | "playing" | "game-over";
 
 export function ShogiGame() {
-  const { recordLocalPlay } = usePlayPage();
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const [mode] = useState<PlayMode>("local");
   const [phase, setPhase] = useState<Phase>("setup");
   const [state, setState] = useState<ShogiState>(initialShogiState);
   const [selected, setSelected] = useState<number | null>(null);
   const [dropPiece, setDropPiece] = useState<Droppable | null>(null);
   const [winner, setWinner] = useState<number | null>(null);
 
-  const startGame = useCallback(() => {
-    recordLocalPlay();
-    setState(initialShogiState());
-    setSelected(null);
-    setDropPiece(null);
-    setWinner(null);
-    setPhase("playing");
-  }, [recordLocalPlay]);
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: false,
+    localActive: phase === "playing" || phase === "game-over",
+    gameOver: phase === "game-over",
+    turnPlayer: state.current,
+  });
+
+  const localSnapshotRef = useStateRef(state);
+
+  const startGame = useCallback(
+    (kind: LocalMatchSetupKind, difficulty: CpuDifficulty) => {
+      setCpuDifficulty(difficulty);
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setState(initialShogiState());
+      setSelected(null);
+      setDropPiece(null);
+      setWinner(null);
+      setPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart, setCpuDifficulty]
+  );
 
   const moves = useMemo(
     () => (phase === "playing" ? shogiMoves(state) : []),
@@ -78,9 +113,32 @@ export function ShogiGame() {
     [state, finishIfNeeded]
   );
 
+  const applyCpuShogi = useCallback(
+    (snapshot: ShogiState, move: ShogiMove) => {
+      if (phase !== "playing") return;
+      const next = applyShogiMove(snapshot, move);
+      setState(next);
+      setSelected(null);
+      setDropPiece(null);
+      finishIfNeeded(next);
+    },
+    [phase, finishIfNeeded]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state,
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseShogiMove(snapshot, difficulty, cpuSeat),
+    applyMove: applyCpuShogi,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
   const onSquare = useCallback(
     (index: number) => {
-      if (phase !== "playing") return;
+      if (phase !== "playing" || !humanTurn || cpuThinking) return;
       const dest = destinations.find((m) => m.to === index);
       if (dest) {
         apply(dest);
@@ -95,20 +153,23 @@ export function ShogiGame() {
       if (!moves.some((m) => m.kind === "move" && m.from === index)) return;
       setSelected(index);
     },
-    [phase, destinations, apply, dropPiece, state, moves]
+    [phase, destinations, apply, dropPiece, state, moves, humanTurn, cpuThinking]
   );
 
   const onHandPiece = useCallback(
     (piece: Droppable) => {
-      if (phase !== "playing") return;
+      if (phase !== "playing" || !humanTurn || cpuThinking) return;
       if (state.hands[state.current][piece] <= 0) return;
       setSelected(null);
       setDropPiece((prev) => (prev === piece ? null : piece));
     },
-    [phase, state]
+    [phase, state, humanTurn, cpuThinking]
   );
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
+  const backToSetup = useCallback(() => {
+    setPhase("setup");
+    setPlayMode({ mode: "local" });
+  }, [setPlayMode]);
   usePlaySetupNavigation(phase === "setup", backToSetup);
 
   if (phase === "setup") {
@@ -145,8 +206,21 @@ export function ShogiGame() {
       {!isGameOver && (
       <TurnBanner
         playerIndex={current}
-        playerLabel={`プレイヤー ${current + 1}`}
-        action={inCheck ? "王手" : dropPiece ? `${shogiHandLabel(dropPiece)}を打つ` : undefined}
+        playerLabel={localCpuTurnLabel(
+          matchKind,
+          current,
+          0,
+          `プレイヤー ${current + 1}`
+        )}
+        action={
+          cpuThinking
+            ? "CPUの手番…"
+            : inCheck
+              ? "王手"
+              : dropPiece
+                ? `${shogiHandLabel(dropPiece)}を打つ`
+                : undefined
+        }
       />
       )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LocalCpuSetupExtra } from "@/components/play/shared/LocalCpuSetupExtra";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
@@ -20,12 +21,20 @@ import {
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import {
+  useCpuTurnScheduler,
+  useLocalCpuMatch,
+  useStateRef,
+  localCpuTurnLabel,
+} from "@/hooks/useLocalCpuMatch";
+import { chooseNimMove } from "@/lib/play/ai/nim";
+import {
   initialNim,
   NIM_HEAPS,
   nimOver,
   takeNim,
   type Player,
 } from "@/lib/play/nim";
+import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 
 type LocalPhase = "setup" | "playing" | "game-over";
 
@@ -41,28 +50,73 @@ export function NimGame() {
   const [selectedHeap, setSelectedHeap] = useState<number | null>(null);
   const [winner, setWinner] = useState<Player | null>(null);
 
-  useEffect(() => {
-    if (
-      online.room?.code &&
-      (online.phase === "waiting" || online.phase === "playing")
-    ) {
-      setPlayMode({ mode: "online", roomCode: online.room.code });
-    } else if (mode === "local") {
-      setPlayMode({ mode: "local" });
-    }
-  }, [online.room?.code, online.phase, mode, setPlayMode]);
-
-  const startLocal = useCallback(() => {
-    recordLocalPlay();
-    setHeaps(initialNim());
-    setCurrent(0);
-    setSelectedHeap(null);
-    setWinner(null);
-    setLocalPhase("playing");
-  }, [recordLocalPlay]);
-
-  const isOnline =
+  const isOnlinePlay =
     online.phase === "playing" || online.phase === "finished";
+
+  const {
+    matchKind,
+    cpuDifficulty,
+    setCpuDifficulty,
+    humanTurn,
+    cpuThinking,
+    cpuSeat,
+    prepareLocalStart,
+  } = useLocalCpuMatch({
+    mode,
+    setPlayMode,
+    isOnline: isOnlinePlay,
+    localActive: localPhase === "playing" || localPhase === "game-over",
+    gameOver: localPhase === "game-over",
+    turnPlayer: current,
+  });
+
+  const localSnapshotRef = useStateRef({ heaps, current });
+
+  const startLocal = useCallback(
+    (kind: LocalMatchSetupKind) => {
+      recordLocalPlay();
+      prepareLocalStart(kind);
+      setHeaps(initialNim());
+      setCurrent(0);
+      setSelectedHeap(null);
+      setWinner(null);
+      setLocalPhase("playing");
+    },
+    [recordLocalPlay, prepareLocalStart]
+  );
+
+  const applyCpuNim = useCallback(
+    (
+      snapshot: { heaps: number[]; current: Player },
+      move: { heapIndex: number; count: number }
+    ) => {
+      if (localPhase !== "playing") return;
+      const next = takeNim(snapshot.heaps, move.heapIndex, move.count);
+      if (!next) return;
+      setHeaps(next);
+      setSelectedHeap(null);
+      if (nimOver(next)) {
+        setWinner(snapshot.current);
+        setLocalPhase("game-over");
+        return;
+      }
+      setCurrent(snapshot.current === 0 ? 1 : 0);
+    },
+    [localPhase]
+  );
+
+  useCpuTurnScheduler({
+    enabled: cpuThinking,
+    difficulty: cpuDifficulty,
+    state: { heaps, current },
+    stateRef: localSnapshotRef,
+    chooseMove: (snapshot, difficulty) =>
+      chooseNimMove(snapshot.heaps, snapshot.current, difficulty, cpuSeat),
+    applyMove: applyCpuNim,
+    canActOnSnapshot: (snapshot) => snapshot.current === cpuSeat,
+  });
+
+  const isOnline = isOnlinePlay;
   const onlineState = online.gameState as NimState | null;
 
   const activeHeaps = isOnline && onlineState ? onlineState.heaps : heaps;
@@ -120,7 +174,8 @@ export function NimGame() {
   usePlaySetupNavigation(isSetupScreen, reset);
 
   const isGameOver = activePhase === "game-over" && winners !== null;
-  const canInteract = (isOnline ? online.isMyTurn : true) && !isGameOver;
+  const canInteract =
+    (isOnline ? online.isMyTurn : humanTurn) && !isGameOver && !cpuThinking;
   const selectedCount = selectedHeap === null ? 0 : activeHeaps[selectedHeap];
 
   if (online.completingPendingJoin) {
@@ -138,6 +193,13 @@ export function NimGame() {
         onCreateRoom={(displayName) => online.handleCreate(displayName)}
         onJoinRoom={online.handleJoin}
         onStartLocal={startLocal}
+        extra={(kind) => (
+          <LocalCpuSetupExtra
+            kind={kind}
+            difficulty={cpuDifficulty}
+            onDifficultyChange={setCpuDifficulty}
+          />
+        )}
         loading={online.loading}
         initialJoinCode={online.joinCodeFromUrl}
         error={online.error}
@@ -214,13 +276,20 @@ export function NimGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={activeCurrent}
-          playerLabel={formatSeatLabel(roomPlayers, activeCurrent)}
+          playerLabel={localCpuTurnLabel(
+            matchKind,
+            activeCurrent,
+            0,
+            formatSeatLabel(roomPlayers, activeCurrent)
+          )}
           action={
-            isOnline && !online.isMyTurn
-              ? "相手の手番です"
-              : selectedHeap === null
-                ? "山を選ぶ"
-                : `${selectedHeap + 1}番の山から何個取る？`
+            cpuThinking
+              ? "CPUの手番…"
+              : isOnline && !online.isMyTurn
+                ? "相手の手番です"
+                : selectedHeap === null
+                  ? "山を選ぶ"
+                  : `${selectedHeap + 1}番の山から何個取る？`
           }
         />
       )}
