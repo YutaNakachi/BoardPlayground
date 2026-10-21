@@ -213,6 +213,7 @@ export function NebulaLinkGame() {
       setPlayMode({ mode: "online", roomCode: online.room.code });
     }
   }, [online.room?.code, online.phase, setPlayMode]);
+
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
@@ -220,6 +221,24 @@ export function NebulaLinkGame() {
   const [spinning, setSpinning] = useState(false);
   const [placingPointer, setPlacingPointer] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    if (!online.isMyTurn) {
+      setSelectedPieceId(null);
+      setRotation(0);
+      setHoverIndex(null);
+      setPlacingPointer(false);
+      setSpinning(false);
+    }
+  }, [isOnline, online.isMyTurn]);
+
+  useEffect(() => {
+    if (!isOnlinePlay || !onlineState) return;
+    if (spinning && onlineState.roulette.length > 0) {
+      setSpinning(false);
+    }
+  }, [isOnlinePlay, onlineState, spinning]);
 
   const startGame = useCallback(() => {
     recordLocalPlay();
@@ -265,7 +284,8 @@ export function NebulaLinkGame() {
   const spinRoulette = useCallback(() => {
     if (!game || spinning || game.roulette.length > 0) return;
     if (isOnline) {
-      if (!online.isMyTurn || online.movePending) return;
+      if (!online.isMyTurn || online.movePending || spinning) return;
+      setSpinning(true);
       void online.handleMove({ type: "nebula-spin" });
       return;
     }
@@ -460,7 +480,8 @@ export function NebulaLinkGame() {
     () => online.handleRematch({ firstPlayer }),
     reset
   );
-  const mustPass = phase === "playing" && canNebulaPass(game);
+  const canAct = !isOnline || online.isMyTurn;
+  const mustPass = phase === "playing" && canAct && canNebulaPass(game);
   const home = playerHomeEdge(game.currentPlayer, game.playerCount);
   const rouletteReady = game.roulette.length === 3;
   const turnStyle = getPlayerTurnStyle(game.currentPlayer);
@@ -490,6 +511,7 @@ export function NebulaLinkGame() {
     selectedPieceId === pieceId ? rotation : 0;
 
   const pickPiece = (pieceId: string) => {
+    if (!canAct) return;
     setNotice(null);
     if (selectedPieceId === pieceId) {
       setRotation((r) => (r + 1) % 4);
@@ -504,7 +526,7 @@ export function NebulaLinkGame() {
     Boolean(selectedPieceId && cellPlacementLegal(hoverIndex));
 
   const handleGridPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (isGameOver || !selectedPieceId) return;
+    if (isGameOver || !canAct || !selectedPieceId) return;
     const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index === null) return;
     setHoverIndex(index);
@@ -513,13 +535,13 @@ export function NebulaLinkGame() {
   };
 
   const handleGridPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!selectedPieceId) return;
+    if (!canAct || !selectedPieceId) return;
     const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index !== null) setHoverIndex(index);
   };
 
   const handleGridPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!placingPointer && !selectedPieceId) return;
+    if (!canAct || (!placingPointer && !selectedPieceId)) return;
     const index =
       cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType) ?? hoverIndex;
     if (index !== null && selectedPieceId && cellPlacementLegal(index)) {
@@ -560,7 +582,9 @@ export function NebulaLinkGame() {
           }
           stats={`ホーム辺：${homeEdgeLabel(home)} · 置ける手 ${legalMoves.length}`}
           action={
-            notice ??
+            isOnline && !online.isMyTurn
+              ? "相手の手番です"
+              : notice ??
             (mustPass
               ? "置ける形がないためパスできます。"
               : selectedPieceId
@@ -629,16 +653,12 @@ export function NebulaLinkGame() {
         })}
       </div>
 
-      {!isGameOver && (
+      {!isGameOver && canAct && (
         <div className="flex flex-col items-center gap-2">
           <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
             <button
               type="button"
-              disabled={
-                rouletteReady ||
-                spinning ||
-                (isOnline && (!online.isMyTurn || online.movePending))
-              }
+              disabled={rouletteReady || spinning || online.movePending}
               onClick={spinRoulette}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40 sm:text-sm sm:px-4 sm:py-2 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
             >

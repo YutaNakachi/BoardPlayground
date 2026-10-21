@@ -257,8 +257,11 @@ export function LudoGame() {
   }, [recordLocalPlay, playerCount]);
 
   const moves = useMemo(
-    () => (phase === "playing" ? ludoMoves(state) : []),
-    [phase, state]
+    () =>
+      phase === "playing" && (!isOnline || online.isMyTurn)
+        ? ludoMoves(state)
+        : [],
+    [phase, state, isOnline, online.isMyTurn]
   );
 
   const cellMap = useMemo(
@@ -297,8 +300,19 @@ export function LudoGame() {
   const onRoll = useCallback(() => {
     if (isAnimating || isRolling || state.lastRoll != null || state.winner != null) return;
     if (isOnline) {
-      if (!online.isMyTurn || online.movePending) return;
-      void online.handleMove({ type: "ludo-roll" });
+      if (!online.isMyTurn || online.movePending || isRolling) return;
+      setIsRolling(true);
+      let ticks = 0;
+      rollTimerRef.current = setInterval(() => {
+        ticks += 1;
+        setDiceFace(Math.floor(Math.random() * 6) + 1);
+        if (ticks >= 10) {
+          if (rollTimerRef.current) clearInterval(rollTimerRef.current);
+          rollTimerRef.current = null;
+          setIsRolling(false);
+          void online.handleMove({ type: "ludo-roll" });
+        }
+      }, 70);
       return;
     }
 
@@ -513,7 +527,9 @@ export function LudoGame() {
               : `プレイヤー ${state.activePlayers.indexOf(state.current) + 1}`
           }
           action={
-            state.lastRoll == null
+            isOnline && !online.isMyTurn
+              ? "相手の手番です"
+              : state.lastRoll == null
               ? "サイコロを振る"
               : moves.length === 0
                 ? state.extraTurn
@@ -682,11 +698,14 @@ export function LudoGame() {
             </div>
           )}
 
-          {state.lastRoll == null && !isRolling && !isAnimating ? (
+          {state.lastRoll == null &&
+          !isRolling &&
+          !isAnimating &&
+          (!isOnline || online.isMyTurn) ? (
             <button
               type="button"
               onClick={onRoll}
-              disabled={isOnline && (!online.isMyTurn || online.movePending)}
+              disabled={isOnline && online.movePending}
               className="btn-game"
             >
               サイコロを振る
@@ -695,11 +714,16 @@ export function LudoGame() {
         </div>
       ) : null}
 
-      {state.lastRoll != null && moves.length === 0 && !isGameOver && !isAnimating ? (
+      {state.lastRoll != null &&
+      moves.length === 0 &&
+      !isGameOver &&
+      !isAnimating &&
+      (!isOnline || online.isMyTurn) ? (
         <div className="text-center">
           <button
             type="button"
             onClick={passTurn}
+            disabled={isOnline && online.movePending}
             className="rounded-lg border border-white/20 px-4 py-2 text-sm"
           >
             {state.extraTurn ? "もう一度振る" : "手番を終える"}
