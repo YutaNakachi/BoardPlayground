@@ -476,7 +476,7 @@ export function KingAndSpyGame() {
           <p className="text-center text-sm text-slate-300">
             {isOnlinePlay
               ? "あなたの手札"
-              : `プレイヤー${localActiveSeat + 1}の手札（相手に見えません）`}
+              : `プレイヤー${localActiveSeat + 1}の手札`}
           </p>
           <div
             className={`flex flex-wrap justify-center gap-3 ${isRevealPlayback ? "pointer-events-none opacity-50" : ""}`}
