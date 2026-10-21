@@ -15,6 +15,8 @@ const DOME_RX = 214;
 const WATER_BOTTOM = 828;
 const BASE_RY = 96;
 const SLOT = 16;
+const COIN_R = 40;
+const COIN_STEP = 66;
 
 /** 写真の外縁。y, 左, 右。 */
 const OUTER: readonly (readonly [number, number, number])[] = [
@@ -79,10 +81,10 @@ export function OverheatGlass({ state, label }: Props) {
   const depth = Math.max(0, state.fill - (CAPACITY_MIN - 1));
   const wobblePx = Math.min(6, 2 + depth * 0.8);
   const wobbleSec = Math.max(0.45, 1.15 - depth * 0.08);
-  const stackTop = over ? RIM_Y + 40 : surface + 28;
+  const stackTop = over ? RIM_Y + 78 : surface + COIN_R + 6;
 
   return (
-    <div className="mx-auto w-full max-w-[300px]">
+    <div className="mx-auto w-full max-w-[340px]">
       <style>{`
         .overheat-wobble {
           transform-box: fill-box;
@@ -186,13 +188,14 @@ export function OverheatGlass({ state, label }: Props) {
           </g>
           {inside.map((coin, index) => {
             const fromTop = inside.length - 1 - index;
-            const drift = index % 2 === 0 ? -6 : 6;
+            const drift = index % 2 === 0 ? -8 : 8;
             return (
               <Coin
                 key={`in-${index}`}
                 cx={DOME_CX + drift}
-                cy={stackTop + fromTop * 28}
+                cy={stackTop + fromTop * COIN_STEP}
                 player={coin.player}
+                spin={index * 47}
               />
             );
           })}
@@ -254,14 +257,19 @@ export function OverheatGlass({ state, label }: Props) {
               fill="#67e8f9"
             />
             {spilled.map((coin, index) => {
-              const side = index % 2 === 0 ? -1 : 1;
-              const slot = Math.floor(index / 2);
+              const spots = [
+                [348, 1048],
+                [516, 1048],
+                [432, 1096],
+              ];
+              const [cx, cy] = spots[index] ?? [432, 1048];
               return (
                 <g key={`out-${index}`} className="overheat-coin-out">
                   <Coin
-                    cx={432 + side * (168 + slot * 46)}
-                    cy={1052 - (index % 2) * 8}
+                    cx={cx}
+                    cy={cy}
                     player={coin.player}
+                    spin={20 + index * 63}
                   />
                 </g>
               );
@@ -280,17 +288,33 @@ function Coin({
   cx,
   cy,
   player,
+  spin,
 }: {
   cx: number;
   cy: number;
   player: 0 | 1;
+  spin: number;
 }) {
   const style = getPlayerTurnStyle(player);
+  const size = COIN_R * 2;
   return (
     <g>
-      <circle cx={cx} cy={cy} r="20" fill="#0f172a" />
-      <circle cx={cx} cy={cy} r="16" fill={style.fill} />
-      <circle cx={cx + 4} cy={cy - 4} r="4" fill="#ffffff" opacity="0.85" />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={COIN_R + 1}
+        fill="none"
+        stroke={style.fill}
+        strokeWidth="5"
+      />
+      <image
+        href="/games/overheat-chicken/coin.png"
+        x={cx - COIN_R}
+        y={cy - COIN_R}
+        width={size}
+        height={size}
+        transform={`rotate(${spin} ${cx} ${cy})`}
+      />
     </g>
   );
 }
