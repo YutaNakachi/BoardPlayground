@@ -16,7 +16,6 @@ import {
   CAPACITY_MAX,
   CAPACITY_MIN,
   createOverheat,
-  dropHint,
   MAX_DROP,
   MIN_DROP,
   overflowCoinNumber,
@@ -141,22 +140,16 @@ export function OverheatChickenGame() {
           {Array.from(
             { length: MAX_DROP - MIN_DROP + 1 },
             (_, index) => MIN_DROP + index
-          ).map((count) => {
-            const hint = dropHint(state.fill, count);
-            return (
-              <button
-                key={count}
-                type="button"
-                onClick={() => drop(count)}
-                className="min-h-14 min-w-[5.5rem] rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-white transition hover:bg-white/10"
-              >
-                <span className="block text-base font-bold">{count}枚</span>
-                <span className="block min-h-4 text-[11px] text-slate-400">
-                  {hint ?? "\u00A0"}
-                </span>
-              </button>
-            );
-          })}
+          ).map((count) => (
+            <button
+              key={count}
+              type="button"
+              onClick={() => drop(count)}
+              className="min-h-12 min-w-[5.5rem] rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-base font-bold text-white transition hover:bg-white/10"
+            >
+              {count}枚
+            </button>
+          ))}
         </div>
       ) : null}
     </div>

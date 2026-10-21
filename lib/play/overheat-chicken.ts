@@ -94,16 +94,6 @@ export function tensionNotice(state: OverheatState): string {
   return `あと${remain}枚は確実`;
 }
 
-export function dropHint(
-  fill: number,
-  count: number
-): "確実" | "溢れる" | null {
-  const next = fill + count;
-  if (next <= CAPACITY_MIN) return "確実";
-  if (next > CAPACITY_MAX) return "溢れる";
-  return null;
-}
-
 export function coinsOf(state: OverheatState): CoinView[] {
   const coins: CoinView[] = [];
   let index = 0;

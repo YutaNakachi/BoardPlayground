@@ -9,30 +9,56 @@ import {
   type OverheatState,
 } from "@/lib/play/overheat-chicken";
 
-const RIM_Y = 250;
+const RIM_Y = 352;
+const DOME_CX = 432;
+const DOME_RX = 214;
+const WATER_BOTTOM = 828;
+const BASE_RY = 96;
 const SLOT = 16;
-const BASE_DOME = 28;
-const GLASS_TOP = 48;
-const GLASS_BOTTOM = 378;
 
-function surfaceY(fill: number): number {
-  return RIM_Y - BASE_DOME - fill * SLOT;
-}
+/** 写真の外縁。y, 左, 右。 */
+const OUTER: readonly (readonly [number, number, number])[] = [
+  [360, 164, 702],
+  [520, 180, 686],
+  [640, 191, 674],
+  [760, 203, 662],
+  [860, 212, 652],
+  [940, 220, 645],
+];
 
-/** 杯の壁の x。side は -1 が左。 */
+const BOWL =
+  "M 190 362 L 202 480 L 215 620 L 227 740 L 236 828 L 629 828 L 638 740 L 650 620 L 664 480 L 676 362 Z";
+
 function wallX(y: number, side: -1 | 1): number {
-  const t = Math.min(1, Math.max(0, (y - GLASS_TOP) / (GLASS_BOTTOM - GLASS_TOP)));
-  const left = 58 + 16 * t;
-  const right = 162 - 16 * t;
-  return side < 0 ? left : right;
+  let y0 = OUTER[0][0];
+  let left = OUTER[0][1];
+  let right = OUTER[0][2];
+  const last = OUTER[OUTER.length - 1];
+  let y1 = last[0];
+  let left1 = last[1];
+  let right1 = last[2];
+  for (let i = 0; i < OUTER.length - 1; i += 1) {
+    if (y >= OUTER[i][0] && y <= OUTER[i + 1][0]) {
+      y0 = OUTER[i][0];
+      left = OUTER[i][1];
+      right = OUTER[i][2];
+      y1 = OUTER[i + 1][0];
+      left1 = OUTER[i + 1][1];
+      right1 = OUTER[i + 1][2];
+      break;
+    }
+  }
+  const t = (y - y0) / Math.max(1, y1 - y0);
+  const x = side < 0 ? left + (left1 - left) * t : right + (right1 - right) * t;
+  return x;
 }
 
-function dripPath(side: -1 | 1, y0: number, bulge: number): string {
-  const startX = wallX(y0, side) + side * 6;
-  const midY = y0 + 70;
+function dripPath(side: -1 | 1, bulge: number, y0: number): string {
+  const startX = wallX(y0, side) + side * -4;
+  const midY = 700;
   const midX = wallX(midY, side) + side * bulge;
-  const endX = wallX(410, side) + side * 2;
-  return `M ${startX} ${y0} Q ${midX} ${midY} ${endX} 424`;
+  const endX = wallX(930, side) + side * -2;
+  return `M ${startX} ${y0} Q ${midX} ${midY} ${endX} 1052`;
 }
 
 type Props = {
@@ -42,21 +68,21 @@ type Props = {
 
 export function OverheatGlass({ state, label }: Props) {
   const rawId = useId().replace(/:/g, "");
-  const clipId = `overheat-glass-${rawId}`;
   const waterId = `overheat-water-${rawId}`;
   const over = state.winner !== null;
-  const shownFill = over ? state.capacity : state.fill;
-  const top = surfaceY(shownFill);
+  const ry = over ? 18 : BASE_RY + state.fill * SLOT;
+  const surface = RIM_Y - ry;
   const coins = coinsOf(state);
   const inside = coins.filter((coin) => !coin.spilled);
   const spilled = coins.filter((coin) => coin.spilled);
   const wobble = !over && state.fill >= CAPACITY_MIN;
   const depth = Math.max(0, state.fill - (CAPACITY_MIN - 1));
-  const wobblePx = Math.min(5, 1 + depth * 0.7);
+  const wobblePx = Math.min(6, 2 + depth * 0.8);
   const wobbleSec = Math.max(0.45, 1.15 - depth * 0.08);
+  const stackTop = over ? RIM_Y + 40 : surface + 28;
 
   return (
-    <div className="mx-auto w-full max-w-[240px]">
+    <div className="mx-auto w-full max-w-[300px]">
       <style>{`
         .overheat-wobble {
           transform-box: fill-box;
@@ -97,7 +123,7 @@ export function OverheatGlass({ state, label }: Props) {
           animation: overheat-coin-out 0.7s ease-out both;
         }
         @keyframes overheat-coin-out {
-          from { transform: translateY(-40px); opacity: 0.2; }
+          from { transform: translateY(-70px); opacity: 0.2; }
           to { transform: translateY(0); opacity: 1; }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -109,41 +135,29 @@ export function OverheatGlass({ state, label }: Props) {
           }
         }
       `}</style>
-      <svg
-        viewBox="0 0 220 470"
-        className="h-auto w-full"
-        role="img"
-        aria-label={label}
-      >
-        <defs>
-          <clipPath id={clipId}>
-            <path d="M58 48 L74 378 Q110 404 146 378 L162 48 Q110 62 58 48 Z" />
-          </clipPath>
-          <linearGradient id={waterId} x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#0e7490" />
-            <stop offset="58%" stopColor="#22d3ee" />
-            <stop offset="100%" stopColor="#cffafe" />
-          </linearGradient>
-        </defs>
-
-        <ellipse cx="110" cy="418" rx="48" ry="9" fill="rgba(0,0,0,0.35)" />
-
-        <path
-          d="M58 48 L74 378 Q110 404 146 378 L162 48 Q110 62 58 48 Z"
-          fill="rgba(255,255,255,0.05)"
-          stroke="rgba(255,255,255,0.38)"
-          strokeWidth="3"
-        />
-
-        <g clipPath={`url(#${clipId})`}>
-          <rect
-            x="50"
-            y={top}
-            width="120"
-            height={420 - top}
-            fill={`url(#${waterId})`}
-          />
-          <ellipse
+      <div className="relative aspect-[3/4] w-full" role="img" aria-label={label}>
+        <svg
+          viewBox="0 0 864 1152"
+          className="absolute inset-0 h-full w-full"
+          aria-hidden
+        >
+          <defs>
+            <linearGradient
+              id={waterId}
+              x1="0"
+              y1={surface}
+              x2="0"
+              y2={WATER_BOTTOM}
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0%" stopColor="#e0faff" />
+              <stop offset="16%" stopColor="#67e8f9" />
+              <stop offset="42%" stopColor="#22d3ee" />
+              <stop offset="100%" stopColor="#0e7490" />
+            </linearGradient>
+          </defs>
+          <path d={BOWL} fill={`url(#${waterId})`} />
+          <g
             className={wobble ? "overheat-wobble" : undefined}
             style={
               wobble
@@ -153,97 +167,90 @@ export function OverheatGlass({ state, label }: Props) {
                   } as CSSProperties)
                 : undefined
             }
-            cx="110"
-            cy={top}
-            rx="40"
-            ry={over ? 4 : 12}
-            fill="#e0faff"
-            opacity={over ? 0.55 : 0.95}
-          />
+          >
+            <ellipse
+              cx={DOME_CX}
+              cy={RIM_Y}
+              rx={DOME_RX}
+              ry={ry}
+              fill={`url(#${waterId})`}
+            />
+            <ellipse
+              cx={DOME_CX}
+              cy={surface + Math.max(10, ry * 0.28)}
+              rx={DOME_RX * 0.62}
+              ry={over ? 5 : 11}
+              fill="#f0fdff"
+              opacity={over ? 0.4 : 0.72}
+            />
+          </g>
           {inside.map((coin, index) => {
             const fromTop = inside.length - 1 - index;
+            const drift = index % 2 === 0 ? -6 : 6;
             return (
               <Coin
                 key={`in-${index}`}
-                cx={110}
-                cy={top + 20 + fromTop * 16}
+                cx={DOME_CX + drift}
+                cy={stackTop + fromTop * 28}
                 player={coin.player}
               />
             );
           })}
-        </g>
-
-        <ellipse
-          cx="110"
-          cy={RIM_Y}
-          rx="42"
-          ry="6"
-          fill="none"
-          stroke="rgba(255,255,255,0.82)"
-          strokeWidth="2"
+        </svg>
+        <img
+          src="/games/overheat-chicken/glass.png"
+          alt=""
+          draggable={false}
+          className="pointer-events-none absolute inset-0 h-full w-full select-none"
         />
-        <ellipse
-          cx="110"
-          cy="48"
-          rx="54"
-          ry="8"
-          fill="none"
-          stroke="rgba(255,255,255,0.45)"
-          strokeWidth="3"
-        />
-        <text
-          x="176"
-          y={RIM_Y + 4}
-          fill="#94a3b8"
-          fontSize="12"
-        >
-          縁
-        </text>
-
         {over ? (
-          <g className="overheat-spill">
+          <svg
+            viewBox="0 0 864 1152"
+            className="overheat-spill pointer-events-none absolute inset-0 h-full w-full"
+            aria-hidden
+          >
             <path
               className="overheat-drip"
               pathLength={100}
-              d={dripPath(-1, top, 16)}
+              d={dripPath(-1, 10, 358)}
               fill="none"
               stroke="#67e8f9"
-              strokeWidth="8"
+              strokeWidth="22"
               strokeLinecap="round"
             />
             <path
               className="overheat-drip"
               pathLength={100}
-              d={dripPath(1, top, 16)}
+              d={dripPath(1, 10, 358)}
               fill="none"
               stroke="#67e8f9"
-              strokeWidth="8"
+              strokeWidth="22"
               strokeLinecap="round"
             />
             <path
               className="overheat-drip"
               pathLength={100}
-              d={dripPath(-1, top + 8, 8)}
+              d={dripPath(-1, 4, 390)}
               fill="none"
               stroke="#e0faff"
-              strokeWidth="3"
+              strokeWidth="9"
               strokeLinecap="round"
             />
             <path
               className="overheat-drip"
               pathLength={100}
-              d={dripPath(1, top + 8, 8)}
+              d={dripPath(1, 4, 390)}
               fill="none"
               stroke="#e0faff"
-              strokeWidth="3"
+              strokeWidth="9"
               strokeLinecap="round"
             />
             <ellipse
               className="overheat-puddle"
-              cx="110"
-              cy="438"
-              rx="74"
-              ry="12"
+              cx="432"
+              cy="1064"
+              rx="250"
+              ry="24"
               fill="#67e8f9"
             />
             {spilled.map((coin, index) => {
@@ -252,16 +259,16 @@ export function OverheatGlass({ state, label }: Props) {
               return (
                 <g key={`out-${index}`} className="overheat-coin-out">
                   <Coin
-                    cx={110 + side * (58 + slot * 16)}
-                    cy={430 - (index % 2) * 6}
+                    cx={432 + side * (168 + slot * 46)}
+                    cy={1052 - (index % 2) * 8}
                     player={coin.player}
                   />
                 </g>
               );
             })}
-          </g>
+          </svg>
         ) : null}
-      </svg>
+      </div>
       <p className="sr-only">
         上限の候補は{CAPACITY_MIN}枚から{CAPACITY_MAX}枚です。
       </p>
@@ -281,9 +288,9 @@ function Coin({
   const style = getPlayerTurnStyle(player);
   return (
     <g>
-      <circle cx={cx} cy={cy} r="11" fill="#0f172a" />
-      <circle cx={cx} cy={cy} r="9" fill={style.fill} />
-      <circle cx={cx + 2} cy={cy - 2} r="2.5" fill="#ffffff" opacity="0.85" />
+      <circle cx={cx} cy={cy} r="20" fill="#0f172a" />
+      <circle cx={cx} cy={cy} r="16" fill={style.fill} />
+      <circle cx={cx + 4} cy={cy - 4} r="4" fill="#ffffff" opacity="0.85" />
     </g>
   );
 }
