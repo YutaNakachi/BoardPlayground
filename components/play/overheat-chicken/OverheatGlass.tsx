@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useState, type CSSProperties } from "react";
-import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   CAPACITY_MAX,
   CAPACITY_MIN,
@@ -15,10 +14,21 @@ const DOME_RX = 214;
 const WATER_BOTTOM = 828;
 const BASE_RY = 96;
 const SLOT = 16;
-const COIN_R = 40;
-const COIN_STEP = 52;
-/** 杯の内側の底。先に入れたコインがここへ沈む。 */
-const COIN_FLOOR = 776;
+const COIN_R = 58;
+/** 杯の内側の底。チップはここへ沈んで重なる。 */
+const COIN_FLOOR = 792;
+/** 底でのずれ。先の枚が下、あとの枚が少し上に重なる。x, 上方向。 */
+const CHIP_PILE: readonly [number, number][] = [
+  [0, 0],
+  [-50, 16],
+  [52, 14],
+  [-8, 32],
+  [44, 34],
+  [-48, 36],
+  [18, 48],
+  [-32, 50],
+  [36, 58],
+];
 
 /** 写真の外縁。y, 左, 右。 */
 const OUTER: readonly (readonly [number, number, number])[] = [
@@ -201,16 +211,16 @@ export function OverheatGlass({ state, label }: Props) {
             />
           </g>
           {inside.map((coin, index) => {
-            const drift = index % 2 === 0 ? -10 : 10;
-            const cy = COIN_FLOOR - index * COIN_STEP;
+            const [dx, up] = CHIP_PILE[index] ?? [0, 12];
+            const cy = COIN_FLOOR - up;
             const globalIndex = coins.indexOf(coin);
             return (
               <Coin
                 key={`in-${index}`}
-                cx={DOME_CX + drift}
+                cx={DOME_CX + dx}
                 cy={cy}
                 player={coin.player}
-                spin={index * 47}
+                spin={index * 37}
                 sinkFrom={
                   !reducedMotion && globalIndex >= freshStart
                     ? surface + COIN_R - cy
@@ -333,7 +343,6 @@ function Coin({
   sinkFrom?: number;
   sinkDelay?: number;
 }) {
-  const style = getPlayerTurnStyle(player);
   const size = COIN_R * 2;
   return (
     <g className={sinkFrom !== undefined ? "overheat-sink" : undefined}>
@@ -348,16 +357,8 @@ function Coin({
           fill="freeze"
         />
       ) : null}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={COIN_R + 1}
-        fill="none"
-        stroke={style.fill}
-        strokeWidth="5"
-      />
       <image
-        href="/games/overheat-chicken/coin.png"
+        href={`/games/overheat-chicken/chip-${player}.png`}
         x={cx - COIN_R}
         y={cy - COIN_R}
         width={size}
