@@ -435,6 +435,28 @@ const games: GameMeta[] = [
     listedAt: "2026-10-10",
   },
   {
+    slug: "overheat-chicken",
+    title: "オーバーヒート・チキンレース",
+    description:
+      "縁まで満たした杯に交互にコインを入れ、水を溢れさせた方が負けになる2人用の勝負。上限は終わるまで分かりません。",
+    origin: "fiction",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 2,
+    complexity: "easy",
+    cpu: false,
+    team: false,
+    tags: ["心理戦", "運要素"],
+    rulesSummary: [
+      "縁まで満たした杯に、1手番でコインを1〜3枚入れる。溢れさせた方が負け。",
+      "上限は5〜9枚のどこか。5枚までは必ず耐え、超えた枚数で終了。数字は溢れたときに分かる。",
+      "同じ画面で交代する。先手は始める前に選ぶ。",
+    ],
+    status: "playable",
+    listed: false,
+  },
+  {
     slug: "dominoes",
     title: "ドミノ",
     description:
