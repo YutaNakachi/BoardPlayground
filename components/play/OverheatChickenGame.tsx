@@ -12,14 +12,10 @@ import {
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
-  CAPACITY_MAX,
-  CAPACITY_MIN,
   CHIP_LABEL,
-  CHIP_RISE,
   CHIP_SIZES,
   createOverheat,
   endTurn,
-  formatLevel,
   MAX_CHIPS_PER_TURN,
   placeChip,
   tensionNotice,
@@ -30,8 +26,10 @@ import {
 
 type Phase = "setup" | "playing" | "game-over";
 
+const PLAYER_NAME = ["ピンク", "水色"] as const;
+
 function playerLabel(player: PlayerId): string {
-  return `プレイヤー ${player + 1}`;
+  return PLAYER_NAME[player];
 }
 
 export function OverheatChickenGame() {
@@ -74,7 +72,7 @@ export function OverheatChickenGame() {
     return (
       <SetupPanel
         title="オーバーヒート・チキンレース"
-        description="縁まで満たした杯に、小・中・大のチップを1枚ずつ入れます。1手番は3枚まで。水を溢れさせた方が負けです。"
+        description="縁まで満たした杯に、小・中・大のチップを入れます。終えるときはボタンを押します。水を溢れさせた方が負けです。"
         playerCount={2}
         onPlayerCount={() => {}}
         playerOptions={[2]}
@@ -100,16 +98,14 @@ export function OverheatChickenGame() {
   }
 
   const over = phase === "game-over" && state.winner !== null;
-  const levelLabel = formatLevel(state.fill);
-  const glassLabel = over
-    ? `杯。上限は${state.capacity}。水位${levelLabel}で水が溢れた。`
-    : `杯。水位${levelLabel}。この手番${state.placed}枚。${tensionNotice(state)}`;
+  const notice = tensionNotice(state);
+  const glassLabel = over ? "杯。水が溢れた。" : "杯。チップを入れている。";
   const action =
     state.placed <= 0
-      ? "小・中・大から1枚"
+      ? "サイズを選ぶ"
       : state.placed >= MAX_CHIPS_PER_TURN
         ? "手番を終える"
-        : "続けるか終了";
+        : "続けるか、手番を終える";
 
   return (
     <div className="space-y-6">
@@ -118,11 +114,8 @@ export function OverheatChickenGame() {
           variant="inline"
           winners={[state.winner]}
           onReplay={backToSetup}
-          details={
-            <p className="text-sm text-slate-400">
-              上限は{state.capacity}。水位{levelLabel}で溢れた。
-            </p>
-          }
+          winnersLabel={playerLabel(state.winner)}
+          details={<p className="text-sm text-slate-400">水が溢れた。</p>}
         />
       ) : null}
 
@@ -130,23 +123,19 @@ export function OverheatChickenGame() {
         <TurnBanner
           playerIndex={state.current}
           playerLabel={playerLabel(state.current)}
-          stats={`水位 ${levelLabel} · ${state.placed}/${MAX_CHIPS_PER_TURN}枚`}
           action={action}
-          notice={tensionNotice(state)}
+          notice={notice || undefined}
         />
       ) : null}
 
       <div className="mx-auto flex min-h-10 max-w-md flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-400">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-accent" aria-hidden />
-          プレイヤー 1
+          ピンク
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-sky-400" aria-hidden />
-          プレイヤー 2
-        </span>
-        <span>
-          上限は水位{CAPACITY_MIN}〜{CAPACITY_MAX}
+          水色
         </span>
       </div>
 
@@ -160,12 +149,9 @@ export function OverheatChickenGame() {
               type="button"
               disabled={state.placed >= MAX_CHIPS_PER_TURN}
               onClick={() => place(size)}
-              className="min-h-12 min-w-[5.5rem] rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-base font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/5"
+              className="min-h-12 min-w-[5.5rem] rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-base font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/5"
             >
-              <span className="block leading-tight">{CHIP_LABEL[size]}</span>
-              <span className="block text-xs font-semibold leading-tight text-slate-300">
-                +{formatLevel(CHIP_RISE[size])}
-              </span>
+              {CHIP_LABEL[size]}
             </button>
           ))}
           <button

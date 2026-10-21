@@ -37,11 +37,6 @@ export type OverheatState = {
   chips: OverheatChip[];
 };
 
-export function formatLevel(value: number): string {
-  const snapped = Math.round(value * 2) / 2;
-  return Number.isInteger(snapped) ? String(snapped) : snapped.toFixed(1);
-}
-
 function snap(value: number): number {
   return Math.round(value * 2) / 2;
 }
@@ -108,24 +103,9 @@ export function endTurn(state: OverheatState): OverheatState | null {
   return { ...state, placed: 0, current: other(state.current) };
 }
 
-export function possibleCapacity(state: OverheatState): {
-  min: number;
-  max: number;
-} {
-  if (state.winner !== null) {
-    return { min: state.capacity, max: state.capacity };
-  }
-  const survived = Math.max(CAPACITY_MIN, Math.ceil(state.fill - 1e-9));
-  return { min: Math.min(survived, CAPACITY_MAX), max: CAPACITY_MAX };
-}
-
+/** 画面に出す文言。水位や上限の数字は含めない。 */
 export function tensionNotice(state: OverheatState): string {
   if (state.winner !== null) return "";
   if (snap(state.fill + CHIP_RISE.s) > CAPACITY_MAX) return "次は必ず溢れる";
-  if (state.fill >= CAPACITY_MIN) {
-    const { min, max } = possibleCapacity(state);
-    return min === max ? `上限は${formatLevel(min)}` : `上限は${min}〜${max}`;
-  }
-  const remain = snap(CAPACITY_MIN - state.fill);
-  return `あと${formatLevel(remain)}は確実`;
+  return "";
 }

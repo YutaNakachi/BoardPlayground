@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useState, type CSSProperties } from "react";
 import {
-  CAPACITY_MAX,
   CAPACITY_MIN,
   type ChipSize,
   type OverheatState,
@@ -291,7 +290,7 @@ export function OverheatGlass({ state, label }: Props) {
         ) : null}
       </div>
       <p className="sr-only">
-        上限の候補は水位{CAPACITY_MIN}から{CAPACITY_MAX}です。
+        水位と上限の数字は表示しません。
       </p>
     </div>
   );
