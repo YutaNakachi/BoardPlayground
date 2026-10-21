@@ -69,7 +69,7 @@ export async function fetchRoom(roomId: string): Promise<{
 }
 
 export type StartRoomParams = {
-  firstPlayer?: 0 | 1;
+  firstPlayer?: number;
   gameOptions?: Record<string, unknown>;
 };
 

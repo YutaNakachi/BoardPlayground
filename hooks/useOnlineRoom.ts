@@ -20,6 +20,7 @@ import { mergeGameOptions } from "@/lib/online/game-options";
 import {
   applyMove,
   dejarikTurnSeat,
+  turnSeatForState,
   type DejarikOnlineState,
   type GameState,
   type MovePayload,
@@ -624,19 +625,16 @@ export function useOnlineRoom(gameSlug: string) {
       if (!liveState) return;
 
       const slug = room.gameSlug as OnlineGameSlug;
-      const dejarikActorSeat =
-        slug === "dejarik"
-          ? dejarikTurnSeat(liveState as DejarikOnlineState)
-          : null;
-      const actorSeat =
-        dejarikActorSeat !== null ? dejarikActorSeat : liveState.current;
+      const actorSeat = turnSeatForState(slug, liveState);
       const chainedExtraTurn =
         pendingMoveRef.current &&
         liveState.phase !== "game-over" &&
         actorSeat === mySeat;
 
       const onTurn =
-        chainedExtraTurn || currentPlayer === mySeat || actorSeat === mySeat;
+        chainedExtraTurn ||
+        currentPlayer === mySeat ||
+        (actorSeat !== null && actorSeat === mySeat);
       if (!onTurn) return;
 
       const result = applyMove(
@@ -691,6 +689,8 @@ export function useOnlineRoom(gameSlug: string) {
   }, [room?.gameSlug, gameState, mySeat, currentPlayer]);
   const resolvedPlayerId = myPlayerId || getOrCreatePlayerId();
   const players = room?.players ?? EMPTY_PLAYERS;
+  const maxPlayers = room?.maxPlayers ?? 2;
+  const canStart = players.length === maxPlayers;
 
   return useMemo(
     () => ({
@@ -704,6 +704,8 @@ export function useOnlineRoom(gameSlug: string) {
       isHost,
       isMyTurn,
       players,
+      maxPlayers,
+      canStart,
       error,
       loading,
       movePending,
@@ -729,6 +731,8 @@ export function useOnlineRoom(gameSlug: string) {
       isHost,
       isMyTurn,
       players,
+      maxPlayers,
+      canStart,
       error,
       loading,
       movePending,

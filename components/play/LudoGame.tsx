@@ -4,9 +4,24 @@ import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DiceFace } from "@/components/play/shared/DiceFace";
+import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { OnlinePlayerCountPicker } from "@/components/play/shared/OnlinePlayerCountPicker";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import type { PlayerCountOption } from "@/lib/online/game-options";
+import type { LudoOnlineState } from "@/lib/online/moves";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   coordKey,
@@ -201,15 +216,44 @@ function centerTriangleClass(r: number, c: number): string | null {
 }
 
 export function LudoGame() {
-  const { recordLocalPlay } = usePlayPage();
-  const [phase, setPhase] = useState<Phase>("setup");
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("ludo");
+  const { firstPlayer, onFirstPlayerChange, seatCount } =
+    useOnlineFirstPlayer(online);
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [onlinePlayerCount, setOnlinePlayerCount] =
+    useState<PlayerCountOption>(2);
+  const [localPhase, setLocalPhase] = useState<Phase>("setup");
   const [playerCount, setPlayerCount] = useState(2);
-  const [state, setState] = useState<LudoState>(initialLudo(2));
+  const [localState, setLocalState] = useState<LudoState>(initialLudo(2));
+
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as LudoOnlineState | null;
+  const isOnline = isOnlinePlay;
+  const state: LudoState =
+    isOnline && onlineState ? onlineState : localState;
+  const phase: Phase =
+    isOnline && onlineState
+      ? onlineState.phase === "game-over" || online.phase === "finished"
+        ? "game-over"
+        : "playing"
+      : localPhase;
+
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    }
+  }, [online.room?.code, online.phase, setPlayMode]);
 
   const startGame = useCallback(() => {
     recordLocalPlay();
-    setState(initialLudo(playerCount));
-    setPhase("playing");
+    setLocalState(initialLudo(playerCount));
+    setLocalPhase("playing");
   }, [recordLocalPlay, playerCount]);
 
   const moves = useMemo(
@@ -230,6 +274,12 @@ export function LudoGame() {
   const [diceFace, setDiceFace] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (isOnline && onlineState?.lastRoll != null) {
+      setDiceFace(onlineState.lastRoll);
+    }
+  }, [isOnline, onlineState?.lastRoll]);
 
   const [animatingTokenIndex, setAnimatingTokenIndex] = useState<number | null>(null);
   const [animatingToken, setAnimatingToken] = useState<LudoToken | null>(null);
@@ -252,6 +302,11 @@ export function LudoGame() {
 
   const onRoll = useCallback(() => {
     if (isAnimating || isRolling || state.lastRoll != null || state.winner != null) return;
+    if (isOnline) {
+      if (!online.isMyTurn || online.movePending) return;
+      void online.handleMove({ type: "ludo-roll" });
+      return;
+    }
 
     setIsRolling(true);
     let ticks = 0;
@@ -261,7 +316,7 @@ export function LudoGame() {
       if (ticks >= 10) {
         if (rollTimerRef.current) clearInterval(rollTimerRef.current);
         rollTimerRef.current = null;
-        setState((s) => {
+        setLocalState((s) => {
           const next = rollLudo(s);
           setDiceFace(next.lastRoll ?? 1);
           setIsRolling(false);
@@ -269,20 +324,32 @@ export function LudoGame() {
         });
       }
     }, 70);
-  }, [isAnimating, isRolling, state.lastRoll, state.winner]);
+  }, [
+    isAnimating,
+    isRolling,
+    state.lastRoll,
+    state.winner,
+    isOnline,
+    online,
+  ]);
 
   const onToken = useCallback(
     (tokenIndex: number) => {
       if (isAnimating) return;
       if (!moves.some((m) => m.tokenIndex === tokenIndex)) return;
+      if (isOnline) {
+        if (!online.isMyTurn || online.movePending) return;
+        void online.handleMove({ type: "ludo-move", tokenIndex });
+        return;
+      }
 
       const roll = state.lastRoll!;
       const steps = ludoMoveAnimationSteps(state.tokens[tokenIndex], roll);
 
       if (steps.length === 0) {
         const next = applyLudoMove(state, { tokenIndex });
-        if (next) setState(next);
-        if (next?.winner != null) setPhase("game-over");
+        if (next) setLocalState(next);
+        if (next?.winner != null) setLocalPhase("game-over");
         return;
       }
 
@@ -292,8 +359,8 @@ export function LudoGame() {
         const next = applyLudoMove(state, { tokenIndex });
         setAnimatingTokenIndex(null);
         setAnimatingToken(null);
-        if (next) setState(next);
-        if (next?.winner != null) setPhase("game-over");
+        if (next) setLocalState(next);
+        if (next?.winner != null) setLocalPhase("game-over");
       };
 
       const showStep = (stepIndex: number) => {
@@ -307,32 +374,124 @@ export function LudoGame() {
 
       showStep(0);
     },
-    [isAnimating, moves, state]
+    [isAnimating, moves, state, isOnline, online]
   );
 
   const passTurn = useCallback(() => {
     if (isAnimating) return;
-    setState((s) => endLudoTurn(s));
-  }, [isAnimating]);
+    if (isOnline) {
+      if (!online.isMyTurn || online.movePending) return;
+      void online.handleMove({ type: "ludo-end-turn" });
+      return;
+    }
+    setLocalState((s) => endLudoTurn(s));
+  }, [isAnimating, isOnline, online]);
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
-  usePlaySetupNavigation(phase === "setup", backToSetup);
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setPlayMode({ mode: "local" });
+  }, [online, setPlayMode]);
 
-  if (phase === "setup") {
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") ||
+    online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
+
+  if (online.completingPendingJoin) {
+    return <PendingJoinConnecting />;
+  }
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="ルドー"
         description="サイコロで6が出たらコマを出す。ぴったり止まって相手を戻し、4つすべてをゴールへ。"
-        playerCount={playerCount}
-        playerOptions={[2, 3, 4]}
-        onPlayerCount={setPlayerCount}
-        onStart={startGame}
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={(displayName) =>
+          online.handleCreate(displayName, {
+            playerCount: onlinePlayerCount,
+            firstPlayer,
+          })
+        }
+        onJoinRoom={online.handleJoin}
+        onStartLocal={() => {
+          setMode("local");
+          startGame();
+        }}
+        loading={online.loading}
+        error={online.error}
+        initialJoinCode={online.joinCodeFromUrl}
+        createExtra={
+          <OnlinePlayerCountPicker
+            value={onlinePlayerCount}
+            options={[2, 3, 4]}
+            onChange={setOnlinePlayerCount}
+          />
+        }
+        extra={
+          <OnlinePlayerCountPicker
+            value={playerCount as PlayerCountOption}
+            options={[2, 3, 4]}
+            onChange={setPlayerCount}
+          />
+        }
+      />
+    );
+  }
+
+  if (online.phase === "waiting" && online.room) {
+    return (
+      <OnlineSetupPanel
+        title="ルドー"
+        description="サイコロで6が出たらコマを出す。ぴったり止まって相手を戻し、4つすべてをゴールへ。"
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          maxPlayers: online.maxPlayers,
+          isHost: online.isHost,
+          onStart: () => online.handleStart({ firstPlayer }),
+          canStart: online.canStart,
+          extra: (
+            <OnlineFirstPlayerPicker
+              players={online.players}
+              value={firstPlayer}
+              seatCount={seatCount}
+              onChange={online.isHost ? onFirstPlayerChange : undefined}
+              readOnly={!online.isHost}
+            />
+          ),
+        }}
       />
     );
   }
 
   const isGameOver = phase === "game-over" && state.winner != null;
   const winners = isGameOver ? [state.winner!] : null;
+  const winnerLabels =
+    isOnline && isGameOver && winners
+      ? formatWinnersWithNames(
+          online.players,
+          winners.map((w) => state.activePlayers.indexOf(w))
+        )
+      : null;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    () => online.handleRematch({ firstPlayer }),
+    reset
+  );
 
   return (
     <div className="space-y-6">
@@ -340,7 +499,8 @@ export function LudoGame() {
         <ResultPanel
           variant="inline"
           winners={winners}
-          onReplay={() => setPhase("setup")}
+          winnersLabel={winnerLabels ?? undefined}
+          {...replayProps}
           details={<p className="text-slate-400">4つのコマをすべてゴールしました。</p>}
         />
       )}
@@ -348,7 +508,14 @@ export function LudoGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={LUDO_STYLE_INDEX[state.current]}
-          playerLabel={`プレイヤー ${state.activePlayers.indexOf(state.current) + 1}`}
+          playerLabel={
+            isOnline
+              ? formatSeatLabel(
+                  online.players,
+                  state.activePlayers.indexOf(state.current)
+                )
+              : `プレイヤー ${state.activePlayers.indexOf(state.current) + 1}`
+          }
           action={
             state.lastRoll == null
               ? "サイコロを振る"
@@ -520,7 +687,12 @@ export function LudoGame() {
           )}
 
           {state.lastRoll == null && !isRolling && !isAnimating ? (
-            <button type="button" onClick={onRoll} className="btn-game">
+            <button
+              type="button"
+              onClick={onRoll}
+              disabled={isOnline && (!online.isMyTurn || online.movePending)}
+              className="btn-game"
+            >
               サイコロを振る
             </button>
           ) : null}

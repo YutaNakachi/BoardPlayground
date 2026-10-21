@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import {
-  parseFirstPlayer,
-  type FirstPlayerSeat,
-} from "@/lib/online/game-options";
+import { parseOpeningSeat } from "@/lib/online/player-count";
+import { requiredPlayerCountFromRoom } from "@/lib/online/game-options";
 import type { RoomInfo, RoomPlayer } from "@/lib/online/types";
 
 type OnlinePhase = "idle" | "waiting" | "playing" | "finished";
@@ -18,21 +16,30 @@ type OnlineRoomSlice = {
 };
 
 export function useOnlineFirstPlayer(online: OnlineRoomSlice) {
-  const storedFirstPlayer = parseFirstPlayer(online.room?.gameOptions);
+  const slug = online.room?.gameSlug ?? "";
+  const seatCount = online.room
+    ? requiredPlayerCountFromRoom(
+        slug,
+        online.room.gameOptions,
+        online.room.maxPlayers
+      )
+    : 2;
+  const storedOpening =
+    parseOpeningSeat(online.room?.gameOptions, seatCount) ?? 0;
   const roomId = online.room?.id ?? "";
   const [selectionByRoom, setSelectionByRoom] = useState<
-    Record<string, FirstPlayerSeat>
+    Record<string, number>
   >({});
 
   const selection = roomId ? selectionByRoom[roomId] : undefined;
-  const rematchDefault: FirstPlayerSeat = storedFirstPlayer === 0 ? 1 : 0;
+  const rematchDefault = (storedOpening + 1) % seatCount;
   const firstPlayer =
     online.phase === "finished"
       ? (selection ?? rematchDefault)
-      : (selection ?? storedFirstPlayer);
+      : (selection ?? storedOpening);
 
   const onFirstPlayerChange = useCallback(
-    (seat: FirstPlayerSeat) => {
+    (seat: number) => {
       if (!roomId) return;
       setSelectionByRoom((prev) => ({ ...prev, [roomId]: seat }));
       if (
@@ -54,5 +61,5 @@ export function useOnlineFirstPlayer(online: OnlineRoomSlice) {
     ]
   );
 
-  return { firstPlayer, onFirstPlayerChange };
+  return { firstPlayer, onFirstPlayerChange, seatCount };
 }

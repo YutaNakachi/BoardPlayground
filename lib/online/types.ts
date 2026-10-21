@@ -13,6 +13,7 @@ export type RoomInfo = {
   code: string;
   gameSlug: string;
   status: RoomStatus;
+  maxPlayers: number;
   players: RoomPlayer[];
   hostPlayerId: string;
   gameOptions: Record<string, unknown>;
@@ -24,7 +25,7 @@ export type RoomGameState = {
   currentPlayer: number | null;
 };
 
-/** Games that support online 2-player play */
+/** Games that support online play (2-player or host-selected 2–4) */
 export const ONLINE_GAME_SLUGS = [
   "reversi",
   "tic-tac-toe",
@@ -38,6 +39,8 @@ export const ONLINE_GAME_SLUGS = [
   "fox-hounds",
   "dejarik",
   "mini-shogi",
+  "ludo",
+  "nebula-link",
 ] as const;
 
 export type OnlineGameSlug = (typeof ONLINE_GAME_SLUGS)[number];
