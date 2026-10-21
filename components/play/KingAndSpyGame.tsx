@@ -23,11 +23,7 @@ import {
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import { kingRoleSeatFromHost } from "@/lib/play/king-and-spy/game-options";
-import {
-  CARD_KIND_LABEL,
-  playerRoleLabel,
-  winningSideLabel,
-} from "@/lib/play/king-and-spy/labels";
+import { playerRoleLabel } from "@/lib/play/king-and-spy/labels";
 import { roleForSeat } from "@/lib/play/king-and-spy/rules";
 import {
   applyKingAndSpyCommit,
@@ -399,10 +395,6 @@ export function KingAndSpyGame() {
         ? "オープン…"
         : "場に裏向きで出しました。相手の確定を待っています";
     }
-    if (activeView.lastReveal) {
-      const lr = activeView.lastReveal;
-      notice = `公開: ${CARD_KIND_LABEL[lr.cards[0].kind]} vs ${CARD_KIND_LABEL[lr.cards[1].kind]} → ${winningSideLabel(lr.winningSide)}決着（+${lr.pointsAwarded}）`;
-    }
   }
 
   const replayProps = getOnlineResultReplayProps(
@@ -448,27 +440,13 @@ export function KingAndSpyGame() {
       )}
 
       {!isGameOver && (
-        <KingAndSpyDuelField field={field} labels={seatLabels} mySeat={mySeat} />
+        <KingAndSpyDuelField
+          field={field}
+          labels={seatLabels}
+          mySeat={mySeat}
+          lastReveal={activeView.lastReveal}
+        />
       )}
-
-      <div className="rounded-xl border border-slate-700/80 bg-slate-900/50 p-3">
-        <p className="text-xs text-slate-400">捨て札</p>
-        <div className="mt-2 flex flex-wrap justify-center gap-2">
-          {activeView.discards.length === 0 ? (
-            <span className="text-sm text-slate-500">なし</span>
-          ) : (
-            activeView.discards.map((c) => (
-              <KingAndSpyPlayingCard
-                key={c.id}
-                card={c}
-                faceDown={false}
-                flipped={true}
-                size="discard"
-              />
-            ))
-          )}
-        </div>
-      </div>
 
       {!isGameOver && (
         <div className="space-y-3">
