@@ -61,7 +61,7 @@ function toPublicState(view: KingAndSpyViewState): KingAndSpyPublicState {
 }
 
 export function KingAndSpyGame() {
-  const { recordLocalPlay } = usePlayPage();
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
   const { onlineEnabled } = usePlayStats();
   const online = useOnlineRoom("king-and-spy");
   const { hostStartsAsKing, onHostStartsAsKingChange } =
@@ -84,6 +84,19 @@ export function KingAndSpyGame() {
 
   const isOnlinePlay =
     online.phase === "playing" || online.phase === "finished";
+
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" ||
+        online.phase === "playing" ||
+        online.phase === "finished")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    } else if (localPhase === "playing" || localPhase === "game-over") {
+      setPlayMode({ mode: "local" });
+    }
+  }, [online.room?.code, online.phase, localPhase, setPlayMode]);
 
   const onlineView: KingAndSpyViewState | null = useMemo(() => {
     if (!isOnlinePlay || !online.gameState) return null;
@@ -203,8 +216,10 @@ export function KingAndSpyGame() {
       }
       if (!pub.committedReady[0] && !pub.committedReady[1]) {
         setLocalActiveSeat(0);
-      } else {
-        setLocalActiveSeat(seat === 0 ? 1 : 0);
+      } else if (!pub.committedReady[0]) {
+        setLocalActiveSeat(0);
+      } else if (!pub.committedReady[1]) {
+        setLocalActiveSeat(1);
       }
     },
     [publicState, secrets]
@@ -430,7 +445,9 @@ export function KingAndSpyGame() {
     notice = undefined;
   } else {
     stats = `あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
-    action = "手札から1枚選び、確定する";
+    action = isOnlinePlay
+      ? "手札から1枚選び、いつでも確定（相手と同時進行）"
+      : "手札から1枚選び、確定する";
     if (isRevealPlayback) {
       action = "公開中… 次の手札は表示が終わってから";
     } else if (alreadyCommitted) {
@@ -453,9 +470,10 @@ export function KingAndSpyGame() {
         playerIndex={mySeat}
         playerLabel={
           isOnlinePlay
-            ? getSeatDisplayName(online.players, mySeat)
-            : `プレイヤー${mySeat + 1}`
+            ? "あなた"
+            : `プレイヤー${localActiveSeat + 1}`
         }
+        showTurnPhrase={!isOnlinePlay}
         stats={stats}
         action={action}
         notice={notice}

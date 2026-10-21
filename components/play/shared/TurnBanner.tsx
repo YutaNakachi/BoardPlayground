@@ -8,6 +8,8 @@ type Props = {
   stats?: string;
   action?: string;
   notice?: string;
+  /** false: 「の手番」を付けない（同時進行向け） */
+  showTurnPhrase?: boolean;
 };
 
 export function TurnBanner({
@@ -16,6 +18,7 @@ export function TurnBanner({
   stats,
   action,
   notice,
+  showTurnPhrase = true,
 }: Props) {
   const style = getPlayerTurnStyle(playerIndex);
   const hasSubtitle = Boolean(stats || action || notice);
@@ -31,7 +34,9 @@ export function TurnBanner({
         />
         <p className="font-display text-lg font-extrabold tracking-tight text-white sm:text-xl">
           <span className={style.label}>{playerLabel}</span>
-          <span className="text-slate-200">の手番</span>
+          {showTurnPhrase ? (
+            <span className="text-slate-200">の手番</span>
+          ) : null}
         </p>
       </div>
       <p

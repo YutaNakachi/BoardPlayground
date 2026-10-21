@@ -24,8 +24,18 @@ const emptySlot = (): DuelSlot => ({
 
 const emptyField = (): DuelFieldState => [emptySlot(), emptySlot()];
 
+/** 相手が確定済み（裏向き・種類は非公開） */
+const OPPONENT_FIELD_PLACEHOLDER: KingAndSpyCard = {
+  id: "field-opponent-hidden",
+  kind: "citizen",
+};
+
 function slotBack(card: KingAndSpyCard | null): DuelSlot {
-  return { card, faceDownOnField: true, revealed: false };
+  return {
+    card: card ?? OPPONENT_FIELD_PLACEHOLDER,
+    faceDownOnField: true,
+    revealed: false,
+  };
 }
 
 function slotOpen(card: KingAndSpyCard): DuelSlot {
