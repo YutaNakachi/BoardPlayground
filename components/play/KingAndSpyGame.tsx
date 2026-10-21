@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
 import { KingAndSpyMatchPanel } from "@/components/play/king-and-spy/KingAndSpyMatchPanel";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
@@ -128,11 +128,24 @@ export function KingAndSpyGame() {
     ? myCommittedCard
     : null;
 
-  const { field, resetField } = useKingAndSpyDuelField(
+  const { field, resetField, isRevealPlayback } = useKingAndSpyDuelField(
     duelPublic,
     mySeat,
     duelCommittedCard
   );
+
+  const [displayHand, setDisplayHand] = useState<KingAndSpyCard[]>([]);
+
+  useEffect(() => {
+    if (!activeView || isRevealPlayback) return;
+    setDisplayHand(activeView.myHand);
+  }, [activeView, isRevealPlayback]);
+
+  useEffect(() => {
+    if (!isRevealPlayback) {
+      setPickedCardId(null);
+    }
+  }, [isRevealPlayback]);
 
   const seatLabels: [string, string] = useMemo(() => {
     if (isOnlinePlay) {
@@ -192,7 +205,7 @@ export function KingAndSpyGame() {
   );
 
   const handleCommit = useCallback(() => {
-    if (!pickedCardId || !activeView) return;
+    if (!pickedCardId || !activeView || isRevealPlayback) return;
     const card = activeView.myHand.find((c) => c.id === pickedCardId);
     if (!card) return;
 
@@ -217,6 +230,7 @@ export function KingAndSpyGame() {
     localPhase,
     localActiveSeat,
     commitLocal,
+    isRevealPlayback,
   ]);
 
   const isSetupScreen =
@@ -390,7 +404,9 @@ export function KingAndSpyGame() {
   } else {
     stats = `あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
     action = "手札から1枚選び、確定する";
-    if (alreadyCommitted) {
+    if (isRevealPlayback) {
+      action = "公開中… 次の手札は表示が終わってから";
+    } else if (alreadyCommitted) {
       action = opponentCommitted
         ? "オープン…"
         : "場に裏向きで出しました。相手の確定を待っています";
@@ -456,18 +472,20 @@ export function KingAndSpyGame() {
               ? "あなたの手札"
               : `プレイヤー${localActiveSeat + 1}の手札（相手に見えません）`}
           </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {activeView.myHand.map((card) => (
+          <div
+            className={`flex flex-wrap justify-center gap-3 ${isRevealPlayback ? "pointer-events-none opacity-50" : ""}`}
+          >
+            {displayHand.map((card) => (
               <KingAndSpyPlayingCard
                 key={card.id}
                 card={card}
                 faceDown={false}
                 flipped={true}
                 size="hand"
-                selected={pickedCardId === card.id}
-                disabled={alreadyCommitted}
+                selected={!isRevealPlayback && pickedCardId === card.id}
+                disabled={alreadyCommitted || isRevealPlayback}
                 onClick={
-                  alreadyCommitted
+                  alreadyCommitted || isRevealPlayback
                     ? undefined
                     : () => setPickedCardId(card.id)
                 }
@@ -477,7 +495,7 @@ export function KingAndSpyGame() {
           <div className="flex justify-center">
             <button
               type="button"
-              disabled={!pickedCardId || alreadyCommitted}
+              disabled={!pickedCardId || alreadyCommitted || isRevealPlayback}
               onClick={handleCommit}
               className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white disabled:opacity-40"
             >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   KingAndSpyCard,
   KingAndSpyPublicState,
@@ -13,6 +13,8 @@ export type DuelSlot = {
 };
 
 export type DuelFieldState = [DuelSlot, DuelSlot];
+
+const REVEAL_HOLD_MS = 2800;
 
 const emptySlot = (): DuelSlot => ({
   card: null,
@@ -30,12 +32,41 @@ function slotOpen(card: KingAndSpyCard): DuelSlot {
   return { card, faceDownOnField: false, revealed: true };
 }
 
+function lastRevealPlaybackToken(
+  publicState: KingAndSpyPublicState
+): string | null {
+  if (!publicState.lastReveal) return null;
+  const [a, b] = publicState.lastReveal.cards;
+  return `reveal:${a.id}:${b.id}:${publicState.discards.length}`;
+}
+
+function startRevealAnimation(
+  a: KingAndSpyCard,
+  b: KingAndSpyCard,
+  setRevealField: (f: DuelFieldState | null) => void,
+  onDone: () => void
+) {
+  setRevealField([slotBack(a), slotBack(b)]);
+  const flipTimer = window.setTimeout(() => {
+    setRevealField([slotOpen(a), slotOpen(b)]);
+  }, 350);
+  const clearTimer = window.setTimeout(() => {
+    setRevealField(null);
+    onDone();
+  }, REVEAL_HOLD_MS);
+  return () => {
+    window.clearTimeout(flipTimer);
+    window.clearTimeout(clearTimer);
+  };
+}
+
 export function useKingAndSpyDuelField(
   publicState: KingAndSpyPublicState,
   mySeat: 0 | 1,
   myCommittedCard: KingAndSpyCard | null
 ) {
   const [revealField, setRevealField] = useState<DuelFieldState | null>(null);
+  const [playbackDoneToken, setPlaybackDoneToken] = useState<string | null>(null);
   const revealTokenRef = useRef<string | null>(null);
   const discardLenRef = useRef(publicState.discards.length);
 
@@ -48,27 +79,31 @@ export function useKingAndSpyDuelField(
     ];
   }, [publicState.committedReady, mySeat, myCommittedCard]);
 
-  useEffect(() => {
+  const bothCommitted =
+    publicState.committedReady[0] && publicState.committedReady[1];
+
+  const decisiveRevealToken = useMemo(
+    () => lastRevealPlaybackToken(publicState),
+    [publicState.lastReveal, publicState.discards.length]
+  );
+
+  const decisiveRevealPending =
+    decisiveRevealToken !== null &&
+    playbackDoneToken !== decisiveRevealToken;
+
+  useLayoutEffect(() => {
     const ready = publicState.committedReady;
     if (ready[0] || ready[1]) return;
 
-    if (publicState.lastReveal) {
-      const [a, b] = publicState.lastReveal.cards;
-      const token = `${a.id}:${b.id}:${publicState.discards.length}`;
-      if (revealTokenRef.current === token) return;
-      revealTokenRef.current = token;
+    if (decisiveRevealToken) {
+      if (playbackDoneToken === decisiveRevealToken) return;
+      if (revealTokenRef.current === decisiveRevealToken) return;
+      revealTokenRef.current = decisiveRevealToken;
 
-      setRevealField([slotBack(a), slotBack(b)]);
-      const flipTimer = window.setTimeout(() => {
-        setRevealField([slotOpen(a), slotOpen(b)]);
-      }, 350);
-      const clearTimer = window.setTimeout(() => {
-        setRevealField(null);
-      }, 2800);
-      return () => {
-        window.clearTimeout(flipTimer);
-        window.clearTimeout(clearTimer);
-      };
+      const [a, b] = publicState.lastReveal!.cards;
+      return startRevealAnimation(a, b, setRevealField, () => {
+        setPlaybackDoneToken(decisiveRevealToken);
+      });
     }
 
     const prevLen = discardLenRef.current;
@@ -85,22 +120,16 @@ export function useKingAndSpyDuelField(
       if (revealTokenRef.current === token) return;
       revealTokenRef.current = token;
 
-      setRevealField([slotBack(a), slotBack(b)]);
-      const flipTimer = window.setTimeout(() => {
-        setRevealField([slotOpen(a), slotOpen(b)]);
-      }, 350);
-      const clearTimer = window.setTimeout(() => {
-        setRevealField(null);
-      }, 2800);
-      return () => {
-        window.clearTimeout(flipTimer);
-        window.clearTimeout(clearTimer);
-      };
+      return startRevealAnimation(a, b, setRevealField, () => {
+        /* 市民引き分けは手札枚数が変わらないためトークン完了は不要 */
+      });
     }
   }, [
     publicState.committedReady,
     publicState.lastReveal,
     publicState.discards,
+    decisiveRevealToken,
+    playbackDoneToken,
   ]);
 
   const registerMyCommit = useCallback((_card: KingAndSpyCard) => {
@@ -110,9 +139,20 @@ export function useKingAndSpyDuelField(
   const resetField = useCallback(() => {
     revealTokenRef.current = null;
     setRevealField(null);
+    setPlaybackDoneToken(null);
   }, []);
 
   const field = waitingField ?? revealField ?? emptyField();
 
-  return { field, registerMyCommit, resetField };
+  const interactionLocked =
+    bothCommitted ||
+    decisiveRevealPending ||
+    revealField !== null;
+
+  return {
+    field,
+    registerMyCommit,
+    resetField,
+    isRevealPlayback: interactionLocked,
+  };
 }
