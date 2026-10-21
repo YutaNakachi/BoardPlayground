@@ -37,6 +37,7 @@ import {
 } from "@/lib/online/room-client";
 import { shouldApplyRemoteGameVersion } from "@/lib/online/sync-game-state";
 import { isOnlineSecretGame } from "@/lib/online/secret-games";
+import { optimisticKingAndSpyCommitView } from "@/lib/play/king-and-spy/state";
 import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -125,10 +126,23 @@ export function useOnlineRoom(gameSlug: string) {
       remoteCurrentPlayer: number | null
     ) => {
       const remoteGameOver = state.phase === "game-over";
+      const secretSlug = roomRef.current?.gameSlug;
       if (pendingMoveRef.current) {
-        if (!remoteGameOver) return;
-        pendingMoveRef.current = false;
-        setMovePending(false);
+        if (!remoteGameOver) {
+          if (
+            secretSlug &&
+            isOnlineSecretGame(secretSlug) &&
+            remoteVersion >= versionRef.current
+          ) {
+            pendingMoveRef.current = false;
+            setMovePending(false);
+          } else {
+            return;
+          }
+        } else {
+          pendingMoveRef.current = false;
+          setMovePending(false);
+        }
       }
       if (
         !shouldApplyRemoteGameVersion(
@@ -664,7 +678,17 @@ export function useOnlineRoom(gameSlug: string) {
         if (liveState.phase === "game-over") return;
         const view = liveState as import("@/lib/play/king-and-spy/types").KingAndSpyViewState;
         if (view.committedReady?.[mySeat]) return;
-        sendMovePipeline(move, versionRef.current);
+        if (move.type !== "king-and-spy-commit") return;
+
+        const optimistic = optimisticKingAndSpyCommitView(view, move.cardId);
+        if ("error" in optimistic) return;
+
+        const optimisticVersion = versionRef.current + 1;
+        setGameState(optimistic);
+        versionRef.current = optimisticVersion;
+        setVersion(optimisticVersion);
+
+        sendMovePipeline(move, optimisticVersion - 1);
         return;
       }
 

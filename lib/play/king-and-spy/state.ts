@@ -12,6 +12,7 @@ import type {
   KingAndSpyCard,
   KingAndSpyPublicState,
   KingAndSpySecrets,
+  KingAndSpyViewState,
   WinningSide,
 } from "./types";
 
@@ -210,6 +211,40 @@ export function applyKingAndSpyCommit(
   }
 
   return {};
+}
+
+/** オンライン用: 自席の確定だけを即時反映（両者確定の決着はサーバー待ち） */
+export function optimisticKingAndSpyCommitView(
+  view: KingAndSpyViewState,
+  cardId: string
+): KingAndSpyViewState | { error: string } {
+  if (view.phase === "game-over") {
+    return { error: "Game is over" };
+  }
+  if (view.committedReady[view.mySeat]) {
+    return { error: "Already committed" };
+  }
+  const card = view.myHand.find((c) => c.id === cardId);
+  if (!card) {
+    return { error: "Card not in hand" };
+  }
+
+  const committedReady = [...view.committedReady] as [boolean, boolean];
+  committedReady[view.mySeat] = true;
+  const myHand = view.myHand.filter((c) => c.id !== cardId);
+  const handCounts = [...view.handCounts] as [number, number];
+  handCounts[view.mySeat] = myHand.length;
+
+  const clearLastReveal =
+    !view.committedReady[0] && !view.committedReady[1];
+
+  return {
+    ...view,
+    myHand,
+    committedReady,
+    handCounts,
+    lastReveal: clearLastReveal ? null : view.lastReveal,
+  };
 }
 
 export function projectKingAndSpyForSeat(

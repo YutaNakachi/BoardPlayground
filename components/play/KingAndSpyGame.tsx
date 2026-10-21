@@ -470,7 +470,7 @@ export function KingAndSpyGame() {
         playerIndex={mySeat}
         playerLabel={
           isOnlinePlay
-            ? "あなた"
+            ? getSeatDisplayName(online.players, mySeat)
             : `プレイヤー${localActiveSeat + 1}`
         }
         showTurnPhrase={!isOnlinePlay}
