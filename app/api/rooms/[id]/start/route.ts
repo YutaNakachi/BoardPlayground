@@ -11,7 +11,11 @@ import {
   initialKingAndSpySecrets,
 } from "@/lib/play/king-and-spy/state";
 import { createInitialState } from "@/lib/online/moves";
-import { saveRoomSecrets } from "@/lib/online/room-secrets";
+import {
+  probeRoomSecretsTable,
+  roomSecretsWriteErrorMessage,
+  saveRoomSecrets,
+} from "@/lib/online/room-secrets";
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 import { isOnlineSecretGame } from "@/lib/online/secret-games";
 import { isOnlineGame } from "@/lib/online/types";
@@ -85,6 +89,16 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "参加者が2人揃っていません" }, { status: 409 });
   }
 
+  if (isOnlineSecretGame(room.game_slug)) {
+    const secretsReady = await probeRoomSecretsTable(db);
+    if (!secretsReady.ok) {
+      return NextResponse.json(
+        { error: secretsReady.message, code: secretsReady.code },
+        { status: 503 }
+      );
+    }
+  }
+
   if (!isOnlineGame(room.game_slug)) {
     return NextResponse.json({ error: "Unsupported game" }, { status: 400 });
   }
@@ -152,7 +166,11 @@ export async function POST(request: Request, { params }: Params) {
     : await db.from("room_state").insert({ room_id: id, ...statePayload });
 
   if (stateError) {
-    return NextResponse.json({ error: "Failed to start game" }, { status: 500 });
+    console.error("[rooms/start] room_state", stateError.message);
+    return NextResponse.json(
+      { error: "ゲーム状態の保存に失敗しました" },
+      { status: 500 }
+    );
   }
 
   if (isOnlineSecretGame(room.game_slug) && secretsPayload) {
@@ -160,7 +178,13 @@ export async function POST(request: Request, { params }: Params) {
       await saveRoomSecrets(db, id, secretsPayload, 1);
     } catch (e) {
       console.error("[rooms/start] secrets", e);
-      return NextResponse.json({ error: "Failed to start game" }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: roomSecretsWriteErrorMessage(e),
+          code: "ROOM_SECRETS_WRITE_FAILED",
+        },
+        { status: 500 }
+      );
     }
   }
 
