@@ -445,6 +445,7 @@ export function KingAndSpyGame() {
           labels={seatLabels}
           mySeat={mySeat}
           lastReveal={activeView.lastReveal}
+          roundHistory={pub.roundHistory}
         />
       )}
 

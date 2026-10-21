@@ -3,13 +3,17 @@
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
 import type { DuelFieldState } from "@/components/play/king-and-spy/useKingAndSpyDuelField";
 import { CARD_KIND_LABEL, winningSideLabel } from "@/lib/play/king-and-spy/labels";
-import type { KingAndSpyPublicState } from "@/lib/play/king-and-spy/types";
+import type {
+  KingAndSpyPublicState,
+  KingAndSpyRoundRecord,
+} from "@/lib/play/king-and-spy/types";
 
 type Props = {
   field: DuelFieldState;
   labels: [string, string];
   mySeat: 0 | 1;
   lastReveal: KingAndSpyPublicState["lastReveal"];
+  roundHistory: KingAndSpyRoundRecord[];
 };
 
 export function KingAndSpyDuelField({
@@ -17,39 +21,53 @@ export function KingAndSpyDuelField({
   labels,
   mySeat,
   lastReveal,
+  roundHistory,
 }: Props) {
-  const hasCards = field[0].faceDownOnField || field[1].faceDownOnField || field[0].revealed || field[1].revealed;
+  const hasCards =
+    field[0].faceDownOnField ||
+    field[1].faceDownOnField ||
+    field[0].revealed ||
+    field[1].revealed;
   const bothOpen = field[0].revealed && field[1].revealed;
   const c0 = field[0].card;
   const c1 = field[1].card;
 
   let openResult: import("react").ReactNode = null;
   if (bothOpen && c0 && c1) {
-    if (
-      lastReveal &&
-      lastReveal.cards[0].id === c0.id &&
-      lastReveal.cards[1].id === c1.id
-    ) {
-      openResult = (
-        <p className="mt-4 text-center text-sm font-medium text-white">
-          <span className="text-slate-300">
-            {CARD_KIND_LABEL[c0.kind]} vs {CARD_KIND_LABEL[c1.kind]}
-          </span>
-          <span className="mx-2 text-slate-600">→</span>
-          <span className="text-indigo-200">
-            {labels[lastReveal.recipientSeat]} +{lastReveal.pointsAwarded}
-          </span>
-          <span className="mt-1 block text-xs font-normal text-slate-400">
-            {winningSideLabel(lastReveal.winningSide)}の決着
-          </span>
-        </p>
-      );
-    } else if (c0.kind === "citizen" && c1.kind === "citizen") {
+    if (c0.kind === "citizen" && c1.kind === "citizen") {
       openResult = (
         <p className="mt-4 text-center text-sm text-slate-300">
           市民同士 — 引き分け（加点なし・同じラウンドで続行）
         </p>
       );
+    } else {
+      const fromReveal =
+        lastReveal &&
+        lastReveal.cards[0].id === c0.id &&
+        lastReveal.cards[1].id === c1.id
+          ? lastReveal
+          : null;
+      const fromHistory = roundHistory.at(-1);
+      const recipientSeat = fromReveal?.recipientSeat ?? fromHistory?.winnerSeat;
+      const points = fromReveal?.pointsAwarded ?? fromHistory?.pointsAwarded;
+      const side = fromReveal?.winningSide ?? fromHistory?.winningSide;
+
+      if (recipientSeat !== undefined && points !== undefined && side) {
+        openResult = (
+          <p className="mt-4 text-center text-sm font-medium text-white">
+            <span className="text-slate-300">
+              {CARD_KIND_LABEL[c0.kind]} vs {CARD_KIND_LABEL[c1.kind]}
+            </span>
+            <span className="mx-2 text-slate-600">→</span>
+            <span className="text-indigo-200">
+              {labels[recipientSeat]} +{points}
+            </span>
+            <span className="mt-1 block text-xs font-normal text-slate-400">
+              {winningSideLabel(side)}の決着
+            </span>
+          </p>
+        );
+      }
     }
   }
 

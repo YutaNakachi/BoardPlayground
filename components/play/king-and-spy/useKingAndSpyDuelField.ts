@@ -78,6 +78,9 @@ export function useKingAndSpyDuelField(
     if (added === 2 && !publicState.lastReveal) {
       const a = publicState.discards[publicState.discards.length - 2];
       const b = publicState.discards[publicState.discards.length - 1];
+      if (a.kind !== "citizen" || b.kind !== "citizen") {
+        return;
+      }
       const token = `tie:${a.id}:${b.id}`;
       if (revealTokenRef.current === token) return;
       revealTokenRef.current = token;

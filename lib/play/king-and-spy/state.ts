@@ -93,7 +93,6 @@ function startNewRound(
   secrets.pendingCommits = [null, null];
   publicState.handCounts = [5, 5];
   publicState.committedReady = [false, false];
-  publicState.lastReveal = null;
   publicState.phase = "selecting";
   publicState.roundNumber += 1;
 }
@@ -181,6 +180,12 @@ export function applyKingAndSpyCommit(
 ): { error?: string } {
   if (publicState.phase === "game-over") {
     return { error: "Game is over" };
+  }
+  if (
+    !publicState.committedReady[0] &&
+    !publicState.committedReady[1]
+  ) {
+    publicState.lastReveal = null;
   }
   if (publicState.committedReady[seatIndex]) {
     return { error: "Already committed" };
