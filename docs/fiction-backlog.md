@@ -45,6 +45,7 @@
 
 ### 実装済みの参照
 
+- **No.1** [`games/king-and-spy/rules.md`](../games/king-and-spy/rules.md)、プレイ: `components/play/KingAndSpyGame.tsx`、`lib/play/king-and-spy/`
 - **No.11** [`games/dejarik/rules.md`](../games/dejarik/rules.md)、プレイ: `components/play/DejarikGame.tsx`、`lib/play/dejarik/`
 - リリースメモ: [`docs/note/dejarik-release.md`](./note/dejarik-release.md)
 
@@ -54,17 +55,30 @@
 
 | 優先度の考え方 | No. | 理由 |
 | --- | --- | --- |
-| 早め（2人・軽量） | 4 → 1 → 2 → 3 | 心理戦・短時間。既存 2P パターンに近い |
+| 早め（2人・軽量） | 4 → 2 → 3 | 心理戦・短時間。既存 2P パターンに近い |
 | 中盤（2人・中量） | 7 → 5 → 6 → 8 → 9 | UI・ルール確定の工数が増える |
 | 仕様要整理 | 10 | 3人以上・正体隠蔽・交渉。人数と非公開情報の設計を先に固定 |
 | 後半（盤・状態が重い） | 12 → 13 | 重ね駒・ダイスダンジョンは実装・検証コスト大 |
-| 完了 | 11 | — |
+| 完了 | 1, 11 | — |
 
 No.10 は手札非公開・複数人のため、オンライン化は `star-trade` と同様 **部屋＋非公開同期** が前提になる想定。
 
 ## 着手前チェックリスト（1 タイトルあたり）
 
 実装依頼・Agent 起動前に、次を埋める。
+
+### No.1 キング＆スパイ（`king-and-spy`）— 実装済み
+
+- [ ] 公開用 **正式タイトル**（作品名なし）— 現状 **仮タイトル**
+- [x] **slug** 確定 → `king-and-spy`
+- [x] **人数** → 2人固定
+- [x] **勝利条件** → スコア差3点先（首領側決着+1／刺客側決着+2）、最大12ラウンド上限
+- [x] **役割** → ホストが開始側を選択、決着2回ごとに首領⇔刺客交代
+- [x] **1 手 / ラウンド** → 同時確定・公開、市民引き分けは同ラウンド継続、決着で再配布
+- [x] **ルール文** → [`games/king-and-spy/rules.md`](../games/king-and-spy/rules.md)（草案: [`docs/design/king-and-spy-rules-draft.md`](./design/king-and-spy-rules-draft.md)）
+- [x] **掲載** → `listed: true`（2026-10-21）
+
+### その他タイトル
 
 - [ ] 公開用 **正式タイトル**（作品名なし）
 - [ ] **slug** 確定
@@ -79,3 +93,7 @@ No.10 は手札非公開・複数人のため、オンライン化は `star-trad
 | 日付 | 内容 |
 | --- | --- |
 | 2026-10-21 | 全 13 タイトルで初版作成（No.11 は `dejarik` 実装済みとして記載） |
+| 2026-10-21 | No.1 ルール草案 `docs/design/king-and-spy-rules-draft.md` |
+| 2026-10-21 | No.1 各5枚・同時出し・非対称マッチポイント（+1/+2）を草案に反映 |
+| 2026-10-21 | No.1 3点差勝利・2決着ごと交代・ホストが開始側選択 |
+| 2026-10-21 | No.1 プレイ実装・掲載（`king-and-spy`） |
