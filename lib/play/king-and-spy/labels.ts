@@ -3,7 +3,7 @@ import type { WinningSide } from "./types";
 
 export const CARD_KIND_LABEL: Record<CardKind, string> = {
   king: "キング",
-  citizen: "シチズン",
+  citizen: "市民",
   spy: "スパイ",
 };
 
