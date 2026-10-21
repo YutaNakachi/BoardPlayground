@@ -47,7 +47,7 @@ alwaysApply: false
 1. `npm run env:check` が通る（Dockerfile に `curl` があること）
 2. Cloud Agent 環境で **Rebuild** が成功する（`curl: command not found` が出ない）
 3. 新規 Agent 起動が成功する（古いスナップショットだけでなく）
-4. 必要なら `npm run db:check` で Supabase 疎通を確認
+4. 必要なら `npm run db:check` / `npm run db:migrations` で Supabase 疎通とマイグレーション適用を確認
 
 ## トラブル時
 
