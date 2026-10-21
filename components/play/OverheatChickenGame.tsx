@@ -115,7 +115,7 @@ export function OverheatChickenGame() {
           playerIndex={state.current}
           playerLabel={playerLabel(state.current)}
           stats={`コイン ${state.fill} 枚`}
-          action="1〜3枚入れる"
+          action="1〜3枚"
           notice={tensionNotice(state)}
         />
       ) : null}

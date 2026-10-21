@@ -11,10 +11,28 @@ import {
 
 const RIM_Y = 250;
 const SLOT = 16;
-const BASE_DOME = 18;
+const BASE_DOME = 28;
+const GLASS_TOP = 48;
+const GLASS_BOTTOM = 378;
 
 function surfaceY(fill: number): number {
   return RIM_Y - BASE_DOME - fill * SLOT;
+}
+
+/** 杯の壁の x。side は -1 が左。 */
+function wallX(y: number, side: -1 | 1): number {
+  const t = Math.min(1, Math.max(0, (y - GLASS_TOP) / (GLASS_BOTTOM - GLASS_TOP)));
+  const left = 58 + 16 * t;
+  const right = 162 - 16 * t;
+  return side < 0 ? left : right;
+}
+
+function dripPath(side: -1 | 1, y0: number, bulge: number): string {
+  const startX = wallX(y0, side) + side * 6;
+  const midY = y0 + 70;
+  const midX = wallX(midY, side) + side * bulge;
+  const endX = wallX(410, side) + side * 2;
+  return `M ${startX} ${y0} Q ${midX} ${midY} ${endX} 424`;
 }
 
 type Props = {
@@ -50,14 +68,14 @@ export function OverheatGlass({ state, label }: Props) {
           50% { transform: translateX(calc(var(--wobble-px) * -1)); }
         }
         .overheat-drip {
-          stroke-dasharray: 210;
+          stroke-dasharray: 100;
           stroke-dashoffset: 0;
         }
         .overheat-spill .overheat-drip {
           animation: overheat-drip 0.7s ease-out both;
         }
         @keyframes overheat-drip {
-          from { stroke-dashoffset: 210; opacity: 0.15; }
+          from { stroke-dashoffset: 100; opacity: 0.2; }
           to { stroke-dashoffset: 0; opacity: 1; }
         }
         .overheat-puddle {
@@ -148,7 +166,7 @@ export function OverheatGlass({ state, label }: Props) {
               <Coin
                 key={`in-${index}`}
                 cx={110}
-                cy={top + 18 + fromTop * 15}
+                cy={top + 20 + fromTop * 16}
                 player={coin.player}
               />
             );
@@ -186,7 +204,8 @@ export function OverheatGlass({ state, label }: Props) {
           <g className="overheat-spill">
             <path
               className="overheat-drip"
-              d="M48 268 C32 330 36 390 52 424"
+              pathLength={100}
+              d={dripPath(-1, top, 16)}
               fill="none"
               stroke="#67e8f9"
               strokeWidth="8"
@@ -194,7 +213,8 @@ export function OverheatGlass({ state, label }: Props) {
             />
             <path
               className="overheat-drip"
-              d="M172 268 C188 330 184 390 168 424"
+              pathLength={100}
+              d={dripPath(1, top, 16)}
               fill="none"
               stroke="#67e8f9"
               strokeWidth="8"
@@ -202,17 +222,19 @@ export function OverheatGlass({ state, label }: Props) {
             />
             <path
               className="overheat-drip"
-              d="M58 286 C46 340 50 392 62 418"
+              pathLength={100}
+              d={dripPath(-1, top + 8, 8)}
               fill="none"
-              stroke="#a5f3fc"
+              stroke="#e0faff"
               strokeWidth="3"
               strokeLinecap="round"
             />
             <path
               className="overheat-drip"
-              d="M162 286 C174 340 170 392 158 418"
+              pathLength={100}
+              d={dripPath(1, top + 8, 8)}
               fill="none"
-              stroke="#a5f3fc"
+              stroke="#e0faff"
               strokeWidth="3"
               strokeLinecap="round"
             />
@@ -259,8 +281,9 @@ function Coin({
   const style = getPlayerTurnStyle(player);
   return (
     <g>
-      <circle cx={cx} cy={cy} r="9" fill="#f5d78a" />
-      <circle cx={cx} cy={cy} r="6.5" fill={style.fill} />
+      <circle cx={cx} cy={cy} r="11" fill="#0f172a" />
+      <circle cx={cx} cy={cy} r="9" fill={style.fill} />
+      <circle cx={cx + 2} cy={cy - 2} r="2.5" fill="#ffffff" opacity="0.85" />
     </g>
   );
 }

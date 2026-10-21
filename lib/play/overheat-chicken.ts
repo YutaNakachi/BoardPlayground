@@ -85,15 +85,13 @@ export function possibleCapacity(state: OverheatState): {
 
 export function tensionNotice(state: OverheatState): string {
   if (state.winner !== null) return "";
-  if (state.fill >= CAPACITY_MAX) return "次のコインで必ず溢れます";
+  if (state.fill >= CAPACITY_MAX) return "次は必ず溢れる";
   if (state.fill >= CAPACITY_MIN) {
     const { min, max } = possibleCapacity(state);
-    return min === max
-      ? `ありうる上限は${min}枚`
-      : `ありうる上限は${min}〜${max}枚`;
+    return min === max ? `上限は${min}枚` : `上限は${min}〜${max}枚`;
   }
   const remain = CAPACITY_MIN - state.fill;
-  return `あと${remain}枚までは必ず耐えます`;
+  return `あと${remain}枚は確実`;
 }
 
 export function dropHint(
