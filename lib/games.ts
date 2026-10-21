@@ -455,7 +455,8 @@ const games: GameMeta[] = [
       "決着2回ごとに首領側と刺客側の担当を入れ替え。オンラインではホストが開始時の側を選びます。",
     ],
     status: "playable",
-    listed: false,
+    listed: true,
+    listedAt: "2026-10-21",
   },
   {
     slug: "dominoes",
