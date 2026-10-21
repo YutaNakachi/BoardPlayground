@@ -36,6 +36,7 @@ import {
   type StartRoomParams,
 } from "@/lib/online/room-client";
 import { shouldApplyRemoteGameVersion } from "@/lib/online/sync-game-state";
+import { isOnlineSecretGame } from "@/lib/online/secret-games";
 import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -142,7 +143,11 @@ export function useOnlineRoom(gameSlug: string) {
         if (seat !== null) resolvedCurrentPlayer = seat;
       }
       setCurrentPlayer(resolvedCurrentPlayer);
-      if (state.phase === "playing" || state.phase === "placement") {
+      if (
+        state.phase === "playing" ||
+        state.phase === "placement" ||
+        state.phase === "selecting"
+      ) {
         setPhase("playing");
       } else if (state.phase === "game-over") {
         setPhase("finished");
@@ -157,7 +162,14 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const refreshRoom = useCallback(async (roomId: string) => {
-    const data = await fetchRoom(roomId);
+    const slugForFetch =
+      roomRef.current?.gameSlug ??
+      (typeof window !== "undefined" ? gameSlug : "");
+    const pid = myPlayerId || getOrCreatePlayerId();
+    const data = await fetchRoom(
+      roomId,
+      isOnlineSecretGame(slugForFetch) ? pid : undefined
+    );
     setRoom(data.room);
     if (data.gameState) {
       const remoteState = data.gameState.state as GameState;
@@ -175,7 +187,7 @@ export function useOnlineRoom(gameSlug: string) {
       setPhase("waiting");
     }
     return data;
-  }, [applyRemoteGameState]);
+  }, [applyRemoteGameState, gameSlug, myPlayerId]);
 
   const startPoll = useCallback(
     (roomId: string) => {
@@ -202,6 +214,13 @@ export function useOnlineRoom(gameSlug: string) {
         version: number;
         current_player: number | null;
       }) => {
+        if (
+          roomRef.current &&
+          isOnlineSecretGame(roomRef.current.gameSlug)
+        ) {
+          void refreshRoom(roomId);
+          return;
+        }
         applyRemoteGameState(row.state, row.version, row.current_player);
       };
 
@@ -258,7 +277,7 @@ export function useOnlineRoom(gameSlug: string) {
         void supabase.removeChannel(channel);
       };
     },
-    [applyRemoteGameState, startPoll]
+    [applyRemoteGameState, refreshRoom, startPoll]
   );
 
   useEffect(() => {
@@ -624,12 +643,24 @@ export function useOnlineRoom(gameSlug: string) {
       if (!liveState) return;
 
       const slug = room.gameSlug as OnlineGameSlug;
+      if (isOnlineSecretGame(slug)) {
+        if (liveState.phase === "game-over") return;
+        const view = liveState as import("@/lib/play/king-and-spy/types").KingAndSpyViewState;
+        if (view.committedReady?.[mySeat]) return;
+        sendMovePipeline(move, versionRef.current);
+        return;
+      }
+
       const dejarikActorSeat =
         slug === "dejarik"
           ? dejarikTurnSeat(liveState as DejarikOnlineState)
           : null;
       const actorSeat =
-        dejarikActorSeat !== null ? dejarikActorSeat : liveState.current;
+        dejarikActorSeat !== null
+          ? dejarikActorSeat
+          : "current" in liveState
+            ? (liveState as { current: number }).current
+            : mySeat;
       const chainedExtraTurn =
         pendingMoveRef.current &&
         liveState.phase !== "game-over" &&
@@ -683,6 +714,12 @@ export function useOnlineRoom(gameSlug: string) {
   const isHost = room?.hostPlayerId === myPlayerId;
   const isMyTurn = useMemo(() => {
     if (mySeat < 0) return false;
+    if (room?.gameSlug && isOnlineSecretGame(room.gameSlug) && gameState) {
+      const view = gameState as import("@/lib/play/king-and-spy/types").KingAndSpyViewState;
+      if (view.committedReady) {
+        return view.phase !== "game-over" && !view.committedReady[mySeat];
+      }
+    }
     if (room?.gameSlug === "dejarik" && gameState) {
       const seat = dejarikTurnSeat(gameState as DejarikOnlineState);
       if (seat !== null) return seat === mySeat;

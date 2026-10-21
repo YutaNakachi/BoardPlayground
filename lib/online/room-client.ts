@@ -56,11 +56,17 @@ export async function joinRoom(
   return res.json();
 }
 
-export async function fetchRoom(roomId: string): Promise<{
+export async function fetchRoom(
+  roomId: string,
+  playerId?: string
+): Promise<{
   room: RoomInfo;
   gameState: RoomGameState | null;
 }> {
-  const res = await fetch(`/api/rooms/${roomId}`);
+  const query = playerId
+    ? `?playerId=${encodeURIComponent(playerId)}`
+    : "";
+  const res = await fetch(`/api/rooms/${roomId}${query}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error ?? "部屋情報の取得に失敗しました");

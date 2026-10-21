@@ -25,6 +25,12 @@ import {
   type Fragment,
 } from "./chrono-split";
 import { drawDomino, dominoPlays, initialDominoes } from "./dominoes";
+import { matchWinner } from "./king-and-spy/rules";
+import {
+  applyKingAndSpyCommit,
+  initialKingAndSpyPublicState,
+  initialKingAndSpySecrets,
+} from "./king-and-spy/state";
 import { drawDotsBoxesEdge, dotsBoxesWinners, initialDotsBoxes } from "./dots-and-boxes";
 import {
   dropGravityFour,
@@ -1014,6 +1020,17 @@ function checkChronoSplit() {
   assert(applyChronoTake(game, cardId, 0) !== null, "chrono legal take");
 }
 
+function checkKingAndSpy() {
+  let pub = initialKingAndSpyPublicState(0);
+  let sec = initialKingAndSpySecrets(0);
+  const kingCard = sec.hands[0].find((c) => c.kind === "king")!;
+  const citizenCard = sec.hands[1].find((c) => c.kind === "citizen")!;
+  applyKingAndSpyCommit(pub, sec, 0, kingCard.id);
+  applyKingAndSpyCommit(pub, sec, 1, citizenCard.id);
+  assert(pub.scores[0] === 1, "king-and-spy king side +1");
+  assert(matchWinner(pub.scores) === null, "king-and-spy not over at 1-0");
+}
+
 function checkStarTrade() {
   const twoKind = scoreStarTradeCards([
     { id: "a", suit: "star", value: 3 },
@@ -1068,6 +1085,7 @@ export function runPlayEngineChecks() {
   checkNebulaLink();
   checkChronoSplit();
   checkStarTrade();
+  checkKingAndSpy();
   runDejarikChecks(assert);
   runSenkaiSenkiChecks(assert);
 }

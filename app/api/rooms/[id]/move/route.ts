@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireOnlineBackend } from "@/lib/api/require-online";
 import { applyMove, type MovePayload } from "@/lib/online/moves";
+import { applyOnlineMoveWithSecrets } from "@/lib/online/secret-move";
+import { isOnlineSecretGame } from "@/lib/online/secret-games";
 import { isOnlineGame } from "@/lib/online/types";
 
 type Params = { params: Promise<{ id: string }> };
@@ -67,27 +69,58 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "State conflict", version: stateRow.version }, { status: 409 });
   }
 
-  const result = applyMove(
-    room.game_slug,
-    stateRow.state as import("@/lib/online/moves").GameState,
-    player.seat_index,
-    move,
-    room.game_options ?? undefined
-  );
+  const baseState = stateRow.state as import("@/lib/online/moves").GameState;
 
-  if ("error" in result) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+  let publicState: import("@/lib/online/moves").GameState;
+  let responseState: import("@/lib/online/moves").GameState;
+  let newVersion: number;
+  let currentPlayer: number | null;
+  let newStatus: "playing" | "finished";
+
+  if (isOnlineSecretGame(room.game_slug)) {
+    const secretResult = await applyOnlineMoveWithSecrets(
+      db,
+      id,
+      room.game_slug,
+      baseState,
+      stateRow.version,
+      player.seat_index,
+      move
+    );
+    if ("error" in secretResult) {
+      return NextResponse.json({ error: secretResult.error }, { status: 400 });
+    }
+    publicState = secretResult.publicState;
+    responseState = secretResult.projectedState;
+    newVersion = secretResult.newVersion;
+    currentPlayer = secretResult.currentPlayer;
+    newStatus = secretResult.finished ? "finished" : "playing";
+  } else {
+    const result = applyMove(
+      room.game_slug,
+      baseState,
+      player.seat_index,
+      move,
+      room.game_options ?? undefined
+    );
+
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
+    publicState = result.state;
+    responseState = result.state;
+    newVersion = stateRow.version + 1;
+    currentPlayer = result.currentPlayer;
+    newStatus = result.state.phase === "game-over" ? "finished" : "playing";
   }
-
-  const newVersion = stateRow.version + 1;
-  const newStatus = result.state.phase === "game-over" ? "finished" : "playing";
 
   await db
     .from("room_state")
     .update({
-      state: result.state,
+      state: publicState,
       version: newVersion,
-      current_player: result.currentPlayer,
+      current_player: currentPlayer,
       updated_at: new Date().toISOString(),
     })
     .eq("room_id", id);
@@ -98,9 +131,9 @@ export async function POST(request: Request, { params }: Params) {
 
   return NextResponse.json({
     gameState: {
-      state: result.state,
+      state: responseState,
       version: newVersion,
-      currentPlayer: result.currentPlayer,
+      currentPlayer,
     },
   });
 }

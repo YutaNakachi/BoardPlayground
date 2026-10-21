@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireOnlineBackend } from "@/lib/api/require-online";
+import type { GameState } from "@/lib/online/moves";
+import { projectGameStateForSeat } from "@/lib/online/project-state";
+import { loadRoomSecrets } from "@/lib/online/room-secrets";
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
+import { isOnlineSecretGame } from "@/lib/online/secret-games";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: Params) {
   const backend = await requireOnlineBackend();
   if (backend instanceof Response) return backend;
   const { db } = backend;
@@ -52,6 +56,29 @@ export async function GET(_request: Request, { params }: Params) {
     .eq("room_id", id)
     .maybeSingle();
 
+  const playerId = new URL(request.url).searchParams.get("playerId");
+  let projectedState: GameState | null = stateRow
+    ? (stateRow.state as GameState)
+    : null;
+
+  if (
+    stateRow &&
+    room.status === "playing" &&
+    isOnlineSecretGame(room.game_slug) &&
+    playerId
+  ) {
+    const member = (players ?? []).find((p) => p.player_id === playerId);
+    if (member) {
+      const secretsRow = await loadRoomSecrets(db, id);
+      projectedState = projectGameStateForSeat(
+        room.game_slug,
+        stateRow.state as GameState,
+        secretsRow?.payload ?? null,
+        member.seat_index
+      );
+    }
+  }
+
   return NextResponse.json({
     room: {
       id: room.id,
@@ -68,7 +95,7 @@ export async function GET(_request: Request, { params }: Params) {
     },
     gameState: stateRow
       ? {
-          state: stateRow.state,
+          state: projectedState ?? stateRow.state,
           version: stateRow.version,
           currentPlayer: stateRow.current_player,
         }

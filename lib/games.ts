@@ -435,6 +435,29 @@ const games: GameMeta[] = [
     listedAt: "2026-10-10",
   },
   {
+    slug: "king-and-spy",
+    title: "キング＆スパイ（仮）",
+    description:
+      "首領側と刺客側の非対称な三すくみカード心理戦。同時に1枚を出し、点差3点先取で勝ちます。フィクション作品に登場する類の勝負を、ボドパッ！向けに整理した非公式プレイ版です。",
+    origin: "fiction",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 10,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["カード", "心理戦"],
+    rulesSummary: [
+      "首領側は首領1・市民4、刺客側は刺客1・市民4。首領＞市民＞刺客＞首領の三すくみ。",
+      "各ラウンドで手札から1枚を同時に選び、双方が確定したら公開。市民同士は引き分けで同ラウンド継続。",
+      "首領側の決着で+1点、刺客側の決着で+2点。先に相手との点差3点でマッチ勝利。",
+      "決着2回ごとに首領側と刺客側の担当を入れ替え。オンラインではホストが開始時の側を選びます。",
+    ],
+    status: "playable",
+    listed: false,
+  },
+  {
     slug: "dominoes",
     title: "ドミノ",
     description:

@@ -1,6 +1,8 @@
 import type { DotsBoxesSize } from "@/lib/play/dots-and-boxes";
 import { secondPlayer } from "@/lib/play/dejarik/state";
 import type { TttMode } from "@/lib/play/tic-tac-toe";
+import { parseHostStartsAsKing } from "@/lib/play/king-and-spy/game-options";
+import type { KingAndSpyStoredOptions } from "@/lib/play/king-and-spy/online-options";
 import type { OnlineGameSlug } from "./types";
 
 export type FirstPlayerSeat = 0 | 1;
@@ -28,6 +30,7 @@ export type OnlineGameOptions =
   | TicTacToeGameOptions
   | DotsBoxesGameOptions
   | FoxHoundsGameOptions
+  | KingAndSpyStoredOptions
   | CommonGameOptions;
 
 export function parseHoundsSeat(raw: unknown): HoundsSeat {
@@ -179,6 +182,31 @@ export function validateGameOptions(
       return parseDotsBoxesGameOptions(raw);
     case "fox-hounds":
       return parseFoxHoundsGameOptions(raw);
+    case "king-and-spy": {
+      if (raw == null) return { hostStartsAsKing: true };
+      if (typeof raw !== "object") return null;
+      const keys = Object.keys(raw as object);
+      if (
+        !keys.every(
+          (key) => key === "hostStartsAsKing" || key === "kingRoleSeat"
+        )
+      ) {
+        return null;
+      }
+      if (
+        "kingRoleSeat" in (raw as object) &&
+        (raw as { kingRoleSeat: unknown }).kingRoleSeat !== 0 &&
+        (raw as { kingRoleSeat: unknown }).kingRoleSeat !== 1
+      ) {
+        return null;
+      }
+      return {
+        hostStartsAsKing: parseHostStartsAsKing(raw),
+        ...("kingRoleSeat" in (raw as object)
+          ? { kingRoleSeat: (raw as { kingRoleSeat: 0 | 1 }).kingRoleSeat }
+          : {}),
+      };
+    }
   }
 }
 
@@ -213,6 +241,11 @@ export function hasNonDefaultGameOptions(
       return parseDotsBoxesSize(options) !== 4;
     case "fox-hounds":
       return parseHoundsSeat(options) === 1;
+    case "king-and-spy":
+      return (
+        parseHostStartsAsKing(options) === false ||
+        ("kingRoleSeat" in options && options.kingRoleSeat !== undefined)
+      );
     default:
       return Object.keys(options).length > 0;
   }
