@@ -81,6 +81,12 @@ export function useOnlineRoom(gameSlug: string) {
 
   const broadcastGameState = useCallback(
     (state: GameState, remoteVersion: number, remoteCurrentPlayer: number | null) => {
+      if (
+        roomRef.current &&
+        isOnlineSecretGame(roomRef.current.gameSlug)
+      ) {
+        return;
+      }
       const channel = channelRef.current;
       if (!channel) return;
       void channel.send({
@@ -161,11 +167,13 @@ export function useOnlineRoom(gameSlug: string) {
     []
   );
 
-  const refreshRoom = useCallback(async (roomId: string) => {
+  const refreshRoom = useCallback(
+    async (roomId: string, options?: { playerId?: string }) => {
     const slugForFetch =
       roomRef.current?.gameSlug ??
       (typeof window !== "undefined" ? gameSlug : "");
-    const pid = myPlayerId || getOrCreatePlayerId();
+    const pid =
+      options?.playerId ?? (myPlayerId || getOrCreatePlayerId());
     const data = await fetchRoom(
       roomId,
       isOnlineSecretGame(slugForFetch) ? pid : undefined
@@ -187,7 +195,9 @@ export function useOnlineRoom(gameSlug: string) {
       setPhase("waiting");
     }
     return data;
-  }, [applyRemoteGameState, gameSlug, myPlayerId]);
+  },
+    [applyRemoteGameState, gameSlug, myPlayerId]
+  );
 
   const startPoll = useCallback(
     (roomId: string) => {
@@ -229,6 +239,13 @@ export function useOnlineRoom(gameSlug: string) {
           config: { broadcast: { ack: false, self: false } },
         })
         .on("broadcast", { event: "room_state" }, ({ payload }) => {
+          if (
+            roomRef.current &&
+            isOnlineSecretGame(roomRef.current.gameSlug)
+          ) {
+            void refreshRoom(roomId);
+            return;
+          }
           const row = payload as RoomStateBroadcast;
           applyRemoteGameState(row.state, row.version, row.currentPlayer);
         })
@@ -317,7 +334,7 @@ export function useOnlineRoom(gameSlug: string) {
       if (cleanup) {
         realtimeCleanupRef.current = cleanup;
       }
-      void refreshRoom(roomId);
+      void refreshRoom(roomId, { playerId });
       return cleanup;
     },
     [clearRealtime, refreshRoom, subscribeRealtime]
@@ -440,7 +457,7 @@ export function useOnlineRoom(gameSlug: string) {
       setError(null);
       try {
         const result = await createRoom(gameSlug, displayName, gameOptions);
-        const data = await fetchRoom(result.roomId);
+        const data = await fetchRoom(result.roomId, result.playerId);
         setupRoom(result.roomId, result.playerId, result.seatIndex, data.room);
       } catch (e) {
         setError(e instanceof Error ? e.message : "エラーが発生しました");
@@ -501,7 +518,7 @@ export function useOnlineRoom(gameSlug: string) {
         moveQueueRef.current = [];
         setMovePending(false);
         versionRef.current = 0;
-        const data = await refreshRoom(room.id);
+        const data = await refreshRoom(room.id, { playerId: myPlayerId });
         setPhase("playing");
         if (data.gameState) {
           broadcastGameState(

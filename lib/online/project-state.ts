@@ -37,6 +37,7 @@ export function isKingAndSpyViewState(
     typeof state === "object" &&
     state !== null &&
     "myHand" in state &&
+    Array.isArray((state as KingAndSpyViewState).myHand) &&
     "kingRoleSeat" in state
   );
 }

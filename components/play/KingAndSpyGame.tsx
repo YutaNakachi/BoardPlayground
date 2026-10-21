@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
 import { KingAndSpyMatchPanel } from "@/components/play/king-and-spy/KingAndSpyMatchPanel";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
@@ -240,9 +240,16 @@ export function KingAndSpyGame() {
   ]);
 
   const isSetupScreen =
-    (mode === "local" && localPhase === "setup") ||
+    (mode === "local" &&
+      localPhase === "setup" &&
+      online.phase === "idle") ||
     (mode === "online" && online.phase === "idle");
   usePlaySetupNavigation(isSetupScreen, resetLocal);
+
+  useEffect(() => {
+    if (!isOnlinePlay || onlineView || !online.room) return;
+    void online.refreshRoom(online.room.id);
+  }, [isOnlinePlay, onlineView, online.room, online.refreshRoom]);
 
   if (online.completingPendingJoin) {
     return <PendingJoinConnecting />;
@@ -343,7 +350,11 @@ export function KingAndSpyGame() {
     );
   }
 
-  if (mode === "local" && localPhase === "setup") {
+  if (
+    mode === "local" &&
+    localPhase === "setup" &&
+    online.phase === "idle"
+  ) {
     return (
       <OnlineSetupPanel
         title="キング＆スパイ（仮）"
@@ -382,6 +393,16 @@ export function KingAndSpyGame() {
   }
 
   if (!activeView) {
+    if (isOnlinePlay) {
+      return (
+        <div className="mx-auto w-full max-w-lg space-y-3 py-12 text-center text-slate-300">
+          <p className="text-sm">ゲーム状態を読み込み中…</p>
+          {online.error && (
+            <p className="text-sm text-red-400">{online.error}</p>
+          )}
+        </div>
+      );
+    }
     return null;
   }
 
