@@ -10,7 +10,9 @@ import {
 const RIM_Y = 360;
 /** 写真の上の余白と、底より下の空きを枠から外す。 */
 const FRAME_TOP = 185;
-const FRAME_BOTTOM = 1104;
+const FRAME_BOTTOM = 1032;
+/** 溢れた水が足もとを満たす上端。透明になった底のすぐ上。 */
+const FLOOR_Y = 868;
 const FRAME_H = FRAME_BOTTOM - FRAME_TOP;
 const DOME_CX = 432;
 const DOME_RX = 214;
@@ -24,34 +26,15 @@ const CHIP_DRAW: Record<ChipSize, number> = {
   m: 0.8,
   l: 1,
 };
-/** 底でのずれ。先の枚が下、あとの枚が少し上に重なる。x, 上方向。 */
-const CHIP_PILE: readonly [number, number][] = [
-  [0, 0],
-  [-46, 12],
-  [48, 10],
-  [-12, 26],
-  [34, 28],
-  [-44, 32],
-  [14, 44],
-  [-30, 46],
-  [40, 50],
-  [-6, 60],
-  [22, 64],
-  [-38, 66],
-  [8, 76],
-  [-20, 80],
-  [30, 82],
-  [-2, 92],
-  [16, 96],
-  [-24, 100],
-  [4, 108],
-  [-12, 116],
-  [20, 118],
-  [-32, 122],
-  [8, 128],
-  [-4, 136],
-  [24, 138],
-];
+/** 底に重ねる。枚数が増えても杯の下のほうに留まる。 */
+function pileSlot(index: number): [number, number] {
+  const cols = [0, -44, 46, -18, 24, -36, 14, 32, -8, 20];
+  const row = Math.floor(index / cols.length);
+  const stagger = row % 2 === 0 ? 0 : 7;
+  const dx = (cols[index % cols.length] ?? 0) + stagger;
+  const up = row * 13 + (index % 3) * 3;
+  return [dx, up];
+}
 
 /** 写真の外縁。y, 左, 右。 */
 const OUTER: readonly (readonly [number, number, number])[] = [
@@ -94,8 +77,8 @@ function dripPath(side: -1 | 1, bulge: number, y0: number): string {
   const startX = wallX(y0, side) + side * -4;
   const midY = 700;
   const midX = wallX(midY, side) + side * bulge;
-  const endX = wallX(930, side) + side * -2;
-  return `M ${startX} ${y0} Q ${midX} ${midY} ${endX} 1052`;
+  const endX = wallX(930, side) + side * 6;
+  return `M ${startX} ${y0} Q ${midX} ${midY} ${endX} 984`;
 }
 
 type Props = {
@@ -247,7 +230,7 @@ export function OverheatGlass({ state, label }: Props) {
             </g>
           ) : null}
           {chips.map((chip, index) => {
-            const [dx, up] = CHIP_PILE[index] ?? [0, 12];
+            const [dx, up] = pileSlot(index);
             const radius = COIN_R * CHIP_DRAW[chip.size];
             const cy = COIN_FLOOR - up + COIN_R - radius;
             return (
@@ -267,6 +250,32 @@ export function OverheatGlass({ state, label }: Props) {
             );
           })}
         </svg>
+        {over ? (
+          <svg
+            viewBox="0 0 864 1152"
+            className="overheat-spill pointer-events-none absolute inset-0 h-full w-full"
+            aria-hidden
+          >
+            <rect x="196" y={FLOOR_Y} width="472" height="132" fill="#22d3ee" />
+            <ellipse
+              className="overheat-puddle"
+              cx="432"
+              cy="996"
+              rx="328"
+              ry="32"
+              fill="#22d3ee"
+            />
+            <ellipse
+              className="overheat-puddle"
+              cx="432"
+              cy="1006"
+              rx="176"
+              ry="12"
+              fill="#e0faff"
+              opacity="0.75"
+            />
+          </svg>
+        ) : null}
         <img
           src="/games/overheat-chicken/glass.png"
           alt=""
@@ -314,14 +323,6 @@ export function OverheatGlass({ state, label }: Props) {
               stroke="#e0faff"
               strokeWidth="9"
               strokeLinecap="round"
-            />
-            <ellipse
-              className="overheat-puddle"
-              cx="432"
-              cy="1064"
-              rx="250"
-              ry="24"
-              fill="#67e8f9"
             />
           </svg>
         ) : null}

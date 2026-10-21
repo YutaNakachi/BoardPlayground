@@ -139,18 +139,29 @@ export function OverheatChickenGame() {
       <OverheatGlass state={state} label={glassLabel} />
 
       {!over ? (
-        <div className="flex flex-wrap justify-center gap-3">
-          {CHIP_SIZES.map((size) => (
-            <button
-              key={size}
-              type="button"
-              disabled={state.placed >= MAX_CHIPS_PER_TURN}
-              onClick={() => place(size)}
-              className="min-h-12 min-w-[5.5rem] rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-base font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/5"
-            >
-              {CHIP_LABEL[size]}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-end justify-center gap-3">
+          {CHIP_SIZES.map((size) => {
+            const px = size === "s" ? 46 : size === "m" ? 60 : 76;
+            return (
+              <button
+                key={size}
+                type="button"
+                aria-label={CHIP_LABEL[size]}
+                disabled={state.placed >= MAX_CHIPS_PER_TURN}
+                onClick={() => place(size)}
+                className="rounded-full p-0.5 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <img
+                  src={`/games/overheat-chicken/chip-${state.current}.png`}
+                  alt=""
+                  width={px}
+                  height={px}
+                  draggable={false}
+                  className="pointer-events-none block select-none"
+                />
+              </button>
+            );
+          })}
           <button
             type="button"
             disabled={state.placed < 1}

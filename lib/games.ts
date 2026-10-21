@@ -443,7 +443,7 @@ const games: GameMeta[] = [
     players: "2",
     playersMin: 2,
     playersMax: 2,
-    durationMinutes: 2,
+    durationMinutes: 5,
     complexity: "easy",
     cpu: false,
     team: false,

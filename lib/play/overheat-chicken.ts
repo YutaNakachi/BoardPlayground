@@ -1,7 +1,7 @@
 /** 縁まで満たした杯。水位が capacity を超えると、そのチップを入れた人の負け。 */
 
-export const CAPACITY_MIN = 6;
-export const CAPACITY_MAX = 12;
+export const CAPACITY_MIN = 15;
+export const CAPACITY_MAX = 20;
 export const MAX_CHIPS_PER_TURN = 3;
 
 export const CHIP_SIZES = ["s", "m", "l"] as const;
@@ -48,8 +48,8 @@ export type OverheatState = {
   visual: OverheatVisual;
 };
 
-/** あとの半ステップほど見た目の増分が小さい。枠の上を空けすぎない。 */
-const DOME_UNIT = 9.2;
+/** あとの半ステップほど見た目の増分が小さい。長い対局でも枠の上を空けすぎない。 */
+const DOME_UNIT = 4;
 
 function unit(seed: number, index: number): number {
   let n = Math.imul(Math.floor(seed * 997) + 1, 374761393) + Math.imul(index + 1, 668265263);
@@ -77,7 +77,7 @@ export function domeRise(state: OverheatState): number {
   let rise = 0;
   for (let i = 0; i < steps; i += 1) {
     const jitter = 0.82 + unit(state.visual.seed, i) * 0.36;
-    const fade = Math.exp(-i * 0.06);
+    const fade = Math.exp(-i * 0.028);
     rise += DOME_UNIT * state.visual.scale * jitter * fade;
   }
   return rise;
