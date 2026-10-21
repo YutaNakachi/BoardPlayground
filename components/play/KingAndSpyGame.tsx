@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
+import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
+import { useKingAndSpyDuelField } from "@/components/play/king-and-spy/useKingAndSpyDuelField";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
@@ -49,41 +52,18 @@ function roleLabel(role: "king" | "spy") {
   return role === "king" ? "首領側" : "刺客側";
 }
 
-function CardChip({
-  card,
-  onClick,
-  selected,
-  disabled,
-}: {
-  card: KingAndSpyCard;
-  onClick?: () => void;
-  selected?: boolean;
-  disabled?: boolean;
-}) {
-  const base =
-    "rounded-lg border px-3 py-2 text-sm font-medium transition-colors";
-  const kindStyle =
-    card.kind === "king"
-      ? "border-amber-500/60 bg-amber-950/40 text-amber-100"
-      : card.kind === "spy"
-        ? "border-rose-500/60 bg-rose-950/40 text-rose-100"
-        : "border-slate-500/60 bg-slate-800/80 text-slate-100";
-  if (onClick && !disabled) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`${base} ${kindStyle} ${selected ? "ring-2 ring-indigo-400" : ""}`}
-      >
-        {KIND_LABEL[card.kind]}
-      </button>
-    );
-  }
-  return <span className={`${base} ${kindStyle} opacity-90`}>{KIND_LABEL[card.kind]}</span>;
+function toPublicState(view: KingAndSpyViewState): KingAndSpyPublicState {
+  const {
+    myHand: _h,
+    mySeat: _s,
+    myRole: _r,
+    ...pub
+  } = view;
+  return pub;
 }
 
 export function KingAndSpyGame() {
-  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { recordLocalPlay } = usePlayPage();
   const { onlineEnabled } = usePlayStats();
   const online = useOnlineRoom("king-and-spy");
   const { hostStartsAsKing, onHostStartsAsKingChange } =
@@ -100,6 +80,9 @@ export function KingAndSpyGame() {
   );
   const [localActiveSeat, setLocalActiveSeat] = useState<0 | 1>(0);
   const [pickedCardId, setPickedCardId] = useState<string | null>(null);
+  const [myCommittedCard, setMyCommittedCard] = useState<KingAndSpyCard | null>(
+    null
+  );
 
   const isOnlinePlay =
     online.phase === "playing" || online.phase === "finished";
@@ -131,6 +114,44 @@ export function KingAndSpyGame() {
     localActiveSeat,
   ]);
 
+  const duelPublic = useMemo(
+    () =>
+      activeView
+        ? toPublicState(activeView)
+        : initialKingAndSpyPublicState(0),
+    [activeView]
+  );
+
+  const mySeat = isOnlinePlay
+    ? (online.mySeat as 0 | 1)
+    : localActiveSeat;
+
+  const { field, registerMyCommit, resetField } = useKingAndSpyDuelField(
+    duelPublic,
+    mySeat,
+    myCommittedCard
+  );
+
+  useEffect(() => {
+    if (
+      !duelPublic.committedReady[mySeat] &&
+      !duelPublic.committedReady[mySeat === 0 ? 1 : 0] &&
+      !duelPublic.lastReveal
+    ) {
+      setMyCommittedCard(null);
+    }
+  }, [duelPublic.committedReady, duelPublic.lastReveal, mySeat]);
+
+  const seatLabels: [string, string] = useMemo(() => {
+    if (isOnlinePlay) {
+      return [
+        getSeatDisplayName(online.players, 0),
+        getSeatDisplayName(online.players, 1),
+      ];
+    }
+    return ["プレイヤー1", "プレイヤー2"];
+  }, [isOnlinePlay, online.players]);
+
   const startLocal = useCallback(
     (_kind: LocalMatchSetupKind) => {
       recordLocalPlay();
@@ -139,25 +160,32 @@ export function KingAndSpyGame() {
       setSecrets(initialKingAndSpySecrets(kingRoleSeat));
       setLocalActiveSeat(0);
       setPickedCardId(null);
+      setMyCommittedCard(null);
+      resetField();
       setLocalPhase("playing");
     },
-    [recordLocalPlay, setPlayMode, hostStartsAsKingLocal]
+    [recordLocalPlay, hostStartsAsKingLocal, resetField]
   );
 
   const resetLocal = useCallback(() => {
     setLocalPhase("setup");
     setPickedCardId(null);
-  }, []);
+    setMyCommittedCard(null);
+    resetField();
+  }, [resetField]);
 
   const commitLocal = useCallback(
-    (seat: 0 | 1, cardId: string) => {
+    (seat: 0 | 1, card: KingAndSpyCard) => {
       const pub = structuredClone(publicState);
       const sec = structuredClone(secrets);
-      const result = applyKingAndSpyCommit(pub, sec, seat, cardId);
+      const result = applyKingAndSpyCommit(pub, sec, seat, card.id);
       if (result.error) return;
       setPublicState(pub);
       setSecrets(sec);
       setPickedCardId(null);
+      if (!pub.committedReady[0] && !pub.committedReady[1]) {
+        setMyCommittedCard(null);
+      }
       if (pub.phase === "game-over") {
         setLocalPhase("game-over");
         return;
@@ -173,6 +201,12 @@ export function KingAndSpyGame() {
 
   const handleCommit = useCallback(() => {
     if (!pickedCardId || !activeView) return;
+    const card = activeView.myHand.find((c) => c.id === pickedCardId);
+    if (!card) return;
+
+    registerMyCommit(card);
+    setMyCommittedCard(card);
+
     if (isOnlinePlay && online.mySeat >= 0) {
       if (activeView.committedReady[online.mySeat]) return;
       void online.handleMove({
@@ -183,7 +217,7 @@ export function KingAndSpyGame() {
       return;
     }
     if (localPhase !== "playing") return;
-    commitLocal(localActiveSeat, pickedCardId);
+    commitLocal(localActiveSeat, card);
   }, [
     pickedCardId,
     activeView,
@@ -192,6 +226,7 @@ export function KingAndSpyGame() {
     localPhase,
     localActiveSeat,
     commitLocal,
+    registerMyCommit,
   ]);
 
   const isSetupScreen =
@@ -203,11 +238,7 @@ export function KingAndSpyGame() {
     return <PendingJoinConnecting />;
   }
 
-  if (
-    mode === "online" &&
-    online.phase === "idle" &&
-    onlineEnabled
-  ) {
+  if (mode === "online" && online.phase === "idle" && onlineEnabled) {
     return (
       <OnlineSetupPanel
         title="キング＆スパイ（仮）"
@@ -351,7 +382,6 @@ export function KingAndSpyGame() {
     localPhase === "game-over" ||
     activeView.phase === "game-over";
 
-  const mySeat = isOnlinePlay ? (online.mySeat as 0 | 1) : localActiveSeat;
   const alreadyCommitted = activeView.committedReady[mySeat];
   const opponentCommitted = activeView.committedReady[mySeat === 0 ? 1 : 0];
 
@@ -360,7 +390,9 @@ export function KingAndSpyGame() {
   let action = "手札から1枚選び、確定する";
   let notice: string | undefined;
   if (alreadyCommitted) {
-    action = opponentCommitted ? "公開中…" : "相手の確定を待っています";
+    action = opponentCommitted
+      ? "オープン…"
+      : "場に裏向きで出しました。相手の確定を待っています";
   }
   if (activeView.lastReveal) {
     const lr = activeView.lastReveal;
@@ -405,13 +437,25 @@ export function KingAndSpyGame() {
         />
       )}
 
+      {!isGameOver && (
+        <KingAndSpyDuelField field={field} labels={seatLabels} mySeat={mySeat} />
+      )}
+
       <div className="rounded-xl border border-slate-700/80 bg-slate-900/50 p-3">
         <p className="text-xs text-slate-400">捨て札</p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap justify-center gap-2">
           {activeView.discards.length === 0 ? (
             <span className="text-sm text-slate-500">なし</span>
           ) : (
-            activeView.discards.map((c) => <CardChip key={c.id} card={c} />)
+            activeView.discards.map((c) => (
+              <KingAndSpyPlayingCard
+                key={c.id}
+                card={c}
+                faceDown={false}
+                flipped={true}
+                size="discard"
+              />
+            ))
           )}
         </div>
       </div>
@@ -423,11 +467,14 @@ export function KingAndSpyGame() {
               ? "あなたの手札"
               : `プレイヤー${localActiveSeat + 1}の手札（相手に見えません）`}
           </p>
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex flex-wrap justify-center gap-3">
             {activeView.myHand.map((card) => (
-              <CardChip
+              <KingAndSpyPlayingCard
                 key={card.id}
                 card={card}
+                faceDown={false}
+                flipped={true}
+                size="hand"
                 selected={pickedCardId === card.id}
                 disabled={alreadyCommitted}
                 onClick={
@@ -445,7 +492,7 @@ export function KingAndSpyGame() {
               onClick={handleCommit}
               className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white disabled:opacity-40"
             >
-              確定
+              場に出す（確定）
             </button>
           </div>
         </div>
