@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
 import { KingAndSpyMatchPanel } from "@/components/play/king-and-spy/KingAndSpyMatchPanel";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
@@ -135,11 +135,21 @@ export function KingAndSpyGame() {
   );
 
   const myHandLive = activeView?.myHand ?? [];
-  const frozenHandRef = useRef(myHandLive);
-  if (!isRevealPlayback) {
-    frozenHandRef.current = myHandLive;
+  const [revealHandHold, setRevealHandHold] = useState<KingAndSpyCard[] | null>(
+    null
+  );
+  const [revealHandLatch, setRevealHandLatch] = useState(false);
+  if (isRevealPlayback) {
+    if (!revealHandLatch) {
+      setRevealHandLatch(true);
+      setRevealHandHold(myHandLive);
+    }
+  } else if (revealHandLatch) {
+    setRevealHandLatch(false);
+    setRevealHandHold(null);
   }
-  const displayHand = isRevealPlayback ? frozenHandRef.current : myHandLive;
+  const displayHand =
+    isRevealPlayback && revealHandHold !== null ? revealHandHold : myHandLive;
 
   const effectivePickedCardId = isRevealPlayback ? null : pickedCardId;
 
