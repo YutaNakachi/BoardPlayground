@@ -53,6 +53,7 @@ npm run dev
 2. マイグレーションを適用（いずれか）
    - **CLI（推奨）**: `SUPABASE_DB_URL` を設定して `npm run db:migrate`
    - **手動**: SQL Editor で `supabase/migrations/` 内の SQL を番号順に実行
+   - 適用確認・GRANT: [docs/cloud-agent-supabase.md](docs/cloud-agent-supabase.md)（`npm run db:check` / `007_explicit_grants.sql`）
 3. Vercel の **Settings → Environment Variables** に `.env.example` の3変数を追加（Production / Preview / Development すべて）
 4. **Redeploy** して反映（環境変数追加後は再デプロイが必要）
 5. 動作確認: `https://<your-domain>/api/status` が `{ "stats": true, "online": true }` を返すこと

@@ -2,10 +2,12 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/load-supabase-db-url-from-env-local.sh
+source "$(dirname "$0")/load-supabase-db-url-from-env-local.sh"
 
 if [[ -z "${SUPABASE_DB_URL:-}" ]]; then
   echo "SUPABASE_DB_URL is not set."
-  echo "Add it to the Cloud Agent environment secrets (Supabase Dashboard → Connect → URI)."
+  echo "Add it to .env.local or Cloud Agent secrets (Supabase Dashboard → Connect → Session pooler, port 5432)."
   exit 1
 fi
 

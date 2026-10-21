@@ -60,11 +60,22 @@ alwaysApply: false
 環境シークレットが設定済みなら Agent が実行可能:
 
 ```bash
-npm run db:migrate   # supabase/migrations を適用
-npm run db:check     # 接続・主要テーブル確認
+npm run db:migrate     # supabase/migrations を適用
+npm run db:migrations  # 本番の適用済み一覧（SUPABASE_DB_URL）
+npm run db:check       # 接続・GRANT 確認（anon キー推奨）
 ```
 
 設定手順: `docs/cloud-agent-supabase.md`
+
+### 新規テーブルと Data API GRANT（必須）
+
+Supabase は 2026-10-30 以降 `public` の新規テーブルに Data API 権限を自動付与しない。`CREATE TABLE` と**同じマイグレーション**で明示 `GRANT` する（既存例: `007_explicit_grants.sql`）。
+
+- **anon**: Realtime `postgres_changes` 用に `SELECT` が要るテーブルだけ（RLS で読み取り限定）
+- **service_role**: 部屋 API・統計 API 用に `SELECT, INSERT, UPDATE, DELETE`
+- **authenticated**: 本アプリは Supabase Auth 未使用のため通常は付けない
+
+列追加のみのマイグレーションでは GRANT 追加は不要。`db reset` / プレビューブランチでも通るよう、テーブル作成マイグレーションに含める。
 
 ## 出力
 
