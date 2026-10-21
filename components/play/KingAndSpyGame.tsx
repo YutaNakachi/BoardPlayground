@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
 import { KingAndSpyMatchPanel } from "@/components/play/king-and-spy/KingAndSpyMatchPanel";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
@@ -134,18 +134,14 @@ export function KingAndSpyGame() {
     duelCommittedCard
   );
 
-  const [displayHand, setDisplayHand] = useState<KingAndSpyCard[]>([]);
+  const myHandLive = activeView?.myHand ?? [];
+  const frozenHandRef = useRef(myHandLive);
+  if (!isRevealPlayback) {
+    frozenHandRef.current = myHandLive;
+  }
+  const displayHand = isRevealPlayback ? frozenHandRef.current : myHandLive;
 
-  useEffect(() => {
-    if (!activeView || isRevealPlayback) return;
-    setDisplayHand(activeView.myHand);
-  }, [activeView, isRevealPlayback]);
-
-  useEffect(() => {
-    if (!isRevealPlayback) {
-      setPickedCardId(null);
-    }
-  }, [isRevealPlayback]);
+  const effectivePickedCardId = isRevealPlayback ? null : pickedCardId;
 
   const seatLabels: [string, string] = useMemo(() => {
     if (isOnlinePlay) {
@@ -482,7 +478,7 @@ export function KingAndSpyGame() {
                 faceDown={false}
                 flipped={true}
                 size="hand"
-                selected={!isRevealPlayback && pickedCardId === card.id}
+                selected={effectivePickedCardId === card.id}
                 disabled={alreadyCommitted || isRevealPlayback}
                 onClick={
                   alreadyCommitted || isRevealPlayback
@@ -495,7 +491,9 @@ export function KingAndSpyGame() {
           <div className="flex justify-center">
             <button
               type="button"
-              disabled={!pickedCardId || alreadyCommitted || isRevealPlayback}
+              disabled={
+                !effectivePickedCardId || alreadyCommitted || isRevealPlayback
+              }
               onClick={handleCommit}
               className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white disabled:opacity-40"
             >
