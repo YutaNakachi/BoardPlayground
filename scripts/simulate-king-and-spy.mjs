@@ -7,6 +7,7 @@ const WIN_MARGIN = 3;
 const KING_SIDE_POINTS = 1;
 const SPY_SIDE_POINTS = 2;
 const SWAP_EVERY_DECISIVE = 2;
+const MATCH_MAX_ROUNDS = 12;
 
 /** @typedef {'king' | 'spy' | 'citizen'} CardKind */
 
@@ -76,22 +77,30 @@ function leader(scores) {
 }
 
 /** @param {() => number} rng */
-function playMatch(rng, startKingPlayer = 0) {
+function playMatch(rng, startKingPlayer = 0, maxRounds = null) {
   const scores = [0, 0];
   let kingRolePlayer = startKingPlayer;
   let decisiveCount = 0;
+  let roundNumber = 1;
   const stats = {
     decisives: 0,
     playsPerDecisive: [],
     kingDecisives: 0,
     spyDecisives: 0,
     swaps: 0,
+    capEnd: false,
+    drawAtCap: false,
   };
 
   const maxDecisives = 500;
   while (scoreDiff(scores) < WIN_MARGIN) {
     if (stats.decisives >= maxDecisives) {
       return { ...stats, scores, kingRolePlayer, aborted: true };
+    }
+    if (maxRounds != null && roundNumber > maxRounds) {
+      stats.capEnd = true;
+      stats.drawAtCap = leader(scores) === -1;
+      break;
     }
     const r = playOneDecisiveRound(kingRolePlayer, rng, stats);
     addPoints(scores, r.winPlayer, r.winningRole);
@@ -102,19 +111,28 @@ function playMatch(rng, startKingPlayer = 0) {
 
     if (scoreDiff(scores) >= WIN_MARGIN) break;
 
+    if (maxRounds != null && roundNumber >= maxRounds) {
+      stats.capEnd = true;
+      stats.drawAtCap = leader(scores) === -1;
+      break;
+    }
+
+    roundNumber++;
     if (decisiveCount % SWAP_EVERY_DECISIVE === 0) {
       kingRolePlayer = 1 - kingRolePlayer;
       stats.swaps++;
     }
   }
 
+  const win = leader(scores);
   return {
     ...stats,
     scores,
     kingRolePlayer,
-    winner: leader(scores),
+    winner: win,
     margin: scoreDiff(scores),
     aborted: false,
+    roundsPlayed: roundNumber,
   };
 }
 
@@ -216,6 +234,34 @@ console.log(JSON.stringify(runBatch(50_000, 0), null, 2));
 
 console.log("\n=== ランダム手 50,000 マッチ (開始: P1=首領側) ===");
 console.log(JSON.stringify(runBatch(50_000, 1), null, 2));
+
+console.log(`\n=== 上限 ${MATCH_MAX_ROUNDS} ラウンド (50,000 マッチ) ===`);
+{
+  const rng = mulberry32(99);
+  let cap = 0;
+  let draws = 0;
+  const rounds = [];
+  for (let i = 0; i < 50_000; i++) {
+    const m = playMatch(rng, 0, MATCH_MAX_ROUNDS);
+    if (m.capEnd) cap++;
+    if (m.drawAtCap) draws++;
+    rounds.push(m.roundsPlayed);
+  }
+  rounds.sort((a, b) => a - b);
+  console.log(
+    JSON.stringify(
+      {
+        capRate: cap / 50_000,
+        drawAtCapRate: draws / 50_000,
+        roundsP50: percentile(rounds, 50),
+        roundsP90: percentile(rounds, 90),
+        note: "12は4の倍数。2決着交代で各12ラウンド完走時キング/スパイ担当6ずつ",
+      },
+      null,
+      2
+    )
+  );
+}
 
 /** 市民のみランダムでは偏るので、決着側の条件付き確率を完全ランダム理論値と比較 */
 function exactOnePlayDistribution(kingRolePlayer) {

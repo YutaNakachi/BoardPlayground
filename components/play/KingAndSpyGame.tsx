@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
+import { KingAndSpyMatchPanel } from "@/components/play/king-and-spy/KingAndSpyMatchPanel";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
 import { useKingAndSpyDuelField } from "@/components/play/king-and-spy/useKingAndSpyDuelField";
 import { usePlayPage } from "@/components/play/PlayPageContext";
@@ -22,12 +23,18 @@ import {
 } from "@/lib/online/player-labels";
 import type { PlayMode } from "@/lib/online/types";
 import { kingRoleSeatFromHost } from "@/lib/play/king-and-spy/game-options";
+import {
+  CARD_KIND_LABEL,
+  playerRoleLabel,
+  winningSideLabel,
+} from "@/lib/play/king-and-spy/labels";
 import { roleForSeat } from "@/lib/play/king-and-spy/rules";
 import {
   applyKingAndSpyCommit,
   decisivesUntilRoleSwap,
   initialKingAndSpyPublicState,
   initialKingAndSpySecrets,
+  MATCH_MAX_ROUNDS,
 } from "@/lib/play/king-and-spy/state";
 import type {
   KingAndSpyCard,
@@ -38,19 +45,9 @@ import type {
 import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 
 const GAME_DESCRIPTION =
-  "首領と刺客の非対称な三すくみカード。同時に1枚を出し、点差3点先取で勝ちます。";
-
-const KIND_LABEL: Record<KingAndSpyCard["kind"], string> = {
-  king: "首領",
-  citizen: "市民",
-  spy: "刺客",
-};
+  "キングとスパイの非対称な三すくみカード。同時に1枚を出し、点差3点先取または12ラウンドで勝ちます。";
 
 type LocalPhase = "setup" | "playing" | "game-over";
-
-function roleLabel(role: "king" | "spy") {
-  return role === "king" ? "首領側" : "刺客側";
-}
 
 function toPublicState(view: KingAndSpyViewState): KingAndSpyPublicState {
   const {
@@ -59,7 +56,12 @@ function toPublicState(view: KingAndSpyViewState): KingAndSpyPublicState {
     myRole: _r,
     ...pub
   } = view;
-  return pub;
+  return {
+    ...pub,
+    roundNumber: pub.roundNumber ?? 1,
+    maxRounds: pub.maxRounds ?? MATCH_MAX_ROUNDS,
+    roundHistory: pub.roundHistory ?? [],
+  };
 }
 
 export function KingAndSpyGame() {
@@ -253,14 +255,14 @@ export function KingAndSpyGame() {
                 className={`px-4 py-2 ${setupPillClass(hostStartsAsKingLocal)}`}
                 onClick={() => setHostStartsAsKingLocal(true)}
               >
-                首領側
+                キング側
               </button>
               <button
                 type="button"
                 className={`px-4 py-2 ${setupPillClass(!hostStartsAsKingLocal)}`}
                 onClick={() => setHostStartsAsKingLocal(false)}
               >
-                刺客側
+                スパイ側
               </button>
             </div>
           </div>
@@ -301,20 +303,20 @@ export function KingAndSpyGame() {
                     className={`px-4 py-2 ${setupPillClass(hostStartsAsKing)}`}
                     onClick={() => onHostStartsAsKingChange(true)}
                   >
-                    首領側
+                    キング側
                   </button>
                   <button
                     type="button"
                     className={`px-4 py-2 ${setupPillClass(!hostStartsAsKing)}`}
                     onClick={() => onHostStartsAsKingChange(false)}
                   >
-                    刺客側
+                    スパイ側
                   </button>
                 </div>
               ) : (
                 <p className="text-center text-sm text-white">
                   ホストは
-                  {hostStartsAsKing ? "首領側" : "刺客側"}
+                  {hostStartsAsKing ? "キング側" : "スパイ側"}
                   で開始
                 </p>
               )}
@@ -347,14 +349,14 @@ export function KingAndSpyGame() {
                 className={`px-4 py-2 ${setupPillClass(hostStartsAsKingLocal)}`}
                 onClick={() => setHostStartsAsKingLocal(true)}
               >
-                首領側
+                キング側
               </button>
               <button
                 type="button"
                 className={`px-4 py-2 ${setupPillClass(!hostStartsAsKingLocal)}`}
                 onClick={() => setHostStartsAsKingLocal(false)}
               >
-                刺客側
+                スパイ側
               </button>
             </div>
           </div>
@@ -367,8 +369,6 @@ export function KingAndSpyGame() {
     return null;
   }
 
-  const scores = activeView.scores;
-  const margin = Math.abs(scores[0] - scores[1]);
   const isGameOver =
     (isOnlinePlay && online.phase === "finished") ||
     localPhase === "game-over" ||
@@ -377,7 +377,8 @@ export function KingAndSpyGame() {
   const alreadyCommitted = activeView.committedReady[mySeat];
   const opponentCommitted = activeView.committedReady[mySeat === 0 ? 1 : 0];
 
-  const stats = `スコア ${scores[0]} – ${scores[1]}（差 ${margin}） · あなたは${roleLabel(activeView.myRole)} · 交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
+  const pub = toPublicState(activeView);
+  const stats = `ラウンド ${pub.roundNumber}/${pub.maxRounds} · あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
 
   let action = "手札から1枚選び、確定する";
   let notice: string | undefined;
@@ -388,9 +389,10 @@ export function KingAndSpyGame() {
   }
   if (activeView.lastReveal) {
     const lr = activeView.lastReveal;
-    notice = `公開: ${KIND_LABEL[lr.cards[0].kind]} vs ${KIND_LABEL[lr.cards[1].kind]} → ${lr.winningSide === "king-side" ? "首領側" : "刺客側"}決着（+${lr.pointsAwarded}）`;
+    notice = `公開: ${CARD_KIND_LABEL[lr.cards[0].kind]} vs ${CARD_KIND_LABEL[lr.cards[1].kind]} → ${winningSideLabel(lr.winningSide)}決着（+${lr.pointsAwarded}）`;
   }
 
+  const isDrawEnd = isGameOver && Boolean(activeView.draw);
   const winnerSeats =
     isGameOver && activeView.winner !== null ? [activeView.winner] : null;
 
@@ -403,6 +405,15 @@ export function KingAndSpyGame() {
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-4">
+      {isGameOver && isDrawEnd && (
+        <ResultPanel
+          draw
+          winners={[]}
+          winnersLabel="同点のため引き分け（上限ラウンド）"
+          {...replayProps}
+        />
+      )}
+
       {isGameOver && winnerSeats && (
         <ResultPanel
           winners={winnerSeats}
@@ -414,6 +425,12 @@ export function KingAndSpyGame() {
           {...replayProps}
         />
       )}
+
+      <KingAndSpyMatchPanel
+        state={pub}
+        seatLabels={seatLabels}
+        mySeat={mySeat}
+      />
 
       {!isGameOver && (
         <TurnBanner

@@ -1,5 +1,5 @@
 export type KingAndSpyGameOptions = {
-  /** true: ホストが首領側で開始。false: ホストが刺客側で開始 */
+  /** true: ホストがキング側で開始。false: ホストがスパイ側で開始 */
   hostStartsAsKing?: boolean;
 };
 

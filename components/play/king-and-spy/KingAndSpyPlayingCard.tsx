@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import type { CardKind, KingAndSpyCard } from "@/lib/play/king-and-spy/types";
+import { CARD_KIND_LABEL } from "@/lib/play/king-and-spy/labels";
+import type { KingAndSpyCard } from "@/lib/play/king-and-spy/types";
 import {
   KING_AND_SPY_CARD_BACK,
   kingAndSpyCardFaceSrc,
@@ -36,8 +37,7 @@ export function KingAndSpyPlayingCard({
 }: Props) {
   const showFace = Boolean(flipped && !faceDown && card);
   const faceSrc = card ? kingAndSpyCardFaceSrc(card.kind) : kingAndSpyCardFaceSrc("citizen");
-  const kindLabel =
-    card?.kind === "king" ? "首領" : card?.kind === "spy" ? "刺客" : "市民";
+  const kindLabel = card ? CARD_KIND_LABEL[card.kind] : "カード";
 
   const inner = (
     <div
