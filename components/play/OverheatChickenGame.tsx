@@ -26,10 +26,8 @@ import {
 
 type Phase = "setup" | "playing" | "game-over";
 
-const PLAYER_NAME = ["ピンク", "水色"] as const;
-
 function playerLabel(player: PlayerId): string {
-  return PLAYER_NAME[player];
+  return `プレイヤー ${player + 1}`;
 }
 
 export function OverheatChickenGame() {
@@ -114,7 +112,6 @@ export function OverheatChickenGame() {
           variant="inline"
           winners={[state.winner]}
           onReplay={backToSetup}
-          winnersLabel={playerLabel(state.winner)}
           details={<p className="text-sm text-slate-400">水が溢れた。</p>}
         />
       ) : null}
@@ -131,11 +128,11 @@ export function OverheatChickenGame() {
       <div className="mx-auto flex min-h-10 max-w-md flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-400">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-accent" aria-hidden />
-          ピンク
+          プレイヤー 1
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-sky-400" aria-hidden />
-          水色
+          プレイヤー 2
         </span>
       </div>
 

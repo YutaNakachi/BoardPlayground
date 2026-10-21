@@ -48,10 +48,8 @@ export type OverheatState = {
   visual: OverheatVisual;
 };
 
-/** 縁すれすれの水面。ここから上だけが表面張力のふくらみ。 */
-const DOME_MENISCUS = 12;
-const DOME_STEP = 6.4;
-const DOME_COLLAPSE = 12;
+/** あとの半ステップほど見た目の増分が小さい。枠の上を空けすぎない。 */
+const DOME_UNIT = 9.2;
 
 function unit(seed: number, index: number): number {
   let n = Math.imul(Math.floor(seed * 997) + 1, 374761393) + Math.imul(index + 1, 668265263);
@@ -63,9 +61,9 @@ function unit(seed: number, index: number): number {
 
 export function rollVisual(random: () => number = Math.random): OverheatVisual {
   return {
-    scale: 0.5 + random() * 0.85,
+    scale: 0.72 + random() * 0.5,
     seed: random() * 1000,
-    wobbleAt: 70 + random() * 90,
+    wobbleAt: 18 + random() * 48,
   };
 }
 
@@ -74,12 +72,13 @@ export function rollVisual(random: () => number = Math.random): OverheatVisual {
  * 対局の scale と半ステップごとのばらつきで、高さから水位は逆算できない。
  */
 export function domeRise(state: OverheatState): number {
-  if (state.winner !== null) return DOME_COLLAPSE;
+  if (state.winner !== null) return 0;
   const steps = Math.round(state.fill * 2);
-  let rise = DOME_MENISCUS;
+  let rise = 0;
   for (let i = 0; i < steps; i += 1) {
-    const jitter = 0.75 + unit(state.visual.seed, i) * 0.5;
-    rise += DOME_STEP * state.visual.scale * jitter;
+    const jitter = 0.82 + unit(state.visual.seed, i) * 0.36;
+    const fade = Math.exp(-i * 0.06);
+    rise += DOME_UNIT * state.visual.scale * jitter * fade;
   }
   return rise;
 }

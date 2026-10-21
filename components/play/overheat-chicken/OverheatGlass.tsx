@@ -7,7 +7,11 @@ import {
   type OverheatState,
 } from "@/lib/play/overheat-chicken";
 
-const RIM_Y = 352;
+const RIM_Y = 360;
+/** 写真の上の余白と、底より下の空きを枠から外す。 */
+const FRAME_TOP = 185;
+const FRAME_BOTTOM = 1104;
+const FRAME_H = FRAME_BOTTOM - FRAME_TOP;
 const DOME_CX = 432;
 const DOME_RX = 214;
 const WATER_BOTTOM = 828;
@@ -164,7 +168,19 @@ export function OverheatGlass({ state, label }: Props) {
           }
         }
       `}</style>
-      <div className="relative aspect-[3/4] w-full" role="img" aria-label={label}>
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ aspectRatio: `864 / ${FRAME_H}` }}
+        role="img"
+        aria-label={label}
+      >
+        <div
+          className="absolute left-0 w-full"
+          style={{
+            top: `${(-FRAME_TOP / FRAME_H) * 100}%`,
+            height: `${(1152 / FRAME_H) * 100}%`,
+          }}
+        >
         <svg
           viewBox="0 0 864 1152"
           className="absolute inset-0 h-full w-full"
@@ -186,33 +202,50 @@ export function OverheatGlass({ state, label }: Props) {
             </linearGradient>
           </defs>
           <path d={BOWL} fill={`url(#${waterId})`} />
-          <g
-            className={wobble ? "overheat-wobble" : undefined}
-            style={
-              wobble
-                ? ({
-                    ["--wobble-px" as string]: `${wobblePx}px`,
-                    ["--wobble-sec" as string]: `${wobbleSec}s`,
-                  } as CSSProperties)
-                : undefined
-            }
-          >
-            <ellipse
-              cx={DOME_CX}
-              cy={RIM_Y}
-              rx={DOME_RX}
-              ry={ry}
-              fill={`url(#${waterId})`}
+          <path
+            d={`M 188 ${RIM_Y} L 676 ${RIM_Y} L 676 372 L 188 372 Z`}
+            fill={`url(#${waterId})`}
+          />
+          {ry < 8 ? (
+            <line
+              x1="206"
+              y1={RIM_Y}
+              x2="658"
+              y2={RIM_Y}
+              stroke="#f0fdff"
+              strokeWidth="2.5"
+              opacity="0.7"
             />
-            <ellipse
-              cx={DOME_CX}
-              cy={surface + Math.max(4, ry * 0.28)}
-              rx={DOME_RX * 0.62}
-              ry={over ? 4 : Math.max(3, Math.min(11, ry * 0.22))}
-              fill="#f0fdff"
-              opacity={over ? 0.4 : 0.72}
-            />
-          </g>
+          ) : null}
+          {ry > 0 ? (
+            <g
+              className={wobble ? "overheat-wobble" : undefined}
+              style={
+                wobble
+                  ? ({
+                      ["--wobble-px" as string]: `${wobblePx}px`,
+                      ["--wobble-sec" as string]: `${wobbleSec}s`,
+                    } as CSSProperties)
+                  : undefined
+              }
+            >
+              <ellipse
+                cx={DOME_CX}
+                cy={RIM_Y}
+                rx={DOME_RX}
+                ry={ry}
+                fill={`url(#${waterId})`}
+              />
+              <ellipse
+                cx={DOME_CX}
+                cy={surface + Math.max(4, ry * 0.28)}
+                rx={DOME_RX * 0.62}
+                ry={Math.max(3, Math.min(11, ry * 0.22))}
+                fill="#f0fdff"
+                opacity="0.72"
+              />
+            </g>
+          ) : null}
           {chips.map((chip, index) => {
             const [dx, up] = CHIP_PILE[index] ?? [0, 12];
             const radius = COIN_R * CHIP_DRAW[chip.size];
@@ -292,6 +325,7 @@ export function OverheatGlass({ state, label }: Props) {
             />
           </svg>
         ) : null}
+        </div>
       </div>
       <p className="sr-only">
         水位と上限の数字は表示しません。
