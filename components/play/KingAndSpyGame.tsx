@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
 import { useKingAndSpyDuelField } from "@/components/play/king-and-spy/useKingAndSpyDuelField";
@@ -126,21 +126,15 @@ export function KingAndSpyGame() {
     ? (online.mySeat as 0 | 1)
     : localActiveSeat;
 
-  const { field, registerMyCommit, resetField } = useKingAndSpyDuelField(
+  const duelCommittedCard = duelPublic.committedReady[mySeat]
+    ? myCommittedCard
+    : null;
+
+  const { field, resetField } = useKingAndSpyDuelField(
     duelPublic,
     mySeat,
-    myCommittedCard
+    duelCommittedCard
   );
-
-  useEffect(() => {
-    if (
-      !duelPublic.committedReady[mySeat] &&
-      !duelPublic.committedReady[mySeat === 0 ? 1 : 0] &&
-      !duelPublic.lastReveal
-    ) {
-      setMyCommittedCard(null);
-    }
-  }, [duelPublic.committedReady, duelPublic.lastReveal, mySeat]);
 
   const seatLabels: [string, string] = useMemo(() => {
     if (isOnlinePlay) {
@@ -204,7 +198,6 @@ export function KingAndSpyGame() {
     const card = activeView.myHand.find((c) => c.id === pickedCardId);
     if (!card) return;
 
-    registerMyCommit(card);
     setMyCommittedCard(card);
 
     if (isOnlinePlay && online.mySeat >= 0) {
@@ -226,7 +219,6 @@ export function KingAndSpyGame() {
     localPhase,
     localActiveSeat,
     commitLocal,
-    registerMyCommit,
   ]);
 
   const isSetupScreen =
