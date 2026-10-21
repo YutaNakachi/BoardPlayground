@@ -378,23 +378,32 @@ export function KingAndSpyGame() {
   const opponentCommitted = activeView.committedReady[mySeat === 0 ? 1 : 0];
 
   const pub = toPublicState(activeView);
-  const stats = `ラウンド ${pub.roundNumber}/${pub.maxRounds} · あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
-
-  let action = "手札から1枚選び、確定する";
-  let notice: string | undefined;
-  if (alreadyCommitted) {
-    action = opponentCommitted
-      ? "オープン…"
-      : "場に裏向きで出しました。相手の確定を待っています";
-  }
-  if (activeView.lastReveal) {
-    const lr = activeView.lastReveal;
-    notice = `公開: ${CARD_KIND_LABEL[lr.cards[0].kind]} vs ${CARD_KIND_LABEL[lr.cards[1].kind]} → ${winningSideLabel(lr.winningSide)}決着（+${lr.pointsAwarded}）`;
-  }
-
+  const scores = pub.scores;
   const isDrawEnd = isGameOver && Boolean(activeView.draw);
   const winnerSeats =
     isGameOver && activeView.winner !== null ? [activeView.winner] : null;
+
+  let stats: string;
+  let action: string;
+  let notice: string | undefined;
+
+  if (isGameOver) {
+    stats = `最終スコア ${scores[0]} – ${scores[1]}`;
+    action = isDrawEnd ? "上限ラウンド終了・同点" : "マッチ終了";
+    notice = undefined;
+  } else {
+    stats = `あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
+    action = "手札から1枚選び、確定する";
+    if (alreadyCommitted) {
+      action = opponentCommitted
+        ? "オープン…"
+        : "場に裏向きで出しました。相手の確定を待っています";
+    }
+    if (activeView.lastReveal) {
+      const lr = activeView.lastReveal;
+      notice = `公開: ${CARD_KIND_LABEL[lr.cards[0].kind]} vs ${CARD_KIND_LABEL[lr.cards[1].kind]} → ${winningSideLabel(lr.winningSide)}決着（+${lr.pointsAwarded}）`;
+    }
+  }
 
   const replayProps = getOnlineResultReplayProps(
     isOnlinePlay,
@@ -405,6 +414,18 @@ export function KingAndSpyGame() {
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-4">
+      <TurnBanner
+        playerIndex={mySeat}
+        playerLabel={
+          isOnlinePlay
+            ? getSeatDisplayName(online.players, mySeat)
+            : `プレイヤー${mySeat + 1}`
+        }
+        stats={stats}
+        action={action}
+        notice={notice}
+      />
+
       {isGameOver && isDrawEnd && (
         <ResultPanel
           draw
@@ -423,26 +444,6 @@ export function KingAndSpyGame() {
               : `プレイヤー${winnerSeats[0] + 1}`
           }
           {...replayProps}
-        />
-      )}
-
-      <KingAndSpyMatchPanel
-        state={pub}
-        seatLabels={seatLabels}
-        mySeat={mySeat}
-      />
-
-      {!isGameOver && (
-        <TurnBanner
-          playerIndex={mySeat}
-          playerLabel={
-            isOnlinePlay
-              ? getSeatDisplayName(online.players, mySeat)
-              : `プレイヤー${mySeat + 1}`
-          }
-          stats={stats}
-          action={action}
-          notice={notice}
         />
       )}
 
@@ -506,6 +507,12 @@ export function KingAndSpyGame() {
           </div>
         </div>
       )}
+
+      <KingAndSpyMatchPanel
+        state={pub}
+        seatLabels={seatLabels}
+        mySeat={mySeat}
+      />
     </div>
   );
 }
