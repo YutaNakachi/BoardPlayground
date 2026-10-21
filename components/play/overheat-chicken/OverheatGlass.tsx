@@ -28,6 +28,9 @@ const CHIP_PILE: readonly [number, number][] = [
   [18, 48],
   [-32, 50],
   [36, 58],
+  [-16, 70],
+  [30, 74],
+  [2, 88],
 ];
 
 /** 写真の外縁。y, 左, 右。 */
@@ -87,8 +90,6 @@ export function OverheatGlass({ state, label }: Props) {
   const ry = over ? 18 : BASE_RY + state.fill * SLOT;
   const surface = RIM_Y - ry;
   const coins = coinsOf(state);
-  const inside = coins.filter((coin) => !coin.spilled);
-  const spilled = coins.filter((coin) => coin.spilled);
   const wobble = !over && state.fill >= CAPACITY_MIN;
   const depth = Math.max(0, state.fill - (CAPACITY_MIN - 1));
   const wobblePx = Math.min(6, 2 + depth * 0.8);
@@ -140,23 +141,11 @@ export function OverheatGlass({ state, label }: Props) {
           35% { opacity: 1; }
           to { opacity: 1; }
         }
-        .overheat-coin-out {
-          transform-box: fill-box;
-          transform-origin: center;
-        }
-        .overheat-spill .overheat-coin-out {
-          animation: overheat-coin-out 0.7s ease-out both;
-        }
-        @keyframes overheat-coin-out {
-          from { transform: translateY(-70px); opacity: 0.2; }
-          to { transform: translateY(0); opacity: 1; }
-        }
         @media (prefers-reduced-motion: reduce) {
           .overheat-wobble,
           .overheat-spill .overheat-drip,
           .overheat-spill .overheat-puddle,
-          .overheat-sink,
-          .overheat-spill .overheat-coin-out {
+          .overheat-sink {
             animation: none;
           }
         }
@@ -210,10 +199,9 @@ export function OverheatGlass({ state, label }: Props) {
               opacity={over ? 0.4 : 0.72}
             />
           </g>
-          {inside.map((coin, index) => {
+          {coins.map((coin, index) => {
             const [dx, up] = CHIP_PILE[index] ?? [0, 12];
             const cy = COIN_FLOOR - up;
-            const globalIndex = coins.indexOf(coin);
             return (
               <Coin
                 key={`in-${index}`}
@@ -222,11 +210,11 @@ export function OverheatGlass({ state, label }: Props) {
                 player={coin.player}
                 spin={index * 37}
                 sinkFrom={
-                  !reducedMotion && globalIndex >= freshStart
+                  !reducedMotion && index >= freshStart
                     ? surface + COIN_R - cy
                     : undefined
                 }
-                sinkDelay={(globalIndex - freshStart) * 0.08}
+                sinkDelay={(index - freshStart) * 0.08}
               />
             );
           })}
@@ -287,24 +275,6 @@ export function OverheatGlass({ state, label }: Props) {
               ry="24"
               fill="#67e8f9"
             />
-            {spilled.map((coin, index) => {
-              const spots = [
-                [348, 1048],
-                [516, 1048],
-                [432, 1096],
-              ];
-              const [cx, cy] = spots[index] ?? [432, 1048];
-              return (
-                <g key={`out-${index}`} className="overheat-coin-out">
-                  <Coin
-                    cx={cx}
-                    cy={cy}
-                    player={coin.player}
-                    spin={20 + index * 63}
-                  />
-                </g>
-              );
-            })}
           </svg>
         ) : null}
       </div>
