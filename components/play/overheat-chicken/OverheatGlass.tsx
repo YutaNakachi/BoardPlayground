@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type CSSProperties } from "react";
+import { useEffect, useId, useState, type CSSProperties } from "react";
 import { getPlayerTurnStyle } from "@/lib/player-colors";
 import {
   CAPACITY_MAX,
@@ -16,7 +16,9 @@ const WATER_BOTTOM = 828;
 const BASE_RY = 96;
 const SLOT = 16;
 const COIN_R = 40;
-const COIN_STEP = 66;
+const COIN_STEP = 52;
+/** 杯の内側の底。先に入れたコインがここへ沈む。 */
+const COIN_FLOOR = 776;
 
 /** 写真の外縁。y, 左, 右。 */
 const OUTER: readonly (readonly [number, number, number])[] = [
@@ -81,7 +83,10 @@ export function OverheatGlass({ state, label }: Props) {
   const depth = Math.max(0, state.fill - (CAPACITY_MIN - 1));
   const wobblePx = Math.min(6, 2 + depth * 0.8);
   const wobbleSec = Math.max(0.45, 1.15 - depth * 0.08);
-  const stackTop = over ? RIM_Y + 78 : surface + COIN_R + 6;
+  const reducedMotion = usePrefersReducedMotion();
+  const lastDrop = state.drops[state.drops.length - 1];
+  const freshCount = lastDrop?.count ?? 0;
+  const freshStart = Math.max(0, coins.length - freshCount);
 
   return (
     <div className="mx-auto w-full max-w-[340px]">
@@ -117,6 +122,14 @@ export function OverheatGlass({ state, label }: Props) {
           from { transform: scaleX(0.15); opacity: 0.2; }
           to { transform: scaleX(1); opacity: 0.92; }
         }
+        .overheat-sink {
+          animation: overheat-sink-fade 0.85s ease-out both;
+        }
+        @keyframes overheat-sink-fade {
+          from { opacity: 0.2; }
+          35% { opacity: 1; }
+          to { opacity: 1; }
+        }
         .overheat-coin-out {
           transform-box: fill-box;
           transform-origin: center;
@@ -132,6 +145,7 @@ export function OverheatGlass({ state, label }: Props) {
           .overheat-wobble,
           .overheat-spill .overheat-drip,
           .overheat-spill .overheat-puddle,
+          .overheat-sink,
           .overheat-spill .overheat-coin-out {
             animation: none;
           }
@@ -187,15 +201,22 @@ export function OverheatGlass({ state, label }: Props) {
             />
           </g>
           {inside.map((coin, index) => {
-            const fromTop = inside.length - 1 - index;
-            const drift = index % 2 === 0 ? -8 : 8;
+            const drift = index % 2 === 0 ? -10 : 10;
+            const cy = COIN_FLOOR - index * COIN_STEP;
+            const globalIndex = coins.indexOf(coin);
             return (
               <Coin
                 key={`in-${index}`}
                 cx={DOME_CX + drift}
-                cy={stackTop + fromTop * COIN_STEP}
+                cy={cy}
                 player={coin.player}
                 spin={index * 47}
+                sinkFrom={
+                  !reducedMotion && globalIndex >= freshStart
+                    ? surface + COIN_R - cy
+                    : undefined
+                }
+                sinkDelay={(globalIndex - freshStart) * 0.08}
               />
             );
           })}
@@ -284,21 +305,49 @@ export function OverheatGlass({ state, label }: Props) {
   );
 }
 
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  return reduced;
+}
+
 function Coin({
   cx,
   cy,
   player,
   spin,
+  sinkFrom,
+  sinkDelay = 0,
 }: {
   cx: number;
   cy: number;
   player: 0 | 1;
   spin: number;
+  /** 水面からこの差だけ上に出して、底の位置まで落とす。 */
+  sinkFrom?: number;
+  sinkDelay?: number;
 }) {
   const style = getPlayerTurnStyle(player);
   const size = COIN_R * 2;
   return (
-    <g>
+    <g className={sinkFrom !== undefined ? "overheat-sink" : undefined}>
+      {sinkFrom !== undefined ? (
+        <animateTransform
+          attributeName="transform"
+          type="translate"
+          from={`0 ${sinkFrom}`}
+          to="0 0"
+          begin={`${sinkDelay}s`}
+          dur="0.85s"
+          fill="freeze"
+        />
+      ) : null}
       <circle
         cx={cx}
         cy={cy}
