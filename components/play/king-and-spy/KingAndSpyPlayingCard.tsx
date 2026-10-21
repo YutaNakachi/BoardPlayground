@@ -58,7 +58,7 @@ export function KingAndSpyPlayingCard({
             src={KING_AND_SPY_CARD_BACK}
             alt=""
             fill
-            className="object-cover"
+            className="object-cover object-center scale-[1.12]"
             sizes="120px"
             priority={size === "field"}
           />
@@ -74,7 +74,7 @@ export function KingAndSpyPlayingCard({
             src={faceSrc}
             alt={kindLabel}
             fill
-            className="object-cover"
+            className="object-cover object-center scale-[1.12]"
             sizes="120px"
           />
         </div>
