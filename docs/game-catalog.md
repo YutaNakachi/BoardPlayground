@@ -49,4 +49,5 @@ npm run catalog:doc
 
 - ルール文: `games/{slug}/rules.md`
 - プレイ画面: `lib/play-registry.ts`
+- フィクション枠の追加候補: [`docs/fiction-backlog.md`](./fiction-backlog.md)
 - Agent 初回プロンプト: [`docs/agent-prompts.md`](./agent-prompts.md)
