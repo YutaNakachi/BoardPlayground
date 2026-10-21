@@ -19,6 +19,7 @@ import {
 import { mergeGameOptions } from "@/lib/online/game-options";
 import {
   applyMove,
+  dejarikTurnSeat,
   turnSeatForState,
   type DejarikOnlineState,
   type GameState,

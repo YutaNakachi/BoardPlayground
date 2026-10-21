@@ -196,6 +196,7 @@ export function NebulaLinkGame() {
     online.phase === "playing" || online.phase === "finished";
   const onlineState = online.gameState as NebulaOnlineState | null;
   const isOnline = isOnlinePlay;
+  const canAct = !isOnline || online.isMyTurn;
   const game: NebulaState | null =
     isOnline && onlineState ? onlineState : localGame;
   const phase: Phase =
@@ -221,24 +222,6 @@ export function NebulaLinkGame() {
   const [spinning, setSpinning] = useState(false);
   const [placingPointer, setPlacingPointer] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOnline) return;
-    if (!online.isMyTurn) {
-      setSelectedPieceId(null);
-      setRotation(0);
-      setHoverIndex(null);
-      setPlacingPointer(false);
-      setSpinning(false);
-    }
-  }, [isOnline, online.isMyTurn]);
-
-  useEffect(() => {
-    if (!isOnlinePlay || !onlineState) return;
-    if (spinning && onlineState.roulette.length > 0) {
-      setSpinning(false);
-    }
-  }, [isOnlinePlay, onlineState, spinning]);
 
   const startGame = useCallback(() => {
     recordLocalPlay();
@@ -269,7 +252,9 @@ export function NebulaLinkGame() {
   }, [game, phase, allowedPieces]);
 
   const previewCells = useMemo(() => {
-    if (!game || !selectedPieceId || hoverIndex === null) return new Set<number>();
+    if (!game || !canAct || !selectedPieceId || hoverIndex === null) {
+      return new Set<number>();
+    }
     const { row, col } = nebulaRowCol(hoverIndex);
     const cells = pieceCellsAt(selectedPieceId, rotation, row, col);
     const set = new Set<number>();
@@ -279,7 +264,7 @@ export function NebulaLinkGame() {
       }
     }
     return set;
-  }, [game, selectedPieceId, rotation, hoverIndex]);
+  }, [game, canAct, selectedPieceId, rotation, hoverIndex]);
 
   const spinRoulette = useCallback(() => {
     if (!game || spinning || game.roulette.length > 0) return;
@@ -480,7 +465,11 @@ export function NebulaLinkGame() {
     () => online.handleRematch({ firstPlayer }),
     reset
   );
-  const canAct = !isOnline || online.isMyTurn;
+  const activePieceId = canAct ? selectedPieceId : null;
+  const activeRotation = canAct ? rotation : 0;
+  const activeHoverIndex = canAct ? hoverIndex : null;
+  const showRouletteSpinning =
+    spinning && (!isOnline || game.roulette.length === 0);
   const mustPass = phase === "playing" && canAct && canNebulaPass(game);
   const home = playerHomeEdge(game.currentPlayer, game.playerCount);
   const rouletteReady = game.roulette.length === 3;
@@ -488,13 +477,13 @@ export function NebulaLinkGame() {
 
   const cellPlacementLegal = (index: number) =>
     Boolean(
-      selectedPieceId &&
+      activePieceId &&
         isLegalNebulaPlacement(
           game.board,
           game.currentPlayer,
           game.playerCount,
-          selectedPieceId,
-          rotation,
+          activePieceId,
+          activeRotation,
           nebulaRowCol(index).row,
           nebulaRowCol(index).col
         )
@@ -502,13 +491,13 @@ export function NebulaLinkGame() {
 
   const piecePickButtonClass = (pieceId: string) =>
     `flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border p-0.5 sm:h-12 sm:w-12 ${
-      selectedPieceId === pieceId
+      activePieceId === pieceId
         ? `${turnStyle.sectionBorder} ${turnStyle.sectionBg} ring-2 ${turnStyle.sectionRing}`
         : "border-surface-border bg-surface-raised hover:border-white/20"
     }`;
 
   const previewRotationFor = (pieceId: string) =>
-    selectedPieceId === pieceId ? rotation : 0;
+    activePieceId === pieceId ? activeRotation : 0;
 
   const pickPiece = (pieceId: string) => {
     if (!canAct) return;
@@ -522,11 +511,11 @@ export function NebulaLinkGame() {
   };
 
   const placementLegal =
-    hoverIndex !== null &&
-    Boolean(selectedPieceId && cellPlacementLegal(hoverIndex));
+    activeHoverIndex !== null &&
+    Boolean(activePieceId && cellPlacementLegal(activeHoverIndex));
 
   const handleGridPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (isGameOver || !canAct || !selectedPieceId) return;
+    if (isGameOver || !canAct || !activePieceId) return;
     const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index === null) return;
     setHoverIndex(index);
@@ -535,16 +524,17 @@ export function NebulaLinkGame() {
   };
 
   const handleGridPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!canAct || !selectedPieceId) return;
+    if (!canAct || !activePieceId) return;
     const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index !== null) setHoverIndex(index);
   };
 
   const handleGridPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!canAct || (!placingPointer && !selectedPieceId)) return;
+    if (!canAct || (!placingPointer && !activePieceId)) return;
     const index =
-      cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType) ?? hoverIndex;
-    if (index !== null && selectedPieceId && cellPlacementLegal(index)) {
+      cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType) ??
+      activeHoverIndex;
+    if (index !== null && activePieceId && cellPlacementLegal(index)) {
       placeAt(index);
     }
     setPlacingPointer(false);
@@ -587,7 +577,7 @@ export function NebulaLinkGame() {
               : notice ??
             (mustPass
               ? "置ける形がないためパスできます。"
-              : selectedPieceId
+              : activePieceId
                 ? "盤上で位置を合わせて離すと置きます。同じ形をもう一度押すと回転します。"
                 : rouletteReady
                   ? "ルーレットの形または単マスを選んでください。"
@@ -599,7 +589,7 @@ export function NebulaLinkGame() {
       <div
         ref={gridRef}
         className={`mx-auto grid w-fit max-w-full gap-px sm:gap-0.5 ${
-          selectedPieceId && !isGameOver ? "touch-none select-none" : ""
+          activePieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{
           gridTemplateColumns: `repeat(${NEBULA_SIZE}, clamp(0.95rem, 4vmin, 1.3rem))`,
@@ -658,11 +648,17 @@ export function NebulaLinkGame() {
           <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
             <button
               type="button"
-              disabled={rouletteReady || spinning || online.movePending}
+              disabled={
+                rouletteReady || showRouletteSpinning || online.movePending
+              }
               onClick={spinRoulette}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40 sm:text-sm sm:px-4 sm:py-2 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
             >
-              {spinning ? "回しています…" : rouletteReady ? "ルーレット済み" : "ルーレット"}
+              {showRouletteSpinning
+                ? "回しています…"
+                : rouletteReady
+                  ? "ルーレット済み"
+                  : "ルーレット"}
             </button>
             {mustPass ? (
               <button
