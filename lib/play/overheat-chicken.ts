@@ -1,29 +1,58 @@
-/** 縁まで満たした杯。コインが capacity を超えると、その手番の負け。 */
+/** 縁まで満たした杯。水位が capacity を超えると、そのチップを入れた人の負け。 */
 
 export const CAPACITY_MIN = 5;
 export const CAPACITY_MAX = 9;
-export const MIN_DROP = 1;
-export const MAX_DROP = 3;
+export const MAX_CHIPS_PER_TURN = 3;
+
+export const CHIP_SIZES = ["s", "m", "l"] as const;
+export type ChipSize = (typeof CHIP_SIZES)[number];
+
+/** 水位の上がり。小 0.5、中 1、大 1.5。 */
+export const CHIP_RISE: Record<ChipSize, number> = {
+  s: 0.5,
+  m: 1,
+  l: 1.5,
+};
+
+export const CHIP_LABEL: Record<ChipSize, string> = {
+  s: "小",
+  m: "中",
+  l: "大",
+};
 
 export type PlayerId = 0 | 1;
 
-export type OverheatDrop = {
+export type OverheatChip = {
   player: PlayerId;
-  count: number;
+  size: ChipSize;
 };
 
 export type OverheatState = {
   fill: number;
   capacity: number;
   current: PlayerId;
+  /** この手番で入れた枚数。手番を終えると 0 に戻る。 */
+  placed: number;
   winner: PlayerId | null;
-  drops: OverheatDrop[];
+  chips: OverheatChip[];
 };
 
-export type CoinView = {
-  player: PlayerId;
-  spilled: boolean;
-};
+export function formatLevel(value: number): string {
+  const snapped = Math.round(value * 2) / 2;
+  return Number.isInteger(snapped) ? String(snapped) : snapped.toFixed(1);
+}
+
+function snap(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
+function other(player: PlayerId): PlayerId {
+  return player === 0 ? 1 : 0;
+}
+
+export function isChipSize(value: string): value is ChipSize {
+  return (CHIP_SIZES as readonly string[]).includes(value);
+}
 
 export function randomCapacity(random: () => number = Math.random): number {
   const span = CAPACITY_MAX - CAPACITY_MIN + 1;
@@ -50,27 +79,33 @@ export function createOverheat(
     fill: 0,
     capacity,
     current: first,
+    placed: 0,
     winner: null,
-    drops: [],
+    chips: [],
   };
 }
 
-export function applyDrop(
+export function placeChip(
   state: OverheatState,
-  count: number
+  size: ChipSize
 ): OverheatState | null {
   if (state.winner !== null) return null;
-  if (!Number.isInteger(count) || count < MIN_DROP || count > MAX_DROP) {
-    return null;
-  }
-  const fill = state.fill + count;
-  const drops = [...state.drops, { player: state.current, count }];
+  if (state.placed >= MAX_CHIPS_PER_TURN) return null;
+  if (!isChipSize(size)) return null;
+  const fill = snap(state.fill + CHIP_RISE[size]);
+  const chips = [...state.chips, { player: state.current, size }];
+  const placed = state.placed + 1;
   if (fill > state.capacity) {
-    const winner: PlayerId = state.current === 0 ? 1 : 0;
-    return { ...state, fill, winner, drops };
+    return { ...state, fill, chips, placed, winner: other(state.current) };
   }
-  const current: PlayerId = state.current === 0 ? 1 : 0;
-  return { ...state, fill, current, drops };
+  return { ...state, fill, chips, placed };
+}
+
+/** 1枚以上入れたあと、相手に手番を渡す。3枚入れても自動では渡さない。 */
+export function endTurn(state: OverheatState): OverheatState | null {
+  if (state.winner !== null) return null;
+  if (state.placed < 1) return null;
+  return { ...state, placed: 0, current: other(state.current) };
 }
 
 export function possibleCapacity(state: OverheatState): {
@@ -80,37 +115,17 @@ export function possibleCapacity(state: OverheatState): {
   if (state.winner !== null) {
     return { min: state.capacity, max: state.capacity };
   }
-  return { min: Math.max(CAPACITY_MIN, state.fill), max: CAPACITY_MAX };
+  const survived = Math.max(CAPACITY_MIN, Math.ceil(state.fill - 1e-9));
+  return { min: Math.min(survived, CAPACITY_MAX), max: CAPACITY_MAX };
 }
 
 export function tensionNotice(state: OverheatState): string {
   if (state.winner !== null) return "";
-  if (state.fill >= CAPACITY_MAX) return "次は必ず溢れる";
+  if (snap(state.fill + CHIP_RISE.s) > CAPACITY_MAX) return "次は必ず溢れる";
   if (state.fill >= CAPACITY_MIN) {
     const { min, max } = possibleCapacity(state);
-    return min === max ? `上限は${min}枚` : `上限は${min}〜${max}枚`;
+    return min === max ? `上限は${formatLevel(min)}` : `上限は${min}〜${max}`;
   }
-  const remain = CAPACITY_MIN - state.fill;
-  return `あと${remain}枚は確実`;
-}
-
-export function coinsOf(state: OverheatState): CoinView[] {
-  const coins: CoinView[] = [];
-  let index = 0;
-  for (const drop of state.drops) {
-    for (let i = 0; i < drop.count; i += 1) {
-      index += 1;
-      coins.push({
-        player: drop.player,
-        spilled: state.winner !== null && index > state.capacity,
-      });
-    }
-  }
-  return coins;
-}
-
-/** 溢れたコインの枚数位置（1始まり）。対局中は null。 */
-export function overflowCoinNumber(state: OverheatState): number | null {
-  if (state.winner === null) return null;
-  return state.capacity + 1;
+  const remain = snap(CAPACITY_MIN - state.fill);
+  return `あと${formatLevel(remain)}は確実`;
 }

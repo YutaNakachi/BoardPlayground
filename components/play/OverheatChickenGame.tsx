@@ -12,14 +12,18 @@ import {
 import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import {
-  applyDrop,
   CAPACITY_MAX,
   CAPACITY_MIN,
+  CHIP_LABEL,
+  CHIP_RISE,
+  CHIP_SIZES,
   createOverheat,
-  MAX_DROP,
-  MIN_DROP,
-  overflowCoinNumber,
+  endTurn,
+  formatLevel,
+  MAX_CHIPS_PER_TURN,
+  placeChip,
   tensionNotice,
+  type ChipSize,
   type OverheatState,
   type PlayerId,
 } from "@/lib/play/overheat-chicken";
@@ -48,10 +52,10 @@ export function OverheatChickenGame() {
     setPhase("playing");
   }, [firstPlayer, recordLocalPlay]);
 
-  const drop = useCallback(
-    (count: number) => {
+  const place = useCallback(
+    (size: ChipSize) => {
       if (!state || phase !== "playing") return;
-      const next = applyDrop(state, count);
+      const next = placeChip(state, size);
       if (!next) return;
       setState(next);
       if (next.winner !== null) setPhase("game-over");
@@ -59,11 +63,18 @@ export function OverheatChickenGame() {
     [phase, state]
   );
 
+  const finishTurn = useCallback(() => {
+    if (!state || phase !== "playing") return;
+    const next = endTurn(state);
+    if (!next) return;
+    setState(next);
+  }, [phase, state]);
+
   if (phase === "setup" || !state) {
     return (
       <SetupPanel
         title="オーバーヒート・チキンレース"
-        description="縁まで満たした杯に、コインを1〜3枚ずつ入れます。水を溢れさせた方が負けです。"
+        description="縁まで満たした杯に、小・中・大のチップを1枚ずつ入れます。1手番は3枚まで。水を溢れさせた方が負けです。"
         playerCount={2}
         onPlayerCount={() => {}}
         playerOptions={[2]}
@@ -89,21 +100,27 @@ export function OverheatChickenGame() {
   }
 
   const over = phase === "game-over" && state.winner !== null;
-  const brokeAt = overflowCoinNumber(state);
+  const levelLabel = formatLevel(state.fill);
   const glassLabel = over
-    ? `杯。上限は${state.capacity}枚。${brokeAt}枚目で水が溢れた。`
-    : `杯。コイン${state.fill}枚。${tensionNotice(state)}`;
+    ? `杯。上限は${state.capacity}。水位${levelLabel}で水が溢れた。`
+    : `杯。水位${levelLabel}。この手番${state.placed}枚。${tensionNotice(state)}`;
+  const action =
+    state.placed <= 0
+      ? "小・中・大から1枚"
+      : state.placed >= MAX_CHIPS_PER_TURN
+        ? "手番を終える"
+        : "続けるか終了";
 
   return (
     <div className="space-y-6">
-      {over && state.winner !== null && brokeAt !== null ? (
+      {over && state.winner !== null ? (
         <ResultPanel
           variant="inline"
           winners={[state.winner]}
           onReplay={backToSetup}
           details={
             <p className="text-sm text-slate-400">
-              上限は{state.capacity}枚。{brokeAt}枚目で溢れた。
+              上限は{state.capacity}。水位{levelLabel}で溢れた。
             </p>
           }
         />
@@ -113,8 +130,8 @@ export function OverheatChickenGame() {
         <TurnBanner
           playerIndex={state.current}
           playerLabel={playerLabel(state.current)}
-          stats={`コイン ${state.fill} 枚`}
-          action="1〜3枚"
+          stats={`水位 ${levelLabel} · ${state.placed}/${MAX_CHIPS_PER_TURN}枚`}
+          action={action}
           notice={tensionNotice(state)}
         />
       ) : null}
@@ -129,7 +146,7 @@ export function OverheatChickenGame() {
           プレイヤー 2
         </span>
         <span>
-          上限は{CAPACITY_MIN}〜{CAPACITY_MAX}枚
+          上限は水位{CAPACITY_MIN}〜{CAPACITY_MAX}
         </span>
       </div>
 
@@ -137,19 +154,28 @@ export function OverheatChickenGame() {
 
       {!over ? (
         <div className="flex flex-wrap justify-center gap-3">
-          {Array.from(
-            { length: MAX_DROP - MIN_DROP + 1 },
-            (_, index) => MIN_DROP + index
-          ).map((count) => (
+          {CHIP_SIZES.map((size) => (
             <button
-              key={count}
+              key={size}
               type="button"
-              onClick={() => drop(count)}
-              className="min-h-12 min-w-[5.5rem] rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-base font-bold text-white transition hover:bg-white/10"
+              disabled={state.placed >= MAX_CHIPS_PER_TURN}
+              onClick={() => place(size)}
+              className="min-h-12 min-w-[5.5rem] rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-base font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/5"
             >
-              {count}枚
+              <span className="block leading-tight">{CHIP_LABEL[size]}</span>
+              <span className="block text-xs font-semibold leading-tight text-slate-300">
+                +{formatLevel(CHIP_RISE[size])}
+              </span>
             </button>
           ))}
+          <button
+            type="button"
+            disabled={state.placed < 1}
+            onClick={finishTurn}
+            className="min-h-12 min-w-[7.5rem] rounded-2xl border border-white/25 bg-white/10 px-4 py-3 text-base font-bold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/10"
+          >
+            手番を終える
+          </button>
         </div>
       ) : null}
     </div>

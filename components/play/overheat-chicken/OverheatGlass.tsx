@@ -4,7 +4,7 @@ import { useEffect, useId, useState, type CSSProperties } from "react";
 import {
   CAPACITY_MAX,
   CAPACITY_MIN,
-  coinsOf,
+  type ChipSize,
   type OverheatState,
 } from "@/lib/play/overheat-chicken";
 
@@ -17,20 +17,33 @@ const SLOT = 16;
 const COIN_R = 58;
 /** 杯の内側の底。チップはここへ沈んで重なる。 */
 const COIN_FLOOR = 792;
+/** 絵の大きさ。水位の上がりに合わせ、小ほど小さい。 */
+const CHIP_DRAW: Record<ChipSize, number> = {
+  s: 0.62,
+  m: 0.8,
+  l: 1,
+};
 /** 底でのずれ。先の枚が下、あとの枚が少し上に重なる。x, 上方向。 */
 const CHIP_PILE: readonly [number, number][] = [
   [0, 0],
-  [-50, 16],
-  [52, 14],
-  [-8, 32],
-  [44, 34],
-  [-48, 36],
-  [18, 48],
-  [-32, 50],
-  [36, 58],
-  [-16, 70],
-  [30, 74],
-  [2, 88],
+  [-46, 12],
+  [48, 10],
+  [-12, 26],
+  [34, 28],
+  [-44, 32],
+  [14, 44],
+  [-30, 46],
+  [40, 50],
+  [-6, 60],
+  [22, 64],
+  [-38, 66],
+  [8, 76],
+  [-20, 80],
+  [30, 82],
+  [-2, 92],
+  [16, 96],
+  [-24, 100],
+  [4, 108],
 ];
 
 /** 写真の外縁。y, 左, 右。 */
@@ -89,15 +102,13 @@ export function OverheatGlass({ state, label }: Props) {
   const over = state.winner !== null;
   const ry = over ? 18 : BASE_RY + state.fill * SLOT;
   const surface = RIM_Y - ry;
-  const coins = coinsOf(state);
+  const chips = state.chips;
   const wobble = !over && state.fill >= CAPACITY_MIN;
   const depth = Math.max(0, state.fill - (CAPACITY_MIN - 1));
   const wobblePx = Math.min(6, 2 + depth * 0.8);
   const wobbleSec = Math.max(0.45, 1.15 - depth * 0.08);
   const reducedMotion = usePrefersReducedMotion();
-  const lastDrop = state.drops[state.drops.length - 1];
-  const freshCount = lastDrop?.count ?? 0;
-  const freshStart = Math.max(0, coins.length - freshCount);
+  const freshIndex = state.placed > 0 ? chips.length - 1 : -1;
 
   return (
     <div className="mx-auto w-full max-w-[340px]">
@@ -199,22 +210,23 @@ export function OverheatGlass({ state, label }: Props) {
               opacity={over ? 0.4 : 0.72}
             />
           </g>
-          {coins.map((coin, index) => {
+          {chips.map((chip, index) => {
             const [dx, up] = CHIP_PILE[index] ?? [0, 12];
-            const cy = COIN_FLOOR - up;
+            const radius = COIN_R * CHIP_DRAW[chip.size];
+            const cy = COIN_FLOOR - up + COIN_R - radius;
             return (
               <Coin
                 key={`in-${index}`}
                 cx={DOME_CX + dx}
                 cy={cy}
-                player={coin.player}
+                radius={radius}
+                player={chip.player}
                 spin={index * 37}
                 sinkFrom={
-                  !reducedMotion && index >= freshStart
-                    ? surface + COIN_R - cy
+                  !reducedMotion && index === freshIndex
+                    ? surface + radius - cy
                     : undefined
                 }
-                sinkDelay={(index - freshStart) * 0.08}
               />
             );
           })}
@@ -279,7 +291,7 @@ export function OverheatGlass({ state, label }: Props) {
         ) : null}
       </div>
       <p className="sr-only">
-        上限の候補は{CAPACITY_MIN}枚から{CAPACITY_MAX}枚です。
+        上限の候補は水位{CAPACITY_MIN}から{CAPACITY_MAX}です。
       </p>
     </div>
   );
@@ -300,20 +312,20 @@ function usePrefersReducedMotion(): boolean {
 function Coin({
   cx,
   cy,
+  radius,
   player,
   spin,
   sinkFrom,
-  sinkDelay = 0,
 }: {
   cx: number;
   cy: number;
+  radius: number;
   player: 0 | 1;
   spin: number;
   /** 水面からこの差だけ上に出して、底の位置まで落とす。 */
   sinkFrom?: number;
-  sinkDelay?: number;
 }) {
-  const size = COIN_R * 2;
+  const size = radius * 2;
   return (
     <g className={sinkFrom !== undefined ? "overheat-sink" : undefined}>
       {sinkFrom !== undefined ? (
@@ -322,15 +334,15 @@ function Coin({
           type="translate"
           from={`0 ${sinkFrom}`}
           to="0 0"
-          begin={`${sinkDelay}s`}
+          begin="0s"
           dur="0.85s"
           fill="freeze"
         />
       ) : null}
       <image
         href={`/games/overheat-chicken/chip-${player}.png`}
-        x={cx - COIN_R}
-        y={cy - COIN_R}
+        x={cx - radius}
+        y={cy - radius}
         width={size}
         height={size}
         transform={`rotate(${spin} ${cx} ${cy})`}
