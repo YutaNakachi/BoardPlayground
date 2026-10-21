@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState, type CSSProperties } from "react";
 import {
-  CAPACITY_MIN,
+  domeRise,
   type ChipSize,
   type OverheatState,
 } from "@/lib/play/overheat-chicken";
@@ -11,8 +11,6 @@ const RIM_Y = 352;
 const DOME_CX = 432;
 const DOME_RX = 214;
 const WATER_BOTTOM = 828;
-const BASE_RY = 96;
-const SLOT = 16;
 const COIN_R = 58;
 /** 杯の内側の底。チップはここへ沈んで重なる。 */
 const COIN_FLOOR = 792;
@@ -43,6 +41,12 @@ const CHIP_PILE: readonly [number, number][] = [
   [16, 96],
   [-24, 100],
   [4, 108],
+  [-12, 116],
+  [20, 118],
+  [-32, 122],
+  [8, 128],
+  [-4, 136],
+  [24, 138],
 ];
 
 /** 写真の外縁。y, 左, 右。 */
@@ -99,13 +103,13 @@ export function OverheatGlass({ state, label }: Props) {
   const rawId = useId().replace(/:/g, "");
   const waterId = `overheat-water-${rawId}`;
   const over = state.winner !== null;
-  const ry = over ? 18 : BASE_RY + state.fill * SLOT;
+  const ry = domeRise(state);
   const surface = RIM_Y - ry;
   const chips = state.chips;
-  const wobble = !over && state.fill >= CAPACITY_MIN;
-  const depth = Math.max(0, state.fill - (CAPACITY_MIN - 1));
-  const wobblePx = Math.min(6, 2 + depth * 0.8);
-  const wobbleSec = Math.max(0.45, 1.15 - depth * 0.08);
+  const pastWobble = ry - state.visual.wobbleAt;
+  const wobble = !over && pastWobble >= 0;
+  const wobblePx = Math.min(6, 1.6 + Math.max(0, pastWobble) * 0.025);
+  const wobbleSec = Math.max(0.45, 1.2 - Math.max(0, pastWobble) * 0.004);
   const reducedMotion = usePrefersReducedMotion();
   const freshIndex = state.placed > 0 ? chips.length - 1 : -1;
 
@@ -202,9 +206,9 @@ export function OverheatGlass({ state, label }: Props) {
             />
             <ellipse
               cx={DOME_CX}
-              cy={surface + Math.max(10, ry * 0.28)}
+              cy={surface + Math.max(4, ry * 0.28)}
               rx={DOME_RX * 0.62}
-              ry={over ? 5 : 11}
+              ry={over ? 4 : Math.max(3, Math.min(11, ry * 0.22))}
               fill="#f0fdff"
               opacity={over ? 0.4 : 0.72}
             />
