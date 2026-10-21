@@ -275,12 +275,6 @@ export function LudoGame() {
   const [isRolling, setIsRolling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    if (isOnline && onlineState?.lastRoll != null) {
-      setDiceFace(onlineState.lastRoll);
-    }
-  }, [isOnline, onlineState?.lastRoll]);
-
   const [animatingTokenIndex, setAnimatingTokenIndex] = useState<number | null>(null);
   const [animatingToken, setAnimatingToken] = useState<LudoToken | null>(null);
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -476,6 +470,8 @@ export function LudoGame() {
       />
     );
   }
+
+  const displayDiceFace = isRolling ? diceFace : (state.lastRoll ?? diceFace);
 
   const isGameOver = phase === "game-over" && state.winner != null;
   const winners = isGameOver ? [state.winner!] : null;
@@ -681,7 +677,7 @@ export function LudoGame() {
         <div className="flex flex-col items-center gap-3">
           {(isRolling || state.lastRoll != null) && (
             <div className="flex flex-col items-center gap-2">
-              <DiceFace value={diceFace} size="lg" rolling={isRolling} />
+              <DiceFace value={displayDiceFace} size="lg" rolling={isRolling} />
               {isRolling ? <p className="text-sm text-slate-400">振っています…</p> : null}
             </div>
           )}
