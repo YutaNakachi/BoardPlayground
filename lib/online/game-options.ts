@@ -171,6 +171,7 @@ export function validateGameOptions(
     case "gravity-four":
     case "nim":
     case "hex":
+    case "overheat-chicken":
     case "mancala":
     case "dejarik":
     case "mini-shogi":
