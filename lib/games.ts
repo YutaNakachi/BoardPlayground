@@ -435,6 +435,28 @@ const games: GameMeta[] = [
     listedAt: "2026-10-10",
   },
   {
+    slug: "overheat-chicken",
+    title: "オーバーヒート・チキンレース",
+    description:
+      "縁まで満たした杯に、大きさの違うチップを交互に入れ、水を溢れさせた方が負けになる勝負。上限は終わるまで分かりません。",
+    origin: "fiction",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 5,
+    complexity: "easy",
+    cpu: false,
+    team: false,
+    tags: ["心理戦", "運要素"],
+    rulesSummary: [
+      "縁まで満たした杯に、小・中・大のチップを一枚ずつ入れる。終えるときはボタンを押す。",
+      "水面は縁で平らな状態からふくらむ。見た目だけでは、どこで溢れるかは分からない。",
+      "同じ画面で交代する。先手は始める前に選ぶ。",
+    ],
+    status: "playable",
+    listed: false,
+  },
+  {
     slug: "dominoes",
     title: "ドミノ",
     description:
