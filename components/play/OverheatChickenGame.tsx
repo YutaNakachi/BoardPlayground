@@ -39,7 +39,7 @@ import {
 type LocalPhase = "setup" | "playing" | "game-over";
 
 const SETUP_DESCRIPTION =
-  "縁まで満たした杯に、小・中・大のチップを入れます。1手番は最大3枚です。終えるときはボタンを押します。水を溢れさせた方が負けです。";
+  "漫画『ジョジョの奇妙な冒険』第3部に登場する杯の勝負を、ボドパッ！独自ルールで再現した非公式プレイ版です。縁まで満たした杯に小・中・大のチップを入れ、溢れさせた方が負け。1手番は最大3枚、終えるときはボタンを押します。";
 
 function playerLabel(player: PlayerId): string {
   return `プレイヤー ${player + 1}`;

@@ -438,7 +438,7 @@ const games: GameMeta[] = [
     slug: "overheat-chicken",
     title: "オーバーヒート・チキンレース",
     description:
-      "縁まで満たした杯に、小・中・大のチップを交互に入れ、水を溢れさせた方が負けの2人用ゲーム。溢れない上限は終わるまで分かりません。",
+      "漫画『ジョジョの奇妙な冒険』第3部の杯の勝負をモチーフにした2人用ゲーム。縁まで満たした杯にチップを入れ、溢れさせた方が負け。上限は終わるまで分かりません。",
     origin: "fiction",
     players: "2",
     playersMin: 2,
@@ -454,7 +454,8 @@ const games: GameMeta[] = [
       "上限を超えたチップを入れたプレイヤーの負け。先手は開始前に選ぶ。同じ画面で交代。",
     ],
     status: "playable",
-    listed: false,
+    listed: true,
+    listedAt: "2026-10-22",
   },
   {
     slug: "dominoes",
