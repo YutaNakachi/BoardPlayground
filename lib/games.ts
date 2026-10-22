@@ -412,9 +412,9 @@ const games: GameMeta[] = [
   },
   {
     slug: "dejarik",
-    title: "デジャリック",
+    title: "ホロチェス",
     description:
-      "STAR WARSに登場するデジャリック（ホロチェス）を、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。",
+      "STAR WARSに登場するデジャリックを、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。",
     origin: "fiction",
     players: "2",
     playersMin: 2,
