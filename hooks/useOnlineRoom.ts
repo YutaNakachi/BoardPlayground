@@ -20,10 +20,16 @@ import { mergeGameOptions } from "@/lib/online/game-options";
 import {
   applyMove,
   dejarikTurnSeat,
+  turnSeatForState,
   type DejarikOnlineState,
   type GameState,
   type MovePayload,
 } from "@/lib/online/moves";
+
+/** サーバー側乱数の手（楽観更新すると結果が一瞬ずれる） */
+function isServerRandomMove(move: MovePayload): boolean {
+  return move.type === "nebula-spin" || move.type === "ludo-roll";
+}
 import { getOrCreatePlayerId } from "@/lib/online/player-id";
 import { normalizeRoomCodeInput } from "@/lib/online/room-code";
 import {
@@ -624,19 +630,16 @@ export function useOnlineRoom(gameSlug: string) {
       if (!liveState) return;
 
       const slug = room.gameSlug as OnlineGameSlug;
-      const dejarikActorSeat =
-        slug === "dejarik"
-          ? dejarikTurnSeat(liveState as DejarikOnlineState)
-          : null;
-      const actorSeat =
-        dejarikActorSeat !== null ? dejarikActorSeat : liveState.current;
+      const actorSeat = turnSeatForState(slug, liveState);
       const chainedExtraTurn =
         pendingMoveRef.current &&
         liveState.phase !== "game-over" &&
         actorSeat === mySeat;
 
       const onTurn =
-        chainedExtraTurn || currentPlayer === mySeat || actorSeat === mySeat;
+        chainedExtraTurn ||
+        currentPlayer === mySeat ||
+        (actorSeat !== null && actorSeat === mySeat);
       if (!onTurn) return;
 
       const result = applyMove(
@@ -648,13 +651,15 @@ export function useOnlineRoom(gameSlug: string) {
       );
       if ("error" in result) return;
 
+      if (isServerRandomMove(move)) {
+        setMovePending(true);
+        sendMovePipeline(move, versionRef.current);
+        return;
+      }
+
       const wasChained = pendingMoveRef.current;
       const optimisticVersion = versionRef.current + 1;
-      let optimisticCurrent = result.currentPlayer;
-      if (slug === "dejarik") {
-        const seat = dejarikTurnSeat(result.state as DejarikOnlineState);
-        if (seat !== null) optimisticCurrent = seat;
-      }
+      const optimisticCurrent = result.currentPlayer;
       setGameState(result.state);
       setCurrentPlayer(optimisticCurrent);
       setVersion(optimisticVersion);
@@ -683,14 +688,17 @@ export function useOnlineRoom(gameSlug: string) {
   const isHost = room?.hostPlayerId === myPlayerId;
   const isMyTurn = useMemo(() => {
     if (mySeat < 0) return false;
-    if (room?.gameSlug === "dejarik" && gameState) {
-      const seat = dejarikTurnSeat(gameState as DejarikOnlineState);
+    const slug = room?.gameSlug as OnlineGameSlug | undefined;
+    if (gameState && slug) {
+      const seat = turnSeatForState(slug, gameState);
       if (seat !== null) return seat === mySeat;
     }
     return currentPlayer === mySeat;
   }, [room?.gameSlug, gameState, mySeat, currentPlayer]);
   const resolvedPlayerId = myPlayerId || getOrCreatePlayerId();
   const players = room?.players ?? EMPTY_PLAYERS;
+  const maxPlayers = room?.maxPlayers ?? 2;
+  const canStart = players.length === maxPlayers;
 
   return useMemo(
     () => ({
@@ -704,6 +712,8 @@ export function useOnlineRoom(gameSlug: string) {
       isHost,
       isMyTurn,
       players,
+      maxPlayers,
+      canStart,
       error,
       loading,
       movePending,
@@ -729,6 +739,8 @@ export function useOnlineRoom(gameSlug: string) {
       isHost,
       isMyTurn,
       players,
+      maxPlayers,
+      canStart,
       error,
       loading,
       movePending,

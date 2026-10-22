@@ -13,7 +13,9 @@ export async function GET(_request: Request, { params }: Params) {
 
   const roomSelectWithOptions = await db
     .from("rooms")
-    .select("id, code, game_slug, status, host_player_id, expires_at, game_options")
+    .select(
+      "id, code, game_slug, status, host_player_id, expires_at, game_options, max_players"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -21,11 +23,17 @@ export async function GET(_request: Request, { params }: Params) {
   if (roomSelectWithOptions.error && isMissingGameOptionsColumn(roomSelectWithOptions.error)) {
     const roomSelectBase = await db
       .from("rooms")
-      .select("id, code, game_slug, status, host_player_id, expires_at")
+      .select(
+        "id, code, game_slug, status, host_player_id, expires_at, max_players"
+      )
       .eq("id", id)
       .maybeSingle();
     room = roomSelectBase.data
-      ? { ...roomSelectBase.data, game_options: {} }
+      ? {
+          ...roomSelectBase.data,
+          game_options: {},
+          max_players: roomSelectBase.data.max_players ?? 2,
+        }
       : null;
   } else if (roomSelectWithOptions.error) {
     console.error("[rooms/get]", roomSelectWithOptions.error.message);
@@ -59,6 +67,7 @@ export async function GET(_request: Request, { params }: Params) {
       gameSlug: room.game_slug,
       status: room.status,
       hostPlayerId: room.host_player_id,
+      maxPlayers: room.max_players ?? 2,
       gameOptions: (room.game_options as Record<string, unknown> | null) ?? {},
       players: (players ?? []).map((p) => ({
         playerId: p.player_id,

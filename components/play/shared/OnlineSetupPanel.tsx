@@ -45,6 +45,7 @@ type Props = {
   waiting?: {
     code: string;
     players: { displayName: string; seatIndex: number }[];
+    maxPlayers?: number;
     isHost: boolean;
     onStart: () => void;
     canStart: boolean;
@@ -105,6 +106,8 @@ export function OnlineSetupPanel({
         : extra;
 
   if (waiting) {
+    const targetCount = waiting.maxPlayers ?? 2;
+    const remaining = Math.max(0, targetCount - waiting.players.length);
     return (
       <PlaySetupCard
         title="部屋を待機中"
@@ -122,6 +125,9 @@ export function OnlineSetupPanel({
             </li>
           ))}
         </ul>
+        <p className="text-sm text-slate-400">
+          目標人数: {targetCount}人（あと {remaining} 人）
+        </p>
         {waiting.isHost && waiting.canStart ? (
           <button
             type="button"
@@ -133,8 +139,8 @@ export function OnlineSetupPanel({
           </button>
         ) : (
           <p className="text-sm text-slate-400">
-            {waiting.players.length < 2
-              ? "相手の参加を待っています…"
+            {remaining > 0
+              ? "参加者の入室を待っています…"
               : "ホストの開始を待っています…"}
           </p>
         )}

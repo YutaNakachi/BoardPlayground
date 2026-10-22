@@ -346,9 +346,10 @@ export function FoxHoundsGame() {
         waiting={{
           code: online.room.code,
           players: online.players,
+          maxPlayers: online.maxPlayers,
           isHost: online.isHost,
           onStart: () => online.handleStart({ gameOptions: { houndsSeat } }),
-          canStart: online.players.length >= 2,
+          canStart: online.canStart,
           extra: (
             <OnlineHoundsSeatPicker
               players={online.players}

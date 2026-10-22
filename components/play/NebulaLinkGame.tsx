@@ -2,11 +2,32 @@
 
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { NebulaPiecePreview } from "@/components/play/shared/NebulaPiecePreview";
+import { OnlineFirstPlayerPicker } from "@/components/play/shared/OnlineFirstPlayerPicker";
+import { OnlinePlayerCountPicker } from "@/components/play/shared/OnlinePlayerCountPicker";
+import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
+import { PendingJoinConnecting } from "@/components/play/shared/PendingJoinConnecting";
 import { ResultPanel } from "@/components/play/shared/ResultPanel";
-import { SetupPanel } from "@/components/play/shared/SetupPanel";
 import { TurnBanner } from "@/components/play/shared/TurnBanner";
+import { usePlayStats } from "@/components/PlayStatsProvider";
+import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
+import { useOnlineRoom } from "@/hooks/useOnlineRoom";
+import type { PlayerCountOption } from "@/lib/online/game-options";
+import type { NebulaOnlineState } from "@/lib/online/moves";
+import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
+import {
+  formatSeatLabel,
+  formatWinnersWithNames,
+} from "@/lib/online/player-labels";
+import type { PlayMode } from "@/lib/online/types";
 import { getPlayerTurnStyle, playerPieceClasses } from "@/lib/player-colors";
 import {
   applyNebulaPass,
@@ -159,10 +180,41 @@ function nebulaHomeEdgeCellLook(
 }
 
 export function NebulaLinkGame() {
-  const { recordLocalPlay } = usePlayPage();
+  const { recordLocalPlay, setPlayMode } = usePlayPage();
+  const { onlineEnabled } = usePlayStats();
+  const online = useOnlineRoom("nebula-link");
+  const { firstPlayer, onFirstPlayerChange, seatCount } =
+    useOnlineFirstPlayer(online);
+  const [mode, setMode] = useState<PlayMode>("local");
+  const [onlinePlayerCount, setOnlinePlayerCount] =
+    useState<PlayerCountOption>(2);
   const [playerCount, setPlayerCount] = useState(2);
-  const [phase, setPhase] = useState<Phase>("setup");
-  const [game, setGame] = useState<NebulaState | null>(null);
+  const [localPhase, setLocalPhase] = useState<Phase>("setup");
+  const [localGame, setLocalGame] = useState<NebulaState | null>(null);
+
+  const isOnlinePlay =
+    online.phase === "playing" || online.phase === "finished";
+  const onlineState = online.gameState as NebulaOnlineState | null;
+  const isOnline = isOnlinePlay;
+  const canAct = !isOnline || online.isMyTurn;
+  const game: NebulaState | null =
+    isOnline && onlineState ? onlineState : localGame;
+  const phase: Phase =
+    isOnline && onlineState
+      ? onlineState.phase === "game-over" || online.phase === "finished"
+        ? "game-over"
+        : "playing"
+      : localPhase;
+
+  useEffect(() => {
+    if (
+      online.room?.code &&
+      (online.phase === "waiting" || online.phase === "playing")
+    ) {
+      setPlayMode({ mode: "online", roomCode: online.room.code });
+    }
+  }, [online.room?.code, online.phase, setPlayMode]);
+
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
@@ -173,13 +225,13 @@ export function NebulaLinkGame() {
 
   const startGame = useCallback(() => {
     recordLocalPlay();
-    setGame(initialNebulaLink(playerCount));
+    setLocalGame(initialNebulaLink(playerCount));
     setNotice(null);
     setSelectedPieceId(null);
     setRotation(0);
     setSpinning(false);
     setHoverIndex(null);
-    setPhase("playing");
+    setLocalPhase("playing");
   }, [recordLocalPlay, playerCount]);
 
   const allowedPieces = useMemo(() => {
@@ -200,7 +252,9 @@ export function NebulaLinkGame() {
   }, [game, phase, allowedPieces]);
 
   const previewCells = useMemo(() => {
-    if (!game || !selectedPieceId || hoverIndex === null) return new Set<number>();
+    if (!game || !canAct || !selectedPieceId || hoverIndex === null) {
+      return new Set<number>();
+    }
     const { row, col } = nebulaRowCol(hoverIndex);
     const cells = pieceCellsAt(selectedPieceId, rotation, row, col);
     const set = new Set<number>();
@@ -210,22 +264,28 @@ export function NebulaLinkGame() {
       }
     }
     return set;
-  }, [game, selectedPieceId, rotation, hoverIndex]);
+  }, [game, canAct, selectedPieceId, rotation, hoverIndex]);
 
   const spinRoulette = useCallback(() => {
     if (!game || spinning || game.roulette.length > 0) return;
+    if (isOnline) {
+      if (!online.isMyTurn || online.movePending || spinning) return;
+      setSpinning(true);
+      void online.handleMove({ type: "nebula-spin" });
+      return;
+    }
     setSpinning(true);
     setNotice(null);
     window.setTimeout(() => {
       const next = applyNebulaSpinRoulette(game);
       if (next) {
-        setGame(next);
+        setLocalGame(next);
         setSelectedPieceId(null);
         setRotation(0);
       }
       setSpinning(false);
     }, 600);
-  }, [game, spinning]);
+  }, [game, spinning, isOnline, online]);
 
   const placeAt = useCallback(
     (index: number) => {
@@ -237,6 +297,20 @@ export function NebulaLinkGame() {
         anchorRow: row,
         anchorCol: col,
       };
+      if (isOnline) {
+        if (!online.isMyTurn || online.movePending) return false;
+        void online.handleMove({
+          type: "nebula-place",
+          pieceId: selectedPieceId,
+          rotation,
+          anchorRow: row,
+          anchorCol: col,
+        });
+        setSelectedPieceId(null);
+        setRotation(0);
+        setHoverIndex(null);
+        return true;
+      }
       const next = applyNebulaPlace(game, placement);
       if (!next) {
         setNotice("ここには置けません。");
@@ -246,15 +320,20 @@ export function NebulaLinkGame() {
       setSelectedPieceId(null);
       setRotation(0);
       setHoverIndex(null);
-      setGame(next);
-      if (next.gameOver) setPhase("game-over");
+      setLocalGame(next);
+      if (next.gameOver) setLocalPhase("game-over");
       return true;
     },
-    [phase, game, selectedPieceId, rotation]
+    [phase, game, selectedPieceId, rotation, isOnline, online]
   );
 
   const pass = useCallback(() => {
     if (!game || phase !== "playing") return;
+    if (isOnline) {
+      if (!online.isMyTurn || online.movePending) return;
+      void online.handleMove({ type: "nebula-pass" });
+      return;
+    }
     const next = applyNebulaPass(game);
     if (!next) return;
     setNotice(`プレイヤー ${game.currentPlayer + 1} がパスしました。`);
@@ -262,31 +341,113 @@ export function NebulaLinkGame() {
     setRotation(0);
     setHoverIndex(null);
     setSpinning(false);
-    setGame(next);
-    if (next.gameOver) setPhase("game-over");
-  }, [phase, game]);
+    setLocalGame(next);
+    if (next.gameOver) setLocalPhase("game-over");
+  }, [phase, game, isOnline, online]);
 
   const winner = useMemo(() => {
     if (phase !== "game-over" || !game) return null;
     return nebulaWinners(game);
   }, [phase, game]);
 
-  const backToSetup = useCallback(() => setPhase("setup"), []);
-  usePlaySetupNavigation(phase === "setup", backToSetup);
+  const reset = useCallback(() => {
+    online.reset();
+    setLocalPhase("setup");
+    setMode("local");
+    setPlayMode({ mode: "local" });
+  }, [online, setPlayMode]);
 
-  if (phase === "setup") {
+  const isSetupScreen =
+    (localPhase === "setup" && online.phase === "idle") ||
+    online.phase === "waiting";
+  usePlaySetupNavigation(isSetupScreen, reset);
+
+  const setupHint = (
+    <p className="text-xs text-slate-500">
+      2人は北・南、3人は北・東・西（南は中立）、4人は四辺。初手はホーム辺から、2手目以降は自分のブロックに角だけでつなぎます。
+    </p>
+  );
+
+  if (online.completingPendingJoin) {
+    return <PendingJoinConnecting />;
+  }
+
+  if (localPhase === "setup" && online.phase === "idle") {
     return (
-      <SetupPanel
+      <OnlineSetupPanel
         title="ネビュラ・リンク"
         description="21×21の盤面で、様々な形状のブロックを配置し、星核を自分のホーム辺側に閉じ込めたら勝ち。"
-        playerCount={playerCount}
-        onPlayerCount={setPlayerCount}
-        onStart={startGame}
-        extra={
-          <p className="text-xs text-slate-500">
-            2人は北・南、3人は北・東・西（南は中立）、4人は四辺。初手はホーム辺から、2手目以降は自分のブロックに角だけでつなぎます。
-          </p>
+        mode={mode}
+        onModeChange={setMode}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={(displayName) =>
+          online.handleCreate(displayName, {
+            playerCount: onlinePlayerCount,
+            firstPlayer,
+          })
         }
+        onJoinRoom={online.handleJoin}
+        onStartLocal={() => {
+          setMode("local");
+          startGame();
+        }}
+        loading={online.loading}
+        error={online.error}
+        initialJoinCode={online.joinCodeFromUrl}
+        createExtra={
+          <OnlinePlayerCountPicker
+            value={onlinePlayerCount}
+            options={[2, 3, 4]}
+            onChange={setOnlinePlayerCount}
+          />
+        }
+        extra={
+          <>
+            <OnlinePlayerCountPicker
+              value={playerCount as PlayerCountOption}
+              options={[2, 3, 4]}
+              onChange={setPlayerCount}
+            />
+            {setupHint}
+          </>
+        }
+      />
+    );
+  }
+
+  if (online.phase === "waiting" && online.room) {
+    return (
+      <OnlineSetupPanel
+        title="ネビュラ・リンク"
+        description="21×21の盤面で、様々な形状のブロックを配置し、星核を自分のホーム辺側に閉じ込めたら勝ち。"
+        mode="online"
+        onModeChange={() => {}}
+        onlineSupported={onlineEnabled}
+        onCreateRoom={() => {}}
+        onJoinRoom={() => {}}
+        onStartLocal={() => {}}
+        loading={online.loading}
+        error={online.error}
+        waiting={{
+          code: online.room.code,
+          players: online.players,
+          maxPlayers: online.maxPlayers,
+          isHost: online.isHost,
+          onStart: () => online.handleStart({ firstPlayer }),
+          canStart: online.canStart,
+          extra: (
+            <>
+              {setupHint}
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                seatCount={seatCount}
+                onChange={online.isHost ? onFirstPlayerChange : undefined}
+                readOnly={!online.isHost}
+              />
+            </>
+          ),
+        }}
       />
     );
   }
@@ -294,20 +455,35 @@ export function NebulaLinkGame() {
   if (!game) return null;
 
   const isGameOver = phase === "game-over" && winner !== null;
-  const mustPass = phase === "playing" && canNebulaPass(game);
+  const winnerLabels =
+    isOnline && isGameOver && winner
+      ? formatWinnersWithNames(online.players, winner)
+      : null;
+  const replayProps = getOnlineResultReplayProps(
+    isOnline,
+    online.isHost,
+    () => online.handleRematch({ firstPlayer }),
+    reset
+  );
+  const activePieceId = canAct ? selectedPieceId : null;
+  const activeRotation = canAct ? rotation : 0;
+  const activeHoverIndex = canAct ? hoverIndex : null;
+  const showRouletteSpinning =
+    spinning && (!isOnline || game.roulette.length === 0);
+  const mustPass = phase === "playing" && canAct && canNebulaPass(game);
   const home = playerHomeEdge(game.currentPlayer, game.playerCount);
   const rouletteReady = game.roulette.length === 3;
   const turnStyle = getPlayerTurnStyle(game.currentPlayer);
 
   const cellPlacementLegal = (index: number) =>
     Boolean(
-      selectedPieceId &&
+      activePieceId &&
         isLegalNebulaPlacement(
           game.board,
           game.currentPlayer,
           game.playerCount,
-          selectedPieceId,
-          rotation,
+          activePieceId,
+          activeRotation,
           nebulaRowCol(index).row,
           nebulaRowCol(index).col
         )
@@ -315,15 +491,16 @@ export function NebulaLinkGame() {
 
   const piecePickButtonClass = (pieceId: string) =>
     `flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border p-0.5 sm:h-12 sm:w-12 ${
-      selectedPieceId === pieceId
+      activePieceId === pieceId
         ? `${turnStyle.sectionBorder} ${turnStyle.sectionBg} ring-2 ${turnStyle.sectionRing}`
         : "border-surface-border bg-surface-raised hover:border-white/20"
     }`;
 
   const previewRotationFor = (pieceId: string) =>
-    selectedPieceId === pieceId ? rotation : 0;
+    activePieceId === pieceId ? activeRotation : 0;
 
   const pickPiece = (pieceId: string) => {
+    if (!canAct) return;
     setNotice(null);
     if (selectedPieceId === pieceId) {
       setRotation((r) => (r + 1) % 4);
@@ -334,11 +511,11 @@ export function NebulaLinkGame() {
   };
 
   const placementLegal =
-    hoverIndex !== null &&
-    Boolean(selectedPieceId && cellPlacementLegal(hoverIndex));
+    activeHoverIndex !== null &&
+    Boolean(activePieceId && cellPlacementLegal(activeHoverIndex));
 
   const handleGridPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (isGameOver || !selectedPieceId) return;
+    if (isGameOver || !canAct || !activePieceId) return;
     const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index === null) return;
     setHoverIndex(index);
@@ -347,16 +524,17 @@ export function NebulaLinkGame() {
   };
 
   const handleGridPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!selectedPieceId) return;
+    if (!canAct || !activePieceId) return;
     const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index !== null) setHoverIndex(index);
   };
 
   const handleGridPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!placingPointer && !selectedPieceId) return;
+    if (!canAct || (!placingPointer && !activePieceId)) return;
     const index =
-      cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType) ?? hoverIndex;
-    if (index !== null && selectedPieceId && cellPlacementLegal(index)) {
+      cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType) ??
+      activeHoverIndex;
+    if (index !== null && activePieceId && cellPlacementLegal(index)) {
       placeAt(index);
     }
     setPlacingPointer(false);
@@ -371,8 +549,9 @@ export function NebulaLinkGame() {
         <ResultPanel
           variant="inline"
           winners={winner}
+          winnersLabel={winnerLabels ?? undefined}
           draw={game.isDraw}
-          onReplay={() => setPhase("setup")}
+          {...replayProps}
           details={
             <p className="text-slate-400">
               {game.isDraw
@@ -386,13 +565,19 @@ export function NebulaLinkGame() {
       {!isGameOver && (
         <TurnBanner
           playerIndex={game.currentPlayer}
-          playerLabel={`プレイヤー ${game.currentPlayer + 1}`}
+          playerLabel={
+            isOnline
+              ? formatSeatLabel(online.players, game.currentPlayer)
+              : `プレイヤー ${game.currentPlayer + 1}`
+          }
           stats={`ホーム辺：${homeEdgeLabel(home)} · 置ける手 ${legalMoves.length}`}
           action={
-            notice ??
+            isOnline && !online.isMyTurn
+              ? "相手の手番です"
+              : notice ??
             (mustPass
               ? "置ける形がないためパスできます。"
-              : selectedPieceId
+              : activePieceId
                 ? "盤上で位置を合わせて離すと置きます。同じ形をもう一度押すと回転します。"
                 : rouletteReady
                   ? "ルーレットの形または単マスを選んでください。"
@@ -404,7 +589,7 @@ export function NebulaLinkGame() {
       <div
         ref={gridRef}
         className={`mx-auto grid w-fit max-w-full gap-px sm:gap-0.5 ${
-          selectedPieceId && !isGameOver ? "touch-none select-none" : ""
+          activePieceId && !isGameOver ? "touch-none select-none" : ""
         }`}
         style={{
           gridTemplateColumns: `repeat(${NEBULA_SIZE}, clamp(0.95rem, 4vmin, 1.3rem))`,
@@ -458,20 +643,27 @@ export function NebulaLinkGame() {
         })}
       </div>
 
-      {!isGameOver && (
+      {!isGameOver && canAct && (
         <div className="flex flex-col items-center gap-2">
           <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
             <button
               type="button"
-              disabled={rouletteReady || spinning}
+              disabled={
+                rouletteReady || showRouletteSpinning || online.movePending
+              }
               onClick={spinRoulette}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40 sm:text-sm sm:px-4 sm:py-2 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
             >
-              {spinning ? "回しています…" : rouletteReady ? "ルーレット済み" : "ルーレット"}
+              {showRouletteSpinning
+                ? "回しています…"
+                : rouletteReady
+                  ? "ルーレット済み"
+                  : "ルーレット"}
             </button>
             {mustPass ? (
               <button
                 type="button"
+                disabled={isOnline && (!online.isMyTurn || online.movePending)}
                 onClick={pass}
                 className="rounded-lg border border-surface-border bg-surface-raised px-3 py-1.5 text-xs font-medium text-white hover:border-white/30 sm:text-sm sm:px-4 sm:py-2"
               >
