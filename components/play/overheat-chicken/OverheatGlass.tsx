@@ -329,7 +329,7 @@ export function OverheatGlass({ state, label }: Props) {
         </div>
       </div>
       <p className="sr-only">
-        水位と上限の数字は表示しません。
+        水位と上限の数字は出しません。
       </p>
     </div>
   );
