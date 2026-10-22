@@ -69,7 +69,7 @@ export function OverheatChickenGame() {
     return (
       <SetupPanel
         title="オーバーヒート・チキンレース"
-        description="縁まで満たした杯に、小・中・大のチップを入れます。終えるときはボタンを押します。水を溢れさせた方が負けです。"
+        description="縁まで満たした杯に、小・中・大のチップを入れます。1手番は最大3枚です。終えるときはボタンを押します。水を溢れさせた方が負けです。"
         playerCount={2}
         onPlayerCount={() => {}}
         playerOptions={[2]}
@@ -95,13 +95,15 @@ export function OverheatChickenGame() {
   }
 
   const over = phase === "game-over" && state.winner !== null;
-  const glassLabel = over ? "杯。水が溢れた。" : "杯。チップを入れている。";
+  const glassLabel = over
+    ? "杯。水が溢れています。"
+    : "杯。チップを入れています。";
   const action =
     state.placed <= 0
-      ? "サイズを選ぶ"
+      ? "チップの大きさを選んでください。"
       : state.placed >= MAX_CHIPS_PER_TURN
-        ? "手番を終える"
-        : "続けるか、手番を終える";
+        ? "手番を終えてください。"
+        : "続けて入れるか、手番を終えてください。";
 
   return (
     <div className="space-y-6">
@@ -110,7 +112,11 @@ export function OverheatChickenGame() {
           variant="inline"
           winners={[state.winner]}
           onReplay={backToSetup}
-          details={<p className="text-sm text-slate-400">水が溢れた。</p>}
+          details={
+            <p className="text-sm text-slate-400">
+              水が溢れました。溢れさせた側の負けです。
+            </p>
+          }
         />
       ) : null}
 
@@ -143,7 +149,7 @@ export function OverheatChickenGame() {
               <button
                 key={size}
                 type="button"
-                aria-label={CHIP_LABEL[size]}
+                aria-label={`${CHIP_LABEL[size]}のチップ`}
                 disabled={state.placed >= MAX_CHIPS_PER_TURN}
                 onClick={() => place(size)}
                 className="rounded-full p-0.5 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
