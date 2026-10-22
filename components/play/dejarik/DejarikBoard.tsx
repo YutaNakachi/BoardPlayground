@@ -76,7 +76,7 @@ export function DejarikBoard({
         className="block h-auto w-full"
         onPointerDown={onPointerDown}
         role="img"
-        aria-label="デジャリック盤"
+        aria-label="ホロチェス盤"
       >
       <defs>
         <radialGradient id="dejarik-rim" cx="50%" cy="45%" r="55%">
