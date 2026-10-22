@@ -5,6 +5,7 @@ import { HexBoardPreview } from "@/components/game-art/HexBoardPreview";
 import { LudoBoardPreview } from "@/components/game-art/LudoBoardPreview";
 import { MancalaBoardPreview } from "@/components/game-art/MancalaBoardPreview";
 import { NebulaLinkBoardPreview } from "@/components/game-art/NebulaLinkBoardPreview";
+import { OverheatChickenBoardPreview } from "@/components/game-art/OverheatChickenBoardPreview";
 import { SenkaiSenkiBoardPreview } from "@/components/game-art/SenkaiSenkiBoardPreview";
 import type { GameMeta } from "@/lib/games";
 import { MORRIS_LINES, MORRIS_XY } from "@/lib/play/nine-mens-morris";
@@ -242,6 +243,10 @@ function HexPreview() {
 
 function DejarikPreview() {
   return <DejarikBoardPreview />;
+}
+
+function OverheatChickenPreview() {
+  return <OverheatChickenBoardPreview />;
 }
 
 function FoxHoundsPreview() {
@@ -849,6 +854,7 @@ const PREVIEWS: Record<string, () => ReactNode> = {
   hex: HexPreview,
   "fox-hounds": FoxHoundsPreview,
   dejarik: DejarikPreview,
+  "overheat-chicken": OverheatChickenPreview,
   dominoes: DominoPreview,
   "chinese-checkers": ChineseCheckersPreview,
   ludo: LudoPreview,

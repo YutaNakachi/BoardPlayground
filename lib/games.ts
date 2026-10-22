@@ -454,7 +454,8 @@ const games: GameMeta[] = [
       "上限を超えたチップを入れたプレイヤーの負け。先手は開始前に選ぶ。同じ画面で交代。",
     ],
     status: "playable",
-    listed: false,
+    listed: true,
+    listedAt: "2026-10-22",
   },
   {
     slug: "dominoes",
