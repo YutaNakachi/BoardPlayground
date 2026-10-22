@@ -29,6 +29,9 @@ function playerLabel(player: PlayerId): string {
   return `プレイヤー ${player + 1}`;
 }
 
+const SETUP_DESCRIPTION =
+  "漫画『ジョジョの奇妙な冒険』第6部に登場する杯の勝負を、ボドパッ！独自ルールで再現した非公式プレイ版です。縁まで満たした杯に小・中・大のチップを入れ、溢れさせた方が負け。1手番は最大3枚、終えるときはボタンを押します。";
+
 export function OverheatChickenGame() {
   const { recordLocalPlay } = usePlayPage();
   const [phase, setPhase] = useState<Phase>("setup");
@@ -69,7 +72,7 @@ export function OverheatChickenGame() {
     return (
       <SetupPanel
         title="オーバーヒート・チキンレース"
-        description="縁まで満たした杯に、小・中・大のチップを入れます。1手番は最大3枚です。終えるときはボタンを押します。水を溢れさせた方が負けです。"
+        description={SETUP_DESCRIPTION}
         playerCount={2}
         onPlayerCount={() => {}}
         playerOptions={[2]}
