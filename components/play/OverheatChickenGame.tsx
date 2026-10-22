@@ -18,7 +18,6 @@ import {
   endTurn,
   MAX_CHIPS_PER_TURN,
   placeChip,
-  tensionNotice,
   type ChipSize,
   type OverheatState,
   type PlayerId,
@@ -96,7 +95,6 @@ export function OverheatChickenGame() {
   }
 
   const over = phase === "game-over" && state.winner !== null;
-  const notice = tensionNotice(state);
   const glassLabel = over ? "杯。水が溢れた。" : "杯。チップを入れている。";
   const action =
     state.placed <= 0
@@ -121,7 +119,6 @@ export function OverheatChickenGame() {
           playerIndex={state.current}
           playerLabel={playerLabel(state.current)}
           action={action}
-          notice={notice || undefined}
         />
       ) : null}
 

@@ -150,9 +150,3 @@ export function endTurn(state: OverheatState): OverheatState | null {
   return { ...state, placed: 0, current: other(state.current) };
 }
 
-/** 画面に出す文言。水位や上限の数字は含めない。 */
-export function tensionNotice(state: OverheatState): string {
-  if (state.winner !== null) return "";
-  if (snap(state.fill + CHIP_RISE.s) > CAPACITY_MAX) return "次は必ず溢れる";
-  return "";
-}
