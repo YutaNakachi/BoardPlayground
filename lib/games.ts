@@ -454,8 +454,7 @@ const games: GameMeta[] = [
       "同じ画面で交代する。先手は始める前に選ぶ。",
     ],
     status: "playable",
-    listed: true,
-    listedAt: "2026-10-21",
+    listed: false,
   },
   {
     slug: "dominoes",
