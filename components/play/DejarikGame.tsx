@@ -57,7 +57,7 @@ type LocalPhase = "setup" | "active";
 type MatchKind = "pvp" | "cpu";
 
 const DESCRIPTION =
-  "STAR WARSに登場するデジャリック（ホロチェス）を、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。";
+  "STAR WARSに登場するデジャリックを、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。";
 
 function applyCpuMove(
   state: DejarikState,
@@ -434,7 +434,7 @@ export function DejarikGame() {
   if (localPhase === "setup" && online.phase === "idle") {
     return (
       <OnlineSetupPanel
-        title="デジャリック"
+        title="ホロチェス"
         description={DESCRIPTION}
         mode={mode}
         onModeChange={setMode}
@@ -468,7 +468,7 @@ export function DejarikGame() {
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
-        title="デジャリック"
+        title="ホロチェス"
         description={DESCRIPTION}
         mode="online"
         onModeChange={() => {}}
