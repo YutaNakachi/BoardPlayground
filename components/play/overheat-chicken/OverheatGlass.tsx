@@ -81,20 +81,41 @@ function wallX(y: number, side: -1 | 1): number {
   return x;
 }
 
-/** 縁の内側の液面から唇を越え、外側を下り、水たまりの中で同じ側のまま終わる。 */
-function dripRibbon(side: -1 | 1): { body: string; shine: string } {
-  const y1 = 700;
-  const y2 = 930;
-  const y3 = 986;
+/** 足の外側、左。ガラスの輪郭のすぐ外。右は中心で折り返す。 */
+const FOOT_LEFT: readonly (readonly [number, number])[] = [
+  [844, 202],
+  [890, 204],
+  [930, 208],
+  [958, 218],
+  [976, 246],
+];
+
+function sideX(x: number, side: -1 | 1): number {
+  return side < 0 ? x : 864 - x;
+}
+
+/** 残した表面張力の端から、片側の縁を越えてその側の水たまりへ下りる。 */
+function dripRibbon(side: -1 | 1, rise: number): { body: string; shine: string } {
   const along = (y: number, out: number) => wallX(y, side) + side * out;
-  const a1 = along(y1, 8);
-  const a2 = along(y2, 6);
-  const a3 = along(940, -4);
-  const inner = 432 + side * 200;
-  const lipOut = along(352, 16);
-  const body = `M ${inner} 360 C ${inner + side * 8} 356, ${lipOut - side * 4} 358, ${lipOut} 374 Q ${a1 + side * 11} ${y1} ${a2 + side * 10} ${y2} Q ${a2 + side * 9} ${y3 - 18} ${a3 + side * 8} ${y3} L ${a3} ${y3} Q ${a2} ${y2} ${a1} ${y1} Q ${lipOut - side * 14} 376 ${inner + side * 12} 362 Z`;
-  const shine = `M ${inner + side * 8} 360 Q ${lipOut - side * 2} 366 ${a1 + side * 4} ${y1} Q ${a2 + side * 3} ${y2} ${a3 + side * 3} ${y3 - 6}`;
+  const shoulder = 432 + side * 118;
+  const y0 = RIM_Y - rise * 0.62;
+  const lip = along(366, 12);
+  const mid = along(760, 10);
+  const land = sideX(210, side);
+  const landY = 948;
+  const body = `M ${shoulder} ${y0} C ${shoulder + side * 10} ${y0 - 6}, ${lip - side * 6} ${y0 + 2}, ${lip} ${RIM_Y + 18} Q ${mid} 740 ${land + side * 6} ${landY} L ${land - side * 14} ${landY} Q ${along(740, 0)} 740 ${lip - side * 16} ${RIM_Y + 22} C ${shoulder + side * 24} ${y0 + 8}, ${shoulder - side * 6} ${y0 + 4}, ${shoulder - side * 4} ${y0} Z`;
+  const shine = `M ${shoulder + side * 6} ${y0 + 2} Q ${lip} ${RIM_Y + 10} ${mid} 740 Q ${along(860, 6)} 860 ${land} ${landY - 10}`;
   return { body, shine };
+}
+
+/** こぼれた側の足もとに沿い、底の裏には入らない。 */
+function spillPool(side: -1 | 1): string {
+  const hug = FOOT_LEFT.map(([y, x]) => `${sideX(x, side)} ${y}`).join(" L ");
+  return `M ${hug} C ${sideX(200, side)} 1008, ${sideX(108, side)} 1014, ${sideX(86, side)} 956 C ${sideX(74, side)} 890, ${sideX(150, side)} 848, ${sideX(202, side)} 844 Z`;
+}
+
+function spillSheen(side: -1 | 1): string {
+  return `M ${sideX(220, side)} 990 Q ${sideX(130, side)} 1008 ${sideX(96, side)} 940`;
 }
 
 type Props = {
@@ -106,7 +127,8 @@ export function OverheatGlass({ state, label }: Props) {
   const rawId = useId().replace(/:/g, "");
   const waterId = `overheat-water-${rawId}`;
   const over = state.winner !== null;
-  const ry = domeRise(state);
+  const spillSide: -1 | 1 = scatterUnit(state.visual.seed, 7) < 0.5 ? -1 : 1;
+  const ry = over ? 32 : domeRise(state);
   const surface = RIM_Y - ry;
   const chips = state.chips;
   const pastWobble = ry - state.visual.wobbleAt;
@@ -210,6 +232,9 @@ export function OverheatGlass({ state, label }: Props) {
               <stop offset="0%" stopColor="#fff" />
               <stop offset="100%" stopColor="#000" />
             </linearGradient>
+            <clipPath id={`${waterId}-meniscus`} clipPathUnits="userSpaceOnUse">
+              <rect x="150" y="300" width="564" height="42" />
+            </clipPath>
             <mask
               id={`${waterId}-mask`}
               maskUnits="userSpaceOnUse"
@@ -230,11 +255,7 @@ export function OverheatGlass({ state, label }: Props) {
           </defs>
           <path d={BOWL} fill={`url(#${waterId})`} mask={`url(#${waterId}-mask)`} />
           <path
-            d={
-              over
-                ? "M 210 356 L 654 356 L 654 372 L 210 372 Z"
-                : `M 188 ${RIM_Y} L 676 ${RIM_Y} L 676 372 L 188 372 Z`
-            }
+            d={`M 188 ${RIM_Y} L 676 ${RIM_Y} L 676 372 L 188 372 Z`}
             fill={`url(#${waterId})`}
           />
           {ry < 8 && !over ? (
@@ -250,6 +271,7 @@ export function OverheatGlass({ state, label }: Props) {
           ) : null}
           {ry > 0 ? (
             <g
+              clipPath={over ? `url(#${waterId}-meniscus)` : undefined}
               className={wobble ? "overheat-wobble" : undefined}
               style={
                 wobble
@@ -318,14 +340,7 @@ export function OverheatGlass({ state, label }: Props) {
                 <stop offset="100%" stopColor="#d4923a" />
               </linearGradient>
             </defs>
-            <ellipse
-              className="overheat-puddle"
-              cx="432"
-              cy="960"
-              rx="300"
-              ry="50"
-              fill={`url(#${waterId}-pool)`}
-            />
+            <path className="overheat-puddle" d={spillPool(spillSide)} fill={`url(#${waterId}-pool)`} />
           </svg>
         ) : null}
         <img
@@ -354,10 +369,10 @@ export function OverheatGlass({ state, label }: Props) {
                 <stop offset="100%" stopColor="#c47a28" />
               </linearGradient>
             </defs>
-            {([-1, 1] as const).map((side) => {
-              const drip = dripRibbon(side);
+            {(() => {
+              const drip = dripRibbon(spillSide, ry);
               return (
-                <g key={side}>
+                <g>
                   <path className="overheat-drip" d={drip.body} fill={`url(#${waterId}-drip)`} />
                   <path
                     className="overheat-drip"
@@ -371,13 +386,13 @@ export function OverheatGlass({ state, label }: Props) {
                   />
                 </g>
               );
-            })}
+            })()}
             <defs>
               <linearGradient
                 id={`${waterId}-sheen`}
-                x1="330"
+                x1={spillSide < 0 ? "70" : "560"}
                 y1="0"
-                x2="534"
+                x2={spillSide < 0 ? "260" : "790"}
                 y2="0"
                 gradientUnits="userSpaceOnUse"
               >
@@ -387,20 +402,12 @@ export function OverheatGlass({ state, label }: Props) {
               </linearGradient>
             </defs>
             <path
-              d="M 338 986 Q 432 998 526 986"
+              d={spillSheen(spillSide)}
               fill="none"
               stroke={`url(#${waterId}-sheen)`}
-              strokeWidth="7"
+              strokeWidth="3.5"
               strokeLinecap="round"
-              opacity="0.35"
-            />
-            <path
-              d="M 356 987 Q 432 997 508 987"
-              fill="none"
-              stroke={`url(#${waterId}-sheen)`}
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity="0.9"
+              opacity="0.7"
             />
           </svg>
         ) : null}
