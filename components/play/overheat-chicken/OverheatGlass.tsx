@@ -94,19 +94,58 @@ function sideX(x: number, side: -1 | 1): number {
   return side < 0 ? x : 864 - x;
 }
 
-/** 表面張力の端から縁の上を通り、片側の水たまりへ下りる。 */
+function chain(points: readonly (readonly [number, number])[], move: boolean): string {
+  const n = (v: number) => v.toFixed(1);
+  let d = `${move ? "M" : "L"} ${n(points[0][0])} ${n(points[0][1])}`;
+  if (points.length < 3) {
+    for (let i = 1; i < points.length; i += 1) d += ` L ${n(points[i][0])} ${n(points[i][1])}`;
+    return d;
+  }
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const mx = (points[i][0] + points[i + 1][0]) / 2;
+    const my = (points[i][1] + points[i + 1][1]) / 2;
+    d += ` Q ${n(points[i][0])} ${n(points[i][1])} ${n(mx)} ${n(my)}`;
+  }
+  const last = points[points.length - 1];
+  d += ` L ${n(last[0])} ${n(last[1])}`;
+  return d;
+}
+
+/** 中心線の両脇に幅を取り、角のない帯にする。 */
+function smoothRibbon(samples: readonly (readonly [number, number, number])[]): { body: string; shine: string } {
+  const upper: [number, number][] = [];
+  const lower: [number, number][] = [];
+  for (let i = 0; i < samples.length; i += 1) {
+    const prev = samples[Math.max(0, i - 1)];
+    const next = samples[Math.min(samples.length - 1, i + 1)];
+    let tx = next[0] - prev[0];
+    let ty = next[1] - prev[1];
+    const len = Math.hypot(tx, ty) || 1;
+    tx /= len;
+    ty /= len;
+    const w = samples[i][2];
+    upper.push([samples[i][0] - ty * w, samples[i][1] + tx * w]);
+    lower.push([samples[i][0] + ty * w, samples[i][1] - tx * w]);
+  }
+  const shine = chain(samples.map(([x, y]) => [x, y]), true);
+  const body = `${chain(upper, true)} ${chain([...lower].reverse(), false)} Z`;
+  return { body, shine };
+}
+
+/** 表面張力の上から縁をなでて、片側の水たまりまで一続きで下りる。 */
 function dripRibbon(side: -1 | 1, rise: number): { body: string; shine: string } {
   const along = (y: number, out: number) => wallX(y, side) + side * out;
-  const shoulder = 432 + side * 108;
-  const y0 = RIM_Y - rise * 0.5;
-  const lip = along(350, 0);
-  const over = along(356, 16);
-  const mid = along(780, 8);
-  const land = sideX(210, side);
-  const landY = 948;
-  const body = `M ${shoulder} ${y0} C ${shoulder + side * 36} ${y0 + 1}, ${lip - side * 10} 347, ${over} 356 Q ${mid} 760 ${land + side * 8} ${landY} L ${land - side * 16} ${landY} Q ${along(780, -4)} 780 ${lip - side * 4} 366 C ${lip - side * 24} 354, ${shoulder + side * 12} ${y0 + 9}, ${shoulder - side * 8} ${y0 + 3} Z`;
-  const shine = `M ${shoulder + side * 14} ${y0 + 2} Q ${lip} 352 ${over - side * 3} 360 Q ${mid} 760 ${land} ${landY - 12}`;
-  return { body, shine };
+  const samples: (readonly [number, number, number])[] = [
+    [432 + side * 86, RIM_Y - rise * 0.72, 7],
+    [432 + side * 148, RIM_Y - rise * 0.42, 8],
+    [along(348, -4), 350, 7.5],
+    [along(358, 11), 364, 7],
+    [along(480, 8), 500, 6.5],
+    [along(700, 7), 720, 6],
+    [along(860, 6), 880, 6],
+    [sideX(208, side), 956, 8],
+  ];
+  return smoothRibbon(samples);
 }
 
 /** こぼれた側の足もとに沿い、底の裏には入らない。 */
