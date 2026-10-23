@@ -2,7 +2,7 @@
 
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
 import type { DuelFieldState } from "@/components/play/king-and-spy/useKingAndSpyDuelField";
-import { CARD_KIND_LABEL, winningSideLabel } from "@/lib/play/king-and-spy/labels";
+import { CARD_KIND_LABEL } from "@/lib/play/king-and-spy/labels";
 import type {
   KingAndSpyPublicState,
   KingAndSpyRoundRecord,
@@ -50,9 +50,8 @@ export function KingAndSpyDuelField({
       const fromHistory = roundHistory.at(-1);
       const recipientSeat = fromReveal?.recipientSeat ?? fromHistory?.winnerSeat;
       const points = fromReveal?.pointsAwarded ?? fromHistory?.pointsAwarded;
-      const side = fromReveal?.winningSide ?? fromHistory?.winningSide;
 
-      if (recipientSeat !== undefined && points !== undefined && side) {
+      if (recipientSeat !== undefined && points !== undefined) {
         openResult = (
           <p className="mt-4 text-center text-sm font-medium text-white">
             <span className="text-slate-300">
@@ -61,9 +60,6 @@ export function KingAndSpyDuelField({
             <span className="mx-2 text-slate-600">→</span>
             <span className="text-indigo-200">
               {labels[recipientSeat]} +{points}
-            </span>
-            <span className="mt-1 block text-xs font-normal text-slate-400">
-              {winningSideLabel(side)}の決着
             </span>
           </p>
         );

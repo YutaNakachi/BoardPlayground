@@ -50,7 +50,8 @@ export function kingAndSpyShowcaseToken(
   const showcase = publicState.showcase;
   if (!showcase) return null;
   const [a, b] = showcase.cards;
-  return `showcase:${a.id}:${b.id}:${showcase.tie ? "tie" : "win"}`;
+  // ラウンドごとにカード id は振り直されるので、捨て札枚数でトリックを区別する
+  return `showcase:${publicState.discards.length}:${a.id}:${b.id}:${showcase.tie ? "tie" : "win"}`;
 }
 
 function startShowcase(
