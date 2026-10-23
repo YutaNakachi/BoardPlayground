@@ -81,12 +81,20 @@ function wallX(y: number, side: -1 | 1): number {
   return x;
 }
 
-function dripPath(side: -1 | 1, bulge: number, y0: number): string {
-  const startX = wallX(y0, side) + side * -4;
-  const midY = 700;
-  const midX = wallX(midY, side) + side * bulge;
-  const endX = wallX(930, side) + side * 6;
-  return `M ${startX} ${y0} Q ${midX} ${midY} ${endX} 990`;
+/** 左右の外側を下り、水たまりの中で同じ側のまま終わる。 */
+function dripRibbon(side: -1 | 1): { body: string; shine: string } {
+  const y0 = 364;
+  const y1 = 700;
+  const y2 = 930;
+  const y3 = 986;
+  const along = (y: number, out: number) => wallX(y, side) + side * out;
+  const a0 = along(y0, 1);
+  const a1 = along(y1, 9);
+  const a2 = along(y2, 6);
+  const a3 = along(940, -4);
+  const body = `M ${a0} ${y0} Q ${a1} ${y1} ${a2} ${y2} Q ${a2} ${y3 - 16} ${a3} ${y3} L ${a3 + side * 9} ${y3} Q ${a2 + side * 11} ${y2} ${a1 + side * 12} ${y1} Q ${a0 + side * 14} ${y0 + 70} ${a0 + side * 14} ${y0} Z`;
+  const shine = `M ${a0 + side * 5} ${y0 + 10} Q ${a1 + side * 4} ${y1} ${a3 + side * 3} ${y3 - 6}`;
+  return { body, shine };
 }
 
 type Props = {
@@ -292,13 +300,27 @@ export function OverheatGlass({ state, label }: Props) {
             className="overheat-spill pointer-events-none absolute inset-0 h-full w-full"
             aria-hidden
           >
+            <defs>
+              <linearGradient
+                id={`${waterId}-pool`}
+                x1="0"
+                y1="910"
+                x2="0"
+                y2="1010"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop offset="0%" stopColor="#b26e22" />
+                <stop offset="80%" stopColor="#c47a28" />
+                <stop offset="100%" stopColor="#d4923a" />
+              </linearGradient>
+            </defs>
             <ellipse
               className="overheat-puddle"
               cx="432"
               cy="960"
               rx="300"
               ry="50"
-              fill="#c47a28"
+              fill={`url(#${waterId}-pool)`}
             />
           </svg>
         ) : null}
@@ -314,50 +336,53 @@ export function OverheatGlass({ state, label }: Props) {
             className="overheat-spill pointer-events-none absolute inset-0 h-full w-full"
             aria-hidden
           >
+            {([-1, 1] as const).map((side) => {
+              const drip = dripRibbon(side);
+              return (
+                <g key={side}>
+                  <path className="overheat-drip" d={drip.body} fill="#c47a28" />
+                  <path
+                    className="overheat-drip"
+                    d={drip.shine}
+                    pathLength={100}
+                    fill="none"
+                    stroke="#f6e2b8"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    opacity="0.8"
+                  />
+                </g>
+              );
+            })}
+            <defs>
+              <linearGradient
+                id={`${waterId}-sheen`}
+                x1="330"
+                y1="0"
+                x2="534"
+                y2="0"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop offset="0%" stopColor="#fff6df" stopOpacity="0" />
+                <stop offset="50%" stopColor="#fff6df" stopOpacity="1" />
+                <stop offset="100%" stopColor="#fff6df" stopOpacity="0" />
+              </linearGradient>
+            </defs>
             <path
-              className="overheat-drip"
-              pathLength={100}
-              d={dripPath(-1, 10, 358)}
+              d="M 338 986 Q 432 998 526 986"
               fill="none"
-              stroke="#e0a045"
-              strokeWidth="22"
+              stroke={`url(#${waterId}-sheen)`}
+              strokeWidth="7"
               strokeLinecap="round"
+              opacity="0.35"
             />
             <path
-              className="overheat-drip"
-              pathLength={100}
-              d={dripPath(1, 10, 358)}
+              d="M 356 987 Q 432 997 508 987"
               fill="none"
-              stroke="#e0a045"
-              strokeWidth="22"
+              stroke={`url(#${waterId}-sheen)`}
+              strokeWidth="2"
               strokeLinecap="round"
-            />
-            <path
-              className="overheat-drip"
-              pathLength={100}
-              d={dripPath(-1, 4, 390)}
-              fill="none"
-              stroke="#f6e2b8"
-              strokeWidth="9"
-              strokeLinecap="round"
-            />
-            <path
-              className="overheat-drip"
-              pathLength={100}
-              d={dripPath(1, 4, 390)}
-              fill="none"
-              stroke="#f6e2b8"
-              strokeWidth="9"
-              strokeLinecap="round"
-            />
-            <ellipse
-              className="overheat-puddle"
-              cx="432"
-              cy="996"
-              rx="170"
-              ry="12"
-              fill="#f3d7a1"
-              opacity="0.75"
+              opacity="0.9"
             />
           </svg>
         ) : null}
