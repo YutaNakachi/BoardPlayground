@@ -32,7 +32,7 @@ export function KingAndSpyDuelField({
     if (c0.kind === "citizen" && c1.kind === "citizen") {
       openResult = (
         <p className="mt-4 text-center text-sm text-slate-300">
-          市民同士 — 引き分け。加点なしで続行
+          市民同士の引き分けです。加点なしで、このラウンドを続けます
         </p>
       );
     } else {
@@ -50,7 +50,7 @@ export function KingAndSpyDuelField({
         openResult = (
           <p className="mt-4 text-center text-sm font-medium text-white">
             <span className="text-slate-300">
-              {CARD_KIND_LABEL[c0.kind]} vs {CARD_KIND_LABEL[c1.kind]}
+              {CARD_KIND_LABEL[c0.kind]} 対 {CARD_KIND_LABEL[c1.kind]}
             </span>
             <span className="mx-2 text-slate-600">→</span>
             <span className="text-indigo-200">

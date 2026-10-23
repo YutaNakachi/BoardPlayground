@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { DejarikBoardPreview } from "@/components/game-art/DejarikBoardPreview";
 import { GravityFourBoardPreview } from "@/components/game-art/GravityFourBoardPreview";
@@ -8,6 +9,7 @@ import { NebulaLinkBoardPreview } from "@/components/game-art/NebulaLinkBoardPre
 import { OverheatChickenBoardPreview } from "@/components/game-art/OverheatChickenBoardPreview";
 import { SenkaiSenkiBoardPreview } from "@/components/game-art/SenkaiSenkiBoardPreview";
 import type { GameMeta } from "@/lib/games";
+import { kingAndSpyCardFaceSrc } from "@/lib/play/king-and-spy/card-art";
 import { MORRIS_LINES, MORRIS_XY } from "@/lib/play/nine-mens-morris";
 
 type Props = { game: GameMeta };
@@ -839,7 +841,29 @@ function NimPreview() {
   );
 }
 
+function KingAndSpyPreview() {
+  return (
+    <div className="flex h-24 items-center justify-center gap-2">
+      {(["king", "spy"] as const).map((kind) => (
+        <div
+          key={kind}
+          className="relative h-full w-[4.5rem] overflow-hidden rounded-md shadow-lg shadow-black/50"
+        >
+          <Image
+            src={kingAndSpyCardFaceSrc(kind)}
+            alt=""
+            fill
+            sizes="72px"
+            className="object-cover"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const PREVIEWS: Record<string, () => ReactNode> = {
+  "king-and-spy": KingAndSpyPreview,
   "nebula-link": NebulaPreview,
   "senkai-senki": SenkaiSenkiPreview,
   reversi: ReversiPreview,
