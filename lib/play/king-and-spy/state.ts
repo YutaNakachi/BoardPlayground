@@ -52,6 +52,7 @@ export function initialKingAndSpyPublicState(
     decisiveCount: 0,
     handCounts: [5, 5],
     committedReady: [false, false],
+    handReady: [false, false],
     discards: [],
     lastReveal: null,
     showcase: null,
@@ -65,12 +66,22 @@ export function initialKingAndSpySecrets(
   return dealRound(kingRoleSeat);
 }
 
+function readHandReady(
+  publicState: KingAndSpyPublicState
+): [boolean, boolean] {
+  return [
+    Boolean(publicState.handReady?.[0]),
+    Boolean(publicState.handReady?.[1]),
+  ];
+}
+
 function clonePublic(publicState: KingAndSpyPublicState): KingAndSpyPublicState {
   return {
     ...publicState,
     scores: [...publicState.scores] as [number, number],
     handCounts: [...publicState.handCounts] as [number, number],
     committedReady: [...publicState.committedReady] as [boolean, boolean],
+    handReady: readHandReady(publicState),
     discards: [...publicState.discards],
     roundHistory: [...publicState.roundHistory],
     showcase: publicState.showcase
@@ -104,6 +115,7 @@ function startNewRound(
   secrets.pendingCommits = [null, null];
   publicState.handCounts = [5, 5];
   publicState.committedReady = [false, false];
+  publicState.handReady = [false, false];
   publicState.phase = "selecting";
   publicState.roundNumber += 1;
 }
@@ -169,6 +181,7 @@ function resolveBothCommitted(
   publicState.discards = [...publicState.discards, c0, c1];
   secrets.pendingCommits = [null, null];
   publicState.committedReady = [false, false];
+  publicState.handReady = [false, false];
   publicState.handCounts = [
     secrets.hands[0].length,
     secrets.hands[1].length,
@@ -191,7 +204,8 @@ export function applyKingAndSpyCommit(
   publicState: KingAndSpyPublicState,
   secrets: KingAndSpySecrets,
   seatIndex: 0 | 1,
-  cardId: string
+  cardId: string,
+  options?: { deferResolve?: boolean }
 ): { error?: string } {
   if (publicState.phase === "game-over") {
     return { error: "Game is over" };
@@ -202,6 +216,7 @@ export function applyKingAndSpyCommit(
   ) {
     publicState.lastReveal = null;
     publicState.showcase = null;
+    publicState.handReady = [false, false];
   }
   if (publicState.committedReady[seatIndex]) {
     return { error: "Already committed" };
@@ -221,7 +236,48 @@ export function applyKingAndSpyCommit(
     secrets.hands[1].length,
   ];
 
-  if (publicState.committedReady[0] && publicState.committedReady[1]) {
+  if (
+    !options?.deferResolve &&
+    publicState.committedReady[0] &&
+    publicState.committedReady[1]
+  ) {
+    resolveBothCommitted(publicState, secrets);
+  }
+
+  return {};
+}
+
+/**
+ * 手札から消した表示が終わった席を記録する。
+ * 両者の確定と両者が揃ったときだけ公開・得点・補充を行う。
+ */
+export function applyKingAndSpyHandReady(
+  publicState: KingAndSpyPublicState,
+  secrets: KingAndSpySecrets,
+  seatIndex: 0 | 1
+): { error?: string } {
+  if (publicState.phase === "game-over") {
+    return { error: "Game is over" };
+  }
+  if (publicState.showcase) {
+    return {};
+  }
+  if (!publicState.committedReady[seatIndex]) {
+    return { error: "Not committed" };
+  }
+
+  const ready = readHandReady(publicState);
+  ready[seatIndex] = true;
+  publicState.handReady = ready;
+
+  if (
+    ready[0] &&
+    ready[1] &&
+    publicState.committedReady[0] &&
+    publicState.committedReady[1] &&
+    secrets.pendingCommits[0] &&
+    secrets.pendingCommits[1]
+  ) {
     resolveBothCommitted(publicState, secrets);
   }
 

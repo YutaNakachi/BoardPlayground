@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
 import { KingAndSpyMatchPanel } from "@/components/play/king-and-spy/KingAndSpyMatchPanel";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
@@ -27,6 +27,7 @@ import { playerRoleLabel } from "@/lib/play/king-and-spy/labels";
 import { roleForSeat } from "@/lib/play/king-and-spy/rules";
 import {
   applyKingAndSpyCommit,
+  applyKingAndSpyHandReady,
   decisivesUntilRoleSwap,
   initialKingAndSpyPublicState,
   initialKingAndSpySecrets,
@@ -42,6 +43,18 @@ import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocal
 
 const GAME_DESCRIPTION =
   "漫画『カイジ』のEカードをモチーフにした非公式の三すくみカード。同時に1枚を出し、点差3点先取または12ラウンドで勝ちます。";
+
+/** 場に出てから、手札の表示を減らすまで */
+const HAND_REMOVE_MS = 450;
+/** 両者のカードが裏で揃い、手札減らしも見えてから公開へ進むまで */
+const BOTH_VISIBLE_MS = 500;
+
+type HandPin = {
+  seat: 0 | 1;
+  cards: KingAndSpyCard[];
+  cardId: string;
+  gen: number;
+};
 
 type LocalPhase = "setup" | "playing" | "game-over";
 
@@ -81,6 +94,19 @@ export function KingAndSpyGame() {
   const [myCommittedCard, setMyCommittedCard] = useState<KingAndSpyCard | null>(
     null
   );
+  const [pin, setPin] = useState<HandPin | null>(null);
+  const [pinRelease, setPinRelease] = useState(false);
+  const [revealGeneration, setRevealGeneration] = useState(0);
+  const revealBusy = useRef(false);
+  const ackFlight = useRef(false);
+  const viewRef = useRef<KingAndSpyViewState | null>(null);
+  const publicRef = useRef(publicState);
+  const secretsRef = useRef(secrets);
+  const isOnlineRef = useRef(false);
+  const localPhaseRef = useRef(localPhase);
+  const onlineMoveRef = useRef(online.handleMove);
+  const revealGenerationRef = useRef(0);
+  const aliveRef = useRef(true);
 
   const isOnlinePlay =
     online.phase === "playing" || online.phase === "finished";
@@ -155,9 +181,146 @@ export function KingAndSpyGame() {
     setShownView(activeView);
   }
   const displayView = holdingReveal && shownView ? shownView : activeView;
-  const displayHand = displayView?.myHand ?? [];
+  const showPin =
+    pin !== null &&
+    activeView !== null &&
+    pin.seat === activeView.mySeat &&
+    !holdingReveal &&
+    (!pinRelease || activeView.myHand.some((card) => card.id === pin.cardId));
+  const displayHand = showPin && pin ? pin.cards : (displayView?.myHand ?? []);
+  const handLocked = isHandLocked || pin !== null;
 
-  const effectivePickedCardId = isHandLocked ? null : pickedCardId;
+  const effectivePickedCardId = handLocked ? null : pickedCardId;
+
+  useLayoutEffect(() => {
+    viewRef.current = activeView;
+    publicRef.current = publicState;
+    secretsRef.current = secrets;
+    isOnlineRef.current = isOnlinePlay;
+    localPhaseRef.current = localPhase;
+    onlineMoveRef.current = online.handleMove;
+    revealGenerationRef.current = revealGeneration;
+  }, [
+    activeView,
+    publicState,
+    secrets,
+    isOnlinePlay,
+    localPhase,
+    online.handleMove,
+    revealGeneration,
+  ]);
+
+  const acknowledgeHand = useCallback((seat: 0 | 1) => {
+    revealBusy.current = false;
+    if (isOnlineRef.current) {
+      const view = viewRef.current;
+      if (!view || view.phase === "game-over") return;
+      if (view.showcase || view.handReady?.[seat] || !view.committedReady[seat]) {
+        return;
+      }
+      if (ackFlight.current) return;
+      const sent = onlineMoveRef.current({ type: "king-and-spy-hand-ready" });
+      if (!sent) return;
+      ackFlight.current = true;
+      void Promise.resolve(sent)
+        .catch(() => {})
+        .finally(() => {
+          ackFlight.current = false;
+        });
+      return;
+    }
+    if (localPhaseRef.current !== "playing") return;
+    const pub = structuredClone(publicRef.current);
+    const sec = structuredClone(secretsRef.current);
+    if (pub.showcase || pub.handReady?.[seat] || !pub.committedReady[seat]) return;
+    const result = applyKingAndSpyHandReady(pub, sec, seat);
+    if (result.error) return;
+    publicRef.current = pub;
+    secretsRef.current = sec;
+    setPublicState(pub);
+    setSecrets(sec);
+    if (pub.phase === "game-over") setLocalPhase("game-over");
+    const other: 0 | 1 = seat === 0 ? 1 : 0;
+    if (!pub.showcase && !pub.committedReady[other]) {
+      setLocalActiveSeat(other);
+      setPickedCardId(null);
+    }
+  }, []);
+
+  const stopHandReveal = useCallback(() => {
+    revealBusy.current = false;
+    setRevealGeneration((generation) => generation + 1);
+    setPin(null);
+    setPinRelease(false);
+  }, []);
+
+  const beginHandReveal = useCallback(
+    (seat: 0 | 1, card: KingAndSpyCard, cards: KingAndSpyCard[]) => {
+      const generation = revealGenerationRef.current;
+      revealBusy.current = true;
+      setPin({ seat, cards, cardId: card.id, gen: generation });
+      setPinRelease(false);
+      window.setTimeout(() => {
+        if (!aliveRef.current || revealGenerationRef.current !== generation) return;
+        setPinRelease(true);
+        const started = Date.now();
+        const waitForDrop = () => {
+          if (!aliveRef.current || revealGenerationRef.current !== generation) return;
+          const view = viewRef.current;
+          const stillThere = Boolean(
+            view &&
+              view.mySeat === seat &&
+              view.myHand.some((held) => held.id === card.id)
+          );
+          if (stillThere && Date.now() - started < 8000) {
+            window.setTimeout(waitForDrop, 80);
+            return;
+          }
+          setPin(null);
+          setPinRelease(false);
+          const live = viewRef.current;
+          const both = Boolean(
+            live?.committedReady[0] && live?.committedReady[1]
+          );
+          window.setTimeout(() => {
+            if (!aliveRef.current || revealGenerationRef.current !== generation) {
+              return;
+            }
+            acknowledgeHand(seat);
+          }, both ? BOTH_VISIBLE_MS : 0);
+        };
+        waitForDrop();
+      }, HAND_REMOVE_MS);
+    },
+    [acknowledgeHand]
+  );
+
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOnlinePlay) return;
+    const id = window.setInterval(() => {
+      if (revealBusy.current || ackFlight.current) return;
+      const view = viewRef.current;
+      if (!view || view.phase === "game-over" || view.showcase) return;
+      const seat = view.mySeat;
+      if (view.handReady?.[seat] || !view.committedReady[seat]) return;
+      const sent = onlineMoveRef.current({ type: "king-and-spy-hand-ready" });
+      if (!sent) return;
+      ackFlight.current = true;
+      void Promise.resolve(sent)
+        .catch(() => {})
+        .finally(() => {
+          ackFlight.current = false;
+        });
+    }, 700);
+    return () => window.clearInterval(id);
+  }, [isOnlinePlay]);
 
   const seatLabels: [string, string] = useMemo(() => {
     if (isOnlinePlay) {
@@ -178,6 +341,9 @@ export function KingAndSpyGame() {
       setLocalActiveSeat(0);
       setPickedCardId(null);
       setMyCommittedCard(null);
+      setRevealGeneration((generation) => generation + 1);
+      setPin(null);
+      setPinRelease(false);
       resetField();
       setLocalPhase("playing");
     },
@@ -188,57 +354,59 @@ export function KingAndSpyGame() {
     setLocalPhase("setup");
     setPickedCardId(null);
     setMyCommittedCard(null);
+    setRevealGeneration((generation) => generation + 1);
+    setPin(null);
+    setPinRelease(false);
     resetField();
   }, [resetField]);
 
   const commitLocal = useCallback(
-    (seat: 0 | 1, card: KingAndSpyCard) => {
+    (seat: 0 | 1, card: KingAndSpyCard, handBefore: KingAndSpyCard[]) => {
       const pub = structuredClone(publicState);
       const sec = structuredClone(secrets);
-      const result = applyKingAndSpyCommit(pub, sec, seat, card.id);
+      const result = applyKingAndSpyCommit(pub, sec, seat, card.id, {
+        deferResolve: true,
+      });
       if (result.error) return;
+      publicRef.current = pub;
+      secretsRef.current = sec;
       setPublicState(pub);
       setSecrets(sec);
       setPickedCardId(null);
-      if (!pub.committedReady[0] && !pub.committedReady[1]) {
-        setMyCommittedCard(null);
-      }
-      if (pub.phase === "game-over") {
-        setLocalPhase("game-over");
-      }
-      if (!pub.committedReady[0] && !pub.committedReady[1]) {
-        if (!pub.showcase) {
-          setLocalActiveSeat(0);
-        }
-      } else if (!pub.committedReady[0]) {
-        setLocalActiveSeat(0);
-      } else if (!pub.committedReady[1]) {
-        setLocalActiveSeat(1);
-      }
+      beginHandReveal(seat, card, handBefore);
     },
-    [publicState, secrets]
+    [publicState, secrets, beginHandReveal]
   );
 
   const handleCommit = useCallback(() => {
-    if (!pickedCardId || !activeView || isHandLocked) return;
+    if (!pickedCardId || !activeView || handLocked) return;
     const card = activeView.myHand.find((c) => c.id === pickedCardId);
     if (!card) return;
+    const handBefore = activeView.myHand.map((held) => ({ ...held }));
 
     if (isOnlinePlay && online.mySeat >= 0) {
       if (activeView.committedReady[online.mySeat]) return;
+      const seat = online.mySeat === 1 ? 1 : 0;
       setMyCommittedCard(card);
+      beginHandReveal(seat, card, handBefore);
       const sent = online.handleMove({
         type: "king-and-spy-commit",
         cardId: pickedCardId,
       });
       setPickedCardId(null);
+      if (!sent) {
+        stopHandReveal();
+        setMyCommittedCard(null);
+        return;
+      }
       void Promise.resolve(sent).catch(() => {
+        stopHandReveal();
         setMyCommittedCard(null);
       });
       return;
     }
     if (localPhase !== "playing") return;
-    commitLocal(localActiveSeat, card);
+    commitLocal(localActiveSeat, card, handBefore);
   }, [
     pickedCardId,
     activeView,
@@ -247,7 +415,9 @@ export function KingAndSpyGame() {
     localPhase,
     localActiveSeat,
     commitLocal,
-    isHandLocked,
+    handLocked,
+    beginHandReveal,
+    stopHandReveal,
   ]);
 
   const isSetupScreen =
@@ -431,7 +601,12 @@ export function KingAndSpyGame() {
     action = "手札から1枚選び、確定する";
     if (isFieldAnimating || showcasePending || finalRevealPlaying) {
       action = "公開中";
-    } else if (alreadyCommitted || myCommittedCard) {
+    } else if (
+      activeView.committedReady[0] &&
+      activeView.committedReady[1]
+    ) {
+      action = "両者のカードが揃いました";
+    } else if (alreadyCommitted || myCommittedCard || pin) {
       action = "場に出しました。相手の確定を待っています";
     }
   }
@@ -522,7 +697,7 @@ export function KingAndSpyGame() {
               : `プレイヤー${localActiveSeat + 1}の手札`}
           </p>
           <div
-            className={`flex flex-wrap justify-center gap-3 ${isHandLocked ? "pointer-events-none opacity-50" : ""}`}
+            className={`flex flex-wrap justify-center gap-3 ${handLocked ? "pointer-events-none opacity-50" : ""}`}
           >
             {displayHand.map((card) => (
               <KingAndSpyPlayingCard
@@ -532,9 +707,9 @@ export function KingAndSpyGame() {
                 flipped={true}
                 size="hand"
                 selected={effectivePickedCardId === card.id}
-                disabled={alreadyCommitted || isHandLocked}
+                disabled={alreadyCommitted || handLocked}
                 onClick={
-                  alreadyCommitted || isHandLocked
+                  alreadyCommitted || handLocked
                     ? undefined
                     : () => setPickedCardId(card.id)
                 }
@@ -545,7 +720,7 @@ export function KingAndSpyGame() {
             <button
               type="button"
               disabled={
-                !effectivePickedCardId || alreadyCommitted || isHandLocked
+                !effectivePickedCardId || alreadyCommitted || handLocked
               }
               onClick={handleCommit}
               className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white disabled:opacity-40"

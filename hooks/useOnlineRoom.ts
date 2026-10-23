@@ -703,6 +703,12 @@ export function useOnlineRoom(gameSlug: string) {
       if (isOnlineSecretGame(slug)) {
         if (liveState.phase === "game-over") return;
         const view = liveState as import("@/lib/play/king-and-spy/types").KingAndSpyViewState;
+        if (move.type === "king-and-spy-hand-ready") {
+          if (view.showcase) return;
+          if (view.handReady?.[mySeat]) return;
+          if (!view.committedReady?.[mySeat]) return;
+          return sendMovePipeline(move, versionRef.current);
+        }
         if (view.committedReady?.[mySeat]) return;
         if (move.type !== "king-and-spy-commit") return;
 

@@ -28,6 +28,7 @@ import { drawDomino, dominoPlays, initialDominoes } from "./dominoes";
 import { matchWinner } from "./king-and-spy/rules";
 import {
   applyKingAndSpyCommit,
+  applyKingAndSpyHandReady,
   initialKingAndSpyPublicState,
   initialKingAndSpySecrets,
 } from "./king-and-spy/state";
@@ -1029,6 +1030,41 @@ function checkKingAndSpy() {
   applyKingAndSpyCommit(pub, sec, 1, citizenCard.id);
   assert(pub.scores[0] === 1, "king-and-spy king side +1");
   assert(matchWinner(pub.scores) === null, "king-and-spy not over at 1-0");
+
+  pub = initialKingAndSpyPublicState(0);
+  sec = initialKingAndSpySecrets(0);
+  const deferredKing = sec.hands[0].find((c) => c.kind === "king")!;
+  const deferredCitizen = sec.hands[1].find((c) => c.kind === "citizen")!;
+  applyKingAndSpyCommit(pub, sec, 0, deferredKing.id, { deferResolve: true });
+  assert(pub.handCounts[0] === 4 && pub.scores[0] === 0, "defer drops hand only");
+  assert(pub.showcase === null, "defer does not open");
+  applyKingAndSpyHandReady(pub, sec, 0);
+  assert(pub.showcase === null, "one hand-ready stays closed");
+  applyKingAndSpyCommit(pub, sec, 1, deferredCitizen.id, { deferResolve: true });
+  assert(pub.showcase === null && pub.scores[0] === 0, "both commits stay closed");
+  applyKingAndSpyHandReady(pub, sec, 1);
+  assert(pub.scores[0] === 1, "score after both hand-ready");
+  assert(pub.showcase?.tie === false, "showcase after both hand-ready");
+  assert(
+    sec.hands[0].length === 5 && sec.hands[1].length === 5,
+    "refill after decisive"
+  );
+
+  pub = initialKingAndSpyPublicState(0);
+  sec = initialKingAndSpySecrets(0);
+  const tie0 = sec.hands[0].find((c) => c.kind === "citizen")!;
+  const tie1 = sec.hands[1].find((c) => c.kind === "citizen")!;
+  applyKingAndSpyCommit(pub, sec, 0, tie0.id, { deferResolve: true });
+  applyKingAndSpyCommit(pub, sec, 1, tie1.id, { deferResolve: true });
+  applyKingAndSpyHandReady(pub, sec, 0);
+  applyKingAndSpyHandReady(pub, sec, 1);
+  assert(pub.showcase?.tie === true, "citizen tie showcase");
+  assert(pub.scores[0] === 0 && pub.scores[1] === 0, "tie leaves scores");
+  assert(
+    sec.hands[0].length === 4 && sec.hands[1].length === 4,
+    "tie keeps reduced hands"
+  );
+  assert(pub.roundNumber === 1, "tie stays in the round");
 }
 
 function checkStarTrade() {

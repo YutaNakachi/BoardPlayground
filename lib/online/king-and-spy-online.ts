@@ -1,4 +1,7 @@
-import { applyKingAndSpyCommit } from "@/lib/play/king-and-spy/state";
+import {
+  applyKingAndSpyCommit,
+  applyKingAndSpyHandReady,
+} from "@/lib/play/king-and-spy/state";
 import type {
   KingAndSpyPublicState,
   KingAndSpySecrets,
@@ -23,17 +26,17 @@ export function applyKingAndSpyOnlineMove(
   seatIndex: number,
   move: MovePayload
 ): { state: KingAndSpyPublicState; secrets: KingAndSpySecrets } | { error: string } {
-  if (move.type !== "king-and-spy-commit") {
-    return { error: "Invalid move type" };
-  }
   const pub = structuredClone(publicState);
   const sec = structuredClone(secrets);
-  const result = applyKingAndSpyCommit(
-    pub,
-    sec,
-    seatIndex as 0 | 1,
-    move.cardId
-  );
+  const seat = seatIndex as 0 | 1;
+  const result =
+    move.type === "king-and-spy-hand-ready"
+      ? applyKingAndSpyHandReady(pub, sec, seat)
+      : move.type === "king-and-spy-commit"
+        ? applyKingAndSpyCommit(pub, sec, seat, move.cardId, {
+            deferResolve: true,
+          })
+        : { error: "Invalid move type" };
   if (result.error) {
     return { error: result.error };
   }

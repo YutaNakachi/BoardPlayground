@@ -30,6 +30,11 @@ export type KingAndSpyPublicState = {
   decisiveCount: number;
   handCounts: [number, number];
   committedReady: [boolean, boolean];
+  /**
+   * 場に出したあと、手札から消した表示まで終わった席。
+   * 両者 true になるまで公開・得点・補充はしない。古い対局データには無い。
+   */
+  handReady?: [boolean, boolean];
   discards: KingAndSpyCard[];
   lastReveal: null | {
     cards: [KingAndSpyCard, KingAndSpyCard];

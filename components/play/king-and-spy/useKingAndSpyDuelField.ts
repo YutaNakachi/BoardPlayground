@@ -14,8 +14,8 @@ export type DuelSlot = {
 
 export type DuelFieldState = [DuelSlot, DuelSlot];
 
-/** 両カードが揃ってからオープンまでの間 */
-const FACE_DOWN_MS = 800;
+/** 公開が決まったあと、裏のまま一瞬見せてからめくる */
+const FACE_DOWN_MS = 350;
 /** オープンして結果を見せてから場を空にするまで */
 const OPEN_HOLD_MS = 2400;
 

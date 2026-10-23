@@ -243,7 +243,8 @@ export type MovePayload =
   | { type: "dejarik-attack"; pieceId: number; to: number }
   | { type: "dejarik-scout-end" }
   | { type: "mini-shogi"; move: MiniShogiMove }
-  | { type: "king-and-spy-commit"; cardId: string };
+  | { type: "king-and-spy-commit"; cardId: string }
+  | { type: "king-and-spy-hand-ready" };
 
 function mancalaWinner(pits: number[]): Player | "draw" {
   const p0 = pits[6];
