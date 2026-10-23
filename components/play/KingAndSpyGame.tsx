@@ -15,7 +15,7 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineKingRole } from "@/hooks/useOnlineKingRole";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
-import { isKingAndSpyViewState } from "@/lib/online/project-state";
+import { coerceKingAndSpyView } from "@/lib/online/project-state";
 import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import {
   formatWinnersWithNames,
@@ -100,10 +100,9 @@ export function KingAndSpyGame() {
 
   const onlineView: KingAndSpyViewState | null = useMemo(() => {
     if (!isOnlinePlay || !online.gameState) return null;
-    const s = online.gameState;
-    if (!isKingAndSpyViewState(s)) return null;
-    return s;
-  }, [isOnlinePlay, online.gameState]);
+    const seat = online.mySeat === 1 ? 1 : 0;
+    return coerceKingAndSpyView(online.gameState, seat);
+  }, [isOnlinePlay, online.gameState, online.mySeat]);
 
   const activeView: KingAndSpyViewState | null = useMemo(() => {
     if (isOnlinePlay) return onlineView;
@@ -266,11 +265,6 @@ export function KingAndSpyGame() {
     (mode === "online" && online.phase === "idle");
   usePlaySetupNavigation(isSetupScreen, resetLocal);
 
-  useEffect(() => {
-    if (!isOnlinePlay || onlineView || !online.room) return;
-    void online.refreshRoom(online.room.id);
-  }, [isOnlinePlay, onlineView, online.room, online.refreshRoom]);
-
   if (online.completingPendingJoin) {
     return <PendingJoinConnecting />;
   }
@@ -413,16 +407,6 @@ export function KingAndSpyGame() {
   }
 
   if (!activeView) {
-    if (isOnlinePlay) {
-      return (
-        <div className="mx-auto w-full max-w-lg space-y-3 py-12 text-center text-slate-300">
-          <p className="text-sm">ゲーム状態を読み込み中…</p>
-          {online.error && (
-            <p className="text-sm text-red-400">{online.error}</p>
-          )}
-        </div>
-      );
-    }
     return null;
   }
 
@@ -464,6 +448,31 @@ export function KingAndSpyGame() {
     resetLocal
   );
 
+  const rematchSidePicker =
+    isOnlinePlay && online.isHost ? (
+      <div className="space-y-2">
+        <p className="text-center text-xs text-slate-400">
+          再戦時のホストの側
+        </p>
+        <div className="flex justify-center gap-2">
+          <button
+            type="button"
+            className={`px-4 py-2 ${setupPillClass(hostStartsAsKing)}`}
+            onClick={() => onHostStartsAsKingChange(true)}
+          >
+            キング側
+          </button>
+          <button
+            type="button"
+            className={`px-4 py-2 ${setupPillClass(!hostStartsAsKing)}`}
+            onClick={() => onHostStartsAsKingChange(false)}
+          >
+            スパイ側
+          </button>
+        </div>
+      </div>
+    ) : undefined;
+
   return (
     <div className="mx-auto w-full max-w-lg space-y-4">
       <TurnBanner
@@ -485,6 +494,7 @@ export function KingAndSpyGame() {
           winners={[]}
           winnersLabel="同点のため引き分け"
           {...replayProps}
+          replayExtra={rematchSidePicker}
         />
       )}
 
@@ -497,6 +507,7 @@ export function KingAndSpyGame() {
               : `プレイヤー${winnerSeats[0] + 1}`
           }
           {...replayProps}
+          replayExtra={rematchSidePicker}
         />
       )}
 

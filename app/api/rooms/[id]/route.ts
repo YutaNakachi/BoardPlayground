@@ -63,7 +63,7 @@ export async function GET(request: Request, { params }: Params) {
 
   if (
     stateRow &&
-    room.status === "playing" &&
+    (room.status === "playing" || room.status === "finished") &&
     isOnlineSecretGame(room.game_slug) &&
     playerId
   ) {

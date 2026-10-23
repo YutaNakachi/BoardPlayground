@@ -18,9 +18,6 @@ export function projectGameStateForSeat(
   }
   if (slug === "king-and-spy") {
     const secrets = secretsPayload as KingAndSpySecrets | null;
-    if (!secrets) {
-      return state;
-    }
     return projectKingAndSpyForSeat(
       state as KingAndSpyPublicState,
       secrets,
@@ -39,5 +36,23 @@ export function isKingAndSpyViewState(
     "myHand" in state &&
     Array.isArray((state as KingAndSpyViewState).myHand) &&
     "kingRoleSeat" in state
+  );
+}
+
+/** 手札投影が無い公開状態でも、席付きの表示用状態にする（終局後に secrets を消したとき） */
+export function coerceKingAndSpyView(
+  state: GameState,
+  seatIndex: number
+): KingAndSpyViewState | null {
+  if (typeof state !== "object" || state === null) return null;
+  if (!("kingRoleSeat" in state) || !("scores" in state)) return null;
+  const seat: 0 | 1 = seatIndex === 1 ? 1 : 0;
+  if (isKingAndSpyViewState(state)) {
+    return state;
+  }
+  return projectKingAndSpyForSeat(
+    state as KingAndSpyPublicState,
+    null,
+    seat
   );
 }
