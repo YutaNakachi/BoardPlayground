@@ -37,4 +37,11 @@ export const SITE_ANNOUNCEMENTS: SiteAnnouncement[] = [
     href: "/play/dejarik",
     startsAt: "2026-10-15",
   },
+  {
+    id: "new-game-overheat-chicken",
+    body:
+      "【New】『オーバーヒート・チキンレース』リリース！『ジョジョの奇妙な冒険』第3部の表面張力ギャンブルをモチーフにした心理戦",
+    href: "/play/overheat-chicken",
+    startsAt: "2026-10-23",
+  },
 ];
