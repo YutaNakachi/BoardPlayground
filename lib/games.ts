@@ -412,9 +412,9 @@ const games: GameMeta[] = [
   },
   {
     slug: "dejarik",
-    title: "デジャリック",
+    title: "ホロチェス",
     description:
-      "STAR WARSに登場するデジャリック（ホロチェス）を、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。",
+      "STAR WARSに登場するデジャリックを、ボドパッ！独自のルールで再現した2人用ゲーム。円形のホロ盤で4タイプのクリーチャーを動かし、相手をすべて除去します。",
     origin: "fiction",
     players: "2",
     playersMin: 2,
@@ -457,6 +457,29 @@ const games: GameMeta[] = [
     status: "playable",
     listed: true,
     listedAt: "2026-10-21",
+  },
+  {
+    slug: "overheat-chicken",
+    title: "オーバーヒート・チキンレース",
+    description:
+      "漫画『ジョジョの奇妙な冒険』第3部の杯の勝負をモチーフにした2人用ゲーム。縁まで満たした杯にチップを入れ、溢れさせた方が負け。上限は終わるまで分かりません。",
+    origin: "fiction",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 5,
+    complexity: "easy",
+    cpu: false,
+    team: false,
+    tags: ["心理戦", "運要素"],
+    rulesSummary: [
+      "縁まで満たした杯に、小・中・大のチップを1枚ずつ入れる。1手番は最大3枚。1枚以上入れたら「手番を終える」で交代。",
+      "溢れない上限は対局の開始時に決まり、両者に見えない。見た目だけではどこで溢れるか分からない。",
+      "上限を超えたチップを入れたプレイヤーの負け。先手は開始前に選ぶ。同じ画面で交代。",
+    ],
+    status: "playable",
+    listed: true,
+    listedAt: "2026-10-22",
   },
   {
     slug: "dominoes",
