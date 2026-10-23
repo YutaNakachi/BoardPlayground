@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
 import { KingAndSpyMatchPanel } from "@/components/play/king-and-spy/KingAndSpyMatchPanel";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
-import { useKingAndSpyDuelField } from "@/components/play/king-and-spy/useKingAndSpyDuelField";
+import {
+  kingAndSpyResolvedTrickToken,
+  useKingAndSpyDuelField,
+} from "@/components/play/king-and-spy/useKingAndSpyDuelField";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
@@ -137,8 +140,16 @@ export function KingAndSpyGame() {
     ? (online.mySeat as 0 | 1)
     : localActiveSeat;
 
+  const resolvedTrickToken = useMemo(
+    () => kingAndSpyResolvedTrickToken(duelPublic),
+    [duelPublic]
+  );
+
   const pendingMyCommitOnline =
-    isOnlinePlay && online.movePending && myCommittedCard !== null;
+    isOnlinePlay &&
+    online.movePending &&
+    myCommittedCard !== null &&
+    resolvedTrickToken === null;
 
   const committedCardOnField =
     myCommittedCard &&

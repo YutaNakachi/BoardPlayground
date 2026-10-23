@@ -41,7 +41,8 @@ function slotOpen(card: KingAndSpyCard): DuelSlot {
   return { card, faceDownOnField: false, revealed: true };
 }
 
-function resolveTrickPlaybackToken(
+/** 両者確定が解決済み（オープン演出待ち）のトリック。committedReady が両方 false のときのみ */
+export function kingAndSpyResolvedTrickToken(
   publicState: KingAndSpyPublicState
 ): string | null {
   if (publicState.committedReady[0] || publicState.committedReady[1]) {
@@ -66,7 +67,9 @@ function cardsForTrickToken(
   token: string
 ): [KingAndSpyCard, KingAndSpyCard] | null {
   if (token.startsWith("decisive:")) {
-    if (!publicState.lastReveal) return null;
+    if (!publicState.lastReveal) {
+      return null;
+    }
     return publicState.lastReveal.cards;
   }
   if (token.startsWith("tie:")) {
@@ -114,18 +117,30 @@ export function useKingAndSpyDuelField(
   const revealTokenRef = useRef<string | null>(null);
   /** マウント時点で既に終わっているトリックは再生しない */
   const [historicalSkipToken, setHistoricalSkipToken] = useState(
-    () => resolveTrickPlaybackToken(publicState)
+    () => kingAndSpyResolvedTrickToken(publicState)
   );
+
+  const resolvedTrickToken = useMemo(
+    () => kingAndSpyResolvedTrickToken(publicState),
+    [publicState]
+  );
+
+  /** サーバーが既にトリック解決済みなら送信中の裏表示を重ねない（2人目確定の取りこぼし防止） */
+  const pendingOverlayActive =
+    pendingMyCommit && resolvedTrickToken === null;
 
   const displayReady = useMemo((): [boolean, boolean] => {
     const r = [...publicState.committedReady] as [boolean, boolean];
-    if (pendingMyCommit) {
+    if (pendingOverlayActive) {
       r[mySeat] = true;
     }
     return r;
-  }, [publicState.committedReady, pendingMyCommit, mySeat]);
+  }, [publicState.committedReady, pendingOverlayActive, mySeat]);
 
   const waitingField = useMemo((): DuelFieldState | null => {
+    if (resolvedTrickToken !== null && !pendingOverlayActive) {
+      return null;
+    }
     if (!displayReady[0] && !displayReady[1]) return null;
     return [
       displayReady[0]
@@ -135,12 +150,9 @@ export function useKingAndSpyDuelField(
         ? slotBack(mySeat === 1 ? myCommittedCard : null)
         : emptySlot(),
     ];
-  }, [displayReady, mySeat, myCommittedCard]);
+  }, [displayReady, mySeat, myCommittedCard, resolvedTrickToken, pendingOverlayActive]);
 
-  const trickPlaybackToken = useMemo(
-    () => resolveTrickPlaybackToken(publicState),
-    [publicState]
-  );
+  const trickPlaybackToken = resolvedTrickToken;
 
   const decisivePlaybackPending =
     trickPlaybackToken !== null &&
@@ -153,7 +165,7 @@ export function useKingAndSpyDuelField(
       return;
     }
 
-    const token = resolveTrickPlaybackToken(publicState);
+    const token = kingAndSpyResolvedTrickToken(publicState);
     if (!token) {
       return;
     }
