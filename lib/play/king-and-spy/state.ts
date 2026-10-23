@@ -54,6 +54,7 @@ export function initialKingAndSpyPublicState(
     committedReady: [false, false],
     discards: [],
     lastReveal: null,
+    showcase: null,
     winner: null,
   };
 }
@@ -72,6 +73,15 @@ function clonePublic(publicState: KingAndSpyPublicState): KingAndSpyPublicState 
     committedReady: [...publicState.committedReady] as [boolean, boolean],
     discards: [...publicState.discards],
     roundHistory: [...publicState.roundHistory],
+    showcase: publicState.showcase
+      ? {
+          cards: [
+            publicState.showcase.cards[0],
+            publicState.showcase.cards[1],
+          ],
+          tie: publicState.showcase.tie,
+        }
+      : null,
   };
 }
 
@@ -165,6 +175,10 @@ function resolveBothCommitted(
   ];
 
   const outcome = winningFaction(c0.kind, c1.kind);
+  publicState.showcase = {
+    cards: [c0, c1],
+    tie: outcome === "tie",
+  };
   if (outcome === "tie") {
     publicState.lastReveal = null;
     return;
@@ -187,6 +201,7 @@ export function applyKingAndSpyCommit(
     !publicState.committedReady[1]
   ) {
     publicState.lastReveal = null;
+    publicState.showcase = null;
   }
   if (publicState.committedReady[seatIndex]) {
     return { error: "Already committed" };

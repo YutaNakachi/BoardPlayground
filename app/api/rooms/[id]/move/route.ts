@@ -65,7 +65,13 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Game state not found" }, { status: 404 });
   }
 
-  if (expectedVersion != null && stateRow.version !== expectedVersion) {
+  const secretGame = isOnlineSecretGame(room.game_slug);
+
+  if (
+    !secretGame &&
+    expectedVersion != null &&
+    stateRow.version !== expectedVersion
+  ) {
     return NextResponse.json({ error: "State conflict", version: stateRow.version }, { status: 409 });
   }
 
@@ -77,7 +83,7 @@ export async function POST(request: Request, { params }: Params) {
   let currentPlayer: number | null;
   let newStatus: "playing" | "finished";
 
-  if (isOnlineSecretGame(room.game_slug)) {
+  if (secretGame) {
     const secretResult = await applyOnlineMoveWithSecrets(
       db,
       id,
@@ -88,13 +94,19 @@ export async function POST(request: Request, { params }: Params) {
       move
     );
     if ("error" in secretResult) {
-      return NextResponse.json({ error: secretResult.error }, { status: 400 });
+      const status = secretResult.error === "State conflict" ? 409 : 400;
+      return NextResponse.json({ error: secretResult.error }, { status });
     }
-    publicState = secretResult.publicState;
-    responseState = secretResult.projectedState;
-    newVersion = secretResult.newVersion;
-    currentPlayer = secretResult.currentPlayer;
-    newStatus = secretResult.finished ? "finished" : "playing";
+    if (secretResult.finished) {
+      await db.from("rooms").update({ status: "finished" }).eq("id", id);
+    }
+    return NextResponse.json({
+      gameState: {
+        state: secretResult.projectedState,
+        version: secretResult.newVersion,
+        currentPlayer: secretResult.currentPlayer,
+      },
+    });
   } else {
     const result = applyMove(
       room.game_slug,

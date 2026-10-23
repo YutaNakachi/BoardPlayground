@@ -4,10 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { KingAndSpyDuelField } from "@/components/play/king-and-spy/KingAndSpyDuelField";
 import { KingAndSpyMatchPanel } from "@/components/play/king-and-spy/KingAndSpyMatchPanel";
 import { KingAndSpyPlayingCard } from "@/components/play/king-and-spy/KingAndSpyPlayingCard";
-import {
-  kingAndSpyResolvedTrickToken,
-  useKingAndSpyDuelField,
-} from "@/components/play/king-and-spy/useKingAndSpyDuelField";
+import { useKingAndSpyDuelField } from "@/components/play/king-and-spy/useKingAndSpyDuelField";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { usePlaySetupNavigation } from "@/components/play/usePlaySetupNavigation";
 import { OnlineSetupPanel } from "@/components/play/shared/OnlineSetupPanel";
@@ -140,28 +137,16 @@ export function KingAndSpyGame() {
     ? (online.mySeat as 0 | 1)
     : localActiveSeat;
 
-  const resolvedTrickToken = useMemo(
-    () => kingAndSpyResolvedTrickToken(duelPublic),
-    [duelPublic]
-  );
+  const clearLocalCard = useCallback(() => {
+    setMyCommittedCard(null);
+  }, []);
 
-  const pendingMyCommitOnline =
-    isOnlinePlay &&
-    online.movePending &&
-    myCommittedCard !== null &&
-    resolvedTrickToken === null;
-
-  const committedCardOnField =
-    myCommittedCard &&
-    (activeView?.committedReady[mySeat] || pendingMyCommitOnline)
-      ? myCommittedCard
-      : null;
-
-  const { field, resetField, isHandLocked } = useKingAndSpyDuelField(
+  const { field, resetField, isHandLocked, isFieldAnimating } =
+    useKingAndSpyDuelField(
     duelPublic,
     mySeat,
-    committedCardOnField,
-    pendingMyCommitOnline
+    myCommittedCard,
+    clearLocalCard
   );
 
   const myHandLive = activeView?.myHand ?? [];
@@ -247,23 +232,21 @@ export function KingAndSpyGame() {
     const card = activeView.myHand.find((c) => c.id === pickedCardId);
     if (!card) return;
 
-    setMyCommittedCard(card);
-
     if (isOnlinePlay && online.mySeat >= 0) {
-      if (
-        activeView.committedReady[online.mySeat] ||
-        online.movePending
-      ) {
-        return;
-      }
-      void online.handleMove({
+      if (activeView.committedReady[online.mySeat]) return;
+      setMyCommittedCard(card);
+      const sent = online.handleMove({
         type: "king-and-spy-commit",
         cardId: pickedCardId,
       });
       setPickedCardId(null);
+      void Promise.resolve(sent).catch(() => {
+        setMyCommittedCard(null);
+      });
       return;
     }
     if (localPhase !== "playing") return;
+    setMyCommittedCard(card);
     commitLocal(localActiveSeat, card);
   }, [
     pickedCardId,
@@ -449,9 +432,6 @@ export function KingAndSpyGame() {
     activeView.phase === "game-over";
 
   const alreadyCommitted = activeView.committedReady[mySeat];
-  const opponentCommitted = activeView.committedReady[mySeat === 0 ? 1 : 0];
-  const bothCommitted =
-    activeView.committedReady[0] && activeView.committedReady[1];
 
   const pub = toPublicState(activeView);
   const scores = pub.scores;
@@ -470,12 +450,10 @@ export function KingAndSpyGame() {
   } else {
     stats = `あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
     action = "手札から1枚選び、確定する";
-    if (isHandLocked && !bothCommitted) {
-      action = "公開中… 次の手札は表示が終わってから";
-    } else if (alreadyCommitted) {
-      action = opponentCommitted
-        ? "オープン…"
-        : "場に裏向きで出しました。相手の確定を待っています";
+    if (isFieldAnimating) {
+      action = "公開中";
+    } else if (alreadyCommitted || myCommittedCard) {
+      action = "場に出しました。相手の確定を待っています";
     }
   }
 
@@ -522,15 +500,13 @@ export function KingAndSpyGame() {
         />
       )}
 
-      {!isGameOver && (
-        <KingAndSpyDuelField
-          field={field}
-          labels={seatLabels}
-          mySeat={mySeat}
-          lastReveal={activeView.lastReveal}
-          roundHistory={pub.roundHistory}
-        />
-      )}
+      <KingAndSpyDuelField
+        field={field}
+        labels={seatLabels}
+        mySeat={mySeat}
+        lastReveal={activeView.lastReveal}
+        roundHistory={pub.roundHistory}
+      />
 
       {!isGameOver && (
         <div className="space-y-3">

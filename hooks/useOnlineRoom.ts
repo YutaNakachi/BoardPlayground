@@ -85,6 +85,13 @@ export function useOnlineRoom(gameSlug: string) {
         roomRef.current &&
         isOnlineSecretGame(roomRef.current.gameSlug)
       ) {
+        const channel = channelRef.current;
+        if (!channel) return;
+        void channel.send({
+          type: "broadcast",
+          event: "room_state",
+          payload: { version: remoteVersion, secretTick: true },
+        });
         return;
       }
       const channel = channelRef.current;
@@ -127,18 +134,14 @@ export function useOnlineRoom(gameSlug: string) {
       const remoteGameOver = state.phase === "game-over";
       const secretSlug = roomRef.current?.gameSlug;
       if (pendingMoveRef.current) {
-        if (!remoteGameOver) {
-          if (
-            secretSlug &&
-            isOnlineSecretGame(secretSlug) &&
-            remoteVersion > versionRef.current
-          ) {
-            pendingMoveRef.current = false;
-            setMovePending(false);
-          } else {
-            return;
-          }
-        } else {
+        const secretInFlight =
+          !!secretSlug &&
+          isOnlineSecretGame(secretSlug) &&
+          remoteVersion > versionRef.current;
+        if (!remoteGameOver && !secretInFlight) {
+          return;
+        }
+        if (remoteGameOver) {
           pendingMoveRef.current = false;
           setMovePending(false);
         }
@@ -215,9 +218,10 @@ export function useOnlineRoom(gameSlug: string) {
   const startPoll = useCallback(
     (roomId: string) => {
       if (pollRef.current) return;
+      const intervalMs = isOnlineSecretGame(gameSlug) ? 400 : 1000;
       pollRef.current = setInterval(() => {
         void refreshRoom(roomId);
-      }, 1000);
+      }, intervalMs);
     },
     [refreshRoom]
   );
@@ -329,6 +333,18 @@ export function useOnlineRoom(gameSlug: string) {
       }
     };
   }, [phase, room?.id, startPoll]);
+
+  useEffect(() => {
+    if (!room?.id || !isOnlineSecretGame(gameSlug)) return;
+    if (phase !== "playing" && phase !== "finished") return;
+    startPoll(room.id);
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [phase, room?.id, gameSlug, startPoll]);
 
   const setupRoom = useCallback(
     (roomId: string, playerId: string, seatIndex: number, roomInfo: RoomInfo) => {
@@ -594,12 +610,12 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const sendMovePipelineRef = useRef<
-    (move: MovePayload, expectedVersion: number) => void
-  >(() => {});
+    (move: MovePayload, expectedVersion: number) => Promise<void>
+  >(async () => {});
 
   useEffect(() => {
     sendMovePipelineRef.current = (move: MovePayload, expectedVersion: number) => {
-      if (!room) return;
+      if (!room) return Promise.resolve();
 
       pendingMoveRef.current = true;
       setMovePending(true);
@@ -609,12 +625,17 @@ export function useOnlineRoom(gameSlug: string) {
       const rollbackCurrentPlayer = currentPlayer;
       const rollbackPhase = phase;
 
-      void sendRoomMove(room.id, myPlayerId, move, expectedVersion)
+      return sendRoomMove(room.id, myPlayerId, move, expectedVersion)
         .then((serverResult) => {
           if (moveQueueRef.current.length > 0) {
             // Peers already received newer optimistic broadcasts; stale server rows rewind the board.
             const nextMove = moveQueueRef.current.shift()!;
-            sendMovePipelineRef.current(nextMove, serverResult.version);
+            return sendMovePipelineRef.current(nextMove, serverResult.version);
+          }
+
+          if (serverResult.version < versionRef.current) {
+            pendingMoveRef.current = false;
+            setMovePending(false);
             return;
           }
 
@@ -631,7 +652,10 @@ export function useOnlineRoom(gameSlug: string) {
         })
         .catch((e) => {
           moveQueueRef.current = [];
-          if (rollbackState) {
+          const secretInFlight =
+            !!room && isOnlineSecretGame(room.gameSlug);
+          const newerLanded = versionRef.current > rollbackVersion;
+          if (rollbackState && !(secretInFlight && newerLanded)) {
             setGameState(rollbackState);
             setVersion(rollbackVersion);
             versionRef.current = rollbackVersion;
@@ -647,6 +671,9 @@ export function useOnlineRoom(gameSlug: string) {
           void refreshRoom(room.id);
           pendingMoveRef.current = false;
           setMovePending(false);
+          if (isOnlineSecretGame(room.gameSlug)) {
+            throw e;
+          }
         });
     };
   }, [
@@ -661,7 +688,7 @@ export function useOnlineRoom(gameSlug: string) {
 
   const sendMovePipeline = useCallback(
     (move: MovePayload, expectedVersion: number) => {
-      sendMovePipelineRef.current(move, expectedVersion);
+      return sendMovePipelineRef.current(move, expectedVersion);
     },
     []
   );
@@ -679,8 +706,7 @@ export function useOnlineRoom(gameSlug: string) {
         if (view.committedReady?.[mySeat]) return;
         if (move.type !== "king-and-spy-commit") return;
 
-        sendMovePipeline(move, versionRef.current);
-        return;
+        return sendMovePipeline(move, versionRef.current);
       }
 
       const dejarikActorSeat =

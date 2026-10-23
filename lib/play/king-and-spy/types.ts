@@ -37,6 +37,14 @@ export type KingAndSpyPublicState = {
     pointsAwarded: number;
     recipientSeat: 0 | 1;
   };
+  /**
+   * 両者確定直後の公開トリック。次のトリックの最初の確定まで残す。
+   * クライアントはこの組だけを見て、裏→オープン→リセットを再生する。
+   */
+  showcase: null | {
+    cards: [KingAndSpyCard, KingAndSpyCard];
+    tie: boolean;
+  };
   winner: 0 | 1 | null;
   /** 上限ラウンド到達などで引き分け終了 */
   draw?: boolean;
