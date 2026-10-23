@@ -82,12 +82,15 @@ function wallX(y: number, side: -1 | 1): number {
 }
 
 /** 足の外側、左。ガラスの輪郭のすぐ外。右は中心で折り返す。 */
+/** 足の外縁のすぐ外側。下端は底のカーブに沿って内側へ寄る。穴には入れない。 */
 const FOOT_LEFT: readonly (readonly [number, number])[] = [
-  [844, 202],
-  [890, 204],
-  [930, 208],
-  [958, 218],
-  [976, 246],
+  [900, 214],
+  [928, 216],
+  [948, 222],
+  [960, 232],
+  [968, 250],
+  [974, 272],
+  [980, 300],
 ];
 
 function sideX(x: number, side: -1 | 1): number {
@@ -111,10 +114,31 @@ function chain(points: readonly (readonly [number, number])[], move: boolean): s
   return d;
 }
 
-/** 中心線の両脇に幅を取り、角のない帯にする。 */
-function smoothRibbon(samples: readonly (readonly [number, number, number])[]): { body: string; shine: string } {
-  const upper: [number, number][] = [];
-  const lower: [number, number][] = [];
+function onDome(x: number, rise: number): number {
+  const nx = (x - DOME_CX) / DOME_RX;
+  const inside = 1 - nx * nx;
+  if (inside <= 0) return RIM_Y;
+  return RIM_Y - rise * Math.sqrt(inside);
+}
+
+function band(
+  a: readonly (readonly [number, number])[],
+  b: readonly (readonly [number, number])[],
+): string {
+  return `${chain(a, true)} ${chain([...b].reverse(), false)} Z`;
+}
+
+type LiquidRibbon = { body: string; glint: string };
+
+/** 中心線から帯を作り、光の側にだけ細い反射を足す。 */
+function liquidRibbon(
+  samples: readonly (readonly [number, number, number, number])[],
+  side: -1 | 1,
+): LiquidRibbon {
+  const bodyA: [number, number][] = [];
+  const bodyB: [number, number][] = [];
+  const glintA: [number, number][] = [];
+  const glintB: [number, number][] = [];
   for (let i = 0; i < samples.length; i += 1) {
     const prev = samples[Math.max(0, i - 1)];
     const next = samples[Math.min(samples.length - 1, i + 1)];
@@ -123,39 +147,62 @@ function smoothRibbon(samples: readonly (readonly [number, number, number])[]): 
     const len = Math.hypot(tx, ty) || 1;
     tx /= len;
     ty /= len;
-    const w = samples[i][2];
-    upper.push([samples[i][0] - ty * w, samples[i][1] + tx * w]);
-    lower.push([samples[i][0] + ty * w, samples[i][1] - tx * w]);
+    let nx = -ty;
+    let ny = tx;
+    const [x, y, w, gw] = samples[i];
+    bodyA.push([x + nx * w, y + ny * w]);
+    bodyB.push([x - nx * w, y - ny * w]);
+    if (nx * side * 0.4 + ny * -1 < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    const shift = Math.min(w * 0.34, Math.max(0.2, w - gw - 0.3));
+    glintA.push([x + nx * (shift + gw), y + ny * (shift + gw)]);
+    glintB.push([x + nx * Math.max(0, shift - gw), y + ny * Math.max(0, shift - gw)]);
   }
-  const shine = chain(samples.map(([x, y]) => [x, y]), true);
-  const body = `${chain(upper, true)} ${chain([...lower].reverse(), false)} Z`;
-  return { body, shine };
+  return { body: band(bodyA, bodyB), glint: band(glintA, glintB) };
 }
 
-/** 表面張力の上から縁をなでて、片側の水たまりまで一続きで下りる。 */
-function dripRibbon(side: -1 | 1, rise: number): { body: string; shine: string } {
-  const along = (y: number, out: number) => wallX(y, side) + side * out;
-  const samples: (readonly [number, number, number])[] = [
-    [432 + side * 86, RIM_Y - rise * 0.72, 11],
-    [432 + side * 148, RIM_Y - rise * 0.42, 12],
-    [along(348, -4), 350, 11],
-    [along(358, 12), 364, 11],
-    [along(480, 10), 500, 10],
-    [along(700, 9), 720, 10],
-    [along(860, 8), 880, 10],
-    [sideX(208, side), 956, 12],
+/** 表面張力から縁を巻いて下り、水たまりの上で広がって溶ける。座標は左溢れで書き、反対側は折り返す。 */
+function dripLiquid(side: -1 | 1, rise: number): LiquidRibbon {
+  const left: (readonly [number, number, number, number])[] = [];
+  const add = (x: number, y: number, w: number, g: number) => left.push([x, y, w, g]);
+  for (const [dx, w] of [
+    [92, 6.2],
+    [128, 6.2],
+    [160, 6],
+    [188, 5.8],
+  ] as const) {
+    const x = DOME_CX - dx;
+    add(x, onDome(x, rise), w, 0.16);
+  }
+  const lip: readonly (readonly [number, number, number, number])[] = [
+    [214, 350, 6, 0.28],
+    [198, 353, 6.6, 0.5],
+    [186, 357, 7.4, 0.75],
+    [176, 363, 8, 0.6],
+    [170, 371, 7.6, 0.28],
+    [168, 382, 7.2, 0.14],
   ];
-  return smoothRibbon(samples);
+  for (const point of lip) add(...point);
+  for (const y of [410, 500, 610, 730, 840]) {
+    add(wallX(y, -1) + 2, y, 7, 0.08);
+  }
+  add(wallX(900, -1) + 1, 900, 7.4, 0.08);
+  add(200, 948, 10, 0.08);
+  add(182, 976, 15, 0.06);
+  add(160, 994, 18, 0.04);
+  return liquidRibbon(
+    left.map(([x, y, w, g]) => [sideX(x, side), y, w, g]),
+    side,
+  );
 }
 
 /** こぼれた側の足もとに沿い、底の裏には入らない。 */
 function spillPool(side: -1 | 1): string {
   const hug = FOOT_LEFT.map(([y, x]) => `${sideX(x, side)} ${y}`).join(" L ");
-  return `M ${hug} C ${sideX(200, side)} 1008, ${sideX(108, side)} 1014, ${sideX(86, side)} 956 C ${sideX(74, side)} 890, ${sideX(150, side)} 848, ${sideX(202, side)} 844 Z`;
-}
-
-function spillSheen(side: -1 | 1): string {
-  return `M ${sideX(220, side)} 990 Q ${sideX(130, side)} 1008 ${sideX(96, side)} 940`;
+  const p = (x: number, y: number) => `${sideX(x, side)} ${y}`;
+  return `M ${hug} C ${p(250, 1006)} ${p(150, 1024)} ${p(78, 992)} C ${p(68, 968)} ${p(140, 940)} ${p(214, 900)} Z`;
 }
 
 type Props = {
@@ -190,16 +237,12 @@ export function OverheatGlass({ state, label }: Props) {
           0%, 100% { transform: translateX(var(--wobble-px)); }
           50% { transform: translateX(calc(var(--wobble-px) * -1)); }
         }
-        .overheat-drip {
-          stroke-dasharray: 100;
-          stroke-dashoffset: 0;
-        }
         .overheat-spill .overheat-drip {
           animation: overheat-drip 0.7s ease-out both;
         }
         @keyframes overheat-drip {
-          from { stroke-dashoffset: 100; opacity: 0.2; }
-          to { stroke-dashoffset: 0; opacity: 1; }
+          from { opacity: 0.15; }
+          to { opacity: 1; }
         }
         .overheat-puddle {
           transform-box: fill-box;
@@ -370,13 +413,13 @@ export function OverheatGlass({ state, label }: Props) {
               <linearGradient
                 id={`${waterId}-pool`}
                 x1="0"
-                y1="910"
+                y1="880"
                 x2="0"
-                y2="1010"
+                y2="1020"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop offset="0%" stopColor="#b26e22" />
-                <stop offset="80%" stopColor="#c47a28" />
+                <stop offset="0%" stopColor="#a86420" />
+                <stop offset="40%" stopColor="#c47a28" />
                 <stop offset="100%" stopColor="#d4923a" />
               </linearGradient>
             </defs>
@@ -399,75 +442,64 @@ export function OverheatGlass({ state, label }: Props) {
               <linearGradient
                 id={`${waterId}-drip`}
                 x1="0"
-                y1="344"
+                y1="336"
                 x2="0"
-                y2="720"
+                y2="760"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop offset="0%" stopColor="#f0d090" />
-                <stop offset="14%" stopColor="#d4923a" />
-                <stop offset="42%" stopColor="#c47a28" />
+                <stop offset="0%" stopColor="#e8b15a" />
+                <stop offset="12%" stopColor="#d4923a" />
+                <stop offset="28%" stopColor="#c47a28" />
                 <stop offset="100%" stopColor="#c47a28" />
               </linearGradient>
+              <linearGradient
+                id={`${waterId}-glint`}
+                x1="0"
+                y1="340"
+                x2="0"
+                y2="980"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop offset="0%" stopColor="#fff6e0" stopOpacity="0" />
+                <stop offset="3%" stopColor="#fff6e0" stopOpacity="0.55" />
+                <stop offset="8%" stopColor="#ffe6b4" stopOpacity="0.08" />
+                <stop offset="100%" stopColor="#fff6e0" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient
+                id={`${waterId}-melt`}
+                x1={sideX(214, spillSide)}
+                y1="940"
+                x2={sideX(155, spillSide)}
+                y2="1002"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop offset="0%" stopColor="#fff" />
+                <stop offset="35%" stopColor="#fff" />
+                <stop offset="100%" stopColor="#000" />
+              </linearGradient>
+              <mask
+                id={`${waterId}-meltmask`}
+                maskUnits="userSpaceOnUse"
+                x="0"
+                y="0"
+                width="864"
+                height="1152"
+              >
+                <rect x="0" y="0" width="864" height="1152" fill={`url(#${waterId}-melt)`} />
+              </mask>
+              <filter id={`${waterId}-glintblur`} x="-50%" y="-20%" width="200%" height="140%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur stdDeviation="1.1" />
+              </filter>
             </defs>
             {(() => {
-              const drip = dripRibbon(spillSide, ry);
+              const drip = dripLiquid(spillSide, ry);
               return (
-                <g>
-                  <path className="overheat-drip" d={drip.body} fill={`url(#${waterId}-drip)`} opacity="0.94" />
-                  <path
-                    className="overheat-drip"
-                    d={drip.shine}
-                    pathLength={100}
-                    fill="none"
-                    stroke="#fff6df"
-                    strokeWidth="4.5"
-                    strokeLinecap="round"
-                    opacity="0.22"
-                  />
-                  <path
-                    className="overheat-drip"
-                    d={drip.shine}
-                    pathLength={100}
-                    fill="none"
-                    stroke="#fffaf0"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    opacity="0.82"
-                  />
+                <g className="overheat-drip" mask={`url(#${waterId}-meltmask)`}>
+                  <path d={drip.body} fill={`url(#${waterId}-drip)`} opacity="0.86" />
+                  <path d={drip.glint} fill={`url(#${waterId}-glint)`} filter={`url(#${waterId}-glintblur)`} />
                 </g>
               );
             })()}
-            <defs>
-              <linearGradient
-                id={`${waterId}-sheen`}
-                x1={spillSide < 0 ? "70" : "560"}
-                y1="0"
-                x2={spillSide < 0 ? "260" : "790"}
-                y2="0"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop offset="0%" stopColor="#fff6df" stopOpacity="0" />
-                <stop offset="50%" stopColor="#fff6df" stopOpacity="1" />
-                <stop offset="100%" stopColor="#fff6df" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path
-              d={spillSheen(spillSide)}
-              fill="none"
-              stroke={`url(#${waterId}-sheen)`}
-              strokeWidth="9"
-              strokeLinecap="round"
-              opacity="0.32"
-            />
-            <path
-              d={spillSheen(spillSide)}
-              fill="none"
-              stroke={`url(#${waterId}-sheen)`}
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              opacity="0.85"
-            />
           </svg>
         ) : null}
         </div>
