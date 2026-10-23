@@ -81,20 +81,19 @@ function wallX(y: number, side: -1 | 1): number {
   return x;
 }
 
-/** 唇の下から外側を下り、水たまりの中で同じ側のまま終わる。上端は丸く、縁を横切らない。 */
+/** 縁の内側の液面から唇を越え、外側を下り、水たまりの中で同じ側のまま終わる。 */
 function dripRibbon(side: -1 | 1): { body: string; shine: string } {
-  const y0 = 378;
   const y1 = 700;
   const y2 = 930;
   const y3 = 986;
   const along = (y: number, out: number) => wallX(y, side) + side * out;
-  const a0 = along(y0, 2);
   const a1 = along(y1, 8);
   const a2 = along(y2, 6);
   const a3 = along(940, -4);
-  const lip = a0 + side * 6;
-  const body = `M ${a0} ${y0 + 14} Q ${a0} ${y0 - 1} ${lip} ${y0 - 3} Q ${a0 + side * 11} ${y0 - 1} ${a0 + side * 11} ${y0 + 16} Q ${a1 + side * 11} ${y1} ${a2 + side * 10} ${y2} Q ${a2 + side * 9} ${y3 - 18} ${a3 + side * 8} ${y3} L ${a3} ${y3} Q ${a2} ${y2} ${a1} ${y1} Q ${a0} ${y0 + 36} ${a0} ${y0 + 14} Z`;
-  const shine = `M ${lip} ${y0 + 8} Q ${a1 + side * 4} ${y1} ${a3 + side * 3} ${y3 - 6}`;
+  const inner = 432 + side * 200;
+  const lipOut = along(352, 16);
+  const body = `M ${inner} 360 C ${inner + side * 8} 356, ${lipOut - side * 4} 358, ${lipOut} 374 Q ${a1 + side * 11} ${y1} ${a2 + side * 10} ${y2} Q ${a2 + side * 9} ${y3 - 18} ${a3 + side * 8} ${y3} L ${a3} ${y3} Q ${a2} ${y2} ${a1} ${y1} Q ${lipOut - side * 14} 376 ${inner + side * 12} 362 Z`;
+  const shine = `M ${inner + side * 8} 360 Q ${lipOut - side * 2} 366 ${a1 + side * 4} ${y1} Q ${a2 + side * 3} ${y2} ${a3 + side * 3} ${y3 - 6}`;
   return { body, shine };
 }
 
@@ -231,10 +230,14 @@ export function OverheatGlass({ state, label }: Props) {
           </defs>
           <path d={BOWL} fill={`url(#${waterId})`} mask={`url(#${waterId}-mask)`} />
           <path
-            d={`M 188 ${RIM_Y} L 676 ${RIM_Y} L 676 372 L 188 372 Z`}
+            d={
+              over
+                ? "M 210 356 L 654 356 L 654 372 L 210 372 Z"
+                : `M 188 ${RIM_Y} L 676 ${RIM_Y} L 676 372 L 188 372 Z`
+            }
             fill={`url(#${waterId})`}
           />
-          {ry < 8 ? (
+          {ry < 8 && !over ? (
             <line
               x1="206"
               y1={RIM_Y}
@@ -337,11 +340,25 @@ export function OverheatGlass({ state, label }: Props) {
             className="overheat-spill pointer-events-none absolute inset-0 h-full w-full"
             aria-hidden
           >
+            <defs>
+              <linearGradient
+                id={`${waterId}-drip`}
+                x1="0"
+                y1="344"
+                x2="0"
+                y2="720"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop offset="0%" stopColor="#f3d7a2" />
+                <stop offset="22%" stopColor="#e0a045" />
+                <stop offset="100%" stopColor="#c47a28" />
+              </linearGradient>
+            </defs>
             {([-1, 1] as const).map((side) => {
               const drip = dripRibbon(side);
               return (
                 <g key={side}>
-                  <path className="overheat-drip" d={drip.body} fill="#c47a28" />
+                  <path className="overheat-drip" d={drip.body} fill={`url(#${waterId}-drip)`} />
                   <path
                     className="overheat-drip"
                     d={drip.shine}
