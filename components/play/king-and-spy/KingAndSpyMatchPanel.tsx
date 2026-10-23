@@ -20,7 +20,7 @@ export function KingAndSpyMatchPanel({ state, seatLabels, mySeat }: Props) {
           ラウンド {roundNumber} / {maxRounds}
         </p>
         <p className="text-xs text-slate-400">
-          点差{3}点先取、または{maxRounds}ラウンド終了時は得点の多い方
+          点差3点、または{maxRounds}ラウンド終了時は得点の多い方
         </p>
       </div>
 
