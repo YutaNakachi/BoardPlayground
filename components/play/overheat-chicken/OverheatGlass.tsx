@@ -81,19 +81,20 @@ function wallX(y: number, side: -1 | 1): number {
   return x;
 }
 
-/** 左右の外側を下り、水たまりの中で同じ側のまま終わる。 */
+/** 唇の下から外側を下り、水たまりの中で同じ側のまま終わる。上端は丸く、縁を横切らない。 */
 function dripRibbon(side: -1 | 1): { body: string; shine: string } {
-  const y0 = 364;
+  const y0 = 378;
   const y1 = 700;
   const y2 = 930;
   const y3 = 986;
   const along = (y: number, out: number) => wallX(y, side) + side * out;
-  const a0 = along(y0, 1);
-  const a1 = along(y1, 9);
+  const a0 = along(y0, 2);
+  const a1 = along(y1, 8);
   const a2 = along(y2, 6);
   const a3 = along(940, -4);
-  const body = `M ${a0} ${y0} Q ${a1} ${y1} ${a2} ${y2} Q ${a2} ${y3 - 16} ${a3} ${y3} L ${a3 + side * 9} ${y3} Q ${a2 + side * 11} ${y2} ${a1 + side * 12} ${y1} Q ${a0 + side * 14} ${y0 + 70} ${a0 + side * 14} ${y0} Z`;
-  const shine = `M ${a0 + side * 5} ${y0 + 10} Q ${a1 + side * 4} ${y1} ${a3 + side * 3} ${y3 - 6}`;
+  const lip = a0 + side * 6;
+  const body = `M ${a0} ${y0 + 14} Q ${a0} ${y0 - 1} ${lip} ${y0 - 3} Q ${a0 + side * 11} ${y0 - 1} ${a0 + side * 11} ${y0 + 16} Q ${a1 + side * 11} ${y1} ${a2 + side * 10} ${y2} Q ${a2 + side * 9} ${y3 - 18} ${a3 + side * 8} ${y3} L ${a3} ${y3} Q ${a2} ${y2} ${a1} ${y1} Q ${a0} ${y0 + 36} ${a0} ${y0 + 14} Z`;
+  const shine = `M ${lip} ${y0 + 8} Q ${a1 + side * 4} ${y1} ${a3 + side * 3} ${y3 - 6}`;
   return { body, shine };
 }
 
