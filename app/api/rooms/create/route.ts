@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
-import { getGameBySlug } from "@/lib/games";
+import { getRegisteredGameBySlug } from "@/lib/games";
 import { isValidPlayerId } from "@/lib/online/player-id";
 import { ROOM_PASSPHRASE_PLACEHOLDER } from "@/lib/online/room-auth";
 import {
@@ -46,7 +46,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid game options" }, { status: 400 });
   }
 
-  const game = getGameBySlug(gameSlug);
+  // 非掲載でも登録済みなら部屋を作る。一覧用の getGameBySlug は listed だけを返す。
+  const game = getRegisteredGameBySlug(gameSlug);
   if (!game || game.status !== "playable") {
     return NextResponse.json({ error: "Unknown game" }, { status: 404 });
   }

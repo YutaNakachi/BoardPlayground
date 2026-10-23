@@ -74,6 +74,13 @@ export function useOnlineRoom(gameSlug: string) {
   const moveQueueRef = useRef<MovePayload[]>([]);
   const roomRef = useRef(room);
 
+  type MoveRollback = {
+    state: GameState;
+    version: number;
+    currentPlayer: number | null;
+    phase: OnlinePhase;
+  };
+
   useEffect(() => {
     roomRef.current = room;
   }, [room]);
@@ -103,14 +110,6 @@ export function useOnlineRoom(gameSlug: string) {
     moveQueueRef.current = [];
   }, []);
 
-  useEffect(() => {
-    versionRef.current = version;
-  }, [version]);
-
-  useEffect(() => {
-    gameStateRef.current = gameState;
-  }, [gameState]);
-
   const applyRemoteGameState = useCallback(
     (
       state: GameState,
@@ -134,6 +133,7 @@ export function useOnlineRoom(gameSlug: string) {
         return;
       }
       setGameState(state);
+      gameStateRef.current = state;
       setVersion(remoteVersion);
       versionRef.current = remoteVersion;
       let resolvedCurrentPlayer = remoteCurrentPlayer;
@@ -309,7 +309,9 @@ export function useOnlineRoom(gameSlug: string) {
     setPhase("idle");
     setRoom(null);
     setGameState(null);
+    gameStateRef.current = null;
     setVersion(0);
+    versionRef.current = 0;
     setCurrentPlayer(null);
     setMyPlayerId("");
     setMySeat(-1);
@@ -478,13 +480,19 @@ export function useOnlineRoom(gameSlug: string) {
       setError(null);
       try {
         await startRoomGame(room.id, myPlayerId, params);
-        pendingMoveRef.current = false;
-        moveQueueRef.current = [];
-        setMovePending(false);
-        versionRef.current = 0;
+        // 開始の応答より先に盤が出て、先に手が進むことがある。
+        // その版番号と待ち行列は消さない。
+        if (!pendingMoveRef.current) {
+          moveQueueRef.current = [];
+          setMovePending(false);
+        }
         const data = await refreshRoom(room.id);
         setPhase("playing");
-        if (data.gameState) {
+        if (
+          data.gameState &&
+          !pendingMoveRef.current &&
+          data.gameState.version >= versionRef.current
+        ) {
           broadcastGameState(
             data.gameState.state as GameState,
             data.gameState.version,
@@ -525,6 +533,7 @@ export function useOnlineRoom(gameSlug: string) {
       versionRef.current = serverVersion;
       setVersion(serverVersion);
       setGameState(serverState);
+      gameStateRef.current = serverState;
       let resolvedCurrentPlayer = serverCurrentPlayer;
       if (roomRef.current?.gameSlug === "dejarik") {
         const seat = dejarikTurnSeat(serverState as DejarikOnlineState);
@@ -545,32 +554,34 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const sendMovePipelineRef = useRef<
-    (move: MovePayload, expectedVersion: number) => void
+    (move: MovePayload, expectedVersion: number, rollback: MoveRollback) => void
   >(() => {});
 
   useEffect(() => {
-    sendMovePipelineRef.current = (move: MovePayload, expectedVersion: number) => {
+    sendMovePipelineRef.current = (
+      move: MovePayload,
+      expectedVersion: number,
+      rollback: MoveRollback
+    ) => {
       if (!room) return;
 
       pendingMoveRef.current = true;
       setMovePending(true);
 
-      const rollbackState = gameStateRef.current;
-      const rollbackVersion = versionRef.current;
-      const rollbackCurrentPlayer = currentPlayer;
-      const rollbackPhase = phase;
-
       void sendRoomMove(room.id, myPlayerId, move, expectedVersion)
         .then((serverResult) => {
           if (moveQueueRef.current.length > 0) {
-            // Peers already received newer optimistic broadcasts; stale server rows rewind the board.
+            // ローカルはすでに次の手まで進んでいる。途中のサーバー状態で盤を戻さない。
             const nextMove = moveQueueRef.current.shift()!;
-            sendMovePipelineRef.current(nextMove, serverResult.version);
+            const accepted = serverResult.state as GameState;
+            sendMovePipelineRef.current(nextMove, serverResult.version, {
+              state: accepted,
+              version: serverResult.version,
+              currentPlayer: serverResult.currentPlayer,
+              phase: accepted.phase === "game-over" ? "finished" : "playing",
+            });
             return;
           }
-
-          versionRef.current = serverResult.version;
-          setVersion(serverResult.version);
 
           applyServerMoveSuccess(
             serverResult.state as GameState,
@@ -582,18 +593,17 @@ export function useOnlineRoom(gameSlug: string) {
         })
         .catch((e) => {
           moveQueueRef.current = [];
-          if (rollbackState) {
-            setGameState(rollbackState);
-            setVersion(rollbackVersion);
-            versionRef.current = rollbackVersion;
-            setCurrentPlayer(rollbackCurrentPlayer);
-            setPhase(rollbackPhase);
-            broadcastGameState(
-              rollbackState,
-              rollbackVersion,
-              rollbackCurrentPlayer
-            );
-          }
+          setGameState(rollback.state);
+          gameStateRef.current = rollback.state;
+          setVersion(rollback.version);
+          versionRef.current = rollback.version;
+          setCurrentPlayer(rollback.currentPlayer);
+          setPhase(rollback.phase);
+          broadcastGameState(
+            rollback.state,
+            rollback.version,
+            rollback.currentPlayer
+          );
           setError(e instanceof Error ? e.message : "手の送信に失敗しました");
           void refreshRoom(room.id);
           pendingMoveRef.current = false;
@@ -603,16 +613,14 @@ export function useOnlineRoom(gameSlug: string) {
   }, [
     room,
     myPlayerId,
-    currentPlayer,
-    phase,
     applyServerMoveSuccess,
     refreshRoom,
     broadcastGameState,
   ]);
 
   const sendMovePipeline = useCallback(
-    (move: MovePayload, expectedVersion: number) => {
-      sendMovePipelineRef.current(move, expectedVersion);
+    (move: MovePayload, expectedVersion: number, rollback: MoveRollback) => {
+      sendMovePipelineRef.current(move, expectedVersion, rollback);
     },
     []
   );
@@ -649,13 +657,27 @@ export function useOnlineRoom(gameSlug: string) {
       if ("error" in result) return;
 
       const wasChained = pendingMoveRef.current;
-      const optimisticVersion = versionRef.current + 1;
+      const previousVersion = versionRef.current;
+      const optimisticVersion = previousVersion + 1;
       let optimisticCurrent = result.currentPlayer;
       if (slug === "dejarik") {
         const seat = dejarikTurnSeat(result.state as DejarikOnlineState);
         if (seat !== null) optimisticCurrent = seat;
       }
+      const rollbackCurrent =
+        dejarikActorSeat !== null
+          ? dejarikActorSeat
+          : currentPlayer !== null
+            ? currentPlayer
+            : actorSeat;
+      const rollback: MoveRollback = {
+        state: liveState,
+        version: previousVersion,
+        currentPlayer: rollbackCurrent,
+        phase: liveState.phase === "game-over" ? "finished" : phase,
+      };
       setGameState(result.state);
+      gameStateRef.current = result.state;
       setCurrentPlayer(optimisticCurrent);
       setVersion(optimisticVersion);
       versionRef.current = optimisticVersion;
@@ -670,14 +692,14 @@ export function useOnlineRoom(gameSlug: string) {
 
       if (wasChained) {
         moveQueueRef.current.push(move);
-        broadcastGameState(result.state, optimisticVersion, optimisticCurrent);
         return;
       }
 
-      broadcastGameState(result.state, optimisticVersion, optimisticCurrent);
-      sendMovePipeline(move, optimisticVersion - 1);
+      // 相手へはサーバーが受け付けた状態だけ届ける。
+      // 楽観的な版番号を先に配ると、相手の次の手が 409 になり盤が戻る。
+      sendMovePipeline(move, previousVersion, rollback);
     },
-    [room, mySeat, currentPlayer, broadcastGameState, sendMovePipeline]
+    [room, mySeat, currentPlayer, phase, sendMovePipeline]
   );
 
   const isHost = room?.hostPlayerId === myPlayerId;

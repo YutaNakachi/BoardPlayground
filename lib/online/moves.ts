@@ -39,6 +39,14 @@ import {
 } from "@/lib/play/mancala";
 import { initialNim, nimOver, takeNim } from "@/lib/play/nim";
 import {
+  createOverheat,
+  endTurn,
+  isChipSize,
+  placeChip,
+  type ChipSize,
+  type OverheatState,
+} from "@/lib/play/overheat-chicken";
+import {
   initialReversiBoard,
   playReversiMove,
   reversiCounts,
@@ -185,6 +193,10 @@ export type MiniShogiOnlineState = MiniShogiState & {
   winner: Player | null;
 };
 
+export type OverheatOnlineState = OverheatState & {
+  phase: "playing" | "game-over";
+};
+
 /** 手番の seat（配置中は placementPlayer、対局中は current） */
 export function dejarikTurnSeat(state: DejarikOnlineState): number | null {
   if (state.phase === "game-over") return null;
@@ -220,7 +232,8 @@ export type GameState =
   | DotsBoxesOnlineState
   | FoxHoundsOnlineState
   | DejarikOnlineState
-  | MiniShogiOnlineState;
+  | MiniShogiOnlineState
+  | OverheatOnlineState;
 
 export type MovePayload =
   | { type: "place"; index: number }
@@ -234,7 +247,9 @@ export type MovePayload =
   | { type: "dejarik-move"; pieceId: number; to: number }
   | { type: "dejarik-attack"; pieceId: number; to: number }
   | { type: "dejarik-scout-end" }
-  | { type: "mini-shogi"; move: MiniShogiMove };
+  | { type: "mini-shogi"; move: MiniShogiMove }
+  | { type: "overheat-place"; size: ChipSize }
+  | { type: "overheat-end" };
 
 function mancalaWinner(pits: number[]): Player | "draw" {
   const p0 = pits[6];
@@ -347,6 +362,8 @@ export function createInitialState(
       }
       return { ...base, phase: "playing", winner: null };
     }
+    case "overheat-chicken":
+      return { ...createOverheat(firstPlayer), phase: "playing" };
   }
 }
 
@@ -748,6 +765,34 @@ export function applyMove(
         },
         currentPlayer: nextPlayer,
       };
+    }
+
+    case "overheat-chicken": {
+      const s = state as OverheatOnlineState;
+      if (move.type === "overheat-place") {
+        if (!isChipSize(move.size)) return { error: "Invalid move type" };
+        const next = placeChip(s, move.size);
+        if (!next) return { error: "Illegal move" };
+        if (next.winner !== null) {
+          return {
+            state: { ...next, phase: "game-over" },
+            currentPlayer: null,
+          };
+        }
+        return {
+          state: { ...next, phase: "playing" },
+          currentPlayer: next.current,
+        };
+      }
+      if (move.type === "overheat-end") {
+        const next = endTurn(s);
+        if (!next) return { error: "Illegal move" };
+        return {
+          state: { ...next, phase: "playing" },
+          currentPlayer: next.current,
+        };
+      }
+      return { error: "Invalid move type" };
     }
 
     case "mancala": {
