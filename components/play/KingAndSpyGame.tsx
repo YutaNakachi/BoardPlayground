@@ -48,6 +48,8 @@ const GAME_DESCRIPTION =
 const HAND_REMOVE_MS = 450;
 /** 両者のカードが裏で揃い、手札減らしも見えてから公開へ進むまで */
 const BOTH_VISIBLE_MS = 500;
+/** 相手がまだ出していないとき、減った手札を見せてから交代するまで */
+const SOLO_HAND_MS = 400;
 
 type HandPin = {
   seat: 0 | 1;
@@ -287,7 +289,7 @@ export function KingAndSpyGame() {
               return;
             }
             acknowledgeHand(seat);
-          }, both ? BOTH_VISIBLE_MS : 0);
+          }, both ? BOTH_VISIBLE_MS : SOLO_HAND_MS);
         };
         waitForDrop();
       }, HAND_REMOVE_MS);
