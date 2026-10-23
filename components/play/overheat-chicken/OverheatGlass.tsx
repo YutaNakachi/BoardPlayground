@@ -11,12 +11,11 @@ const RIM_Y = 360;
 /** 写真の上の余白と、底より下の空きを枠から外す。 */
 const FRAME_TOP = 185;
 const FRAME_BOTTOM = 1032;
-/** 溢れた水が足もとを満たす上端。透明になった底のすぐ上。 */
-const FLOOR_Y = 868;
 const FRAME_H = FRAME_BOTTOM - FRAME_TOP;
 const DOME_CX = 432;
 const DOME_RX = 214;
-const WATER_BOTTOM = 988;
+/** 杯の内側の底。厚いガラスの台には入れない。 */
+const WATER_BOTTOM = 870;
 const COIN_R = 58;
 /** 杯の内側の底。チップはここへ沈んで重なる。 */
 const COIN_FLOOR = 792;
@@ -56,7 +55,7 @@ const OUTER: readonly (readonly [number, number, number])[] = [
 ];
 
 const BOWL =
-  "M 190 362 L 202 480 L 215 620 L 227 740 L 234 820 L 220 870 L 216 920 L 230 960 L 280 982 L 432 988 L 584 982 L 634 960 L 648 920 L 644 870 L 630 820 L 637 740 L 650 620 L 664 480 L 676 362 Z";
+  "M 190 362 L 202 480 L 215 620 L 227 740 L 238 820 L 250 845 L 330 862 L 432 870 L 534 862 L 614 845 L 626 820 L 637 740 L 650 620 L 664 480 L 676 362 Z";
 
 function wallX(y: number, side: -1 | 1): number {
   let y0 = OUTER[0][0];
@@ -188,12 +187,40 @@ export function OverheatGlass({ state, label }: Props) {
               gradientUnits="userSpaceOnUse"
             >
               <stop offset="0%" stopColor="#f8e6be" />
-              <stop offset="16%" stopColor="#e8b860" />
-              <stop offset="46%" stopColor="#c47a28" />
-              <stop offset="100%" stopColor="#5c2e0c" />
+              <stop offset="25%" stopColor="#e8b058" />
+              <stop offset="60%" stopColor="#c47c28" />
+              <stop offset="100%" stopColor="#b06222" />
             </linearGradient>
+            <linearGradient
+              id={`${waterId}-floor`}
+              x1="0"
+              y1="856"
+              x2="0"
+              y2="876"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0%" stopColor="#fff" />
+              <stop offset="100%" stopColor="#000" />
+            </linearGradient>
+            <mask
+              id={`${waterId}-mask`}
+              maskUnits="userSpaceOnUse"
+              x="0"
+              y="0"
+              width="864"
+              height="1152"
+            >
+              <rect x="0" y="0" width="864" height="856" fill="#fff" />
+              <rect
+                x="0"
+                y="856"
+                width="864"
+                height="24"
+                fill={`url(#${waterId}-floor)`}
+              />
+            </mask>
           </defs>
-          <path d={BOWL} fill={`url(#${waterId})`} />
+          <path d={BOWL} fill={`url(#${waterId})`} mask={`url(#${waterId}-mask)`} />
           <path
             d={`M 188 ${RIM_Y} L 676 ${RIM_Y} L 676 372 L 188 372 Z`}
             fill={`url(#${waterId})`}
@@ -265,21 +292,20 @@ export function OverheatGlass({ state, label }: Props) {
             className="overheat-spill pointer-events-none absolute inset-0 h-full w-full"
             aria-hidden
           >
-            <rect x="196" y={FLOOR_Y} width="472" height="132" fill="#c47a28" />
             <ellipse
               className="overheat-puddle"
               cx="432"
-              cy="996"
-              rx="328"
-              ry="32"
+              cy="1006"
+              rx="300"
+              ry="20"
               fill="#c47a28"
             />
             <ellipse
               className="overheat-puddle"
               cx="432"
-              cy="1006"
-              rx="176"
-              ry="12"
+              cy="1012"
+              rx="160"
+              ry="10"
               fill="#f3d7a1"
               opacity="0.75"
             />
