@@ -44,4 +44,11 @@ export const SITE_ANNOUNCEMENTS: SiteAnnouncement[] = [
     href: "/play/overheat-chicken",
     startsAt: "2026-10-23",
   },
+  {
+    id: "new-game-king-and-spy",
+    body:
+      "【New】『キング＆スパイ』リリース！『賭博黙示録カイジ』のEカードをモチーフにしたキング・スパイ・市民の心理戦（オンライン2人）",
+    href: "/play/king-and-spy",
+    startsAt: "2026-10-23",
+  },
 ];
