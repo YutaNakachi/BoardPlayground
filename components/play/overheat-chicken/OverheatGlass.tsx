@@ -94,17 +94,18 @@ function sideX(x: number, side: -1 | 1): number {
   return side < 0 ? x : 864 - x;
 }
 
-/** 残した表面張力の端から、片側の縁を越えてその側の水たまりへ下りる。 */
+/** 表面張力の端から縁の上を通り、片側の水たまりへ下りる。 */
 function dripRibbon(side: -1 | 1, rise: number): { body: string; shine: string } {
   const along = (y: number, out: number) => wallX(y, side) + side * out;
-  const shoulder = 432 + side * 118;
-  const y0 = RIM_Y - rise * 0.62;
-  const lip = along(366, 12);
-  const mid = along(760, 10);
+  const shoulder = 432 + side * 108;
+  const y0 = RIM_Y - rise * 0.5;
+  const lip = along(350, 0);
+  const over = along(356, 16);
+  const mid = along(780, 8);
   const land = sideX(210, side);
   const landY = 948;
-  const body = `M ${shoulder} ${y0} C ${shoulder + side * 10} ${y0 - 6}, ${lip - side * 6} ${y0 + 2}, ${lip} ${RIM_Y + 18} Q ${mid} 740 ${land + side * 6} ${landY} L ${land - side * 14} ${landY} Q ${along(740, 0)} 740 ${lip - side * 16} ${RIM_Y + 22} C ${shoulder + side * 24} ${y0 + 8}, ${shoulder - side * 6} ${y0 + 4}, ${shoulder - side * 4} ${y0} Z`;
-  const shine = `M ${shoulder + side * 6} ${y0 + 2} Q ${lip} ${RIM_Y + 10} ${mid} 740 Q ${along(860, 6)} 860 ${land} ${landY - 10}`;
+  const body = `M ${shoulder} ${y0} C ${shoulder + side * 36} ${y0 + 1}, ${lip - side * 10} 347, ${over} 356 Q ${mid} 760 ${land + side * 8} ${landY} L ${land - side * 16} ${landY} Q ${along(780, -4)} 780 ${lip - side * 4} 366 C ${lip - side * 24} 354, ${shoulder + side * 12} ${y0 + 9}, ${shoulder - side * 8} ${y0 + 3} Z`;
+  const shine = `M ${shoulder + side * 14} ${y0 + 2} Q ${lip} 352 ${over - side * 3} 360 Q ${mid} 760 ${land} ${landY - 12}`;
   return { body, shine };
 }
 
@@ -373,16 +374,26 @@ export function OverheatGlass({ state, label }: Props) {
               const drip = dripRibbon(spillSide, ry);
               return (
                 <g>
-                  <path className="overheat-drip" d={drip.body} fill={`url(#${waterId}-drip)`} />
+                  <path className="overheat-drip" d={drip.body} fill={`url(#${waterId}-drip)`} opacity="0.94" />
                   <path
                     className="overheat-drip"
                     d={drip.shine}
                     pathLength={100}
                     fill="none"
-                    stroke="#f6e2b8"
-                    strokeWidth="3"
+                    stroke="#fff6df"
+                    strokeWidth="8"
                     strokeLinecap="round"
-                    opacity="0.8"
+                    opacity="0.28"
+                  />
+                  <path
+                    className="overheat-drip"
+                    d={drip.shine}
+                    pathLength={100}
+                    fill="none"
+                    stroke="#fffaf0"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    opacity="0.82"
                   />
                 </g>
               );
@@ -405,9 +416,17 @@ export function OverheatGlass({ state, label }: Props) {
               d={spillSheen(spillSide)}
               fill="none"
               stroke={`url(#${waterId}-sheen)`}
-              strokeWidth="3.5"
+              strokeWidth="9"
               strokeLinecap="round"
-              opacity="0.7"
+              opacity="0.32"
+            />
+            <path
+              d={spillSheen(spillSide)}
+              fill="none"
+              stroke={`url(#${waterId}-sheen)`}
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              opacity="0.85"
             />
           </svg>
         ) : null}
