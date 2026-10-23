@@ -42,7 +42,7 @@ import type {
 import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 
 const GAME_DESCRIPTION =
-  "漫画『賭博黙示録カイジ』のEカードがモチーフです。キング、スパイ、市民の三すくみカードゲームです。同時に1枚を出し、点差3点、または12ラウンドで勝ちます。";
+  "漫画『賭博黙示録カイジ』のEカードをモチーフにした、キング・スパイ・市民の三すくみカードゲームです。同時に1枚を出し、点差3点、または12ラウンドで勝ちます。";
 
 /** 場に出てから、手札の表示を減らすまで */
 const HAND_REMOVE_MS = 450;
