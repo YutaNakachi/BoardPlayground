@@ -86,7 +86,7 @@ function dripPath(side: -1 | 1, bulge: number, y0: number): string {
   const midY = 700;
   const midX = wallX(midY, side) + side * bulge;
   const endX = wallX(930, side) + side * 6;
-  return `M ${startX} ${y0} Q ${midX} ${midY} ${endX} 984`;
+  return `M ${startX} ${y0} Q ${midX} ${midY} ${endX} 990`;
 }
 
 type Props = {
@@ -295,19 +295,10 @@ export function OverheatGlass({ state, label }: Props) {
             <ellipse
               className="overheat-puddle"
               cx="432"
-              cy="1006"
+              cy="960"
               rx="300"
-              ry="20"
+              ry="50"
               fill="#c47a28"
-            />
-            <ellipse
-              className="overheat-puddle"
-              cx="432"
-              cy="1012"
-              rx="160"
-              ry="10"
-              fill="#f3d7a1"
-              opacity="0.75"
             />
           </svg>
         ) : null}
@@ -358,6 +349,15 @@ export function OverheatGlass({ state, label }: Props) {
               stroke="#f6e2b8"
               strokeWidth="9"
               strokeLinecap="round"
+            />
+            <ellipse
+              className="overheat-puddle"
+              cx="432"
+              cy="996"
+              rx="170"
+              ry="12"
+              fill="#f3d7a1"
+              opacity="0.75"
             />
           </svg>
         ) : null}
