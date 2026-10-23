@@ -162,24 +162,24 @@ function dripLiquid(side: -1 | 1): LiquidRibbon {
   const add = (x: number, y: number, w: number, g: number) => left.push([x, y, w, g]);
   // 平らな唇には置かない。角の線上で髪の毛ほどから始まり、丸みに沿って太る。
   const lip: readonly (readonly [number, number, number, number])[] = [
-    [172.5, 346.0, 0.35, 0.02],
-    [169.2, 347.4, 0.9, 0.06],
-    [167.2, 349.2, 1.8, 0.12],
-    [166.2, 351.4, 3.2, 0.2],
-    [167.6, 354.4, 4.6, 0.22],
-    [168.8, 357.8, 5.6, 0.14],
-    [170, 362.2, 6.3, 0.08],
-    [171.2, 368, 6.6, 0.08],
-    [172.6, 376, 6.6, 0.08],
-    [174, 386, 6.6, 0.08],
-    [175.4, 400, 6.6, 0.08],
-    [176.6, 416, 6.6, 0.08],
+    [172.5, 346.0, 0.35, 0.04],
+    [169.2, 347.4, 0.9, 0.14],
+    [167.2, 349.2, 1.8, 0.28],
+    [166.2, 351.4, 3.2, 0.7],
+    [167.6, 354.4, 4.6, 1.05],
+    [168.8, 357.8, 5.6, 1.25],
+    [170, 362.2, 6.3, 1.4],
+    [171.2, 368, 6.6, 1.45],
+    [172.6, 376, 6.6, 1.45],
+    [174, 386, 6.6, 1.4],
+    [175.4, 400, 6.6, 1.35],
+    [176.6, 416, 6.6, 1.3],
   ];
   for (const point of lip) add(...point);
   for (const y of [440, 520, 610, 710, 810, 880]) {
-    add(wallX(y, -1) + 6.3, y, 6.6, 0.08);
+    add(wallX(y, -1) + 6.3, y, 6.6, 1.25);
   }
-  add(wallX(910, -1) + 4.5, 910, 7.2, 0.06);
+  add(wallX(910, -1) + 4.5, 910, 7.2, 0.4);
   add(200, 948, 10, 0.08);
   add(182, 976, 15, 0.06);
   add(160, 994, 18, 0.04);
@@ -413,8 +413,25 @@ export function OverheatGlass({ state, label }: Props) {
                 <stop offset="40%" stopColor="#c47a28" />
                 <stop offset="100%" stopColor="#d4923a" />
               </linearGradient>
+              <radialGradient
+                id={`${waterId}-poolglint`}
+                cx={sideX(124, spillSide)}
+                cy="972"
+                r="78"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop offset="0%" stopColor="#fff6e4" stopOpacity="0.62" />
+                <stop offset="32%" stopColor="#f3d7a6" stopOpacity="0.28" />
+                <stop offset="100%" stopColor="#fff1d0" stopOpacity="0" />
+              </radialGradient>
+              <clipPath id={`${waterId}-poolclip`}>
+                <path d={spillPool(spillSide)} />
+              </clipPath>
             </defs>
-            <path className="overheat-puddle" d={spillPool(spillSide)} fill={`url(#${waterId}-pool)`} />
+            <g className="overheat-puddle" clipPath={`url(#${waterId}-poolclip)`}>
+              <path d={spillPool(spillSide)} fill={`url(#${waterId}-pool)`} />
+              <path d={spillPool(spillSide)} fill={`url(#${waterId}-poolglint)`} />
+            </g>
           </svg>
         ) : null}
         <img
@@ -446,15 +463,16 @@ export function OverheatGlass({ state, label }: Props) {
               <linearGradient
                 id={`${waterId}-glint`}
                 x1="0"
-                y1="340"
+                y1="346"
                 x2="0"
-                y2="980"
+                y2="920"
                 gradientUnits="userSpaceOnUse"
               >
                 <stop offset="0%" stopColor="#fff6e0" stopOpacity="0" />
-                <stop offset="3%" stopColor="#fff6e0" stopOpacity="0.55" />
-                <stop offset="8%" stopColor="#ffe6b4" stopOpacity="0.08" />
-                <stop offset="100%" stopColor="#fff6e0" stopOpacity="0" />
+                <stop offset="6%" stopColor="#fff3d4" stopOpacity="0.7" />
+                <stop offset="24%" stopColor="#f6d7a4" stopOpacity="0.46" />
+                <stop offset="55%" stopColor="#e8c48a" stopOpacity="0.24" />
+                <stop offset="100%" stopColor="#fff1d0" stopOpacity="0" />
               </linearGradient>
               <linearGradient
                 id={`${waterId}-melt`}
@@ -479,7 +497,7 @@ export function OverheatGlass({ state, label }: Props) {
                 <rect x="0" y="0" width="864" height="1152" fill={`url(#${waterId}-melt)`} />
               </mask>
               <filter id={`${waterId}-glintblur`} x="-50%" y="-20%" width="200%" height="140%" colorInterpolationFilters="sRGB">
-                <feGaussianBlur stdDeviation="1.1" />
+                <feGaussianBlur stdDeviation="1.25" />
               </filter>
             </defs>
             {(() => {
