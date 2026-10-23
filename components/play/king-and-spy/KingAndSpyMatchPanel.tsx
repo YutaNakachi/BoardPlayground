@@ -75,8 +75,8 @@ export function KingAndSpyMatchPanel({ state, seatLabels, mySeat }: Props) {
                   =スパイ
                 </span>
                 <span className="text-indigo-300">
-                  → {seatLabels[row.winnerSeat]} +{row.pointsAwarded}（
-                  {winningSideLabel(row.winningSide)}）
+                  → {seatLabels[row.winnerSeat]} +{row.pointsAwarded} ·{" "}
+                  {winningSideLabel(row.winningSide)}
                 </span>
               </li>
             ))}

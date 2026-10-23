@@ -37,7 +37,7 @@ export function KingAndSpyDuelField({
     if (c0.kind === "citizen" && c1.kind === "citizen") {
       openResult = (
         <p className="mt-4 text-center text-sm text-slate-300">
-          市民同士 — 引き分け（加点なし・同じラウンドで続行）
+          市民同士 — 引き分け。加点なしで続行
         </p>
       );
     } else {

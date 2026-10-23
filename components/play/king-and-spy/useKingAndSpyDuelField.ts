@@ -113,6 +113,7 @@ export function useKingAndSpyDuelField(
       const [a, b] = publicState.lastReveal!.cards;
       return startRevealAnimation(a, b, setRevealField, () => {
         setPlaybackDoneToken(decisiveRevealToken);
+        discardLenRef.current = publicState.discards.length;
       });
     }
 
@@ -154,15 +155,20 @@ export function useKingAndSpyDuelField(
 
   const field = waitingField ?? revealField ?? emptyField();
 
-  const interactionLocked =
+  const isFieldAnimating = revealField !== null;
+  /** 決着時のみ手札を止める（市民引き分けの場演出中は手札操作可） */
+  const isHandLocked =
     bothCommitted ||
     decisiveRevealPending ||
-    revealField !== null;
+    (isFieldAnimating && publicState.lastReveal !== null);
 
   return {
     field,
     registerMyCommit,
     resetField,
-    isRevealPlayback: interactionLocked,
+    isHandLocked,
+    isFieldAnimating,
+    /** @deprecated use isHandLocked */
+    isRevealPlayback: isHandLocked,
   };
 }

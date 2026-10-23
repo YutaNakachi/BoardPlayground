@@ -141,18 +141,15 @@ export function KingAndSpyGame() {
     ? myCommittedCard
     : null;
 
-  const { field, resetField, isRevealPlayback } = useKingAndSpyDuelField(
-    duelPublic,
-    mySeat,
-    duelCommittedCard
-  );
+  const { field, resetField, isHandLocked, isFieldAnimating } =
+    useKingAndSpyDuelField(duelPublic, mySeat, duelCommittedCard);
 
   const myHandLive = activeView?.myHand ?? [];
   const [revealHandHold, setRevealHandHold] = useState<KingAndSpyCard[] | null>(
     null
   );
   const [revealHandLatch, setRevealHandLatch] = useState(false);
-  if (isRevealPlayback) {
+  if (isHandLocked) {
     if (!revealHandLatch) {
       setRevealHandLatch(true);
       setRevealHandHold(myHandLive);
@@ -162,9 +159,9 @@ export function KingAndSpyGame() {
     setRevealHandHold(null);
   }
   const displayHand =
-    isRevealPlayback && revealHandHold !== null ? revealHandHold : myHandLive;
+    isHandLocked && revealHandHold !== null ? revealHandHold : myHandLive;
 
-  const effectivePickedCardId = isRevealPlayback ? null : pickedCardId;
+  const effectivePickedCardId = isHandLocked ? null : pickedCardId;
 
   const seatLabels: [string, string] = useMemo(() => {
     if (isOnlinePlay) {
@@ -226,7 +223,7 @@ export function KingAndSpyGame() {
   );
 
   const handleCommit = useCallback(() => {
-    if (!pickedCardId || !activeView || isRevealPlayback) return;
+    if (!pickedCardId || !activeView || isHandLocked) return;
     const card = activeView.myHand.find((c) => c.id === pickedCardId);
     if (!card) return;
 
@@ -251,7 +248,7 @@ export function KingAndSpyGame() {
     localPhase,
     localActiveSeat,
     commitLocal,
-    isRevealPlayback,
+    isHandLocked,
   ]);
 
   const isSetupScreen =
@@ -428,6 +425,8 @@ export function KingAndSpyGame() {
 
   const alreadyCommitted = activeView.committedReady[mySeat];
   const opponentCommitted = activeView.committedReady[mySeat === 0 ? 1 : 0];
+  const bothCommitted =
+    activeView.committedReady[0] && activeView.committedReady[1];
 
   const pub = toPublicState(activeView);
   const scores = pub.scores;
@@ -445,10 +444,8 @@ export function KingAndSpyGame() {
     notice = undefined;
   } else {
     stats = `あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
-    action = isOnlinePlay
-      ? "手札から1枚選び、いつでも確定（相手と同時進行）"
-      : "手札から1枚選び、確定する";
-    if (isRevealPlayback) {
+    action = "手札から1枚選び、確定する";
+    if (isHandLocked && !bothCommitted) {
       action = "公開中… 次の手札は表示が終わってから";
     } else if (alreadyCommitted) {
       action = opponentCommitted
@@ -483,7 +480,7 @@ export function KingAndSpyGame() {
         <ResultPanel
           draw
           winners={[]}
-          winnersLabel="同点のため引き分け（上限ラウンド）"
+          winnersLabel="同点のため引き分け"
           {...replayProps}
         />
       )}
@@ -518,7 +515,7 @@ export function KingAndSpyGame() {
               : `プレイヤー${localActiveSeat + 1}の手札`}
           </p>
           <div
-            className={`flex flex-wrap justify-center gap-3 ${isRevealPlayback ? "pointer-events-none opacity-50" : ""}`}
+            className={`flex flex-wrap justify-center gap-3 ${isHandLocked ? "pointer-events-none opacity-50" : ""}`}
           >
             {displayHand.map((card) => (
               <KingAndSpyPlayingCard
@@ -528,9 +525,9 @@ export function KingAndSpyGame() {
                 flipped={true}
                 size="hand"
                 selected={effectivePickedCardId === card.id}
-                disabled={alreadyCommitted || isRevealPlayback}
+                disabled={alreadyCommitted || isHandLocked}
                 onClick={
-                  alreadyCommitted || isRevealPlayback
+                  alreadyCommitted || isHandLocked
                     ? undefined
                     : () => setPickedCardId(card.id)
                 }
@@ -541,12 +538,12 @@ export function KingAndSpyGame() {
             <button
               type="button"
               disabled={
-                !effectivePickedCardId || alreadyCommitted || isRevealPlayback
+                !effectivePickedCardId || alreadyCommitted || isHandLocked
               }
               onClick={handleCommit}
               className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white disabled:opacity-40"
             >
-              場に出す（確定）
+              確定
             </button>
           </div>
         </div>
