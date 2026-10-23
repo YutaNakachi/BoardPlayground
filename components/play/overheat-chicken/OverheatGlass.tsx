@@ -16,7 +16,7 @@ const FLOOR_Y = 868;
 const FRAME_H = FRAME_BOTTOM - FRAME_TOP;
 const DOME_CX = 432;
 const DOME_RX = 214;
-const WATER_BOTTOM = 828;
+const WATER_BOTTOM = 988;
 const COIN_R = 58;
 /** 杯の内側の底。チップはここへ沈んで重なる。 */
 const COIN_FLOOR = 792;
@@ -26,14 +26,23 @@ const CHIP_DRAW: Record<ChipSize, number> = {
   m: 0.8,
   l: 1,
 };
-/** 底に重ねる。枚数が増えても杯の下のほうに留まる。 */
-function pileSlot(index: number): [number, number] {
-  const cols = [0, -44, 46, -18, 24, -36, 14, 32, -8, 20];
-  const row = Math.floor(index / cols.length);
-  const stagger = row % 2 === 0 ? 0 : 7;
-  const dx = (cols[index % cols.length] ?? 0) + stagger;
-  const up = row * 13 + (index % 3) * 3;
-  return [dx, up];
+function scatterUnit(seed: number, index: number): number {
+  let n = Math.imul(Math.floor(seed * 997) + 1, 374761393) + Math.imul(index + 11, 668265263);
+  n = (n ^ (n >>> 13)) >>> 0;
+  n = Math.imul(n, 1274126177);
+  n = (n ^ (n >>> 16)) >>> 0;
+  return n / 4294967296;
+}
+
+/** 底の幅を使い、対局の seed で決まる位置に置く。描き直しで動かない。 */
+function chipSpot(index: number, seed: number, radius: number): [number, number, number] {
+  const across = scatterUnit(seed, index * 2) * 2 - 1;
+  const lift = scatterUnit(seed, index * 2 + 1);
+  const reach = Math.max(52, 172 - radius * 0.42);
+  const dx = across * reach;
+  const up = lift * 18;
+  const spin = scatterUnit(seed, index + 40) * 360;
+  return [dx, up, spin];
 }
 
 /** 写真の外縁。y, 左, 右。 */
@@ -47,7 +56,7 @@ const OUTER: readonly (readonly [number, number, number])[] = [
 ];
 
 const BOWL =
-  "M 190 362 L 202 480 L 215 620 L 227 740 L 236 828 L 629 828 L 638 740 L 650 620 L 664 480 L 676 362 Z";
+  "M 190 362 L 202 480 L 215 620 L 227 740 L 234 820 L 220 870 L 216 920 L 230 960 L 280 982 L 432 988 L 584 982 L 634 960 L 648 920 L 644 870 L 630 820 L 637 740 L 650 620 L 664 480 L 676 362 Z";
 
 function wallX(y: number, side: -1 | 1): number {
   let y0 = OUTER[0][0];
@@ -178,10 +187,10 @@ export function OverheatGlass({ state, label }: Props) {
               y2={WATER_BOTTOM}
               gradientUnits="userSpaceOnUse"
             >
-              <stop offset="0%" stopColor="#e0faff" />
-              <stop offset="16%" stopColor="#67e8f9" />
-              <stop offset="42%" stopColor="#22d3ee" />
-              <stop offset="100%" stopColor="#0e7490" />
+              <stop offset="0%" stopColor="#f8e6be" />
+              <stop offset="16%" stopColor="#e8b860" />
+              <stop offset="46%" stopColor="#c47a28" />
+              <stop offset="100%" stopColor="#5c2e0c" />
             </linearGradient>
           </defs>
           <path d={BOWL} fill={`url(#${waterId})`} />
@@ -195,7 +204,7 @@ export function OverheatGlass({ state, label }: Props) {
               y1={RIM_Y}
               x2="658"
               y2={RIM_Y}
-              stroke="#f0fdff"
+              stroke="#fff1d4"
               strokeWidth="2.5"
               opacity="0.7"
             />
@@ -224,14 +233,14 @@ export function OverheatGlass({ state, label }: Props) {
                 cy={surface + Math.max(4, ry * 0.28)}
                 rx={DOME_RX * 0.62}
                 ry={Math.max(3, Math.min(11, ry * 0.22))}
-                fill="#f0fdff"
+                fill="#fff4d6"
                 opacity="0.72"
               />
             </g>
           ) : null}
           {chips.map((chip, index) => {
-            const [dx, up] = pileSlot(index);
             const radius = COIN_R * CHIP_DRAW[chip.size];
+            const [dx, up, spin] = chipSpot(index, state.visual.seed, radius);
             const cy = COIN_FLOOR - up + COIN_R - radius;
             return (
               <Coin
@@ -240,7 +249,7 @@ export function OverheatGlass({ state, label }: Props) {
                 cy={cy}
                 radius={radius}
                 player={chip.player}
-                spin={index * 37}
+                spin={spin}
                 sinkFrom={
                   !reducedMotion && index === freshIndex
                     ? surface + radius - cy
@@ -256,14 +265,14 @@ export function OverheatGlass({ state, label }: Props) {
             className="overheat-spill pointer-events-none absolute inset-0 h-full w-full"
             aria-hidden
           >
-            <rect x="196" y={FLOOR_Y} width="472" height="132" fill="#22d3ee" />
+            <rect x="196" y={FLOOR_Y} width="472" height="132" fill="#c47a28" />
             <ellipse
               className="overheat-puddle"
               cx="432"
               cy="996"
               rx="328"
               ry="32"
-              fill="#22d3ee"
+              fill="#c47a28"
             />
             <ellipse
               className="overheat-puddle"
@@ -271,7 +280,7 @@ export function OverheatGlass({ state, label }: Props) {
               cy="1006"
               rx="176"
               ry="12"
-              fill="#e0faff"
+              fill="#f3d7a1"
               opacity="0.75"
             />
           </svg>
@@ -293,7 +302,7 @@ export function OverheatGlass({ state, label }: Props) {
               pathLength={100}
               d={dripPath(-1, 10, 358)}
               fill="none"
-              stroke="#67e8f9"
+              stroke="#e0a045"
               strokeWidth="22"
               strokeLinecap="round"
             />
@@ -302,7 +311,7 @@ export function OverheatGlass({ state, label }: Props) {
               pathLength={100}
               d={dripPath(1, 10, 358)}
               fill="none"
-              stroke="#67e8f9"
+              stroke="#e0a045"
               strokeWidth="22"
               strokeLinecap="round"
             />
@@ -311,7 +320,7 @@ export function OverheatGlass({ state, label }: Props) {
               pathLength={100}
               d={dripPath(-1, 4, 390)}
               fill="none"
-              stroke="#e0faff"
+              stroke="#f6e2b8"
               strokeWidth="9"
               strokeLinecap="round"
             />
@@ -320,7 +329,7 @@ export function OverheatGlass({ state, label }: Props) {
               pathLength={100}
               d={dripPath(1, 4, 390)}
               fill="none"
-              stroke="#e0faff"
+              stroke="#f6e2b8"
               strokeWidth="9"
               strokeLinecap="round"
             />
