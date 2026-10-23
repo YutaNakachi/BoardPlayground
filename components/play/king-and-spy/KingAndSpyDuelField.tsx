@@ -23,11 +23,6 @@ export function KingAndSpyDuelField({
   lastReveal,
   roundHistory,
 }: Props) {
-  const hasCards =
-    field[0].faceDownOnField ||
-    field[1].faceDownOnField ||
-    field[0].revealed ||
-    field[1].revealed;
   const bothOpen = field[0].revealed && field[1].revealed;
   const c0 = field[0].card;
   const c1 = field[1].card;
@@ -108,11 +103,6 @@ export function KingAndSpyDuelField({
         })}
       </div>
       {openResult}
-      {!hasCards && (
-        <p className="mt-3 text-center text-xs text-slate-500">
-          確定したカードがここに裏向きで置かれ、揃ったら同時に公開されます
-        </p>
-      )}
     </div>
   );
 }

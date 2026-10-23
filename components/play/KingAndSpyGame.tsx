@@ -41,7 +41,7 @@ import type {
 import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 
 const GAME_DESCRIPTION =
-  "キングとスパイの非対称な三すくみカード。同時に1枚を出し、点差3点先取または12ラウンドで勝ちます。";
+  "漫画『カイジ』のEカードをモチーフにした非公式の三すくみカード。同時に1枚を出し、点差3点先取または12ラウンドで勝ちます。";
 
 type LocalPhase = "setup" | "playing" | "game-over";
 
@@ -272,7 +272,7 @@ export function KingAndSpyGame() {
   if (mode === "online" && online.phase === "idle" && onlineEnabled) {
     return (
       <OnlineSetupPanel
-        title="キング＆スパイ（仮）"
+        title="キング＆スパイ"
         description={GAME_DESCRIPTION}
         mode={mode}
         onModeChange={setMode}
@@ -311,7 +311,7 @@ export function KingAndSpyGame() {
   if (online.phase === "waiting" && online.room) {
     return (
       <OnlineSetupPanel
-        title="キング＆スパイ（仮）"
+        title="キング＆スパイ"
         description={GAME_DESCRIPTION}
         mode="online"
         onModeChange={() => {}}
@@ -371,7 +371,7 @@ export function KingAndSpyGame() {
   ) {
     return (
       <OnlineSetupPanel
-        title="キング＆スパイ（仮）"
+        title="キング＆スパイ"
         description={GAME_DESCRIPTION}
         mode={mode}
         onModeChange={setMode}
