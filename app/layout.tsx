@@ -68,7 +68,7 @@ export default function RootLayout({
           >
             本文へスキップ
           </a>
-          <div className="flex min-h-screen flex-col">
+          <div className="flex min-h-screen w-full max-w-full flex-col overflow-x-clip">
             <Header />
             <SiteSidebar />
             <main id="main-content" className="flex-1">
