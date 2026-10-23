@@ -42,7 +42,7 @@ import type {
 import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 
 const GAME_DESCRIPTION =
-  "漫画『カイジ』のEカードをモチーフにした非公式の三すくみカード。同時に1枚を出し、点差3点先取または12ラウンドで勝ちます。";
+  "漫画『賭博黙示録カイジ』のEカードをモチーフにした、キング・スパイ・市民の三すくみカードゲームです。同時に1枚を出し、点差3点、または12ラウンドで勝ちます。";
 
 /** 場に出てから、手札の表示を減らすまで */
 const HAND_REMOVE_MS = 450;
@@ -595,11 +595,11 @@ export function KingAndSpyGame() {
   let notice: string | undefined;
 
   if (isGameOver) {
-    stats = `最終スコア ${scores[0]} – ${scores[1]}`;
+    stats = `最終得点 ${scores[0]} – ${scores[1]}`;
     action = isDrawEnd ? "上限ラウンド終了・同点" : "マッチ終了";
     notice = undefined;
   } else {
-    stats = `あなたは${playerRoleLabel(scoreView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(scoreView.decisiveCount)}決着`;
+    stats = `${playerRoleLabel(scoreView.myRole)}側 · 交代まであと${decisivesUntilRoleSwap(scoreView.decisiveCount)}決着`;
     action = "手札から1枚選び、確定する";
     if (isFieldAnimating || showcasePending || finalRevealPlaying) {
       action = "公開中";
