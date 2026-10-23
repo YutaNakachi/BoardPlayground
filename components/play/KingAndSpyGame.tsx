@@ -277,6 +277,20 @@ export function KingAndSpyGame() {
     void online.refreshRoom(online.room.id);
   }, [isOnlinePlay, onlineView, online.room, online.refreshRoom]);
 
+  useEffect(() => {
+    if (!isOnlinePlay || !activeView) return;
+    const waiting =
+      activeView.committedReady[0] || activeView.committedReady[1];
+    if (!waiting && !online.movePending) {
+      setMyCommittedCard(null);
+    }
+  }, [
+    isOnlinePlay,
+    activeView?.committedReady,
+    activeView?.discards.length,
+    online.movePending,
+  ]);
+
   if (online.completingPendingJoin) {
     return <PendingJoinConnecting />;
   }
