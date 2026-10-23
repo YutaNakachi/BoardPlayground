@@ -137,12 +137,16 @@ export function KingAndSpyGame() {
     ? (online.mySeat as 0 | 1)
     : localActiveSeat;
 
-  const duelCommittedCard = duelPublic.committedReady[mySeat]
-    ? myCommittedCard
-    : null;
+  const committedCardOnField =
+    activeView?.committedReady[mySeat] && myCommittedCard
+      ? myCommittedCard
+      : null;
 
-  const { field, resetField, isHandLocked, isFieldAnimating } =
-    useKingAndSpyDuelField(duelPublic, mySeat, duelCommittedCard);
+  const { field, resetField, isHandLocked } = useKingAndSpyDuelField(
+    duelPublic,
+    mySeat,
+    committedCardOnField
+  );
 
   const myHandLive = activeView?.myHand ?? [];
   const [revealHandHold, setRevealHandHold] = useState<KingAndSpyCard[] | null>(

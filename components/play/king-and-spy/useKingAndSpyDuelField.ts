@@ -24,7 +24,6 @@ const emptySlot = (): DuelSlot => ({
 
 const emptyField = (): DuelFieldState => [emptySlot(), emptySlot()];
 
-/** 相手が確定済み（裏向き・種類は非公開） */
 const OPPONENT_FIELD_PLACEHOLDER: KingAndSpyCard = {
   id: "field-opponent-hidden",
   kind: "citizen",
@@ -79,6 +78,9 @@ export function useKingAndSpyDuelField(
   const [playbackDoneToken, setPlaybackDoneToken] = useState<string | null>(null);
   const revealTokenRef = useRef<string | null>(null);
   const discardLenRef = useRef(publicState.discards.length);
+  const trickEpochRef = useRef(
+    `${publicState.roundNumber}:${publicState.discards.length}`
+  );
 
   const waitingField = useMemo((): DuelFieldState | null => {
     const ready = publicState.committedReady;
@@ -103,6 +105,16 @@ export function useKingAndSpyDuelField(
 
   useLayoutEffect(() => {
     const ready = publicState.committedReady;
+    const trickEpoch = `${publicState.roundNumber}:${publicState.discards.length}`;
+
+    if (!ready[0] && !ready[1]) {
+      discardLenRef.current = publicState.discards.length;
+      if (trickEpochRef.current !== trickEpoch) {
+        trickEpochRef.current = trickEpoch;
+        setRevealField(null);
+      }
+    }
+
     if (ready[0] || ready[1]) return;
 
     if (decisiveRevealToken) {
@@ -132,31 +144,29 @@ export function useKingAndSpyDuelField(
       revealTokenRef.current = token;
 
       return startRevealAnimation(a, b, setRevealField, () => {
-        /* 市民引き分けは手札枚数が変わらないためトークン完了は不要 */
+        setRevealField(null);
       });
     }
   }, [
     publicState.committedReady,
     publicState.lastReveal,
     publicState.discards,
+    publicState.roundNumber,
     decisiveRevealToken,
     playbackDoneToken,
   ]);
-
-  const registerMyCommit = useCallback((_card: KingAndSpyCard) => {
-    /* 場表示は waitingField（committedReady）で同期 */
-  }, []);
 
   const resetField = useCallback(() => {
     revealTokenRef.current = null;
     setRevealField(null);
     setPlaybackDoneToken(null);
+    discardLenRef.current = 0;
+    trickEpochRef.current = "0:0";
   }, []);
 
   const field = waitingField ?? revealField ?? emptyField();
 
   const isFieldAnimating = revealField !== null;
-  /** 決着時のみ手札を止める（市民引き分けの場演出中は手札操作可） */
   const isHandLocked =
     bothCommitted ||
     decisiveRevealPending ||
@@ -164,11 +174,9 @@ export function useKingAndSpyDuelField(
 
   return {
     field,
-    registerMyCommit,
     resetField,
     isHandLocked,
     isFieldAnimating,
-    /** @deprecated use isHandLocked */
     isRevealPlayback: isHandLocked,
   };
 }

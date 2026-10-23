@@ -132,7 +132,7 @@ export function useOnlineRoom(gameSlug: string) {
           if (
             secretSlug &&
             isOnlineSecretGame(secretSlug) &&
-            remoteVersion >= versionRef.current
+            remoteVersion > versionRef.current
           ) {
             pendingMoveRef.current = false;
             setMovePending(false);
@@ -683,12 +683,8 @@ export function useOnlineRoom(gameSlug: string) {
         const optimistic = optimisticKingAndSpyCommitView(view, move.cardId);
         if ("error" in optimistic) return;
 
-        const optimisticVersion = versionRef.current + 1;
         setGameState(optimistic);
-        versionRef.current = optimisticVersion;
-        setVersion(optimisticVersion);
-
-        sendMovePipeline(move, optimisticVersion - 1);
+        sendMovePipeline(move, versionRef.current);
         return;
       }
 
