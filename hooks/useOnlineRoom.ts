@@ -37,7 +37,6 @@ import {
 } from "@/lib/online/room-client";
 import { shouldApplyRemoteGameVersion } from "@/lib/online/sync-game-state";
 import { isOnlineSecretGame } from "@/lib/online/secret-games";
-import { optimisticKingAndSpyCommitView } from "@/lib/play/king-and-spy/state";
 import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -680,10 +679,6 @@ export function useOnlineRoom(gameSlug: string) {
         if (view.committedReady?.[mySeat]) return;
         if (move.type !== "king-and-spy-commit") return;
 
-        const optimistic = optimisticKingAndSpyCommitView(view, move.cardId);
-        if ("error" in optimistic) return;
-
-        setGameState(optimistic);
         sendMovePipeline(move, versionRef.current);
         return;
       }

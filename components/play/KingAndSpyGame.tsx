@@ -137,15 +137,20 @@ export function KingAndSpyGame() {
     ? (online.mySeat as 0 | 1)
     : localActiveSeat;
 
+  const pendingMyCommitOnline =
+    isOnlinePlay && online.movePending && myCommittedCard !== null;
+
   const committedCardOnField =
-    activeView?.committedReady[mySeat] && myCommittedCard
+    myCommittedCard &&
+    (activeView?.committedReady[mySeat] || pendingMyCommitOnline)
       ? myCommittedCard
       : null;
 
   const { field, resetField, isHandLocked } = useKingAndSpyDuelField(
     duelPublic,
     mySeat,
-    committedCardOnField
+    committedCardOnField,
+    pendingMyCommitOnline
   );
 
   const myHandLive = activeView?.myHand ?? [];
@@ -234,7 +239,12 @@ export function KingAndSpyGame() {
     setMyCommittedCard(card);
 
     if (isOnlinePlay && online.mySeat >= 0) {
-      if (activeView.committedReady[online.mySeat]) return;
+      if (
+        activeView.committedReady[online.mySeat] ||
+        online.movePending
+      ) {
+        return;
+      }
       void online.handleMove({
         type: "king-and-spy-commit",
         cardId: pickedCardId,

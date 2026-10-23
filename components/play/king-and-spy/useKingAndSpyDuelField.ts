@@ -72,27 +72,34 @@ function startRevealAnimation(
 export function useKingAndSpyDuelField(
   publicState: KingAndSpyPublicState,
   mySeat: 0 | 1,
-  myCommittedCard: KingAndSpyCard | null
+  myCommittedCard: KingAndSpyCard | null,
+  /** オンライン: サーバー反映前の自席確定表示のみ（ルールはサーバー側） */
+  pendingMyCommit = false
 ) {
   const [revealField, setRevealField] = useState<DuelFieldState | null>(null);
   const [playbackDoneToken, setPlaybackDoneToken] = useState<string | null>(null);
   const revealTokenRef = useRef<string | null>(null);
   const discardLenRef = useRef(publicState.discards.length);
-  const trickEpochRef = useRef(
-    `${publicState.roundNumber}:${publicState.discards.length}`
-  );
+
+  const displayReady = useMemo((): [boolean, boolean] => {
+    const r = [...publicState.committedReady] as [boolean, boolean];
+    if (pendingMyCommit) {
+      r[mySeat] = true;
+    }
+    return r;
+  }, [publicState.committedReady, pendingMyCommit, mySeat]);
 
   const waitingField = useMemo((): DuelFieldState | null => {
-    const ready = publicState.committedReady;
-    if (!ready[0] && !ready[1]) return null;
+    if (!displayReady[0] && !displayReady[1]) return null;
     return [
-      ready[0] ? slotBack(mySeat === 0 ? myCommittedCard : null) : emptySlot(),
-      ready[1] ? slotBack(mySeat === 1 ? myCommittedCard : null) : emptySlot(),
+      displayReady[0]
+        ? slotBack(mySeat === 0 ? myCommittedCard : null)
+        : emptySlot(),
+      displayReady[1]
+        ? slotBack(mySeat === 1 ? myCommittedCard : null)
+        : emptySlot(),
     ];
-  }, [publicState.committedReady, mySeat, myCommittedCard]);
-
-  const bothCommitted =
-    publicState.committedReady[0] && publicState.committedReady[1];
+  }, [displayReady, mySeat, myCommittedCard]);
 
   const decisiveRevealToken = useMemo(
     () => lastRevealPlaybackToken(publicState),
@@ -105,15 +112,6 @@ export function useKingAndSpyDuelField(
 
   useLayoutEffect(() => {
     const ready = publicState.committedReady;
-    const trickEpoch = `${publicState.roundNumber}:${publicState.discards.length}`;
-
-    if (!ready[0] && !ready[1]) {
-      discardLenRef.current = publicState.discards.length;
-      if (trickEpochRef.current !== trickEpoch) {
-        trickEpochRef.current = trickEpoch;
-        setRevealField(null);
-      }
-    }
 
     if (ready[0] || ready[1]) return;
 
@@ -131,11 +129,11 @@ export function useKingAndSpyDuelField(
 
     const prevLen = discardLenRef.current;
     const added = publicState.discards.length - prevLen;
-    discardLenRef.current = publicState.discards.length;
 
     if (added === 2 && !publicState.lastReveal) {
       const a = publicState.discards[publicState.discards.length - 2];
       const b = publicState.discards[publicState.discards.length - 1];
+      discardLenRef.current = publicState.discards.length;
       if (a.kind !== "citizen" || b.kind !== "citizen") {
         return;
       }
@@ -147,11 +145,12 @@ export function useKingAndSpyDuelField(
         setRevealField(null);
       });
     }
+
+    discardLenRef.current = publicState.discards.length;
   }, [
     publicState.committedReady,
     publicState.lastReveal,
     publicState.discards,
-    publicState.roundNumber,
     decisiveRevealToken,
     playbackDoneToken,
   ]);
@@ -161,14 +160,20 @@ export function useKingAndSpyDuelField(
     setRevealField(null);
     setPlaybackDoneToken(null);
     discardLenRef.current = 0;
-    trickEpochRef.current = "0:0";
   }, []);
 
-  const field = waitingField ?? revealField ?? emptyField();
+  const field =
+    revealField !== null
+      ? revealField
+      : waitingField ?? emptyField();
 
   const isFieldAnimating = revealField !== null;
+  const myPlaced = displayReady[mySeat];
+  const bothPlaced = displayReady[0] && displayReady[1];
+
   const isHandLocked =
-    bothCommitted ||
+    myPlaced ||
+    bothPlaced ||
     decisiveRevealPending ||
     (isFieldAnimating && publicState.lastReveal !== null);
 
