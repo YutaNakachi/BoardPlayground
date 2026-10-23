@@ -23,7 +23,7 @@ alwaysApply: false
 - ローカル専用のルール・勝利条件変更（ゲームロジック検証 Agent と連携）
 - サイト一覧・ヘッダー・about などオンラインと無関係な UI
 - CPU 対戦の実装
-- 手札・秘密情報があるゲームのオンライン（スター・トレード等。サーバー秘匿 or 個人ビュー設計が先）
+- 手札秘匿ゲームの新規追加時は `room_secrets` + `projectGameStateForSeat` パターンに従う（参照: `king-and-spy`）
 - 日本語の推敲・表記統一（文章・文言検証 Agent）
 
 ## 現行アーキテクチャ
@@ -31,7 +31,7 @@ alwaysApply: false
 - **部屋 API**: `app/api/rooms/create` / `join` / `[id]` / `start` / `move`
 - **同期**: `room_state` テーブル + Supabase Realtime（`hooks/useOnlineRoom.ts`）
 - **プレイヤー ID**: `localStorage`（`lib/online/player-id.ts`）
-- **対応ゲーム**: `reversi`, `tic-tac-toe`, `gomoku`, `checkers`（`lib/online/types.ts`）
+- **対応ゲーム**: `ONLINE_GAME_SLUGS`（`lib/online/types.ts`）。手札秘匿は `ONLINE_SECRET_GAME_SLUGS` + `room_secrets`
 - **部屋 TTL**: 24時間（`rooms.expires_at`）
 
 ## ゲームをオンライン対応する手順

@@ -5,8 +5,19 @@ import {
   initialCurrentPlayerSeat,
   mergeGameOptions,
 } from "@/lib/online/game-options";
+import { kingRoleSeatFromHost, parseHostStartsAsKing } from "@/lib/play/king-and-spy/game-options";
+import {
+  initialKingAndSpyPublicState,
+  initialKingAndSpySecrets,
+} from "@/lib/play/king-and-spy/state";
 import { createInitialState } from "@/lib/online/moves";
+import {
+  probeRoomSecretsTable,
+  roomSecretsWriteErrorMessage,
+  saveRoomSecrets,
+} from "@/lib/online/room-secrets";
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
+import { isOnlineSecretGame } from "@/lib/online/secret-games";
 import { isOnlineGame } from "@/lib/online/types";
 import { incrementPlayCount } from "@/lib/stats/record-play";
 
@@ -78,6 +89,16 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "参加者が2人揃っていません" }, { status: 409 });
   }
 
+  if (isOnlineSecretGame(room.game_slug)) {
+    const secretsReady = await probeRoomSecretsTable(db);
+    if (!secretsReady.ok) {
+      return NextResponse.json(
+        { error: secretsReady.message, code: secretsReady.code },
+        { status: 503 }
+      );
+    }
+  }
+
   if (!isOnlineGame(room.game_slug)) {
     return NextResponse.json({ error: "Unsupported game" }, { status: 400 });
   }
@@ -100,8 +121,32 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Invalid game options" }, { status: 400 });
   }
 
-  const initialState = createInitialState(room.game_slug, gameOptions);
-  const openingSeat = initialCurrentPlayerSeat(room.game_slug, gameOptions);
+  const { data: seatPlayers } = await db
+    .from("room_players")
+    .select("player_id, seat_index")
+    .eq("room_id", id);
+
+  let gameOptionsToStore = gameOptions;
+  let initialState = createInitialState(room.game_slug, gameOptions);
+  let secretsPayload: unknown | null = null;
+
+  if (room.game_slug === "king-and-spy") {
+    const hostSeat =
+      (seatPlayers ?? []).find((p) => p.player_id === room.host_player_id)
+        ?.seat_index ?? 0;
+    const kingRoleSeat = kingRoleSeatFromHost(
+      hostSeat as 0 | 1,
+      parseHostStartsAsKing(gameOptions)
+    );
+    gameOptionsToStore = { ...gameOptions, kingRoleSeat };
+    initialState = initialKingAndSpyPublicState(kingRoleSeat);
+    secretsPayload = initialKingAndSpySecrets(kingRoleSeat);
+  }
+
+  const openingSeat =
+    room.game_slug === "king-and-spy"
+      ? null
+      : initialCurrentPlayerSeat(room.game_slug, gameOptions);
 
   const { data: existingState } = await db
     .from("room_state")
@@ -121,12 +166,31 @@ export async function POST(request: Request, { params }: Params) {
     : await db.from("room_state").insert({ room_id: id, ...statePayload });
 
   if (stateError) {
-    return NextResponse.json({ error: "Failed to start game" }, { status: 500 });
+    console.error("[rooms/start] room_state", stateError.message);
+    return NextResponse.json(
+      { error: "ゲーム状態の保存に失敗しました" },
+      { status: 500 }
+    );
+  }
+
+  if (isOnlineSecretGame(room.game_slug) && secretsPayload) {
+    try {
+      await saveRoomSecrets(db, id, secretsPayload, 1);
+    } catch (e) {
+      console.error("[rooms/start] secrets", e);
+      return NextResponse.json(
+        {
+          error: roomSecretsWriteErrorMessage(e),
+          code: "ROOM_SECRETS_WRITE_FAILED",
+        },
+        { status: 500 }
+      );
+    }
   }
 
   await db
     .from("rooms")
-    .update({ status: "playing", game_options: gameOptions })
+    .update({ status: "playing", game_options: gameOptionsToStore })
     .eq("id", id);
   const countResult = await incrementPlayCount(db, room.game_slug);
   if (!countResult.ok) {

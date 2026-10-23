@@ -36,6 +36,7 @@ import {
   type StartRoomParams,
 } from "@/lib/online/room-client";
 import { shouldApplyRemoteGameVersion } from "@/lib/online/sync-game-state";
+import { isOnlineSecretGame } from "@/lib/online/secret-games";
 import type { OnlineGameSlug, RoomInfo, RoomPlayer } from "@/lib/online/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -87,6 +88,19 @@ export function useOnlineRoom(gameSlug: string) {
 
   const broadcastGameState = useCallback(
     (state: GameState, remoteVersion: number, remoteCurrentPlayer: number | null) => {
+      if (
+        roomRef.current &&
+        isOnlineSecretGame(roomRef.current.gameSlug)
+      ) {
+        const channel = channelRef.current;
+        if (!channel) return;
+        void channel.send({
+          type: "broadcast",
+          event: "room_state",
+          payload: { version: remoteVersion, secretTick: true },
+        });
+        return;
+      }
       const channel = channelRef.current;
       if (!channel) return;
       void channel.send({
@@ -117,10 +131,19 @@ export function useOnlineRoom(gameSlug: string) {
       remoteCurrentPlayer: number | null
     ) => {
       const remoteGameOver = state.phase === "game-over";
+      const secretSlug = roomRef.current?.gameSlug;
       if (pendingMoveRef.current) {
-        if (!remoteGameOver) return;
-        pendingMoveRef.current = false;
-        setMovePending(false);
+        const secretInFlight =
+          !!secretSlug &&
+          isOnlineSecretGame(secretSlug) &&
+          remoteVersion > versionRef.current;
+        if (!remoteGameOver && !secretInFlight) {
+          return;
+        }
+        if (remoteGameOver) {
+          pendingMoveRef.current = false;
+          setMovePending(false);
+        }
       }
       if (
         !shouldApplyRemoteGameVersion(
@@ -142,7 +165,11 @@ export function useOnlineRoom(gameSlug: string) {
         if (seat !== null) resolvedCurrentPlayer = seat;
       }
       setCurrentPlayer(resolvedCurrentPlayer);
-      if (state.phase === "playing" || state.phase === "placement") {
+      if (
+        state.phase === "playing" ||
+        state.phase === "placement" ||
+        state.phase === "selecting"
+      ) {
         setPhase("playing");
       } else if (state.phase === "game-over") {
         setPhase("finished");
@@ -156,8 +183,17 @@ export function useOnlineRoom(gameSlug: string) {
     []
   );
 
-  const refreshRoom = useCallback(async (roomId: string) => {
-    const data = await fetchRoom(roomId);
+  const refreshRoom = useCallback(
+    async (roomId: string, options?: { playerId?: string }) => {
+    const slugForFetch =
+      roomRef.current?.gameSlug ??
+      (typeof window !== "undefined" ? gameSlug : "");
+    const pid =
+      options?.playerId ?? (myPlayerId || getOrCreatePlayerId());
+    const data = await fetchRoom(
+      roomId,
+      isOnlineSecretGame(slugForFetch) ? pid : undefined
+    );
     setRoom(data.room);
     if (data.gameState) {
       const remoteState = data.gameState.state as GameState;
@@ -175,14 +211,17 @@ export function useOnlineRoom(gameSlug: string) {
       setPhase("waiting");
     }
     return data;
-  }, [applyRemoteGameState]);
+  },
+    [applyRemoteGameState, gameSlug, myPlayerId]
+  );
 
   const startPoll = useCallback(
     (roomId: string) => {
       if (pollRef.current) return;
+      const intervalMs = isOnlineSecretGame(gameSlug) ? 400 : 1000;
       pollRef.current = setInterval(() => {
         void refreshRoom(roomId);
-      }, 1000);
+      }, intervalMs);
     },
     [refreshRoom]
   );
@@ -202,6 +241,13 @@ export function useOnlineRoom(gameSlug: string) {
         version: number;
         current_player: number | null;
       }) => {
+        if (
+          roomRef.current &&
+          isOnlineSecretGame(roomRef.current.gameSlug)
+        ) {
+          void refreshRoom(roomId);
+          return;
+        }
         applyRemoteGameState(row.state, row.version, row.current_player);
       };
 
@@ -210,6 +256,13 @@ export function useOnlineRoom(gameSlug: string) {
           config: { broadcast: { ack: false, self: false } },
         })
         .on("broadcast", { event: "room_state" }, ({ payload }) => {
+          if (
+            roomRef.current &&
+            isOnlineSecretGame(roomRef.current.gameSlug)
+          ) {
+            void refreshRoom(roomId);
+            return;
+          }
           const row = payload as RoomStateBroadcast;
           applyRemoteGameState(row.state, row.version, row.currentPlayer);
         })
@@ -258,7 +311,7 @@ export function useOnlineRoom(gameSlug: string) {
         void supabase.removeChannel(channel);
       };
     },
-    [applyRemoteGameState, startPoll]
+    [applyRemoteGameState, refreshRoom, startPoll]
   );
 
   useEffect(() => {
@@ -281,6 +334,18 @@ export function useOnlineRoom(gameSlug: string) {
     };
   }, [phase, room?.id, startPoll]);
 
+  useEffect(() => {
+    if (!room?.id || !isOnlineSecretGame(gameSlug)) return;
+    if (phase !== "playing" && phase !== "finished") return;
+    startPoll(room.id);
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [phase, room?.id, gameSlug, startPoll]);
+
   const setupRoom = useCallback(
     (roomId: string, playerId: string, seatIndex: number, roomInfo: RoomInfo) => {
       clearRealtime();
@@ -298,7 +363,7 @@ export function useOnlineRoom(gameSlug: string) {
       if (cleanup) {
         realtimeCleanupRef.current = cleanup;
       }
-      void refreshRoom(roomId);
+      void refreshRoom(roomId, { playerId });
       return cleanup;
     },
     [clearRealtime, refreshRoom, subscribeRealtime]
@@ -423,7 +488,7 @@ export function useOnlineRoom(gameSlug: string) {
       setError(null);
       try {
         const result = await createRoom(gameSlug, displayName, gameOptions);
-        const data = await fetchRoom(result.roomId);
+        const data = await fetchRoom(result.roomId, result.playerId);
         setupRoom(result.roomId, result.playerId, result.seatIndex, data.room);
       } catch (e) {
         setError(e instanceof Error ? e.message : "エラーが発生しました");
@@ -481,7 +546,7 @@ export function useOnlineRoom(gameSlug: string) {
       try {
         await startRoomGame(room.id, myPlayerId, params);
         // 開始の応答より先に盤が出て、先に手が進むことがある。
-        // その版番号と待ち行列は消さない。
+        // その版番号と待ち行列は消さない。秘密対戦の手札は refreshRoom が playerId 付きで取り直す。
         if (!pendingMoveRef.current) {
           moveQueueRef.current = [];
           setMovePending(false);
@@ -554,8 +619,12 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const sendMovePipelineRef = useRef<
-    (move: MovePayload, expectedVersion: number, rollback: MoveRollback) => void
-  >(() => {});
+    (
+      move: MovePayload,
+      expectedVersion: number,
+      rollback: MoveRollback
+    ) => Promise<void>
+  >(async () => {});
 
   useEffect(() => {
     sendMovePipelineRef.current = (
@@ -563,23 +632,29 @@ export function useOnlineRoom(gameSlug: string) {
       expectedVersion: number,
       rollback: MoveRollback
     ) => {
-      if (!room) return;
+      if (!room) return Promise.resolve();
 
       pendingMoveRef.current = true;
       setMovePending(true);
 
-      void sendRoomMove(room.id, myPlayerId, move, expectedVersion)
+      return sendRoomMove(room.id, myPlayerId, move, expectedVersion)
         .then((serverResult) => {
           if (moveQueueRef.current.length > 0) {
             // ローカルはすでに次の手まで進んでいる。途中のサーバー状態で盤を戻さない。
             const nextMove = moveQueueRef.current.shift()!;
             const accepted = serverResult.state as GameState;
-            sendMovePipelineRef.current(nextMove, serverResult.version, {
+            void sendMovePipelineRef.current(nextMove, serverResult.version, {
               state: accepted,
               version: serverResult.version,
               currentPlayer: serverResult.currentPlayer,
               phase: accepted.phase === "game-over" ? "finished" : "playing",
             });
+            return;
+          }
+
+          if (serverResult.version < versionRef.current) {
+            pendingMoveRef.current = false;
+            setMovePending(false);
             return;
           }
 
@@ -593,21 +668,28 @@ export function useOnlineRoom(gameSlug: string) {
         })
         .catch((e) => {
           moveQueueRef.current = [];
-          setGameState(rollback.state);
-          gameStateRef.current = rollback.state;
-          setVersion(rollback.version);
-          versionRef.current = rollback.version;
-          setCurrentPlayer(rollback.currentPlayer);
-          setPhase(rollback.phase);
-          broadcastGameState(
-            rollback.state,
-            rollback.version,
-            rollback.currentPlayer
-          );
+          const secretInFlight = isOnlineSecretGame(room.gameSlug);
+          const newerLanded = versionRef.current > rollback.version;
+          if (!(secretInFlight && newerLanded)) {
+            setGameState(rollback.state);
+            gameStateRef.current = rollback.state;
+            setVersion(rollback.version);
+            versionRef.current = rollback.version;
+            setCurrentPlayer(rollback.currentPlayer);
+            setPhase(rollback.phase);
+            broadcastGameState(
+              rollback.state,
+              rollback.version,
+              rollback.currentPlayer
+            );
+          }
           setError(e instanceof Error ? e.message : "手の送信に失敗しました");
           void refreshRoom(room.id);
           pendingMoveRef.current = false;
           setMovePending(false);
+          if (secretInFlight) {
+            throw e;
+          }
         });
     };
   }, [
@@ -620,7 +702,7 @@ export function useOnlineRoom(gameSlug: string) {
 
   const sendMovePipeline = useCallback(
     (move: MovePayload, expectedVersion: number, rollback: MoveRollback) => {
-      sendMovePipelineRef.current(move, expectedVersion, rollback);
+      return sendMovePipelineRef.current(move, expectedVersion, rollback);
     },
     []
   );
@@ -632,12 +714,37 @@ export function useOnlineRoom(gameSlug: string) {
       if (!liveState) return;
 
       const slug = room.gameSlug as OnlineGameSlug;
+      if (isOnlineSecretGame(slug)) {
+        if (liveState.phase === "game-over") return;
+        const view = liveState as import("@/lib/play/king-and-spy/types").KingAndSpyViewState;
+        const rollback: MoveRollback = {
+          state: liveState,
+          version: versionRef.current,
+          currentPlayer,
+          phase,
+        };
+        if (move.type === "king-and-spy-hand-ready") {
+          if (view.showcase) return;
+          if (view.handReady?.[mySeat]) return;
+          if (!view.committedReady?.[mySeat]) return;
+          return sendMovePipeline(move, rollback.version, rollback);
+        }
+        if (view.committedReady?.[mySeat]) return;
+        if (move.type !== "king-and-spy-commit") return;
+
+        return sendMovePipeline(move, rollback.version, rollback);
+      }
+
       const dejarikActorSeat =
         slug === "dejarik"
           ? dejarikTurnSeat(liveState as DejarikOnlineState)
           : null;
       const actorSeat =
-        dejarikActorSeat !== null ? dejarikActorSeat : liveState.current;
+        dejarikActorSeat !== null
+          ? dejarikActorSeat
+          : "current" in liveState
+            ? (liveState as { current: number }).current
+            : mySeat;
       const chainedExtraTurn =
         pendingMoveRef.current &&
         liveState.phase !== "game-over" &&
@@ -705,6 +812,12 @@ export function useOnlineRoom(gameSlug: string) {
   const isHost = room?.hostPlayerId === myPlayerId;
   const isMyTurn = useMemo(() => {
     if (mySeat < 0) return false;
+    if (room?.gameSlug && isOnlineSecretGame(room.gameSlug) && gameState) {
+      const view = gameState as import("@/lib/play/king-and-spy/types").KingAndSpyViewState;
+      if (view.committedReady) {
+        return view.phase !== "game-over" && !view.committedReady[mySeat];
+      }
+    }
     if (room?.gameSlug === "dejarik" && gameState) {
       const seat = dejarikTurnSeat(gameState as DejarikOnlineState);
       if (seat !== null) return seat === mySeat;

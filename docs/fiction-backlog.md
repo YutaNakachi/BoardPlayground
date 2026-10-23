@@ -20,8 +20,8 @@
 | 区分 | 本数 |
 |------|------|
 | ラインナップ合計 | 13 |
-| 実装済み（`lib/games.ts` 登録あり） | 2（`dejarik`、`overheat-chicken`） |
-| 未着手 | 11 |
+| 実装済み（`lib/games.ts` 登録あり） | 3（`dejarik`、`king-and-spy`、`overheat-chicken`） |
+| 未着手 | 10 |
 
 ## タイトル一覧
 
@@ -29,7 +29,7 @@
 
 | No. | 表示タイトル（仮） | slug（案） | 実装 | 掲載 | メカニクス・特徴 | 規模・目安時間 | 内部参照（非公開用） |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | キング＆スパイ（仮） | `king-and-spy` | ルール草案中 | — | 非対称カード心理戦（各5枚・同時出し・ポイント2先取） | 5〜8分目安 | 『カイジ』Eカード |
+| 1 | キング＆スパイ | `king-and-spy` | **済** | **掲載中** | 非対称カード心理戦（各5枚・点差3） | 5〜8分目安 | 『カイジ』Eカード |
 | 2 | リミテッド・エレメント | `limited-element` | 未 | — | 属性リソース管理・カウンティング | 軽量・3〜5分 | 『カイジ』限定ジャンケン |
 | 3 | ゴールド＆ジニー | `gold-and-genie` | 未 | — | 金貨倍増・強奪・反撃（6枚手札） | 軽量・3〜5分 | 『ジャンケットバンク』ジャックポット・ジニー |
 | 4 | オーバーヒート・チキンレース | `overheat-chicken` | **済** | **掲載中** | 杯に小中大のチップを1枚ずつ積み、溢れさせた方が負け。上限は水位15〜20で非公開。ドームは水位と連動するが高さだけでは逆算できない | 数分 | 『ジョジョ』第3部・表面張力のコイン勝負 |
@@ -45,6 +45,7 @@
 
 ### 実装済みの参照
 
+- **No.1** [`games/king-and-spy/rules.md`](../games/king-and-spy/rules.md)、プレイ: `components/play/KingAndSpyGame.tsx`、`lib/play/king-and-spy/`
 - **No.4** [`games/overheat-chicken/rules.md`](../games/overheat-chicken/rules.md)、プレイ: `components/play/OverheatChickenGame.tsx`、`lib/play/overheat-chicken.ts`
 - **No.11** [`games/dejarik/rules.md`](../games/dejarik/rules.md)、プレイ: `components/play/DejarikGame.tsx`、`lib/play/dejarik/`
 - リリースメモ: [`docs/note/dejarik-release.md`](./note/dejarik-release.md)
@@ -55,11 +56,11 @@
 
 | 優先度の考え方 | No. | 理由 |
 | --- | --- | --- |
-| 早め（2人・軽量） | 1 → 2 → 3 | 心理戦・短時間。既存 2P パターンに近い。No.4 はローカル実装済み |
+| 早め（2人・軽量） | 2 → 3 | 心理戦・短時間。既存 2P パターンに近い。No.1 と No.4 は実装済み |
 | 中盤（2人・中量） | 7 → 5 → 6 → 8 → 9 | UI・ルール確定の工数が増える |
 | 仕様要整理 | 10 | 3人以上・正体隠蔽・交渉。人数と非公開情報の設計を先に固定 |
 | 後半（盤・状態が重い） | 12 → 13 | 重ね駒・ダイスダンジョンは実装・検証コスト大 |
-| 完了 | 4、11 | どちらも掲載中 |
+| 完了 | 1、4、11 | いずれも掲載中 |
 
 No.10 は手札非公開・複数人のため、オンライン化は `star-trade` と同様 **部屋＋非公開同期** が前提になる想定。
 
@@ -67,16 +68,16 @@ No.10 は手札非公開・複数人のため、オンライン化は `star-trad
 
 実装依頼・Agent 起動前に、次を埋める。
 
-### No.1 キング＆スパイ（`king-and-spy`）
+### No.1 キング＆スパイ（`king-and-spy`）— 実装済み
 
 - [ ] 公開用 **正式タイトル**（作品名なし）— 現状 **仮タイトル**
 - [x] **slug** 確定 → `king-and-spy`
 - [x] **人数** → 2人固定
-- [x] **勝利条件** → スコア差3点先（首領側決着+1／刺客側決着+2）
+- [x] **勝利条件** → スコア差3点先（首領側決着+1／刺客側決着+2）、最大12ラウンド上限
 - [x] **役割** → ホストが開始側を選択、決着2回ごとに首領⇔刺客交代
-- [x] **1 手 / ラウンド** → 同時確定・公開、市民引き分けは同ラウンド継続、決着で再配布（草案）
-- [x] **補完メモ** → [`docs/design/king-and-spy-rules-draft.md`](./design/king-and-spy-rules-draft.md)
-- [ ] オーナー承認（ルール草案）
+- [x] **1 手 / ラウンド** → 同時確定・公開、市民引き分けは同ラウンド継続、決着で再配布
+- [x] **ルール文** → [`games/king-and-spy/rules.md`](../games/king-and-spy/rules.md)（草案: [`docs/design/king-and-spy-rules-draft.md`](./design/king-and-spy-rules-draft.md)）
+- [x] **掲載** → `listed: true`（2026-10-21）
 
 ### No.4 オーバーヒート・チキンレース（`overheat-chicken`）
 
@@ -106,6 +107,7 @@ No.10 は手札非公開・複数人のため、オンライン化は `star-trad
 | 2026-10-21 | No.1 ルール草案 `docs/design/king-and-spy-rules-draft.md` |
 | 2026-10-21 | No.1 各5枚・同時出し・非対称マッチポイント（+1/+2）を草案に反映 |
 | 2026-10-21 | No.1 3点差勝利・2決着ごと交代・ホストが開始側選択 |
+| 2026-10-21 | No.1 プレイ実装・掲載（`king-and-spy`） |
 | 2026-10-21 | No.4 `overheat-chicken` をローカル2人で実装（`listed: false`）。衝突マーカーを除去 |
 | 2026-10-21 | No.4 を掲載（`listed: true`、`listedAt: 2026-10-21`） |
 | 2026-10-21 | No.4 の投入を1枚ずつに変更。サイズは小+0.5、中+1、大+1.5。手番の終了はボタン |

@@ -65,6 +65,11 @@ import {
   type TttMode,
 } from "@/lib/play/tic-tac-toe";
 import {
+  initialKingAndSpyPublicState,
+} from "@/lib/play/king-and-spy/state";
+import { kingRoleSeatFromOptions } from "@/lib/play/king-and-spy/online-options";
+import type { KingAndSpyPublicState } from "@/lib/play/king-and-spy/types";
+import {
   type HoundsSeat,
   parseDotsBoxesSize,
   parseFirstPlayer,
@@ -193,6 +198,8 @@ export type MiniShogiOnlineState = MiniShogiState & {
   winner: Player | null;
 };
 
+export type KingAndSpyOnlineState = KingAndSpyPublicState;
+
 export type OverheatOnlineState = OverheatState & {
   phase: "playing" | "game-over";
 };
@@ -233,6 +240,7 @@ export type GameState =
   | FoxHoundsOnlineState
   | DejarikOnlineState
   | MiniShogiOnlineState
+  | KingAndSpyOnlineState
   | OverheatOnlineState;
 
 export type MovePayload =
@@ -248,6 +256,8 @@ export type MovePayload =
   | { type: "dejarik-attack"; pieceId: number; to: number }
   | { type: "dejarik-scout-end" }
   | { type: "mini-shogi"; move: MiniShogiMove }
+  | { type: "king-and-spy-commit"; cardId: string }
+  | { type: "king-and-spy-hand-ready" }
   | { type: "overheat-place"; size: ChipSize }
   | { type: "overheat-end" };
 
@@ -362,6 +372,8 @@ export function createInitialState(
       }
       return { ...base, phase: "playing", winner: null };
     }
+    case "king-and-spy":
+      return initialKingAndSpyPublicState(kingRoleSeatFromOptions(gameOptions));
     case "overheat-chicken":
       return { ...createOverheat(firstPlayer), phase: "playing" };
   }
@@ -396,6 +408,10 @@ export function applyMove(
     return { error: "Game is over" };
   }
 
+  if (slug === "king-and-spy") {
+    return { error: "Secret state required" };
+  }
+
   if (slug === "fox-hounds") {
     const s = state as FoxHoundsOnlineState;
     const houndsSeat = foxHoundsSeatForState(s, gameOptions);
@@ -407,7 +423,7 @@ export function applyMove(
     if (dejarikTurnSeat(s) !== seatIndex) {
       return { error: "Not your turn" };
     }
-  } else if (state.current !== seatIndex) {
+  } else if ("current" in state && state.current !== seatIndex) {
     return { error: "Not your turn" };
   }
 

@@ -435,6 +435,30 @@ const games: GameMeta[] = [
     listedAt: "2026-10-10",
   },
   {
+    slug: "king-and-spy",
+    title: "キング＆スパイ",
+    description:
+      "漫画『カイジ』のEカードをモチーフにした、キングとスパイの非対称な三すくみカード心理戦。裏向きで場に出して同時公開。点差3点先取、または12ラウンド終了時は得点の多い方が勝ちます。",
+    origin: "fiction",
+    players: "2",
+    playersMin: 2,
+    playersMax: 2,
+    durationMinutes: 10,
+    complexity: "normal",
+    cpu: false,
+    team: false,
+    tags: ["カード", "心理戦"],
+    rulesSummary: [
+      "漫画『カイジ』のEカードをモチーフにした非公式版。キング側はキング1・市民4、スパイ側はスパイ1・市民4。キング＞市民＞スパイ＞キング。",
+      "裏向きで場に出してから手札を減らし、両者の減らしが終わってから同時公開。公開と結果のあと、引き分けは手札のまま、決着は5枚に戻して得点を更新。",
+      "キング側決着+1点、スパイ側決着+2点。点差3点先取、または12ラウンド終了時は得点の多い方。",
+      "決着2回ごとにキング／スパイ担当を交代。ホストが開始時の側を選択（オンライン）。",
+    ],
+    status: "playable",
+    listed: true,
+    listedAt: "2026-10-21",
+  },
+  {
     slug: "overheat-chicken",
     title: "オーバーヒート・チキンレース",
     description:

@@ -17,7 +17,11 @@ function isGameOverState(state: GameState | null): boolean {
 }
 
 function isActivePlayPhase(state: GameState): boolean {
-  return state.phase === "playing" || state.phase === "placement";
+  return (
+    state.phase === "playing" ||
+    state.phase === "placement" ||
+    state.phase === "selecting"
+  );
 }
 
 function isRematchStart(

@@ -38,6 +38,7 @@ export const ONLINE_GAME_SLUGS = [
   "fox-hounds",
   "dejarik",
   "mini-shogi",
+  "king-and-spy",
   "overheat-chicken",
 ] as const;
 
