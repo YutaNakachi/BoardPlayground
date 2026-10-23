@@ -17,7 +17,7 @@ export type DuelFieldState = [DuelSlot, DuelSlot];
 /** 両カードが揃ってからオープンまでの間 */
 const FACE_DOWN_MS = 800;
 /** オープンして結果を見せてから場を空にするまで */
-const OPEN_HOLD_MS = 1500;
+const OPEN_HOLD_MS = 2400;
 
 const emptySlot = (): DuelSlot => ({
   card: null,
@@ -140,6 +140,8 @@ export function useKingAndSpyDuelField(
     resetField,
     isHandLocked,
     isFieldAnimating: revealField !== null,
+    /** このトリックのオープン演出が終わるまで true */
+    showcasePending,
     isRevealPlayback: isHandLocked,
   };
 }

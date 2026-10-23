@@ -140,7 +140,7 @@ export function KingAndSpyGame() {
     setMyCommittedCard(null);
   }, []);
 
-  const { field, resetField, isHandLocked, isFieldAnimating } =
+  const { field, resetField, isHandLocked, isFieldAnimating, showcasePending } =
     useKingAndSpyDuelField(
     duelPublic,
     mySeat,
@@ -410,10 +410,12 @@ export function KingAndSpyGame() {
     return null;
   }
 
-  const isGameOver =
+  const matchEnded =
     (isOnlinePlay && online.phase === "finished") ||
     localPhase === "game-over" ||
     activeView.phase === "game-over";
+  const finalRevealPlaying = matchEnded && (showcasePending || isFieldAnimating);
+  const isGameOver = matchEnded && !finalRevealPlaying;
 
   const alreadyCommitted = activeView.committedReady[mySeat];
 
@@ -434,7 +436,7 @@ export function KingAndSpyGame() {
   } else {
     stats = `あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
     action = "手札から1枚選び、確定する";
-    if (isFieldAnimating) {
+    if (isFieldAnimating || showcasePending || finalRevealPlaying) {
       action = "公開中";
     } else if (alreadyCommitted || myCommittedCard) {
       action = "場に出しました。相手の確定を待っています";
