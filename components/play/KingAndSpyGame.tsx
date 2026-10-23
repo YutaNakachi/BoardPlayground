@@ -136,8 +136,9 @@ export function KingAndSpyGame() {
     ? (online.mySeat as 0 | 1)
     : localActiveSeat;
 
-  const clearLocalCard = useCallback(() => {
+  const finishShowcase = useCallback(() => {
     setMyCommittedCard(null);
+    setLocalActiveSeat(0);
   }, []);
 
   const { field, resetField, isHandLocked, isFieldAnimating, showcasePending } =
@@ -145,25 +146,16 @@ export function KingAndSpyGame() {
     duelPublic,
     mySeat,
     isOnlinePlay ? myCommittedCard : null,
-    clearLocalCard
+    finishShowcase
   );
 
-  const myHandLive = activeView?.myHand ?? [];
-  const [revealHandHold, setRevealHandHold] = useState<KingAndSpyCard[] | null>(
-    null
-  );
-  const [revealHandLatch, setRevealHandLatch] = useState(false);
-  if (isHandLocked) {
-    if (!revealHandLatch) {
-      setRevealHandLatch(true);
-      setRevealHandHold(myHandLive);
-    }
-  } else if (revealHandLatch) {
-    setRevealHandLatch(false);
-    setRevealHandHold(null);
+  const holdingReveal = showcasePending || isFieldAnimating;
+  const [shownView, setShownView] = useState<KingAndSpyViewState | null>(null);
+  if (!holdingReveal && activeView && shownView !== activeView) {
+    setShownView(activeView);
   }
-  const displayHand =
-    isHandLocked && revealHandHold !== null ? revealHandHold : myHandLive;
+  const displayView = holdingReveal && shownView ? shownView : activeView;
+  const displayHand = displayView?.myHand ?? [];
 
   const effectivePickedCardId = isHandLocked ? null : pickedCardId;
 
@@ -213,10 +205,11 @@ export function KingAndSpyGame() {
       }
       if (pub.phase === "game-over") {
         setLocalPhase("game-over");
-        return;
       }
       if (!pub.committedReady[0] && !pub.committedReady[1]) {
-        setLocalActiveSeat(0);
+        if (!pub.showcase) {
+          setLocalActiveSeat(0);
+        }
       } else if (!pub.committedReady[0]) {
         setLocalActiveSeat(0);
       } else if (!pub.committedReady[1]) {
@@ -418,8 +411,9 @@ export function KingAndSpyGame() {
 
   const alreadyCommitted = activeView.committedReady[mySeat];
 
-  const pub = toPublicState(activeView);
-  const scores = pub.scores;
+  const scoreView = displayView ?? activeView;
+  const pub = toPublicState(scoreView);
+  const scores = isGameOver ? toPublicState(activeView).scores : pub.scores;
   const isDrawEnd = isGameOver && Boolean(activeView.draw);
   const winnerSeats =
     isGameOver && activeView.winner !== null ? [activeView.winner] : null;
@@ -433,7 +427,7 @@ export function KingAndSpyGame() {
     action = isDrawEnd ? "上限ラウンド終了・同点" : "マッチ終了";
     notice = undefined;
   } else {
-    stats = `あなたは${playerRoleLabel(activeView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(activeView.decisiveCount)}決着`;
+    stats = `あなたは${playerRoleLabel(scoreView.myRole)} · 担当交代まであと${decisivesUntilRoleSwap(scoreView.decisiveCount)}決着`;
     action = "手札から1枚選び、確定する";
     if (isFieldAnimating || showcasePending || finalRevealPlaying) {
       action = "公開中";
@@ -517,7 +511,7 @@ export function KingAndSpyGame() {
         labels={seatLabels}
         mySeat={mySeat}
         lastReveal={activeView.lastReveal}
-        roundHistory={pub.roundHistory}
+        roundHistory={toPublicState(activeView).roundHistory}
       />
 
       {!isGameOver && (
@@ -565,7 +559,7 @@ export function KingAndSpyGame() {
       <KingAndSpyMatchPanel
         state={pub}
         seatLabels={seatLabels}
-        mySeat={mySeat}
+        mySeat={isOnlinePlay ? mySeat : scoreView.mySeat}
       />
     </div>
   );
