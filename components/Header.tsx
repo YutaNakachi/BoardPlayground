@@ -196,7 +196,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 overflow-visible border-b border-surface-border bg-surface/85 backdrop-blur-md">
+      <header className="sticky top-0 z-40 overflow-x-clip border-b border-surface-border bg-surface/85 backdrop-blur-md">
         <div className="mx-auto flex h-12 max-w-6xl items-center gap-2 px-3 sm:h-14 sm:gap-3 sm:px-6">
           {isHome ? (
             <button
@@ -224,7 +224,7 @@ export function Header() {
             <SiteBrand variant="header" />
           </Link>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1 overflow-visible sm:gap-1.5">
+          <div className="ml-auto flex shrink-0 items-center gap-1 overflow-x-clip sm:gap-1.5">
             {onlineEnabled ? (
               <button
                 type="button"
