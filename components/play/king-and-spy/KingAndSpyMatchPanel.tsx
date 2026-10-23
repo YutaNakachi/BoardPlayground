@@ -11,7 +11,6 @@ type Props = {
 
 export function KingAndSpyMatchPanel({ state, seatLabels, mySeat }: Props) {
   const { scores, roundNumber, maxRounds, roundHistory, kingRoleSeat } = state;
-  const spySeat: 0 | 1 = kingRoleSeat === 0 ? 1 : 0;
 
   return (
     <div className="space-y-3 rounded-2xl border border-slate-700/80 bg-slate-900/60 p-4">
@@ -20,7 +19,7 @@ export function KingAndSpyMatchPanel({ state, seatLabels, mySeat }: Props) {
           ラウンド {roundNumber} / {maxRounds}
         </p>
         <p className="text-xs text-slate-400">
-          点差3点、または{maxRounds}ラウンド終了時は得点の多い方
+          先に3点差、または{maxRounds}ラウンドで得点多い方
         </p>
       </div>
 
@@ -41,24 +40,16 @@ export function KingAndSpyMatchPanel({ state, seatLabels, mySeat }: Props) {
             </p>
             {state.phase !== "game-over" && (
               <p className="mt-1 text-xs text-slate-300">
-                今ラウンド:{" "}
                 {seat === kingRoleSeat ? (
-                  <span className="text-amber-200">キング</span>
+                  <span className="text-amber-200">キング担当</span>
                 ) : (
-                  <span className="text-rose-200">スパイ</span>
+                  <span className="text-rose-200">スパイ担当</span>
                 )}
               </p>
             )}
           </div>
         ))}
       </div>
-
-      {state.phase !== "game-over" && (
-        <p className="text-center text-xs text-slate-500">
-          このラウンド — {seatLabels[kingRoleSeat]}がキング /{" "}
-          {seatLabels[spySeat]}がスパイ
-        </p>
-      )}
 
       {roundHistory.length > 0 && (
         <div>
