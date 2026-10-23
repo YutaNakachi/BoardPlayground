@@ -254,7 +254,7 @@ export function OverheatChickenGame() {
         />
       ) : null}
 
-      <div className="mx-auto flex min-h-10 max-w-md flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-400">
+      <div className="mx-auto flex max-w-md flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-400">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-accent" aria-hidden />
           プレイヤー 1

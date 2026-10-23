@@ -8,8 +8,8 @@ import {
 } from "@/lib/play/overheat-chicken";
 
 const RIM_Y = 360;
-/** 写真の上の余白と、底より下の空きを枠から外す。 */
-const FRAME_TOP = 185;
+/** 写真の上の余白と、底より下の空きを枠から外す。ドームの頂点は残す。 */
+const FRAME_TOP = 236;
 const FRAME_BOTTOM = 1032;
 const FRAME_H = FRAME_BOTTOM - FRAME_TOP;
 const DOME_CX = 432;
@@ -168,18 +168,18 @@ function dripLiquid(side: -1 | 1): LiquidRibbon {
     [166.2, 351.4, 3.2, 0.7],
     [167.6, 354.4, 4.6, 1.05],
     [168.8, 357.8, 5.6, 1.25],
-    [170, 362.2, 6.3, 1.4],
-    [171.2, 368, 6.6, 1.45],
-    [172.6, 376, 6.6, 1.45],
-    [174, 386, 6.6, 1.4],
-    [175.4, 400, 6.6, 1.35],
-    [176.6, 416, 6.6, 1.3],
+    [171.2, 362.2, 7.4, 1.45],
+    [173, 368, 8.4, 1.5],
+    [174.6, 376, 9, 1.5],
+    [176.2, 386, 9, 1.45],
+    [177.8, 400, 9, 1.4],
+    [179.2, 416, 9, 1.35],
   ];
   for (const point of lip) add(...point);
   for (const y of [440, 520, 610, 710, 810, 880]) {
-    add(wallX(y, -1) + 6.3, y, 6.6, 1.25);
+    add(wallX(y, -1) + 8.2, y, 9.2, 1.4);
   }
-  add(wallX(910, -1) + 4.5, 910, 7.2, 0.4);
+  add(wallX(910, -1) + 6.4, 910, 9.6, 0.45);
   add(200, 948, 10, 0.08);
   add(182, 976, 15, 0.06);
   add(160, 994, 18, 0.04);
@@ -217,7 +217,7 @@ export function OverheatGlass({ state, label }: Props) {
   const freshIndex = state.placed > 0 ? chips.length - 1 : -1;
 
   return (
-    <div className="mx-auto w-full max-w-[340px]">
+    <div className="mx-auto !mt-1 w-full max-w-[340px]">
       <style>{`
         .overheat-wobble {
           transform-box: fill-box;
