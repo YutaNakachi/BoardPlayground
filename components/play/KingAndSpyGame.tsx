@@ -144,7 +144,7 @@ export function KingAndSpyGame() {
     useKingAndSpyDuelField(
     duelPublic,
     mySeat,
-    myCommittedCard,
+    isOnlinePlay ? myCommittedCard : null,
     clearLocalCard
   );
 
@@ -245,7 +245,6 @@ export function KingAndSpyGame() {
       return;
     }
     if (localPhase !== "playing") return;
-    setMyCommittedCard(card);
     commitLocal(localActiveSeat, card);
   }, [
     pickedCardId,
