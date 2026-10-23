@@ -114,13 +114,6 @@ function chain(points: readonly (readonly [number, number])[], move: boolean): s
   return d;
 }
 
-function onDome(x: number, rise: number): number {
-  const nx = (x - DOME_CX) / DOME_RX;
-  const inside = 1 - nx * nx;
-  if (inside <= 0) return RIM_Y;
-  return RIM_Y - rise * Math.sqrt(inside);
-}
-
 function band(
   a: readonly (readonly [number, number])[],
   b: readonly (readonly [number, number])[],
@@ -164,28 +157,20 @@ function liquidRibbon(
 }
 
 /** 表面張力から縁を巻いて下り、水たまりの上で広がって溶ける。座標は左溢れで書き、反対側は折り返す。 */
-function dripLiquid(side: -1 | 1, rise: number): LiquidRibbon {
+function dripLiquid(side: -1 | 1): LiquidRibbon {
   const left: (readonly [number, number, number, number])[] = [];
   const add = (x: number, y: number, w: number, g: number) => left.push([x, y, w, g]);
-  for (const [dx, w] of [
-    [92, 6.2],
-    [128, 6.2],
-    [160, 6],
-    [188, 5.8],
-  ] as const) {
-    const x = DOME_CX - dx;
-    add(x, onDome(x, rise), w, 0.16);
-  }
   const lip: readonly (readonly [number, number, number, number])[] = [
-    [214, 350, 6, 0.28],
-    [198, 353, 6.6, 0.5],
-    [186, 357, 7.4, 0.75],
-    [176, 363, 8, 0.6],
-    [170, 371, 7.6, 0.28],
-    [168, 382, 7.2, 0.14],
+    [278, 343, 3.4, 0.08],
+    [252, 350, 5.8, 0.24],
+    [230, 358, 6.8, 0.36],
+    [210, 368, 7.2, 0.28],
+    [196, 379, 7, 0.14],
+    [184, 392, 7, 0.08],
+    [174, 408, 7, 0.08],
   ];
   for (const point of lip) add(...point);
-  for (const y of [410, 500, 610, 730, 840]) {
+  for (const y of [430, 530, 650, 770, 870]) {
     add(wallX(y, -1) + 2, y, 7, 0.08);
   }
   add(wallX(900, -1) + 1, 900, 7.4, 0.08);
@@ -447,9 +432,9 @@ export function OverheatGlass({ state, label }: Props) {
                 y2="760"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop offset="0%" stopColor="#e8b15a" />
-                <stop offset="12%" stopColor="#d4923a" />
-                <stop offset="28%" stopColor="#c47a28" />
+                <stop offset="0%" stopColor="#f4d9a6" />
+                <stop offset="10%" stopColor="#e2a64a" />
+                <stop offset="24%" stopColor="#c47a28" />
                 <stop offset="100%" stopColor="#c47a28" />
               </linearGradient>
               <linearGradient
@@ -492,10 +477,10 @@ export function OverheatGlass({ state, label }: Props) {
               </filter>
             </defs>
             {(() => {
-              const drip = dripLiquid(spillSide, ry);
+              const drip = dripLiquid(spillSide);
               return (
                 <g className="overheat-drip" mask={`url(#${waterId}-meltmask)`}>
-                  <path d={drip.body} fill={`url(#${waterId}-drip)`} opacity="0.86" />
+                  <path d={drip.body} fill={`url(#${waterId}-drip)`} opacity="0.96" />
                   <path d={drip.glint} fill={`url(#${waterId}-glint)`} filter={`url(#${waterId}-glintblur)`} />
                 </g>
               );
