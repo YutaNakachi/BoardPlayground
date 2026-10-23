@@ -42,7 +42,7 @@ import type {
 import type { LocalMatchSetupKind } from "@/components/play/shared/PlayModeLocalMatchTabs";
 
 const GAME_DESCRIPTION =
-  "漫画『賭博黙示録カイジ』のEカードをモチーフにした、キング・スパイ・市民の三すくみカードゲームです。同時に1枚を出し、点差3点、または12ラウンドで勝ちます。";
+  "漫画『賭博黙示録カイジ』のEカードをモチーフにした三すくみカード。裏向きで出し、揃ってから公開。先に3点差をつけるか、12ラウンドで得点の多い方が勝ち。";
 
 /** 場に出てから、手札の表示を減らすまで */
 const HAND_REMOVE_MS = 450;
@@ -449,7 +449,7 @@ export function KingAndSpyGame() {
         error={online.error}
         extra={() => (
           <div className="space-y-2">
-            <p className="text-center text-xs text-slate-400">開始時の側（P1）</p>
+            <p className="text-center text-xs text-slate-400">ホストの開始側</p>
             <div className="flex justify-center gap-2">
               <button
                 type="button"
@@ -547,7 +547,7 @@ export function KingAndSpyGame() {
         error={online.error}
         extra={() => (
           <div className="space-y-2">
-            <p className="text-center text-xs text-slate-400">P1の開始側</p>
+            <p className="text-center text-xs text-slate-400">プレイヤー1の開始側</p>
             <div className="flex justify-center gap-2">
               <button
                 type="button"
@@ -596,7 +596,7 @@ export function KingAndSpyGame() {
 
   if (isGameOver) {
     stats = `最終得点 ${scores[0]} – ${scores[1]}`;
-    action = isDrawEnd ? "上限ラウンド終了・同点" : "マッチ終了";
+    action = isDrawEnd ? "12ラウンド終了・同点" : "マッチ終了";
     notice = undefined;
   } else {
     stats = `${playerRoleLabel(scoreView.myRole)}側 · 交代まであと${decisivesUntilRoleSwap(scoreView.decisiveCount)}決着`;
@@ -609,7 +609,7 @@ export function KingAndSpyGame() {
     ) {
       action = "両者のカードが揃いました";
     } else if (alreadyCommitted || myCommittedCard || pin) {
-      action = "場に出しました。相手の確定を待っています";
+      action = "相手の確定を待っています";
     }
   }
 
