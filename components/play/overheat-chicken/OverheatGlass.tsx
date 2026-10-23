@@ -136,14 +136,14 @@ function smoothRibbon(samples: readonly (readonly [number, number, number])[]): 
 function dripRibbon(side: -1 | 1, rise: number): { body: string; shine: string } {
   const along = (y: number, out: number) => wallX(y, side) + side * out;
   const samples: (readonly [number, number, number])[] = [
-    [432 + side * 86, RIM_Y - rise * 0.72, 7],
-    [432 + side * 148, RIM_Y - rise * 0.42, 8],
-    [along(348, -4), 350, 7.5],
-    [along(358, 11), 364, 7],
-    [along(480, 8), 500, 6.5],
-    [along(700, 7), 720, 6],
-    [along(860, 6), 880, 6],
-    [sideX(208, side), 956, 8],
+    [432 + side * 86, RIM_Y - rise * 0.72, 11],
+    [432 + side * 148, RIM_Y - rise * 0.42, 12],
+    [along(348, -4), 350, 11],
+    [along(358, 12), 364, 11],
+    [along(480, 10), 500, 10],
+    [along(700, 9), 720, 10],
+    [along(860, 8), 880, 10],
+    [sideX(208, side), 956, 12],
   ];
   return smoothRibbon(samples);
 }
@@ -404,8 +404,9 @@ export function OverheatGlass({ state, label }: Props) {
                 y2="720"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop offset="0%" stopColor="#f3d7a2" />
-                <stop offset="22%" stopColor="#e0a045" />
+                <stop offset="0%" stopColor="#f0d090" />
+                <stop offset="14%" stopColor="#d4923a" />
+                <stop offset="42%" stopColor="#c47a28" />
                 <stop offset="100%" stopColor="#c47a28" />
               </linearGradient>
             </defs>
@@ -420,9 +421,9 @@ export function OverheatGlass({ state, label }: Props) {
                     pathLength={100}
                     fill="none"
                     stroke="#fff6df"
-                    strokeWidth="8"
+                    strokeWidth="4.5"
                     strokeLinecap="round"
-                    opacity="0.28"
+                    opacity="0.22"
                   />
                   <path
                     className="overheat-drip"
