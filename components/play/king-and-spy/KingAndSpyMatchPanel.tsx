@@ -7,13 +7,21 @@ type Props = {
   state: KingAndSpyPublicState;
   seatLabels: [string, string];
   mySeat: 0 | 1;
+  className?: string;
 };
 
-export function KingAndSpyMatchPanel({ state, seatLabels, mySeat }: Props) {
+export function KingAndSpyMatchPanel({
+  state,
+  seatLabels,
+  mySeat,
+  className,
+}: Props) {
   const { scores, roundNumber, maxRounds, roundHistory, kingRoleSeat } = state;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-700/80 bg-slate-900/60 p-4">
+    <div
+      className={`space-y-3 rounded-2xl border border-slate-700/80 bg-slate-900/60 p-3 sm:p-4 ${className ?? ""}`}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-semibold text-white">
           ラウンド {roundNumber} / {maxRounds}

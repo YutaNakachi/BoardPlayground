@@ -649,7 +649,7 @@ export function KingAndSpyGame() {
     ) : undefined;
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-4">
+    <div className="mx-auto w-full max-w-lg space-y-2 sm:space-y-4">
       <TurnBanner
         playerIndex={mySeat}
         playerLabel={
@@ -658,6 +658,7 @@ export function KingAndSpyGame() {
             : `プレイヤー${localActiveSeat + 1}`
         }
         showTurnPhrase={!isOnlinePlay}
+        compact
         stats={stats}
         action={action}
         notice={notice}
@@ -695,14 +696,12 @@ export function KingAndSpyGame() {
       />
 
       {!isGameOver && (
-        <div className="space-y-3">
-          <p className="text-center text-sm text-slate-300">
-            {isOnlinePlay
-              ? "あなたの手札"
-              : `プレイヤー${localActiveSeat + 1}の手札`}
-          </p>
+        <div className="space-y-2">
+          {isOnlinePlay ? (
+            <p className="text-center text-xs text-slate-400">あなたの手札</p>
+          ) : null}
           <div
-            className={`flex flex-wrap justify-center gap-3 ${handLocked ? "pointer-events-none opacity-50" : ""}`}
+            className={`flex flex-wrap justify-center gap-2 sm:gap-3 ${handLocked ? "pointer-events-none opacity-50" : ""}`}
           >
             {displayHand.map((card) => (
               <KingAndSpyPlayingCard
@@ -737,6 +736,7 @@ export function KingAndSpyGame() {
       )}
 
       <KingAndSpyMatchPanel
+        className="mt-1 sm:mt-0"
         state={pub}
         seatLabels={seatLabels}
         mySeat={isOnlinePlay ? mySeat : scoreView.mySeat}
