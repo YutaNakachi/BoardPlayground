@@ -20,9 +20,9 @@ type Props = {
 };
 
 const SIZE_CLASS = {
-  hand: "h-[7.5rem] w-[5.25rem]",
-  field: "h-[9.5rem] w-[6.75rem]",
-  discard: "h-[4.5rem] w-[3.15rem]",
+  hand: "h-[6.25rem] w-[4.4rem] sm:h-[7.5rem] sm:w-[5.25rem]",
+  field: "h-[8rem] w-[5.6rem] sm:h-[9.5rem] sm:w-[6.75rem]",
+  discard: "h-[4rem] w-[2.8rem] sm:h-[4.5rem] sm:w-[3.15rem]",
 } as const;
 
 export function KingAndSpyPlayingCard({

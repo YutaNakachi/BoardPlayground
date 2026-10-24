@@ -31,7 +31,7 @@ export function KingAndSpyDuelField({
   if (bothOpen && c0 && c1) {
     if (c0.kind === "citizen" && c1.kind === "citizen") {
       openResult = (
-        <p className="mt-4 text-center text-sm text-slate-300">
+        <p className="mt-2 text-center text-sm text-slate-300">
           市民同士の引き分け。このラウンドを続けます
         </p>
       );
@@ -48,7 +48,7 @@ export function KingAndSpyDuelField({
 
       if (recipientSeat !== undefined && points !== undefined) {
         openResult = (
-          <p className="mt-4 text-center text-sm font-medium text-white">
+          <p className="mt-2 text-center text-sm font-medium text-white">
             <span className="text-slate-300">
               {CARD_KIND_LABEL[c0.kind]} 対 {CARD_KIND_LABEL[c1.kind]}
             </span>
@@ -63,22 +63,22 @@ export function KingAndSpyDuelField({
   }
 
   return (
-    <div className="rounded-2xl border border-indigo-500/25 bg-gradient-to-b from-slate-900/90 to-slate-950/90 p-4 shadow-inner shadow-black/40">
+    <div className="rounded-2xl border border-indigo-500/25 bg-gradient-to-b from-slate-900/90 to-slate-950/90 p-3 shadow-inner shadow-black/40 sm:p-4">
       <p className="text-center text-xs font-medium tracking-wide text-indigo-300/80">
         対決エリア
       </p>
-      <div className="mt-4 flex items-end justify-center gap-6 sm:gap-10">
+      <div className="mt-2 flex items-end justify-center gap-4 sm:mt-4 sm:gap-10">
         {([0, 1] as const).map((seat) => {
           const slot = field[seat];
           const show = slot.faceDownOnField || slot.revealed;
           return (
-            <div key={seat} className="flex flex-col items-center gap-2">
+            <div key={seat} className="flex flex-col items-center gap-1 sm:gap-2">
               <span
                 className={`text-xs ${seat === mySeat ? "text-indigo-300" : "text-slate-500"}`}
               >
                 {labels[seat]}
               </span>
-              <div className="flex h-[9.5rem] w-[6.75rem] items-center justify-center">
+              <div className="flex h-[8rem] w-[5.6rem] items-center justify-center sm:h-[9.5rem] sm:w-[6.75rem]">
                 {show ? (
                   <KingAndSpyPlayingCard
                     card={slot.card}
@@ -93,7 +93,7 @@ export function KingAndSpyDuelField({
                   />
                 ) : (
                   <div
-                    className="h-[9.5rem] w-[6.75rem] rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30"
+                    className="h-[8rem] w-[5.6rem] rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 sm:h-[9.5rem] sm:w-[6.75rem]"
                     aria-hidden
                   />
                 )}
