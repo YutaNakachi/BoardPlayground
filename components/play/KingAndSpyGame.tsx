@@ -166,7 +166,10 @@ export function KingAndSpyGame() {
 
   const finishShowcase = useCallback(() => {
     setMyCommittedCard(null);
-    setLocalActiveSeat(0);
+    if (!isOnlineRef.current) {
+      setLocalActiveSeat(publicRef.current.kingRoleSeat);
+      setPickedCardId(null);
+    }
   }, []);
 
   const { field, resetField, isHandLocked, isFieldAnimating, showcasePending } =
@@ -340,7 +343,7 @@ export function KingAndSpyGame() {
       const kingRoleSeat = kingRoleSeatFromHost(0, hostStartsAsKingLocal);
       setPublicState(initialKingAndSpyPublicState(kingRoleSeat));
       setSecrets(initialKingAndSpySecrets(kingRoleSeat));
-      setLocalActiveSeat(0);
+      setLocalActiveSeat(kingRoleSeat);
       setPickedCardId(null);
       setMyCommittedCard(null);
       setRevealGeneration((generation) => generation + 1);
