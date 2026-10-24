@@ -541,7 +541,7 @@ export function HexGame() {
             onClick={handleDeclineSwap}
             className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
           >
-            そのまま打る
+            そのまま打つ
           </button>
         </div>
       )}
