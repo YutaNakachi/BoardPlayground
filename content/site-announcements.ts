@@ -33,8 +33,22 @@ export const SITE_ANNOUNCEMENTS: SiteAnnouncement[] = [
   },
   {
     id: "new-game-dejarik",
-    body: "【New】 『デジャリック』リリース！STAR WARSに登場したあのホログラムチェスを再現！",
+    body: "【New】 『ホロチェス』リリース！STAR WARSに登場したあのホログラムチェスを再現！",
     href: "/play/dejarik",
     startsAt: "2026-10-15",
+  },
+  {
+    id: "new-game-overheat-chicken",
+    body:
+      "【New】『オーバーヒート・チキンレース』リリース！『ジョジョの奇妙な冒険』第3部の表面張力ギャンブルをモチーフにした心理戦",
+    href: "/play/overheat-chicken",
+    startsAt: "2026-10-22",
+  },
+  {
+    id: "new-game-king-and-spy",
+    body:
+      "【New】『キング＆スパイ』リリース！『賭博黙示録カイジ』のEカードをモチーフにしたキング・スパイ・市民の心理戦（オンライン2人）",
+    href: "/play/king-and-spy",
+    startsAt: "2026-10-23",
   },
 ];

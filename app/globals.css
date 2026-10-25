@@ -7,7 +7,13 @@
   --foreground: #f4f0f8;
 }
 
+html {
+  overflow-x: clip;
+}
+
 body {
+  overflow-x: clip;
+  max-width: 100%;
   color: var(--foreground);
   background-color: var(--background);
   background-image:

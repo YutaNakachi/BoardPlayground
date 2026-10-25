@@ -8,6 +8,10 @@ type Props = {
   stats?: string;
   action?: string;
   notice?: string;
+  /** false: 「の手番」を付けない（同時進行向け） */
+  showTurnPhrase?: boolean;
+  /** プレイ画面の縦スペースを詰める */
+  compact?: boolean;
 };
 
 export function TurnBanner({
@@ -16,13 +20,15 @@ export function TurnBanner({
   stats,
   action,
   notice,
+  showTurnPhrase = true,
+  compact = false,
 }: Props) {
   const style = getPlayerTurnStyle(playerIndex);
   const hasSubtitle = Boolean(stats || action || notice);
 
   return (
     <div
-      className={`rounded-2xl border-2 px-4 py-4 ${style.border} ${style.bg} ${style.glow}`}
+      className={`rounded-2xl border-2 ${compact ? "px-3 py-2.5" : "px-4 py-4"} ${style.border} ${style.bg} ${style.glow}`}
     >
       <div className="flex flex-wrap items-center gap-3">
         <span
@@ -31,11 +37,13 @@ export function TurnBanner({
         />
         <p className="font-display text-lg font-extrabold tracking-tight text-white sm:text-xl">
           <span className={style.label}>{playerLabel}</span>
-          <span className="text-slate-200">の手番</span>
+          {showTurnPhrase ? (
+            <span className="text-slate-200">の手番</span>
+          ) : null}
         </p>
       </div>
       <p
-        className={`mt-2 min-h-[1.25rem] pl-7 text-sm ${hasSubtitle ? "" : "invisible"}`}
+        className={`${compact ? "mt-1" : "mt-2"} min-h-[1.25rem] pl-7 text-sm ${hasSubtitle ? "" : "invisible"}`}
       >
         {stats ? <span className="text-slate-400">{stats}</span> : null}
         {stats && (action || notice) ? (

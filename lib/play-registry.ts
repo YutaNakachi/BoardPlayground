@@ -11,6 +11,7 @@ import { FoxHoundsGame } from "@/components/play/FoxHoundsGame";
 import { GomokuGame } from "@/components/play/GomokuGame";
 import { GravityFourGame } from "@/components/play/GravityFourGame";
 import { HexGame } from "@/components/play/HexGame";
+import { KingAndSpyGame } from "@/components/play/KingAndSpyGame";
 import { KlondikeGame } from "@/components/play/KlondikeGame";
 import { LudoGame } from "@/components/play/LudoGame";
 import { MahjongSolitaireGame } from "@/components/play/MahjongSolitaireGame";
@@ -19,6 +20,7 @@ import { MiniShogiGame } from "@/components/play/MiniShogiGame";
 import { NebulaLinkGame } from "@/components/play/NebulaLinkGame";
 import { NineMensMorrisGame } from "@/components/play/NineMensMorrisGame";
 import { NimGame } from "@/components/play/NimGame";
+import { OverheatChickenGame } from "@/components/play/OverheatChickenGame";
 import { ReversiGame } from "@/components/play/ReversiGame";
 import { SenkaiSenkiGame } from "@/components/play/SenkaiSenkiGame";
 import { ShogiGame } from "@/components/play/ShogiGame";
@@ -44,6 +46,8 @@ export const playComponents: Record<string, ComponentType> = {
   hex: HexGame,
   "fox-hounds": FoxHoundsGame,
   dejarik: DejarikGame,
+  "king-and-spy": KingAndSpyGame,
+  "overheat-chicken": OverheatChickenGame,
   dominoes: DominoesGame,
   "chinese-checkers": ChineseCheckersGame,
   ludo: LudoGame,

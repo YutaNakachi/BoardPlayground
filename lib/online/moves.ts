@@ -39,6 +39,14 @@ import {
 } from "@/lib/play/mancala";
 import { initialNim, nimOver, takeNim } from "@/lib/play/nim";
 import {
+  createOverheat,
+  endTurn,
+  isChipSize,
+  placeChip,
+  type ChipSize,
+  type OverheatState,
+} from "@/lib/play/overheat-chicken";
+import {
   initialReversiBoard,
   playReversiMove,
   reversiCounts,
@@ -71,6 +79,11 @@ import {
   initialNebulaLink,
   type NebulaState,
 } from "@/lib/play/nebula-link";
+import {
+  initialKingAndSpyPublicState,
+} from "@/lib/play/king-and-spy/state";
+import { kingRoleSeatFromOptions } from "@/lib/play/king-and-spy/online-options";
+import type { KingAndSpyPublicState } from "@/lib/play/king-and-spy/types";
 import {
   type HoundsSeat,
   parseDotsBoxesSize,
@@ -210,6 +223,12 @@ export type NebulaOnlineState = NebulaState & {
   phase: "playing" | "game-over";
 };
 
+export type KingAndSpyOnlineState = KingAndSpyPublicState;
+
+export type OverheatOnlineState = OverheatState & {
+  phase: "playing" | "game-over";
+};
+
 function ludoPlayerForSeat(state: LudoOnlineState, seatIndex: number): number | null {
   if (seatIndex < 0 || seatIndex >= state.activePlayers.length) return null;
   return state.activePlayers[seatIndex];
@@ -218,6 +237,19 @@ function ludoPlayerForSeat(state: LudoOnlineState, seatIndex: number): number | 
 function ludoSeatForPlayer(state: LudoOnlineState, player: number): number {
   const seat = state.activePlayers.indexOf(player);
   return seat >= 0 ? seat : 0;
+}
+
+/** 手番の seat（配置中は placementPlayer、対局中は current） */
+export function dejarikTurnSeat(state: DejarikOnlineState): number | null {
+  if (state.phase === "game-over") return null;
+  if (state.phase === "placement") {
+    return placementPlayer(state.placementStep, state.firstPlayer);
+  }
+  return state.current;
+}
+
+function dejarikSeatForState(state: DejarikOnlineState): number | null {
+  return dejarikTurnSeat(state);
 }
 
 /** 手番の room seat（move パイプライン・楽観更新用） */
@@ -240,19 +272,6 @@ export function turnSeatForState(
     return state.current;
   }
   return null;
-}
-
-/** 手番の seat（配置中は placementPlayer、対局中は current） */
-export function dejarikTurnSeat(state: DejarikOnlineState): number | null {
-  if (state.phase === "game-over") return null;
-  if (state.phase === "placement") {
-    return placementPlayer(state.placementStep, state.firstPlayer);
-  }
-  return state.current;
-}
-
-function dejarikSeatForState(state: DejarikOnlineState): number | null {
-  return dejarikTurnSeat(state);
 }
 
 function foxHoundsSeatForState(
@@ -279,7 +298,9 @@ export type GameState =
   | DejarikOnlineState
   | MiniShogiOnlineState
   | LudoOnlineState
-  | NebulaOnlineState;
+  | NebulaOnlineState
+  | KingAndSpyOnlineState
+  | OverheatOnlineState;
 
 export type MovePayload =
   | { type: "place"; index: number }
@@ -305,7 +326,11 @@ export type MovePayload =
       anchorRow: number;
       anchorCol: number;
     }
-  | { type: "nebula-pass" };
+  | { type: "nebula-pass" }
+  | { type: "king-and-spy-commit"; cardId: string }
+  | { type: "king-and-spy-hand-ready" }
+  | { type: "overheat-place"; size: ChipSize }
+  | { type: "overheat-end" };
 
 function mancalaWinner(pits: number[]): Player | "draw" {
   const p0 = pits[6];
@@ -440,6 +465,10 @@ export function createInitialState(
         phase: base.gameOver ? "game-over" : "playing",
       };
     }
+    case "king-and-spy":
+      return initialKingAndSpyPublicState(kingRoleSeatFromOptions(gameOptions));
+    case "overheat-chicken":
+      return { ...createOverheat(firstPlayer), phase: "playing" };
   }
 }
 
@@ -470,6 +499,10 @@ export function applyMove(
 ): { state: GameState; currentPlayer: number | null } | { error: string } {
   if (state.phase === "game-over") {
     return { error: "Game is over" };
+  }
+
+  if (slug === "king-and-spy") {
+    return { error: "Secret state required" };
   }
 
   if (slug === "fox-hounds") {
@@ -852,6 +885,34 @@ export function applyMove(
         },
         currentPlayer: nextPlayer,
       };
+    }
+
+    case "overheat-chicken": {
+      const s = state as OverheatOnlineState;
+      if (move.type === "overheat-place") {
+        if (!isChipSize(move.size)) return { error: "Invalid move type" };
+        const next = placeChip(s, move.size);
+        if (!next) return { error: "Illegal move" };
+        if (next.winner !== null) {
+          return {
+            state: { ...next, phase: "game-over" },
+            currentPlayer: null,
+          };
+        }
+        return {
+          state: { ...next, phase: "playing" },
+          currentPlayer: next.current,
+        };
+      }
+      if (move.type === "overheat-end") {
+        const next = endTurn(s);
+        if (!next) return { error: "Illegal move" };
+        return {
+          state: { ...next, phase: "playing" },
+          currentPlayer: next.current,
+        };
+      }
+      return { error: "Invalid move type" };
     }
 
     case "mancala": {
