@@ -16,6 +16,8 @@ import {
 import { PlayModeLocalOnlineTabs } from "@/components/play/shared/PlayModeLocalOnlineTabs";
 import { RoomCodeInput } from "@/components/play/shared/RoomCodeInput";
 import type { PlayMode } from "@/lib/online/types";
+import { isOnlineGame } from "@/lib/online/types";
+import { usePlayStats } from "@/components/PlayStatsProvider";
 
 type Props = {
   title: string;
@@ -72,6 +74,12 @@ export function OnlineSetupPanel({
   waiting,
 }: Props) {
   const { gameSlug } = usePlayPage();
+  const { onlineEnabled, backendLoading } = usePlayStats();
+  const onlineCapable = isOnlineGame(gameSlug);
+  const onlineAvailable = onlineCapable && onlineEnabled;
+  const resolvedOnlineSupported = onlineCapable
+    ? onlineAvailable
+    : onlineSupported;
   const cpuSupported = getGameBySlug(gameSlug)?.cpu ?? false;
   const [localMatchKind, setLocalMatchKind] =
     useState<LocalMatchSetupKind>("pvp");
@@ -153,7 +161,9 @@ export function OnlineSetupPanel({
       <PlayModeLocalOnlineTabs
         mode={displayMode === "online" ? "online" : "local"}
         onModeChange={onModeChange}
-        onlineSupported={onlineSupported}
+        onlineSupported={resolvedOnlineSupported}
+        onlineCapable={onlineCapable}
+        onlineStatusLoading={backendLoading}
       />
 
       {displayMode === "local" ? (
@@ -169,11 +179,11 @@ export function OnlineSetupPanel({
 
       {displayMode === "local" && resolvedLocalExtra ? resolvedLocalExtra : null}
 
-      {displayMode === "online" && onlineSupported && onlineExtra
+      {displayMode === "online" && resolvedOnlineSupported && onlineExtra
         ? onlineExtra
         : null}
 
-      {displayMode === "local" || !onlineSupported ? (
+      {displayMode === "local" || !resolvedOnlineSupported ? (
         <button
           type="button"
           onClick={() => onStartLocal(localMatchKind)}

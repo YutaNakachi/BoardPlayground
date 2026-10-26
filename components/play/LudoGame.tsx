@@ -14,7 +14,11 @@ import { TurnBanner } from "@/components/play/shared/TurnBanner";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { useOnlineFirstPlayer } from "@/hooks/useOnlineFirstPlayer";
 import { useOnlineRoom } from "@/hooks/useOnlineRoom";
-import type { PlayerCountOption } from "@/lib/online/game-options";
+import {
+  parsePlayerCount,
+  type PlayerCountOption,
+} from "@/lib/online/game-options";
+import { getSeatDisplayName } from "@/lib/online/player-labels";
 import type { LudoOnlineState } from "@/lib/online/moves";
 import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import {
@@ -277,6 +281,14 @@ export function LudoGame() {
   const [diceFace, setDiceFace] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [heldRoll, setHeldRoll] = useState<{
+    roll: number;
+    player: number;
+  } | null>(null);
+  const [rollLog, setRollLog] = useState<
+    { seat: number; roll: number; id: number }[]
+  >([]);
+  const rollLogIdRef = useRef(0);
 
   const [animatingTokenIndex, setAnimatingTokenIndex] = useState<number | null>(null);
   const [animatingToken, setAnimatingToken] = useState<LudoToken | null>(null);
@@ -296,6 +308,74 @@ export function LudoGame() {
       if (animTimerRef.current) clearTimeout(animTimerRef.current);
     };
   }, []);
+
+  const currentSeat = state.activePlayers.indexOf(state.current);
+
+  useEffect(() => {
+    if (state.lastRoll != null) {
+      setHeldRoll({ roll: state.lastRoll, player: state.current });
+    }
+  }, [state.lastRoll, state.current]);
+
+  useEffect(() => {
+    if (heldRoll && state.current !== heldRoll.player) {
+      setHeldRoll(null);
+    }
+  }, [state.current, heldRoll]);
+
+  useEffect(() => {
+    if (!isOnline || state.lastRoll == null) return;
+    const seat = currentSeat;
+    setRollLog((prev) => {
+      if (prev[0]?.seat === seat && prev[0]?.roll === state.lastRoll) {
+        return prev;
+      }
+      rollLogIdRef.current += 1;
+      return [
+        { seat, roll: state.lastRoll!, id: rollLogIdRef.current },
+        ...prev,
+      ].slice(0, 6);
+    });
+  }, [isOnline, state.lastRoll, currentSeat]);
+
+  const noMovesAfterRoll =
+    state.lastRoll != null && moves.length === 0 && phase === "playing";
+
+  useEffect(() => {
+    if (!isOnline || !online.isMyTurn || phase !== "playing") return;
+    if (!noMovesAfterRoll) return;
+    if (online.movePending || isRolling) return;
+    const delayMs = state.extraTurn ? 900 : 2200;
+    const timer = setTimeout(() => {
+      void online.handleMove({ type: "ludo-end-turn" });
+    }, delayMs);
+    return () => clearTimeout(timer);
+  }, [
+    isOnline,
+    online.isMyTurn,
+    online.movePending,
+    phase,
+    noMovesAfterRoll,
+    state.extraTurn,
+    isRolling,
+    online,
+  ]);
+
+  const waitingForOpponentRoll =
+    isOnline &&
+    !online.isMyTurn &&
+    phase === "playing" &&
+    state.lastRoll == null &&
+    heldRoll == null &&
+    !isRolling;
+
+  useEffect(() => {
+    if (!waitingForOpponentRoll) return;
+    const id = setInterval(() => {
+      setDiceFace(Math.floor(Math.random() * 6) + 1);
+    }, 75);
+    return () => clearInterval(id);
+  }, [waitingForOpponentRoll]);
 
   const onRoll = useCallback(() => {
     if (isAnimating || isRolling || state.lastRoll != null || state.winner != null) return;
@@ -452,6 +532,15 @@ export function LudoGame() {
   }
 
   if (online.phase === "waiting" && online.room) {
+    const waitPlayerCount =
+      parsePlayerCount(online.room.gameOptions) ?? online.maxPlayers;
+    const waitActivePlayers = initialLudo(waitPlayerCount).activePlayers;
+    const myWaitSeat = online.mySeat;
+    const myWaitPlayer =
+      myWaitSeat >= 0 ? waitActivePlayers[myWaitSeat] : undefined;
+    const myWaitStyle =
+      myWaitPlayer != null ? ludoStyle(myWaitPlayer) : null;
+
     return (
       <OnlineSetupPanel
         title="ルドー"
@@ -472,20 +561,63 @@ export function LudoGame() {
           onStart: () => online.handleStart({ firstPlayer }),
           canStart: online.canStart,
           extra: (
-            <OnlineFirstPlayerPicker
+            <>
+              {myWaitSeat >= 0 && myWaitStyle ? (
+                <p className="flex items-center justify-center gap-2 text-sm text-slate-300">
+                  <span
+                    className={`inline-block h-5 w-5 shrink-0 rounded-full ring-2 ring-white/40 ${myWaitStyle.piece}`}
+                    aria-hidden
+                  />
+                  あなた: 席 {myWaitSeat + 1}（
+                  {formatSeatLabel(online.players, myWaitSeat)}）
+                </p>
+              ) : null}
+              <OnlineFirstPlayerPicker
               players={online.players}
               value={firstPlayer}
               seatCount={seatCount}
               onChange={online.isHost ? onFirstPlayerChange : undefined}
               readOnly={!online.isHost}
             />
+            </>
           ),
         }}
       />
     );
   }
 
-  const displayDiceFace = isRolling ? diceFace : (state.lastRoll ?? diceFace);
+  const displayDiceFace = isRolling
+    ? diceFace
+    : (state.lastRoll ?? heldRoll?.roll ?? diceFace);
+
+  const tokenAriaLabel = (player: number, count: number) => {
+    const seat = state.activePlayers.indexOf(player);
+    const name = isOnline
+      ? getSeatDisplayName(online.players, seat)
+      : `プレイヤー ${seat + 1}`;
+    return count > 1 ? `${name}のコマ ${count}個` : `${name}のコマ`;
+  };
+
+  const rollNotice =
+    noMovesAfterRoll && phase === "playing"
+      ? state.extraTurn
+        ? "動かせる駒がありません（もう一度振れます）"
+        : "動かせる駒がありません"
+      : undefined;
+
+  const canShowRollButton =
+    state.lastRoll == null &&
+    !isRolling &&
+    !isAnimating &&
+    !noMovesAfterRoll &&
+    (!isOnline || online.isMyTurn) &&
+    !(isOnline && online.movePending);
+
+  const showDiceArea =
+    isRolling ||
+    state.lastRoll != null ||
+    heldRoll != null ||
+    waitingForOpponentRoll;
 
   const isGameOver = phase === "game-over" && state.winner != null;
   const winners = isGameOver ? [state.winner!] : null;
@@ -528,15 +660,18 @@ export function LudoGame() {
           }
           action={
             isOnline && !online.isMyTurn
-              ? "相手の手番です"
+              ? waitingForOpponentRoll
+                ? `${formatSeatLabel(online.players, currentSeat)}がサイコロを振っています`
+                : "相手の手番です"
               : state.lastRoll == null
-              ? "サイコロを振る"
-              : moves.length === 0
-                ? state.extraTurn
-                  ? "出せるコマがありません（もう一度振れます）"
-                  : "出せるコマがありません"
-                : "コマを選ぶ"
+                ? "サイコロを振る"
+                : moves.length === 0
+                  ? state.extraTurn
+                    ? "出せるコマがありません（もう一度振れます）"
+                    : "動かせるコマがありません"
+                  : "コマを選ぶ"
           }
+          notice={rollNotice}
         />
       )}
 
@@ -640,7 +775,7 @@ export function LudoGame() {
                             ? "ring-2 ring-white/70 ring-offset-1 ring-offset-slate-950"
                             : tokenStyle.dotShadow
                         }`}
-                        aria-label={`P${state.activePlayers.indexOf(player) + 1} ゴール済みコマ`}
+                        aria-label={`${tokenAriaLabel(player, 1)}（ゴール済み）`}
                       />
                     );
                   }
@@ -668,7 +803,7 @@ export function LudoGame() {
                               ? "ring-2 ring-white ring-offset-1 ring-offset-slate-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
                               : tokenStyle.dotShadow
                       }`}
-                      aria-label={`P${state.activePlayers.indexOf(player) + 1} コマ ${active.length}個`}
+                      aria-label={tokenAriaLabel(player, active.length)}
                     >
                       {active.length >= 2 ? (
                         <span
@@ -691,17 +826,29 @@ export function LudoGame() {
 
       {!isGameOver ? (
         <div className="flex flex-col items-center gap-3">
-          {(isRolling || state.lastRoll != null) && (
+          {showDiceArea ? (
             <div className="flex flex-col items-center gap-2">
-              <DiceFace value={displayDiceFace} size="lg" rolling={isRolling} />
-              {isRolling ? <p className="text-sm text-slate-400">振っています…</p> : null}
+              <DiceFace
+                value={displayDiceFace}
+                size="lg"
+                rolling={isRolling || waitingForOpponentRoll}
+              />
+              {isRolling ? (
+                <p className="text-sm text-slate-400">振っています…</p>
+              ) : waitingForOpponentRoll ? (
+                <p className="text-sm text-slate-400">
+                  {formatSeatLabel(online.players, currentSeat)}が振っています…
+                </p>
+              ) : displayDiceFace ? (
+                <p className="text-sm font-medium text-slate-200">
+                  出目: {displayDiceFace}
+                  {rollNotice ? ` · ${rollNotice}` : null}
+                </p>
+              ) : null}
             </div>
-          )}
+          ) : null}
 
-          {state.lastRoll == null &&
-          !isRolling &&
-          !isAnimating &&
-          (!isOnline || online.isMyTurn) ? (
+          {canShowRollButton ? (
             <button
               type="button"
               onClick={onRoll}
@@ -711,19 +858,28 @@ export function LudoGame() {
               サイコロを振る
             </button>
           ) : null}
+
+          {isOnline && rollLog.length > 0 ? (
+            <ul className="w-full max-w-xs space-y-1 text-center text-xs text-slate-500">
+              {rollLog.map((entry) => (
+                <li key={entry.id}>
+                  {formatSeatLabel(online.players, entry.seat)}: {entry.roll}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 
-      {state.lastRoll != null &&
+      {!isOnline &&
+      state.lastRoll != null &&
       moves.length === 0 &&
       !isGameOver &&
-      !isAnimating &&
-      (!isOnline || online.isMyTurn) ? (
+      !isAnimating ? (
         <div className="text-center">
           <button
             type="button"
             onClick={passTurn}
-            disabled={isOnline && online.movePending}
             className="rounded-lg border border-white/20 px-4 py-2 text-sm"
           >
             {state.extraTurn ? "もう一度振る" : "手番を終える"}
