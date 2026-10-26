@@ -328,7 +328,7 @@ export function LudoGame() {
     online,
   ]);
 
-  const waitingForOpponentRoll =
+  const opponentAwaitingDice =
     isOnline &&
     !online.isMyTurn &&
     phase === "playing" &&
@@ -336,13 +336,13 @@ export function LudoGame() {
     syncedTurnDice == null &&
     !isRolling;
 
-  useEffect(() => {
-    if (!waitingForOpponentRoll) return;
-    const id = setInterval(() => {
-      setDiceFace(Math.floor(Math.random() * 6) + 1);
-    }, 75);
-    return () => clearInterval(id);
-  }, [waitingForOpponentRoll]);
+  const selfRolling =
+    isRolling ||
+    (isOnline &&
+      online.isMyTurn &&
+      online.movePending &&
+      state.lastRoll == null &&
+      syncedTurnDice == null);
 
   const onRoll = useCallback(() => {
     if (isAnimating || isRolling || state.lastRoll != null || state.winner != null) return;
@@ -567,12 +567,9 @@ export function LudoGame() {
     return count > 1 ? `${name}のコマ ${count}個` : `${name}のコマ`;
   };
 
-  const rollNotice =
-    noMovesAfterRoll && phase === "playing"
-      ? state.extraTurn
-        ? "動かせる駒がありません（もう一度振れます）"
-        : "動かせる駒がありません"
-      : undefined;
+  const noMovablePiecesMessage = state.extraTurn
+    ? "動かせるコマがありません（もう一度振れます）"
+    : "動かせるコマがありません";
 
   const canShowRollButton =
     state.lastRoll == null &&
@@ -583,10 +580,9 @@ export function LudoGame() {
     !(isOnline && online.movePending);
 
   const showDiceArea =
-    isRolling ||
+    selfRolling ||
     state.lastRoll != null ||
-    (isOnline && syncedTurnDice != null) ||
-    waitingForOpponentRoll;
+    (isOnline && syncedTurnDice != null);
 
   const isGameOver = phase === "game-over" && state.winner != null;
   const winners = isGameOver ? [state.winner!] : null;
@@ -629,20 +625,30 @@ export function LudoGame() {
           }
           action={
             isOnline && !online.isMyTurn
-              ? waitingForOpponentRoll
-                ? `${formatSeatLabel(online.players, currentSeat)}がサイコロを振っています`
+              ? opponentAwaitingDice
+                ? `${formatSeatLabel(online.players, currentSeat)}の番です（ダイス待ち）`
                 : "相手の手番です"
-              : state.lastRoll == null
-                ? "サイコロを振る"
-                : moves.length === 0
-                  ? state.extraTurn
-                    ? "出せるコマがありません（もう一度振れます）"
-                    : "動かせるコマがありません"
-                  : "コマを選ぶ"
+              : selfRolling
+                ? "サイコロを振っています"
+                : state.lastRoll == null
+                  ? "サイコロを振る"
+                  : moves.length === 0
+                    ? noMovablePiecesMessage
+                    : "コマを選ぶ"
           }
-          notice={rollNotice}
         />
       )}
+
+      {isOnline && online.mySeat >= 0 && !isGameOver ? (
+        <p className="flex items-center justify-center gap-2 text-sm text-slate-400">
+          <span
+            className={`inline-block h-4 w-4 shrink-0 rounded-full ring-2 ring-white/30 ${ludoStyle(state.activePlayers[online.mySeat]).piece}`}
+            aria-hidden
+          />
+          あなた: 席 {online.mySeat + 1}（
+          {formatSeatLabel(online.players, online.mySeat)}）
+        </p>
+      ) : null}
 
       <div className="mx-auto w-full max-w-[min(100%,22rem)]">
         <div
@@ -800,18 +806,13 @@ export function LudoGame() {
               <DiceFace
                 value={displayDiceFace}
                 size="lg"
-                rolling={isRolling || waitingForOpponentRoll}
+                rolling={selfRolling}
               />
-              {isRolling ? (
+              {selfRolling ? (
                 <p className="text-sm text-slate-400">振っています…</p>
-              ) : waitingForOpponentRoll ? (
-                <p className="text-sm text-slate-400">
-                  {formatSeatLabel(online.players, currentSeat)}が振っています…
-                </p>
               ) : displayDiceFace ? (
                 <p className="text-sm font-medium text-slate-200">
                   出目: {displayDiceFace}
-                  {rollNotice ? ` · ${rollNotice}` : null}
                 </p>
               ) : null}
             </div>
