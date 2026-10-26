@@ -21,6 +21,7 @@ import { getOnlineResultReplayProps } from "@/lib/online/result-replay";
 import {
   formatSeatLabel,
   formatWinnersWithNames,
+  getSeatDisplayName,
 } from "@/lib/online/player-labels";
 import type { OverheatOnlineState } from "@/lib/online/moves";
 import type { PlayMode } from "@/lib/online/types";
@@ -255,14 +256,17 @@ export function OverheatChickenGame() {
       ) : null}
 
       <div className="mx-auto flex max-w-md flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-400">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-accent" aria-hidden />
-          プレイヤー 1
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-sky-400" aria-hidden />
-          プレイヤー 2
-        </span>
+        {([0, 1] as const).map((seat) => (
+          <span key={seat} className="inline-flex items-center gap-1.5">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${seat === 0 ? "bg-accent" : "bg-sky-400"}`}
+              aria-hidden
+            />
+            {isOnline
+              ? getSeatDisplayName(online.players, seat)
+              : playerLabel(seat)}
+          </span>
+        ))}
       </div>
 
       <OverheatGlass state={state} label={glassLabel} />
