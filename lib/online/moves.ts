@@ -976,20 +976,6 @@ export function applyMove(
           phase: "playing",
         };
         if (afterRoll.lastRoll === null) return { error: "Cannot roll now" };
-        if (ludoMoves(afterRoll).length === 0) {
-          const turned = endLudoTurn(afterRoll);
-          const passed: LudoOnlineState = {
-            ...turned,
-            phase: turned.winner != null ? "game-over" : "playing",
-          };
-          return {
-            state: passed,
-            currentPlayer:
-              passed.winner != null
-                ? null
-                : ludoSeatForPlayer(passed, passed.current),
-          };
-        }
         return {
           state: afterRoll,
           currentPlayer: ludoSeatForPlayer(afterRoll, afterRoll.current),
