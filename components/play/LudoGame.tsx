@@ -281,13 +281,11 @@ export function LudoGame() {
   const [diceFace, setDiceFace] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [heldRoll, setHeldRoll] = useState<{
+  const heldRollSnapshotRef = useRef<{
     roll: number;
     player: number;
   } | null>(null);
-  const [rollLog, setRollLog] = useState<
-    { seat: number; roll: number; id: number }[]
-  >([]);
+  const rollLogRef = useRef<{ seat: number; roll: number; id: number }[]>([]);
   const rollLogIdRef = useRef(0);
 
   const [animatingTokenIndex, setAnimatingTokenIndex] = useState<number | null>(null);
@@ -311,31 +309,35 @@ export function LudoGame() {
 
   const currentSeat = state.activePlayers.indexOf(state.current);
 
-  useEffect(() => {
+  const heldRoll = useMemo(() => {
     if (state.lastRoll != null) {
-      setHeldRoll({ roll: state.lastRoll, player: state.current });
+      const next = { roll: state.lastRoll, player: state.current };
+      heldRollSnapshotRef.current = next;
+      return next;
     }
+    const stored = heldRollSnapshotRef.current;
+    if (stored && state.current === stored.player) {
+      return stored;
+    }
+    heldRollSnapshotRef.current = null;
+    return null;
   }, [state.lastRoll, state.current]);
 
-  useEffect(() => {
-    if (heldRoll && state.current !== heldRoll.player) {
-      setHeldRoll(null);
+  const rollLog = useMemo(() => {
+    if (!isOnline || state.lastRoll == null) {
+      return rollLogRef.current;
     }
-  }, [state.current, heldRoll]);
-
-  useEffect(() => {
-    if (!isOnline || state.lastRoll == null) return;
     const seat = currentSeat;
-    setRollLog((prev) => {
-      if (prev[0]?.seat === seat && prev[0]?.roll === state.lastRoll) {
-        return prev;
-      }
-      rollLogIdRef.current += 1;
-      return [
-        { seat, roll: state.lastRoll!, id: rollLogIdRef.current },
-        ...prev,
-      ].slice(0, 6);
-    });
+    const prev = rollLogRef.current;
+    if (prev[0]?.seat === seat && prev[0]?.roll === state.lastRoll) {
+      return prev;
+    }
+    rollLogIdRef.current += 1;
+    rollLogRef.current = [
+      { seat, roll: state.lastRoll, id: rollLogIdRef.current },
+      ...prev,
+    ].slice(0, 6);
+    return rollLogRef.current;
   }, [isOnline, state.lastRoll, currentSeat]);
 
   const noMovesAfterRoll =
