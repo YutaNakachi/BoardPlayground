@@ -281,13 +281,6 @@ export function LudoGame() {
   const [diceFace, setDiceFace] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const heldRollSnapshotRef = useRef<{
-    roll: number;
-    player: number;
-  } | null>(null);
-  const rollLogRef = useRef<{ seat: number; roll: number; id: number }[]>([]);
-  const rollLogIdRef = useRef(0);
-
   const [animatingTokenIndex, setAnimatingTokenIndex] = useState<number | null>(null);
   const [animatingToken, setAnimatingToken] = useState<LudoToken | null>(null);
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -308,37 +301,9 @@ export function LudoGame() {
   }, []);
 
   const currentSeat = state.activePlayers.indexOf(state.current);
-
-  const heldRoll = useMemo(() => {
-    if (state.lastRoll != null) {
-      const next = { roll: state.lastRoll, player: state.current };
-      heldRollSnapshotRef.current = next;
-      return next;
-    }
-    const stored = heldRollSnapshotRef.current;
-    if (stored && state.current === stored.player) {
-      return stored;
-    }
-    heldRollSnapshotRef.current = null;
-    return null;
-  }, [state.lastRoll, state.current]);
-
-  const rollLog = useMemo(() => {
-    if (!isOnline || state.lastRoll == null) {
-      return rollLogRef.current;
-    }
-    const seat = currentSeat;
-    const prev = rollLogRef.current;
-    if (prev[0]?.seat === seat && prev[0]?.roll === state.lastRoll) {
-      return prev;
-    }
-    rollLogIdRef.current += 1;
-    rollLogRef.current = [
-      { seat, roll: state.lastRoll, id: rollLogIdRef.current },
-      ...prev,
-    ].slice(0, 6);
-    return rollLogRef.current;
-  }, [isOnline, state.lastRoll, currentSeat]);
+  const onlineLudo = isOnline && onlineState ? onlineState : null;
+  const syncedTurnDice =
+    onlineLudo?.lastRoll ?? onlineLudo?.turnDice ?? null;
 
   const noMovesAfterRoll =
     state.lastRoll != null && moves.length === 0 && phase === "playing";
@@ -368,7 +333,7 @@ export function LudoGame() {
     !online.isMyTurn &&
     phase === "playing" &&
     state.lastRoll == null &&
-    heldRoll == null &&
+    syncedTurnDice == null &&
     !isRolling;
 
   useEffect(() => {
@@ -590,7 +555,9 @@ export function LudoGame() {
 
   const displayDiceFace = isRolling
     ? diceFace
-    : (state.lastRoll ?? heldRoll?.roll ?? diceFace);
+    : (isOnline
+        ? (syncedTurnDice ?? diceFace)
+        : (state.lastRoll ?? diceFace));
 
   const tokenAriaLabel = (player: number, count: number) => {
     const seat = state.activePlayers.indexOf(player);
@@ -618,7 +585,7 @@ export function LudoGame() {
   const showDiceArea =
     isRolling ||
     state.lastRoll != null ||
-    heldRoll != null ||
+    (isOnline && syncedTurnDice != null) ||
     waitingForOpponentRoll;
 
   const isGameOver = phase === "game-over" && state.winner != null;
@@ -861,10 +828,10 @@ export function LudoGame() {
             </button>
           ) : null}
 
-          {isOnline && rollLog.length > 0 ? (
+          {isOnline && (onlineLudo?.rollLog?.length ?? 0) > 0 ? (
             <ul className="w-full max-w-xs space-y-1 text-center text-xs text-slate-500">
-              {rollLog.map((entry) => (
-                <li key={entry.id}>
+              {onlineLudo!.rollLog!.map((entry, index) => (
+                <li key={`${entry.seat}-${entry.roll}-${index}`}>
                   {formatSeatLabel(online.players, entry.seat)}: {entry.roll}
                 </li>
               ))}

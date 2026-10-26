@@ -215,8 +215,13 @@ export type MiniShogiOnlineState = MiniShogiState & {
   winner: Player | null;
 };
 
+export type LudoRollLogEntry = { seat: number; roll: number };
+
 export type LudoOnlineState = LudoState & {
   phase: "playing" | "game-over";
+  /** 手番中の出目（移動後も手番が移るまで全員に表示） */
+  turnDice?: number | null;
+  rollLog?: LudoRollLogEntry[];
 };
 
 export type NebulaOnlineState = NebulaState & {
@@ -453,6 +458,8 @@ export function createInitialState(
         ...base,
         current,
         phase: base.winner != null ? "game-over" : "playing",
+        turnDice: null,
+        rollLog: [],
       };
     }
     case "nebula-link": {
@@ -976,17 +983,32 @@ export function applyMove(
           phase: "playing",
         };
         if (afterRoll.lastRoll === null) return { error: "Cannot roll now" };
+        const rollSeat = ludoSeatForPlayer(afterRoll, afterRoll.current);
+        const rollLog: LudoRollLogEntry[] = [
+          { seat: rollSeat, roll: afterRoll.lastRoll },
+          ...(s.rollLog ?? []),
+        ].slice(0, 6);
         return {
-          state: afterRoll,
-          currentPlayer: ludoSeatForPlayer(afterRoll, afterRoll.current),
+          state: {
+            ...afterRoll,
+            turnDice: afterRoll.lastRoll,
+            rollLog,
+          },
+          currentPlayer: rollSeat,
         };
       }
       if (move.type === "ludo-move") {
         const next = applyLudoMove(s, { tokenIndex: move.tokenIndex });
         if (!next) return { error: "Illegal move" };
+        const keepTurnDice =
+          next.current === s.current
+            ? (s.turnDice ?? s.lastRoll ?? null)
+            : null;
         const withPhase: LudoOnlineState = {
           ...next,
           phase: next.winner != null ? "game-over" : "playing",
+          turnDice: keepTurnDice,
+          rollLog: s.rollLog ?? [],
         };
         return {
           state: withPhase,
@@ -1002,6 +1024,8 @@ export function applyMove(
         const withPhase: LudoOnlineState = {
           ...next,
           phase: next.winner != null ? "game-over" : "playing",
+          turnDice: null,
+          rollLog: s.rollLog ?? [],
         };
         return {
           state: withPhase,
