@@ -276,7 +276,7 @@ export function Header() {
               aria-label="お問い合わせ"
             >
               <ContactIcon />
-              <HeaderTooltip label="お問い合わせ" align="end" />
+              <HeaderTooltip label="お問い合わせ" />
             </Link>
             <Link
               href={SITE_GUIDE_PATH}
