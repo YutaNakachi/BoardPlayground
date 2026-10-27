@@ -32,5 +32,19 @@
     "title": "ホロチェス",
     "subtitle": "円形ホロ盤で、4タイプを動かして相手を取り尽くす。",
     "boardOpacity": 0.14
+  },
+  {
+    "slug": "king-and-spy",
+    "title": "キング＆スパイ",
+    "subtitle": "裏向きで出して、揃ってから公開。三すくみの心理戦。",
+    "boardOpacity": 0.14
+  },
+  {
+    "slug": "overheat-chicken",
+    "title": "オーバーヒート・チキンレース",
+    "subtitle": "溢れない上限は見えない。杯にチップを入れ続ける心理戦。",
+    "boardOpacity": 0.14,
+    "titleNoWrap": true,
+    "titleFontSize": 54
   }
 ]
