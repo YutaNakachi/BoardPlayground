@@ -61,10 +61,9 @@
   },
   {
     "slug": "overheat-chicken",
-    "title": "オーバーヒート・チキンレース",
+    "title": "オーバーヒート・\nチキンレース",
     "subtitle": "溢れない上限は見えない。杯にチップを入れ続ける心理戦。",
     "boardOpacity": 0.14,
-    "titleNoWrap": true,
-    "titleFontSize": 54
+    "titleFontSize": 62
   }
 ]

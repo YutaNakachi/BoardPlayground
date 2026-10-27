@@ -89,7 +89,10 @@ function buildCardOverlayHtml(entry) {
 }
 
 function buildFrameHtml(entry, textureFile) {
-  const title = escapeHtml(entry.title);
+  const title = entry.title
+    .split("\n")
+    .map((line) => escapeHtml(line))
+    .join("<br />");
   const subtitle = escapeHtml(entry.subtitle);
   const texUrl = textureFile ? `file://${textureFile}` : "";
   const boardOpacity = entry.boardOpacity ?? 0.1;
