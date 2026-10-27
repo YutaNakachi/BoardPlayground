@@ -281,6 +281,7 @@ export function LudoGame() {
   const [diceFace, setDiceFace] = useState(1);
   const [rollCycling, setRollCycling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const serverLastRollRef = useRef<number | null>(null);
   const [rollResultPending, setRollResultPending] = useState(false);
   const localMoveAnimRef = useRef(false);
   const ludoAnimVersionRef = useRef(online.version);
@@ -422,14 +423,35 @@ export function LudoGame() {
     !rollCycling &&
     !rollResultPending;
 
+  useEffect(() => {
+    serverLastRollRef.current = state.lastRoll;
+  }, [state.lastRoll]);
+
   const confirmedRoll = isOnline
     ? (state.lastRoll ?? syncedTurnDice)
     : state.lastRoll;
   const waitingRollResult =
-    isOnline && rollResultPending && confirmedRoll == null;
+    isOnline && rollResultPending && state.lastRoll == null;
   const diceAnimating = rollCycling || waitingRollResult;
-  const rollInFlight = rollCycling || rollResultPending;
+  const rollInFlight = diceAnimating;
   const selfRolling = diceAnimating && (!isOnline || online.isMyTurn);
+
+  const clearRollInterval = useCallback(() => {
+    if (rollTimerRef.current) {
+      clearInterval(rollTimerRef.current);
+      rollTimerRef.current = null;
+    }
+  }, []);
+
+  const finishOnlineRollAnimation = useCallback(
+    (face: number) => {
+      clearRollInterval();
+      setDiceFace(face);
+      setRollCycling(false);
+      setRollResultPending(false);
+    },
+    [clearRollInterval]
+  );
 
   const onRoll = useCallback(() => {
     if (
@@ -442,16 +464,21 @@ export function LudoGame() {
     }
     if (isOnline) {
       if (!online.isMyTurn || online.movePending) return;
+      clearRollInterval();
       setRollCycling(true);
       setRollResultPending(false);
       let ticks = 0;
+      let sent = false;
       rollTimerRef.current = setInterval(() => {
+        const serverRoll = serverLastRollRef.current;
+        if (sent && serverRoll != null) {
+          finishOnlineRollAnimation(serverRoll);
+          return;
+        }
         ticks += 1;
         setDiceFace(Math.floor(Math.random() * 6) + 1);
-        if (ticks >= 10) {
-          if (rollTimerRef.current) clearInterval(rollTimerRef.current);
-          rollTimerRef.current = null;
-          setRollCycling(false);
+        if (!sent && ticks >= 10) {
+          sent = true;
           setRollResultPending(true);
           void online.handleMove({ type: "ludo-roll" });
         }
@@ -482,13 +509,15 @@ export function LudoGame() {
     state.winner,
     isOnline,
     online,
+    clearRollInterval,
+    finishOnlineRollAnimation,
   ]);
 
   useEffect(() => {
     if (!isOnline || phase !== "playing") return;
     ludoAnimVersionRef.current = online.version;
     syncLudoSnapshot();
-  }, [isOnline, phase, online.room?.id, syncLudoSnapshot, online.version]);
+  }, [isOnline, phase, online.room?.id, syncLudoSnapshot]);
 
   const onToken = useCallback(
     (tokenIndex: number) => {
@@ -506,6 +535,9 @@ export function LudoGame() {
 
       if (isOnline) {
         if (!online.isMyTurn || online.movePending) return;
+        clearRollInterval();
+        setRollCycling(false);
+        setRollResultPending(false);
         localMoveAnimRef.current = true;
         animateTokenMove(tokenIndex, fromToken, roll, () => {
           localMoveAnimRef.current = false;
@@ -525,6 +557,7 @@ export function LudoGame() {
       online,
       animateTokenMove,
       syncLudoSnapshot,
+      clearRollInterval,
     ]
   );
 
@@ -532,11 +565,14 @@ export function LudoGame() {
     if (isAnimating) return;
     if (isOnline) {
       if (!online.isMyTurn || online.movePending) return;
+      clearRollInterval();
+      setRollCycling(false);
+      setRollResultPending(false);
       void online.handleMove({ type: "ludo-end-turn" });
       return;
     }
     setLocalState((s) => endLudoTurn(s));
-  }, [isAnimating, isOnline, online]);
+  }, [isAnimating, isOnline, online, clearRollInterval]);
 
   const reset = useCallback(() => {
     online.reset();
