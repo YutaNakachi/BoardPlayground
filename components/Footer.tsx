@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SiteBrand } from "@/components/SiteBrand";
+import { SITE_MAX_WIDTH_CLASS } from "@/lib/site-layout";
 import {
   COPYRIGHT_YEAR,
   FOOTER_NAV_LINKS,
@@ -9,7 +10,7 @@ import {
 export function Footer() {
   return (
     <footer className="border-t border-surface-border bg-surface/80">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div className={`${SITE_MAX_WIDTH_CLASS} px-4 py-8 sm:px-6`}>
         <div className="flex flex-col items-center gap-6 text-center sm:gap-8">
           <SiteBrand variant="footer" />
           <nav aria-label="フッターナビゲーション">

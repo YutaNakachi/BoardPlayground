@@ -9,6 +9,7 @@ import { JoinRoomModal } from "@/components/JoinRoomModal";
 import { usePlayStats } from "@/components/PlayStatsProvider";
 import { countSidebarFilters } from "@/lib/games";
 import { SiteBrand } from "@/components/SiteBrand";
+import { SITE_MAX_WIDTH_CLASS } from "@/lib/site-layout";
 import {
   SITE_CONTACT_PATH,
   SITE_GUIDE_PATH,
@@ -197,7 +198,9 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 overflow-x-clip border-b border-surface-border bg-surface/85 backdrop-blur-md">
-        <div className="mx-auto flex h-12 max-w-6xl items-center gap-2 px-3 sm:h-14 sm:gap-3 sm:px-6">
+        <div
+          className={`${SITE_MAX_WIDTH_CLASS} flex h-12 items-center gap-2 px-3 sm:h-14 sm:gap-3 sm:px-6`}
+        >
           {isHome ? (
             <button
               type="button"

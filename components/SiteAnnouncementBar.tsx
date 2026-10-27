@@ -1,4 +1,5 @@
 import { AnnouncementRotator } from "@/components/AnnouncementRotator";
+import { SITE_CONTAINER_CLASS } from "@/lib/site-layout";
 import { getActiveAnnouncements } from "@/lib/site-announcements";
 
 export function SiteAnnouncementBar() {
@@ -11,7 +12,9 @@ export function SiteAnnouncementBar() {
       aria-label="お知らせ"
       className="border-b border-surface-border bg-accent/10"
     >
-      <div className="mx-auto flex max-w-6xl items-center px-4 py-1.5 text-sm sm:px-6 lg:px-8">
+      <div
+        className={`${SITE_CONTAINER_CLASS} flex items-center py-1.5 text-sm`}
+      >
         <AnnouncementRotator
           key={items.map((item) => item.id).join("\u0000")}
           items={items}

@@ -14,6 +14,7 @@ import {
   type GameMeta,
   type GameTag,
 } from "@/lib/games";
+import { CATALOG_GRID_CLASS } from "@/lib/site-layout";
 import { CATALOG_HEADING } from "@/lib/site";
 
 type Props = {
@@ -110,7 +111,7 @@ export function GameCatalog({ games, initialPlayCounts = {} }: Props) {
           該当するゲームはありません。キーワードやタグ、メニューの条件を変えてください。
         </p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={CATALOG_GRID_CLASS}>
           {displayed.map((game) => (
             <GameCard
               key={game.slug}
