@@ -279,8 +279,17 @@ export function LudoGame() {
   );
 
   const [diceFace, setDiceFace] = useState(1);
-  const [isRolling, setIsRolling] = useState(false);
+  const [rollCycling, setRollCycling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [rollResultPending, setRollResultPending] = useState(false);
+  const localMoveAnimRef = useRef(false);
+  const ludoAnimVersionRef = useRef(online.version);
+  const ludoSnapshotRef = useRef({
+    tokens: state.tokens,
+    current: state.current,
+    lastRoll: state.lastRoll,
+    turnDice: null as number | null,
+  });
   const [animatingTokenIndex, setAnimatingTokenIndex] = useState<number | null>(null);
   const [animatingToken, setAnimatingToken] = useState<LudoToken | null>(null);
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -308,24 +317,100 @@ export function LudoGame() {
   const noMovesAfterRoll =
     state.lastRoll != null && moves.length === 0 && phase === "playing";
 
+  const syncLudoSnapshot = useCallback(() => {
+    ludoSnapshotRef.current = {
+      tokens: state.tokens,
+      current: state.current,
+      lastRoll: state.lastRoll,
+      turnDice: syncedTurnDice,
+    };
+  }, [state.tokens, state.current, state.lastRoll, syncedTurnDice]);
+
+  const animateTokenMove = useCallback(
+    (
+      tokenIndex: number,
+      fromToken: LudoToken,
+      roll: number,
+      onDone: () => void
+    ) => {
+      const steps = ludoMoveAnimationSteps(fromToken, roll);
+      if (steps.length === 0) {
+        onDone();
+        return;
+      }
+      setAnimatingTokenIndex(tokenIndex);
+      const showStep = (stepIndex: number) => {
+        setAnimatingToken(steps[stepIndex]);
+        if (stepIndex < steps.length - 1) {
+          animTimerRef.current = setTimeout(
+            () => showStep(stepIndex + 1),
+            LUDO_STEP_MS
+          );
+        } else {
+          animTimerRef.current = setTimeout(() => {
+            setAnimatingTokenIndex(null);
+            setAnimatingToken(null);
+            onDone();
+          }, LUDO_STEP_MS);
+        }
+      };
+      showStep(0);
+    },
+    []
+  );
+
   useEffect(() => {
-    if (!isOnline || !online.isMyTurn || phase !== "playing") return;
-    if (!noMovesAfterRoll) return;
-    if (online.movePending || isRolling) return;
-    const delayMs = state.extraTurn ? 900 : 2200;
-    const timer = setTimeout(() => {
-      void online.handleMove({ type: "ludo-end-turn" });
-    }, delayMs);
-    return () => clearTimeout(timer);
+    if (!isOnline || phase !== "playing") return;
+    if (online.version === ludoAnimVersionRef.current) return;
+    ludoAnimVersionRef.current = online.version;
+
+    if (localMoveAnimRef.current || animatingTokenIndex !== null) {
+      syncLudoSnapshot();
+      return;
+    }
+
+    const snap = ludoSnapshotRef.current;
+    const roll = snap.lastRoll ?? snap.turnDice;
+    if (roll == null) {
+      syncLudoSnapshot();
+      return;
+    }
+
+    const mover = snap.current;
+    let changedIndex = -1;
+    for (let i = 0; i < state.tokens.length; i++) {
+      const token = state.tokens[i];
+      if (token.player !== mover) continue;
+      const prev = snap.tokens[i];
+      if (
+        prev.zone !== token.zone ||
+        prev.steps !== token.steps ||
+        prev.index !== token.index
+      ) {
+        changedIndex = i;
+        break;
+      }
+    }
+
+    if (changedIndex < 0) {
+      syncLudoSnapshot();
+      return;
+    }
+
+    const fromToken = snap.tokens[changedIndex];
+    localMoveAnimRef.current = true;
+    animateTokenMove(changedIndex, fromToken, roll, () => {
+      localMoveAnimRef.current = false;
+      syncLudoSnapshot();
+    });
   }, [
     isOnline,
-    online.isMyTurn,
-    online.movePending,
     phase,
-    noMovesAfterRoll,
-    state.extraTurn,
-    isRolling,
-    online,
+    online.version,
+    state.tokens,
+    animatingTokenIndex,
+    animateTokenMove,
+    syncLudoSnapshot,
   ]);
 
   const opponentAwaitingDice =
@@ -334,21 +419,31 @@ export function LudoGame() {
     phase === "playing" &&
     state.lastRoll == null &&
     syncedTurnDice == null &&
-    !isRolling;
+    !rollCycling &&
+    !rollResultPending;
 
-  const selfRolling =
-    isRolling ||
-    (isOnline &&
-      online.isMyTurn &&
-      online.movePending &&
-      state.lastRoll == null &&
-      syncedTurnDice == null);
+  const confirmedRoll = isOnline
+    ? (state.lastRoll ?? syncedTurnDice)
+    : state.lastRoll;
+  const waitingRollResult =
+    isOnline && rollResultPending && confirmedRoll == null;
+  const diceAnimating = rollCycling || waitingRollResult;
+  const rollInFlight = rollCycling || rollResultPending;
+  const selfRolling = diceAnimating && (!isOnline || online.isMyTurn);
 
   const onRoll = useCallback(() => {
-    if (isAnimating || isRolling || state.lastRoll != null || state.winner != null) return;
+    if (
+      isAnimating ||
+      rollInFlight ||
+      state.lastRoll != null ||
+      state.winner != null
+    ) {
+      return;
+    }
     if (isOnline) {
-      if (!online.isMyTurn || online.movePending || isRolling) return;
-      setIsRolling(true);
+      if (!online.isMyTurn || online.movePending) return;
+      setRollCycling(true);
+      setRollResultPending(false);
       let ticks = 0;
       rollTimerRef.current = setInterval(() => {
         ticks += 1;
@@ -356,14 +451,15 @@ export function LudoGame() {
         if (ticks >= 10) {
           if (rollTimerRef.current) clearInterval(rollTimerRef.current);
           rollTimerRef.current = null;
-          setIsRolling(false);
+          setRollCycling(false);
+          setRollResultPending(true);
           void online.handleMove({ type: "ludo-roll" });
         }
       }, 70);
       return;
     }
 
-    setIsRolling(true);
+    setRollCycling(true);
     let ticks = 0;
     rollTimerRef.current = setInterval(() => {
       ticks += 1;
@@ -371,65 +467,65 @@ export function LudoGame() {
       if (ticks >= 10) {
         if (rollTimerRef.current) clearInterval(rollTimerRef.current);
         rollTimerRef.current = null;
+        setRollCycling(false);
         setLocalState((s) => {
           const next = rollLudo(s);
           setDiceFace(next.lastRoll ?? 1);
-          setIsRolling(false);
           return next;
         });
       }
     }, 70);
   }, [
     isAnimating,
-    isRolling,
+    rollInFlight,
     state.lastRoll,
     state.winner,
     isOnline,
     online,
   ]);
 
+  useEffect(() => {
+    if (!isOnline || phase !== "playing") return;
+    ludoAnimVersionRef.current = online.version;
+    syncLudoSnapshot();
+  }, [isOnline, phase, online.room?.id, syncLudoSnapshot, online.version]);
+
   const onToken = useCallback(
     (tokenIndex: number) => {
       if (isAnimating) return;
       if (!moves.some((m) => m.tokenIndex === tokenIndex)) return;
+      const roll = state.lastRoll;
+      if (roll == null) return;
+
+      const fromToken = state.tokens[tokenIndex];
+      const finishLocal = () => {
+        const next = applyLudoMove(state, { tokenIndex });
+        if (next) setLocalState(next);
+        if (next?.winner != null) setLocalPhase("game-over");
+      };
+
       if (isOnline) {
         if (!online.isMyTurn || online.movePending) return;
-        void online.handleMove({ type: "ludo-move", tokenIndex });
+        localMoveAnimRef.current = true;
+        animateTokenMove(tokenIndex, fromToken, roll, () => {
+          localMoveAnimRef.current = false;
+          syncLudoSnapshot();
+          void online.handleMove({ type: "ludo-move", tokenIndex });
+        });
         return;
       }
 
-      const roll = state.lastRoll!;
-      const steps = ludoMoveAnimationSteps(state.tokens[tokenIndex], roll);
-
-      if (steps.length === 0) {
-        const next = applyLudoMove(state, { tokenIndex });
-        if (next) setLocalState(next);
-        if (next?.winner != null) setLocalPhase("game-over");
-        return;
-      }
-
-      setAnimatingTokenIndex(tokenIndex);
-
-      const finishMove = () => {
-        const next = applyLudoMove(state, { tokenIndex });
-        setAnimatingTokenIndex(null);
-        setAnimatingToken(null);
-        if (next) setLocalState(next);
-        if (next?.winner != null) setLocalPhase("game-over");
-      };
-
-      const showStep = (stepIndex: number) => {
-        setAnimatingToken(steps[stepIndex]);
-        if (stepIndex < steps.length - 1) {
-          animTimerRef.current = setTimeout(() => showStep(stepIndex + 1), LUDO_STEP_MS);
-        } else {
-          animTimerRef.current = setTimeout(finishMove, LUDO_STEP_MS);
-        }
-      };
-
-      showStep(0);
+      animateTokenMove(tokenIndex, fromToken, roll, finishLocal);
     },
-    [isAnimating, moves, state, isOnline, online]
+    [
+      isAnimating,
+      moves,
+      state,
+      isOnline,
+      online,
+      animateTokenMove,
+      syncLudoSnapshot,
+    ]
   );
 
   const passTurn = useCallback(() => {
@@ -553,11 +649,8 @@ export function LudoGame() {
     );
   }
 
-  const displayDiceFace = isRolling
-    ? diceFace
-    : (isOnline
-        ? (syncedTurnDice ?? diceFace)
-        : (state.lastRoll ?? diceFace));
+  const displayDiceFace =
+    diceAnimating ? diceFace : (confirmedRoll ?? diceFace);
 
   const tokenAriaLabel = (player: number, count: number) => {
     const seat = state.activePlayers.indexOf(player);
@@ -573,16 +666,16 @@ export function LudoGame() {
 
   const canShowRollButton =
     state.lastRoll == null &&
-    !isRolling &&
+    !diceAnimating &&
     !isAnimating &&
     !noMovesAfterRoll &&
     (!isOnline || online.isMyTurn) &&
-    !(isOnline && online.movePending);
+    !(isOnline && (online.movePending || waitingRollResult));
 
   const showDiceArea =
-    selfRolling ||
-    state.lastRoll != null ||
-    (isOnline && syncedTurnDice != null);
+    diceAnimating ||
+    confirmedRoll != null ||
+    state.lastRoll != null;
 
   const isGameOver = phase === "game-over" && state.winner != null;
   const winners = isGameOver ? [state.winner!] : null;
@@ -829,27 +922,19 @@ export function LudoGame() {
             </button>
           ) : null}
 
-          {isOnline && (onlineLudo?.rollLog?.length ?? 0) > 0 ? (
-            <ul className="w-full max-w-xs space-y-1 text-center text-xs text-slate-500">
-              {onlineLudo!.rollLog!.map((entry, index) => (
-                <li key={`${entry.seat}-${entry.roll}-${index}`}>
-                  {formatSeatLabel(online.players, entry.seat)}: {entry.roll}
-                </li>
-              ))}
-            </ul>
-          ) : null}
         </div>
       ) : null}
 
-      {!isOnline &&
-      state.lastRoll != null &&
+      {state.lastRoll != null &&
       moves.length === 0 &&
       !isGameOver &&
-      !isAnimating ? (
+      !isAnimating &&
+      (!isOnline || online.isMyTurn) ? (
         <div className="text-center">
           <button
             type="button"
             onClick={passTurn}
+            disabled={isOnline && online.movePending}
             className="rounded-lg border border-white/20 px-4 py-2 text-sm"
           >
             {state.extraTurn ? "もう一度振る" : "手番を終える"}
