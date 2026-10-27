@@ -266,18 +266,10 @@ export function NebulaLinkGame() {
     return set;
   }, [game, canAct, selectedPieceId, rotation, hoverIndex]);
 
-  useEffect(() => {
-    if (!isOnline) return;
-    if (spinning && !online.movePending) {
-      setSpinning(false);
-    }
-  }, [isOnline, spinning, online.movePending]);
-
   const spinRoulette = useCallback(() => {
     if (!game || spinning || game.roulette.length > 0) return;
     if (isOnline) {
-      if (!online.isMyTurn || online.movePending || spinning) return;
-      setSpinning(true);
+      if (!online.isMyTurn || online.movePending) return;
       void online.handleMove({ type: "nebula-spin" });
       return;
     }
@@ -475,8 +467,9 @@ export function NebulaLinkGame() {
   const activePieceId = canAct ? selectedPieceId : null;
   const activeRotation = canAct ? rotation : 0;
   const activeHoverIndex = canAct ? hoverIndex : null;
-  const showRouletteSpinning =
-    spinning && (!isOnline || game.roulette.length === 0);
+  const showRouletteSpinning = isOnline
+    ? online.movePending && game.roulette.length === 0
+    : spinning;
   const mustPass = phase === "playing" && canAct && canNebulaPass(game);
   const home = playerHomeEdge(game.currentPlayer, game.playerCount);
   const rouletteReady = game.roulette.length === 3;
@@ -655,11 +648,7 @@ export function NebulaLinkGame() {
           <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
             <button
               type="button"
-              disabled={
-                rouletteReady ||
-                showRouletteSpinning ||
-                (isOnline && online.movePending)
-              }
+              disabled={rouletteReady || showRouletteSpinning}
               onClick={spinRoulette}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40 sm:text-sm sm:px-4 sm:py-2 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
             >
