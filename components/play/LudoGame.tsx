@@ -273,11 +273,6 @@ export function LudoGame() {
     [state.activePlayers]
   );
 
-  const movableTokenIds = useMemo(
-    () => new Set(moves.map((m) => m.tokenIndex)),
-    [moves]
-  );
-
   const [diceFace, setDiceFace] = useState(1);
   const [rollCycling, setRollCycling] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -438,6 +433,16 @@ export function LudoGame() {
   const diceAnimating = rollCycling || waitingRollResult;
   const rollInFlight = diceAnimating;
   const selfRolling = diceAnimating && (!isOnline || online.isMyTurn);
+  const rolledDiceReady =
+    !rollCycling && !rollResultPending && !diceAnimating;
+
+  const movableTokenIds = useMemo(
+    () =>
+      rolledDiceReady
+        ? new Set(moves.map((m) => m.tokenIndex))
+        : new Set<number>(),
+    [moves, rolledDiceReady]
+  );
 
   const clearRollInterval = useCallback(() => {
     if (rollTimerRef.current) {
@@ -524,7 +529,7 @@ export function LudoGame() {
 
   const onToken = useCallback(
     (tokenIndex: number) => {
-      if (isAnimating) return;
+      if (isAnimating || rollCycling || rollResultPending) return;
       if (!moves.some((m) => m.tokenIndex === tokenIndex)) return;
       const roll = state.lastRoll;
       if (roll == null) return;
@@ -553,6 +558,8 @@ export function LudoGame() {
     },
     [
       isAnimating,
+      rollCycling,
+      rollResultPending,
       moves,
       state,
       isOnline,
@@ -761,7 +768,7 @@ export function LudoGame() {
                 : "相手の手番です"
               : selfRolling
                 ? "サイコロを振っています"
-                : state.lastRoll == null
+                : !rolledDiceReady || state.lastRoll == null
                   ? "サイコロを振る"
                   : moves.length === 0
                     ? noMovablePiecesMessage
@@ -959,7 +966,8 @@ export function LudoGame() {
         </div>
       ) : null}
 
-      {state.lastRoll != null &&
+      {rolledDiceReady &&
+      state.lastRoll != null &&
       moves.length === 0 &&
       !isGameOver &&
       !isAnimating &&

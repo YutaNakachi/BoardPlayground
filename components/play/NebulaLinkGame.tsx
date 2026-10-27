@@ -266,6 +266,13 @@ export function NebulaLinkGame() {
     return set;
   }, [game, canAct, selectedPieceId, rotation, hoverIndex]);
 
+  useEffect(() => {
+    if (!isOnline) return;
+    if (spinning && !online.movePending) {
+      setSpinning(false);
+    }
+  }, [isOnline, spinning, online.movePending]);
+
   const spinRoulette = useCallback(() => {
     if (!game || spinning || game.roulette.length > 0) return;
     if (isOnline) {
@@ -649,7 +656,9 @@ export function NebulaLinkGame() {
             <button
               type="button"
               disabled={
-                rouletteReady || showRouletteSpinning || online.movePending
+                rouletteReady ||
+                showRouletteSpinning ||
+                (isOnline && online.movePending)
               }
               onClick={spinRoulette}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40 sm:text-sm sm:px-4 sm:py-2 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
