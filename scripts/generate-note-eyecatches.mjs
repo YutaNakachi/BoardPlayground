@@ -31,6 +31,9 @@ const BOARD_CAPTURE = {
   hex: 'div.relative:has(svg[aria-label="ヘックスの盤"])',
   "mini-shogi": "div.mx-auto.grid.max-w-xs.grid-cols-5.rounded-xl",
   dejarik: 'div.relative.w-full.touch-none:has(svg[aria-label="ホロチェス盤"])',
+  "king-and-spy":
+    "div.rounded-2xl.border.border-indigo-500\\/25.bg-gradient-to-b",
+  "overheat-chicken": '[role="img"][aria-label^="杯"]',
 };
 
 const HIDE_PLAY_CSS = `
