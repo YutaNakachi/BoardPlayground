@@ -366,6 +366,9 @@ export function LudoGame() {
     ludoAnimVersionRef.current = online.version;
 
     if (localMoveAnimRef.current || animatingTokenIndex !== null) {
+      if (localMoveAnimRef.current) {
+        localMoveAnimRef.current = false;
+      }
       syncLudoSnapshot();
       return;
     }
@@ -540,7 +543,6 @@ export function LudoGame() {
         setRollResultPending(false);
         localMoveAnimRef.current = true;
         animateTokenMove(tokenIndex, fromToken, roll, () => {
-          localMoveAnimRef.current = false;
           syncLudoSnapshot();
           void online.handleMove({ type: "ludo-move", tokenIndex });
         });
@@ -939,10 +941,6 @@ export function LudoGame() {
               />
               {selfRolling ? (
                 <p className="text-sm text-slate-400">振っています…</p>
-              ) : displayDiceFace ? (
-                <p className="text-sm font-medium text-slate-200">
-                  出目: {displayDiceFace}
-                </p>
               ) : null}
             </div>
           ) : null}
