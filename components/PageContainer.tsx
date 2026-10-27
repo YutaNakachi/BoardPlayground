@@ -1,3 +1,5 @@
+import { SITE_CONTAINER_CLASS } from "@/lib/site-layout";
+
 type Props = {
   children: React.ReactNode;
   className?: string;
@@ -18,7 +20,7 @@ export function PageContainer({
 }: Props) {
   return (
     <div
-      className={`mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 ${PADDING_CLASS[padding]} ${className}`}
+      className={`${SITE_CONTAINER_CLASS} ${PADDING_CLASS[padding]} ${className}`}
     >
       {children}
     </div>
