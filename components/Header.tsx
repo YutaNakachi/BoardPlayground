@@ -150,11 +150,29 @@ function RankingIcon() {
 const headerActionClass =
   "group relative inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-xl border text-slate-300 transition hover:border-white/25 hover:text-white sm:min-h-10 sm:min-w-10 sm:rounded-full";
 
-const headerTooltipClass =
-  "pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-surface-raised px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100";
+const headerTooltipBaseClass =
+  "pointer-events-none absolute top-full z-50 mt-2 whitespace-nowrap rounded-lg border border-white/10 bg-surface-raised px-2.5 py-1 text-xs font-medium text-slate-200 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100";
 
-function HeaderTooltip({ label }: { label: string }) {
-  return <span className={headerTooltipClass}>{label}</span>;
+function headerTooltipPositionClass(align: "center" | "end") {
+  return align === "end"
+    ? "right-0 left-auto translate-x-0"
+    : "left-1/2 -translate-x-1/2";
+}
+
+function HeaderTooltip({
+  label,
+  align = "center",
+}: {
+  label: string;
+  align?: "center" | "end";
+}) {
+  return (
+    <span
+      className={`${headerTooltipBaseClass} ${headerTooltipPositionClass(align)}`}
+    >
+      {label}
+    </span>
+  );
 }
 
 function headerNavLinkClass(active: boolean) {
@@ -197,7 +215,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 overflow-x-clip border-b border-surface-border bg-surface/85 backdrop-blur-md">
+      <header className="sticky top-0 z-40 overflow-visible border-b border-surface-border bg-surface/85 backdrop-blur-md">
         <div
           className={`${SITE_MAX_WIDTH_CLASS} flex h-12 items-center gap-2 px-3 sm:h-14 sm:gap-3 sm:px-6`}
         >
@@ -227,7 +245,7 @@ export function Header() {
             <SiteBrand variant="header" />
           </Link>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1 overflow-x-clip sm:gap-1.5">
+          <div className="ml-auto flex shrink-0 items-center gap-1 overflow-visible sm:gap-1.5">
             {onlineEnabled ? (
               <button
                 type="button"
@@ -258,7 +276,7 @@ export function Header() {
               aria-label="お問い合わせ"
             >
               <ContactIcon />
-              <HeaderTooltip label="お問い合わせ" />
+              <HeaderTooltip label="お問い合わせ" align="end" />
             </Link>
             <Link
               href={SITE_GUIDE_PATH}
@@ -267,7 +285,7 @@ export function Header() {
               aria-label="このサイトについて"
             >
               <GuideIcon />
-              <HeaderTooltip label="このサイトについて" />
+              <HeaderTooltip label="このサイトについて" align="end" />
             </Link>
           </div>
         </div>
