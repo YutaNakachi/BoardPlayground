@@ -11,7 +11,7 @@
 | 右 | プレイ画面の盤を **約10%の不透明度** で薄く（左へフェード） |
 
 文言は `entries.json` で管理します（各記事の「サムネ用キャッチコピー」と揃えてください）。  
-任意: `boardOpacity`（盤の濃さ）、`titleNoWrap` / `titleFontSize`（長いタイトルの1行表示）。
+任意: `boardOpacity`（盤の濃さ）、`titleNoWrap` / `titleFontSize`（長いタイトルの1行表示）、`cardOverlay`（`public/games/{slug}/` のカード画像を右背景に重ねる。キング＆スパイ向け）。
 
 ## ファイル
 

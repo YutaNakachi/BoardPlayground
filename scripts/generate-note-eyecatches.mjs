@@ -60,6 +60,34 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
+function buildCardOverlayHtml(entry) {
+  const cards = entry.cardOverlay;
+  if (!Array.isArray(cards) || cards.length === 0) return "";
+
+  const gameDir = path.join(ROOT, "public/games", entry.slug);
+  return cards
+    .map((card) => {
+      const filePath = path.join(gameDir, card.file);
+      if (!fs.existsSync(filePath)) {
+        console.warn("card overlay missing:", filePath);
+        return "";
+      }
+      const src = `file://${filePath}`;
+      const style = [
+        `right: ${card.right ?? "10%"}`,
+        `top: ${card.top ?? "28%"}`,
+        `width: ${card.width ?? 200}px`,
+        `transform: rotate(${card.rotate ?? 0}deg)`,
+        `opacity: ${card.opacity ?? 0.45}`,
+        card.zIndex != null ? `z-index: ${card.zIndex}` : "",
+      ]
+        .filter(Boolean)
+        .join("; ");
+      return `<img class="card-overlay" src="${src}" alt="" style="${style}" />`;
+    })
+    .join("\n");
+}
+
 function buildFrameHtml(entry, textureFile) {
   const title = escapeHtml(entry.title);
   const subtitle = escapeHtml(entry.subtitle);
@@ -67,6 +95,7 @@ function buildFrameHtml(entry, textureFile) {
   const boardOpacity = entry.boardOpacity ?? 0.1;
   const titleFontSize = entry.titleFontSize ?? 80;
   const titleNoWrap = entry.titleNoWrap === true;
+  const cardOverlayHtml = buildCardOverlayHtml(entry);
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -184,11 +213,22 @@ function buildFrameHtml(entry, textureFile) {
       color: #6b6478;
       font-weight: 500;
     }
+    .card-overlay {
+      position: absolute;
+      z-index: 1;
+      height: auto;
+      border-radius: 14px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      -webkit-mask-image: linear-gradient(to left, #000 72%, transparent 100%);
+      mask-image: linear-gradient(to left, #000 72%, transparent 100%);
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
   <div class="frame">
     ${texUrl ? `<div class="board-fade" aria-hidden="true"></div>` : ""}
+    ${cardOverlayHtml}
     <div class="content">
       <div class="brand-row">
         <img class="symbol" src="file://${path.join(BRAND, "logo-symbol.png")}" alt="" />
