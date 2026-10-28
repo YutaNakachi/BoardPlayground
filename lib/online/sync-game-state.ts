@@ -47,6 +47,10 @@ export function shouldApplyRemoteGameVersion(
   }
 
   if (isGameOverState(currentState) && isActivePlayPhase(remoteState)) {
+    // 再戦 version=1 を取り逃しても、進行中の新対局（version < 前局）を取り込む
+    if (remoteVersion < currentVersion) {
+      return true;
+    }
     return false;
   }
 

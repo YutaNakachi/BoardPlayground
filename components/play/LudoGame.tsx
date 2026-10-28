@@ -53,6 +53,7 @@ import {
   ludoMoves,
   ludoTokenCoord,
   rollLudo,
+  tryLudoTokenCoord,
   type LudoState,
   type LudoToken,
 } from "@/lib/play/ludo";
@@ -72,7 +73,8 @@ type CellInfo = {
 };
 
 function ludoStyle(player: number) {
-  return getPlayerTurnStyle(LUDO_STYLE_INDEX[player]);
+  const styleIndex = LUDO_STYLE_INDEX[player];
+  return getPlayerTurnStyle(styleIndex ?? 0);
 }
 
 function buildCellMap(activePlayers: number[]) {
@@ -186,7 +188,10 @@ function cellAppearance(info: CellInfo): string {
 
 function tokensAt(tokens: LudoToken[], coord: Coord): LudoToken[] {
   const key = coordKey(coord);
-  return tokens.filter((t) => coordKey(ludoTokenCoord(t)) === key);
+  return tokens.filter((t) => {
+    const c = tryLudoTokenCoord(t);
+    return c != null && coordKey(c) === key;
+  });
 }
 
 function tokenIndexIn(tokens: LudoToken[], token: LudoToken): number {
@@ -292,7 +297,15 @@ export function LudoGame() {
   const isAnimating = animatingTokenIndex !== null;
 
   const displayTokens = useMemo(() => {
-    if (animatingTokenIndex === null || animatingToken === null) return state.tokens;
+    if (animatingTokenIndex === null || animatingToken === null) {
+      return state.tokens;
+    }
+    if (
+      animatingTokenIndex < 0 ||
+      animatingTokenIndex >= state.tokens.length
+    ) {
+      return state.tokens;
+    }
     return state.tokens.map((t, i) =>
       i === animatingTokenIndex ? animatingToken : t
     );
@@ -355,9 +368,64 @@ export function LudoGame() {
     []
   );
 
+  const clearRollInterval = useCallback(() => {
+    if (rollTimerRef.current) {
+      clearInterval(rollTimerRef.current);
+      rollTimerRef.current = null;
+    }
+  }, []);
+
+  const resetLudoVisualState = useCallback(() => {
+    clearRollInterval();
+    if (animTimerRef.current) {
+      clearTimeout(animTimerRef.current);
+      animTimerRef.current = null;
+    }
+    setAnimatingTokenIndex(null);
+    setAnimatingToken(null);
+    setRollCycling(false);
+    setRollResultPending(false);
+    localMoveAnimRef.current = false;
+  }, [clearRollInterval]);
+
+  const prevOnlineVersionRef = useRef(online.version);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    const prev = prevOnlineVersionRef.current;
+    const next = online.version;
+    prevOnlineVersionRef.current = next;
+    const rematchReset = next === 1 && prev > 1;
+    const tokenCountChanged =
+      ludoSnapshotRef.current.tokens.length !== state.tokens.length;
+    if (rematchReset || tokenCountChanged) {
+      resetLudoVisualState();
+      ludoAnimVersionRef.current = next;
+      ludoSnapshotRef.current = {
+        tokens: state.tokens,
+        current: state.current,
+        lastRoll: state.lastRoll,
+        turnDice: syncedTurnDice,
+      };
+    }
+  }, [
+    isOnline,
+    online.version,
+    state.tokens,
+    state.current,
+    state.lastRoll,
+    syncedTurnDice,
+    resetLudoVisualState,
+  ]);
+
   useEffect(() => {
     if (!isOnline || phase !== "playing") return;
     if (online.version === ludoAnimVersionRef.current) return;
+    if (online.version === 1 && ludoAnimVersionRef.current > 1) {
+      ludoAnimVersionRef.current = online.version;
+      syncLudoSnapshot();
+      return;
+    }
     ludoAnimVersionRef.current = online.version;
 
     if (localMoveAnimRef.current || animatingTokenIndex !== null) {
@@ -397,6 +465,10 @@ export function LudoGame() {
     }
 
     const fromToken = snap.tokens[changedIndex];
+    if (!fromToken || !tryLudoTokenCoord(fromToken)) {
+      syncLudoSnapshot();
+      return;
+    }
     localMoveAnimRef.current = true;
     animateTokenMove(changedIndex, fromToken, roll, () => {
       localMoveAnimRef.current = false;
@@ -443,13 +515,6 @@ export function LudoGame() {
         : new Set<number>(),
     [moves, rolledDiceReady]
   );
-
-  const clearRollInterval = useCallback(() => {
-    if (rollTimerRef.current) {
-      clearInterval(rollTimerRef.current);
-      rollTimerRef.current = null;
-    }
-  }, []);
 
   const finishOnlineRollAnimation = useCallback(
     (face: number) => {

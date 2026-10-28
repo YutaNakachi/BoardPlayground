@@ -33,10 +33,13 @@ export function useOnlineFirstPlayer(online: OnlineRoomSlice) {
 
   const selection = roomId ? selectionByRoom[roomId] : undefined;
   const rematchDefault = (storedOpening + 1) % seatCount;
-  const firstPlayer =
-    online.phase === "finished"
+  const onFinished =
+    online.phase === "finished" || online.room?.status === "finished";
+  const firstPlayer = onFinished
+    ? online.isHost
       ? (selection ?? rematchDefault)
-      : (selection ?? storedOpening);
+      : storedOpening
+    : (selection ?? storedOpening);
 
   const onFirstPlayerChange = useCallback(
     (seat: number) => {

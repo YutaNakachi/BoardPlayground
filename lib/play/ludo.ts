@@ -259,6 +259,24 @@ export function ludoTokenCoord(token: LudoToken): Coord {
   return LUDO_HOME[token.player][token.steps];
 }
 
+/** 盤外プレイヤーなど不正トークン用（描画クラッシュ防止） */
+export function tryLudoTokenCoord(token: LudoToken): Coord | null {
+  if (token.zone === "yard") {
+    const yard = LUDO_YARD[token.player];
+    if (!yard) return null;
+    const coord = yard[token.index];
+    return coord ?? null;
+  }
+  if (token.zone === "track") {
+    if (!LUDO_YARD[token.player]) return null;
+    return trackCoord(token.player, token.steps);
+  }
+  const home = LUDO_HOME[token.player];
+  if (!home) return null;
+  const coord = home[token.steps];
+  return coord ?? null;
+}
+
 export function ludoGoalCount(state: LudoState, player: number): number {
   return state.tokens.filter(
     (t, i) => t.player === player && isLudoTokenFinished(state.tokens, i)

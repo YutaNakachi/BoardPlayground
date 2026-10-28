@@ -136,7 +136,7 @@ export function useOnlineRoom(gameSlug: string) {
       state: GameState,
       remoteVersion: number,
       remoteCurrentPlayer: number | null
-    ) => {
+    ): boolean => {
       const remoteGameOver = state.phase === "game-over";
       const secretSlug = roomRef.current?.gameSlug;
       if (pendingMoveRef.current) {
@@ -145,7 +145,7 @@ export function useOnlineRoom(gameSlug: string) {
           isOnlineSecretGame(secretSlug) &&
           remoteVersion > versionRef.current;
         if (!remoteGameOver && !secretInFlight) {
-          return;
+          return false;
         }
         if (remoteGameOver) {
           pendingMoveRef.current = false;
@@ -160,7 +160,7 @@ export function useOnlineRoom(gameSlug: string) {
           gameStateRef.current
         )
       ) {
-        return;
+        return false;
       }
       setGameState(state);
       gameStateRef.current = state;
@@ -186,6 +186,7 @@ export function useOnlineRoom(gameSlug: string) {
             : prev
         );
       }
+      return true;
     },
     []
   );
@@ -204,15 +205,17 @@ export function useOnlineRoom(gameSlug: string) {
     setRoom(data.room);
     if (data.gameState) {
       const remoteState = data.gameState.state as GameState;
-      applyRemoteGameState(
+      const applied = applyRemoteGameState(
         remoteState,
         data.gameState.version,
         data.gameState.currentPlayer
       );
-      if (remoteState.phase === "game-over" || data.room.status === "finished") {
-        setPhase("finished");
-      } else if (data.room.status === "playing") {
-        setPhase("playing");
+      if (applied) {
+        if (remoteState.phase === "game-over" || data.room.status === "finished") {
+          setPhase("finished");
+        } else if (data.room.status === "playing") {
+          setPhase("playing");
+        }
       }
     } else if (data.room.status === "waiting") {
       setPhase("waiting");
@@ -329,9 +332,10 @@ export function useOnlineRoom(gameSlug: string) {
     return clearRealtime;
   }, [clearRealtime]);
 
-  // Lobby: room_players is not in the Realtime publication, so poll while waiting.
+  // 待機・終局: room / game_options は Realtime 外のためポーリング（先攻変更の同期など）
   useEffect(() => {
-    if (phase !== "waiting" || !room?.id || !getSupabaseBrowserClient()) return;
+    if (phase !== "waiting" && phase !== "finished") return;
+    if (!room?.id || !getSupabaseBrowserClient()) return;
     startPoll(room.id);
     return () => {
       if (pollRef.current) {
@@ -559,7 +563,13 @@ export function useOnlineRoom(gameSlug: string) {
           setMovePending(false);
         }
         const data = await refreshRoom(room.id);
-        setPhase("playing");
+        if (
+          data.gameState &&
+          (data.gameState.state as GameState).phase !== "game-over" &&
+          data.room.status === "playing"
+        ) {
+          setPhase("playing");
+        }
         if (
           data.gameState &&
           !pendingMoveRef.current &&
