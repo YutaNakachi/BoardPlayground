@@ -102,15 +102,17 @@ export function DurationMeta({
 export function GameMetaIndicators({
   game,
   className = "flex flex-wrap items-center gap-x-4 gap-y-1",
+  itemClassName,
 }: {
   game: GameMeta;
   className?: string;
+  itemClassName?: string;
 }) {
   return (
     <div className={className}>
-      <ComplexityMeta complexity={game.complexity} />
-      <PlayersMeta players={game.players} />
-      <DurationMeta minutes={game.durationMinutes} />
+      <ComplexityMeta complexity={game.complexity} className={itemClassName} />
+      <PlayersMeta players={game.players} className={itemClassName} />
+      <DurationMeta minutes={game.durationMinutes} className={itemClassName} />
     </div>
   );
 }

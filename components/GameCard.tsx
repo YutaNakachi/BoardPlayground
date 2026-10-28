@@ -61,12 +61,19 @@ export function GameCard({ game, initialPlayCount }: Props) {
         <p className="mt-2 flex-1 text-sm text-slate-400 line-clamp-2">
           {game.description}
         </p>
-        <div className="mt-auto flex items-center justify-between gap-3 pt-3">
-          <GameMetaIndicators game={game} className="min-w-0 flex flex-wrap items-center gap-x-4 gap-y-1" />
+        <div className="mt-auto flex min-w-0 flex-nowrap items-center gap-2 pt-3">
+          <GameMetaIndicators
+            game={game}
+            itemClassName="text-xs [&_svg]:h-3.5 [&_svg]:w-3.5"
+            className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2 sm:gap-x-2.5"
+          />
           {statsVisible ? (
-            <div className="flex h-5 shrink-0 items-center">
+            <div className="flex shrink-0 items-center">
               {showPlayCount ? (
-                <PlayCountIndicator count={playCount} />
+                <PlayCountIndicator
+                  count={playCount}
+                  className="text-xs [&_svg]:h-3.5 [&_svg]:w-3.5"
+                />
               ) : (
                 <span
                   className="invisible inline-flex items-center gap-1 text-sm tabular-nums"
