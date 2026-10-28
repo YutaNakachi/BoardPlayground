@@ -746,6 +746,16 @@ export function LudoGame() {
           winners={winners}
           winnersLabel={winnerLabels ?? undefined}
           {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                seatCount={seatCount}
+                onChange={onFirstPlayerChange}
+              />
+            ) : undefined
+          }
           details={<p className="text-slate-400">4つのコマをすべてゴールしました。</p>}
         />
       )}

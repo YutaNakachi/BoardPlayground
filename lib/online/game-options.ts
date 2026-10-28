@@ -20,8 +20,10 @@ export type CommonGameOptions = {
   firstPlayer?: FirstPlayerSeat;
 };
 
-export type VariablePlayerGameOptions = CommonGameOptions & {
+export type VariablePlayerGameOptions = {
   playerCount: PlayerCountOption;
+  /** 席 index（0 .. playerCount-1）。未指定時は 0 */
+  firstPlayer?: number;
 };
 
 export type TicTacToeGameOptions = {
@@ -68,9 +70,10 @@ export function seatForRole(role: 0 | 1, houndsSeat: HoundsSeat): HoundsSeat {
 
 export function initialCurrentPlayerSeat(
   slug: OnlineGameSlug,
-  gameOptions: unknown
+  gameOptions: unknown,
+  maxPlayers?: number
 ): number {
-  const seatCount = requiredPlayerCountFromRoom(slug, gameOptions);
+  const seatCount = requiredPlayerCountFromRoom(slug, gameOptions, maxPlayers);
   if (slug === "fox-hounds") {
     return parseHoundsSeat(gameOptions);
   }
@@ -82,6 +85,16 @@ export function initialCurrentPlayerSeat(
   return parseFirstPlayer(gameOptions);
 }
 
+function variablePlayerOpeningSeat(
+  raw: unknown,
+  playerCount: PlayerCountOption
+): number | null {
+  if (raw && typeof raw === "object" && "firstPlayer" in raw) {
+    return parseOpeningSeat(raw, playerCount);
+  }
+  return 0;
+}
+
 function parseVariablePlayerGameOptions(raw: unknown): VariablePlayerGameOptions | null {
   if (raw == null) return null;
   if (typeof raw !== "object") return null;
@@ -91,11 +104,11 @@ function parseVariablePlayerGameOptions(raw: unknown): VariablePlayerGameOptions
   }
   const playerCount = parsePlayerCount(raw);
   if (playerCount === undefined) return null;
-  const firstPlayer = parseFirstPlayer(raw);
-  return {
-    playerCount,
-    ...(firstPlayer === 1 ? { firstPlayer: 1 } : {}),
-  };
+  const opening = variablePlayerOpeningSeat(raw, playerCount);
+  if (opening === null) return null;
+  return opening === 0
+    ? { playerCount }
+    : { playerCount, firstPlayer: opening };
 }
 
 function parseFoxHoundsGameOptions(raw: unknown): FoxHoundsGameOptions | null {
@@ -279,10 +292,14 @@ export function hasNonDefaultGameOptions(
     case "fox-hounds":
       return parseHoundsSeat(options) === 1;
     case "ludo":
-    case "nebula-link":
-      return (
-        parsePlayerCount(options) !== undefined && parsePlayerCount(options) !== 2
-      );
+    case "nebula-link": {
+      const count = parsePlayerCount(options) as PlayerCountOption | undefined;
+      if (count !== undefined && count !== 2) return true;
+      const opening = count
+        ? variablePlayerOpeningSeat(options, count)
+        : parseOpeningSeat(options, 2);
+      return opening !== null && opening !== 0;
+    }
     case "king-and-spy":
       return (
         parseHostStartsAsKing(options) === false ||

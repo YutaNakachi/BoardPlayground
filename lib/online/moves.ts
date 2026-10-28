@@ -90,6 +90,7 @@ import {
   parseFirstPlayer,
   parseHoundsSeat,
   parsePlayerCount,
+  requiredPlayerCountFromRoom,
   parseTicTacToeGameOptions,
   roleForSeat,
   seatForRole,
@@ -344,7 +345,8 @@ function mancalaWinner(pits: number[]): Player | "draw" {
 
 export function createInitialState(
   slug: OnlineGameSlug,
-  gameOptions?: unknown
+  gameOptions?: unknown,
+  maxPlayers?: number
 ): GameState {
   const firstPlayer = parseFirstPlayer(gameOptions);
 
@@ -446,8 +448,13 @@ export function createInitialState(
       return { ...base, phase: "playing", winner: null };
     }
     case "ludo": {
-      const playerCount = parsePlayerCount(gameOptions) ?? 2;
-      const openingSeat = parseOpeningSeat(gameOptions, playerCount) ?? 0;
+      const playerCount = requiredPlayerCountFromRoom(
+        "ludo",
+        gameOptions,
+        maxPlayers
+      );
+      const openingSeat =
+        parseOpeningSeat(gameOptions, playerCount) ?? 0;
       const base = initialLudo(playerCount);
       const current =
         base.activePlayers[openingSeat] ?? base.activePlayers[0];
@@ -459,8 +466,13 @@ export function createInitialState(
       };
     }
     case "nebula-link": {
-      const playerCount = parsePlayerCount(gameOptions) ?? 2;
-      const openingSeat = parseOpeningSeat(gameOptions, playerCount) ?? 0;
+      const playerCount = requiredPlayerCountFromRoom(
+        "nebula-link",
+        gameOptions,
+        maxPlayers
+      );
+      const openingSeat =
+        parseOpeningSeat(gameOptions, playerCount) ?? 0;
       const base = initialNebulaLink(playerCount);
       return {
         ...base,

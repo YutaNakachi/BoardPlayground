@@ -552,6 +552,16 @@ export function NebulaLinkGame() {
           winnersLabel={winnerLabels ?? undefined}
           draw={game.isDraw}
           {...replayProps}
+          replayExtra={
+            isOnline && online.isHost ? (
+              <OnlineFirstPlayerPicker
+                players={online.players}
+                value={firstPlayer}
+                seatCount={seatCount}
+                onChange={onFirstPlayerChange}
+              />
+            ) : undefined
+          }
           details={
             <p className="text-slate-400">
               {game.isDraw

@@ -147,13 +147,13 @@ export async function POST(request: Request, { params }: Params) {
     if (openingFromOptions === null) {
       return NextResponse.json({ error: "Invalid firstPlayer" }, { status: 400 });
     }
-    initialState = createInitialState(room.game_slug, gameOptions);
+    initialState = createInitialState(room.game_slug, gameOptions, maxPlayers);
   }
 
   const openingSeat =
     room.game_slug === "king-and-spy"
       ? null
-      : initialCurrentPlayerSeat(room.game_slug, gameOptions);
+      : initialCurrentPlayerSeat(room.game_slug, gameOptions, maxPlayers);
 
   const { data: existingState } = await db
     .from("room_state")
