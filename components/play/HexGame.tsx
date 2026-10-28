@@ -434,7 +434,8 @@ export function HexGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ firstPlayer }),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   const turnAction = cpuThinking

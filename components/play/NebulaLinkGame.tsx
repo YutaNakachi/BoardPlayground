@@ -462,7 +462,8 @@ export function NebulaLinkGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ firstPlayer }),
-    reset
+    reset,
+    online.rematchLoading
   );
   const activePieceId = canAct ? selectedPieceId : null;
   const activeRotation = canAct ? rotation : 0;
@@ -545,20 +546,21 @@ export function NebulaLinkGame() {
 
   return (
     <div className="space-y-2 sm:space-y-3">
-      {isGameOver && winner && (
+      {isGameOver && game && (
         <ResultPanel
           variant="inline"
-          winners={winner}
+          winners={winner ?? []}
           winnersLabel={winnerLabels ?? undefined}
           draw={game.isDraw}
           {...replayProps}
           replayExtra={
-            isOnline && online.isHost ? (
+            isOnline ? (
               <OnlineFirstPlayerPicker
                 players={online.players}
                 value={firstPlayer}
                 seatCount={seatCount}
-                onChange={onFirstPlayerChange}
+                onChange={online.isHost ? onFirstPlayerChange : undefined}
+                readOnly={!online.isHost}
               />
             ) : undefined
           }

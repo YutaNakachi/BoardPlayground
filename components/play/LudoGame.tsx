@@ -735,7 +735,8 @@ export function LudoGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ firstPlayer }),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   return (
@@ -747,12 +748,13 @@ export function LudoGame() {
           winnersLabel={winnerLabels ?? undefined}
           {...replayProps}
           replayExtra={
-            isOnline && online.isHost ? (
+            isOnline ? (
               <OnlineFirstPlayerPicker
                 players={online.players}
                 value={firstPlayer}
                 seatCount={seatCount}
-                onChange={onFirstPlayerChange}
+                onChange={online.isHost ? onFirstPlayerChange : undefined}
+                readOnly={!online.isHost}
               />
             ) : undefined
           }

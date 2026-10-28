@@ -248,7 +248,8 @@ export function NimGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ firstPlayer }),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   return (

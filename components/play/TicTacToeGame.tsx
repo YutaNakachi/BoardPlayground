@@ -375,7 +375,8 @@ export function TicTacToeGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch(startParams),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   return (

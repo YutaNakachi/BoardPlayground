@@ -355,7 +355,8 @@ export function CheckersGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ firstPlayer }),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   return (

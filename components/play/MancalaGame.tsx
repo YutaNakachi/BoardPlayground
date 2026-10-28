@@ -522,9 +522,10 @@ export function MancalaGame() {
         isOnline,
         online.isHost,
         () => online.handleRematch({ firstPlayer }),
-        leaveToSetup
+        leaveToSetup,
+        online.rematchLoading
       ),
-    [isOnline, online.isHost, online.handleRematch, firstPlayer, leaveToSetup]
+    [isOnline, online.isHost, online.handleRematch, firstPlayer, leaveToSetup, online.rematchLoading]
   );
 
   if (online.completingPendingJoin) {

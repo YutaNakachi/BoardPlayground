@@ -17,6 +17,7 @@ import {
   savePendingJoin,
 } from "@/lib/online/join-room-pending";
 import { mergeGameOptions } from "@/lib/online/game-options";
+import { isOnlineRematchLoading } from "@/lib/online/result-replay";
 import {
   applyMove,
   dejarikTurnSeat,
@@ -581,7 +582,7 @@ export function useOnlineRoom(gameSlug: string) {
 
   const handleRematch = useCallback(
     async (params?: StartRoomParams) => {
-      if (!room) return;
+      if (!room || loading) return;
       const ended =
         phase === "finished" ||
         room.status === "finished" ||
@@ -592,7 +593,7 @@ export function useOnlineRoom(gameSlug: string) {
       setMovePending(false);
       await handleStart(params);
     },
-    [room, phase, gameState, handleStart]
+    [room, phase, gameState, handleStart, loading]
   );
 
   const applyServerMoveSuccess = useCallback(
@@ -841,6 +842,13 @@ export function useOnlineRoom(gameSlug: string) {
   const maxPlayers = room?.maxPlayers ?? 2;
   const canStart = players.length === maxPlayers;
 
+  const rematchLoading = isOnlineRematchLoading(
+    loading,
+    phase,
+    room?.status,
+    gameState?.phase
+  );
+
   return useMemo(
     () => ({
       phase,
@@ -857,6 +865,7 @@ export function useOnlineRoom(gameSlug: string) {
       canStart,
       error,
       loading,
+      rematchLoading,
       movePending,
       handleCreate,
       handleJoin,
@@ -884,6 +893,7 @@ export function useOnlineRoom(gameSlug: string) {
       canStart,
       error,
       loading,
+      rematchLoading,
       movePending,
       handleCreate,
       handleJoin,

@@ -405,7 +405,8 @@ export function DejarikGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ firstPlayer }),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   const winDetails =

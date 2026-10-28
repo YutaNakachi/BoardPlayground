@@ -377,7 +377,8 @@ export function FoxHoundsGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ gameOptions: { houndsSeat } }),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   const turnSeat =
