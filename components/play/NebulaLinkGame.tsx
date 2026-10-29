@@ -350,9 +350,10 @@ export function NebulaLinkGame() {
   }, [phase, game, isOnline, online]);
 
   const winner = useMemo(() => {
-    if (phase !== "game-over" || !game) return null;
-    return nebulaWinners(game);
-  }, [phase, game]);
+    if (!game?.gameOver) return null;
+    const w = nebulaWinners(game);
+    return w.length > 0 ? w : null;
+  }, [game]);
 
   const reset = useCallback(() => {
     online.reset();
@@ -458,15 +459,19 @@ export function NebulaLinkGame() {
 
   if (!game) return null;
 
-  const isGameOver = phase === "game-over" && winner !== null;
+  /** 参加者: room は playing なのに phase が finished のままの再戦切替 */
+  const rematchTransition =
+    isOnline &&
+    online.room?.status === "playing" &&
+    online.phase === "finished";
+
+  const isGameOver = game.gameOver && phase === "game-over";
   const showResultPanel =
-    isGameOver && game && !(isOnline && online.rematchLoading);
-  const resultIsDraw = Boolean(
-    game.isDraw ||
-      (winner &&
-        winner.length === game.playerCount &&
-        game.playerCount > 1)
-  );
+    game.gameOver &&
+    phase === "game-over" &&
+    !(isOnline && online.rematchLoading) &&
+    !rematchTransition;
+  const resultIsDraw = game.gameOver && game.isDraw;
   const winnerLabels =
     isOnline && isGameOver && winner
       ? formatWinnersWithNames(online.players, winner)
