@@ -1,4 +1,4 @@
-import { savePendingJoin } from "@/lib/online/join-room-pending";
+import { saveLastDisplayName, savePendingJoin } from "@/lib/online/join-room-pending";
 import { joinRoom } from "@/lib/online/room-client";
 import { isOnlineGame } from "@/lib/online/types";
 

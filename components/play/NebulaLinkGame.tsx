@@ -218,6 +218,14 @@ export function NebulaLinkGame() {
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
+  /** オンライン: この server version で選んだ駒だけ表示（版更新で自動クリア） */
+  const [selectionVersion, setSelectionVersion] = useState<number | null>(null);
+  const effectiveSelectedPieceId =
+    isOnline && selectionVersion !== online.version
+      ? null
+      : selectedPieceId;
+  const effectiveRotation =
+    isOnline && selectionVersion !== online.version ? 0 : rotation;
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [placingPointer, setPlacingPointer] = useState(false);
@@ -252,11 +260,11 @@ export function NebulaLinkGame() {
   }, [game, phase, allowedPieces]);
 
   const previewCells = useMemo(() => {
-    if (!game || !canAct || !selectedPieceId || hoverIndex === null) {
+    if (!game || !canAct || !effectiveSelectedPieceId || hoverIndex === null) {
       return new Set<number>();
     }
     const { row, col } = nebulaRowCol(hoverIndex);
-    const cells = pieceCellsAt(selectedPieceId, rotation, row, col);
+    const cells = pieceCellsAt(effectiveSelectedPieceId, effectiveRotation, row, col);
     const set = new Set<number>();
     for (const { row: r, col: c } of cells) {
       if (r >= 0 && r < NEBULA_SIZE && c >= 0 && c < NEBULA_SIZE) {
@@ -264,7 +272,7 @@ export function NebulaLinkGame() {
       }
     }
     return set;
-  }, [game, canAct, selectedPieceId, rotation, hoverIndex]);
+  }, [game, canAct, effectiveSelectedPieceId, effectiveRotation, hoverIndex]);
 
   const spinRoulette = useCallback(() => {
     if (!game || spinning || game.roulette.length > 0) return;
@@ -288,11 +296,11 @@ export function NebulaLinkGame() {
 
   const placeAt = useCallback(
     (index: number) => {
-      if (!game || phase !== "playing" || !selectedPieceId) return false;
+      if (!game || phase !== "playing" || !effectiveSelectedPieceId) return false;
       const { row, col } = nebulaRowCol(index);
       const placement: NebulaPlacement = {
-        pieceId: selectedPieceId,
-        rotation,
+        pieceId: effectiveSelectedPieceId,
+        rotation: effectiveRotation,
         anchorRow: row,
         anchorCol: col,
       };
@@ -300,8 +308,8 @@ export function NebulaLinkGame() {
         if (!online.isMyTurn || online.movePending) return false;
         void online.handleMove({
           type: "nebula-place",
-          pieceId: selectedPieceId,
-          rotation,
+          pieceId: effectiveSelectedPieceId,
+          rotation: effectiveRotation,
           anchorRow: row,
           anchorCol: col,
         });
@@ -320,7 +328,7 @@ export function NebulaLinkGame() {
       if (next.gameOver) setLocalPhase("game-over");
       return true;
     },
-    [phase, game, selectedPieceId, rotation, isOnline, online]
+    [phase, game, effectiveSelectedPieceId, effectiveRotation, isOnline, online]
   );
 
   const pass = useCallback(() => {
@@ -345,25 +353,6 @@ export function NebulaLinkGame() {
     if (phase !== "game-over" || !game) return null;
     return nebulaWinners(game);
   }, [phase, game]);
-
-  const pinnedDrawRef = useRef(false);
-  useEffect(() => {
-    if (game?.gameOver && game.isDraw) {
-      pinnedDrawRef.current = true;
-    }
-    if (isOnline && online.phase === "playing" && online.version <= 1) {
-      pinnedDrawRef.current = false;
-    }
-  }, [game?.gameOver, game?.isDraw, isOnline, online.phase, online.version]);
-
-  const resultIsDraw = Boolean(game?.isDraw || pinnedDrawRef.current);
-
-  useEffect(() => {
-    if (!isOnline) return;
-    setSelectedPieceId(null);
-    setRotation(0);
-    setHoverIndex(null);
-  }, [isOnline, online.version]);
 
   const reset = useCallback(() => {
     online.reset();
@@ -472,6 +461,12 @@ export function NebulaLinkGame() {
   const isGameOver = phase === "game-over" && winner !== null;
   const showResultPanel =
     isGameOver && game && !(isOnline && online.rematchLoading);
+  const resultIsDraw = Boolean(
+    game.isDraw ||
+      (winner &&
+        winner.length === game.playerCount &&
+        game.playerCount > 1)
+  );
   const winnerLabels =
     isOnline && isGameOver && winner
       ? formatWinnersWithNames(online.players, winner)
@@ -483,8 +478,8 @@ export function NebulaLinkGame() {
     reset,
     online.rematchLoading
   );
-  const activePieceId = canAct ? selectedPieceId : null;
-  const activeRotation = canAct ? rotation : 0;
+  const activePieceId = canAct ? effectiveSelectedPieceId : null;
+  const activeRotation = canAct ? effectiveRotation : 0;
   const activeHoverIndex = canAct ? hoverIndex : null;
   const showRouletteSpinning = isOnline
     ? online.movePending && game.roulette.length === 0
@@ -510,22 +505,25 @@ export function NebulaLinkGame() {
 
   const piecePickButtonClass = (pieceId: string) =>
     `flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border p-0.5 sm:h-12 sm:w-12 ${
-      selectedPieceId === pieceId
+      effectiveSelectedPieceId === pieceId
         ? `${turnStyle.sectionBorder} ${turnStyle.sectionBg} ring-2 ${turnStyle.sectionRing}`
         : "border-surface-border bg-surface-raised hover:border-white/20"
     }`;
 
   const previewRotationFor = (pieceId: string) =>
-    selectedPieceId === pieceId ? rotation : 0;
+    effectiveSelectedPieceId === pieceId ? effectiveRotation : 0;
 
   const pickPiece = (pieceId: string) => {
     if (!canAct) return;
     setNotice(null);
-    if (selectedPieceId === pieceId) {
+    if (effectiveSelectedPieceId === pieceId) {
       setRotation((r) => (r + 1) % 4);
     } else {
       setSelectedPieceId(pieceId);
       setRotation(0);
+    }
+    if (isOnline) {
+      setSelectionVersion(online.version);
     }
   };
 
