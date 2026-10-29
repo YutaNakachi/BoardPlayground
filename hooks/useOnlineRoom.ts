@@ -139,16 +139,27 @@ export function useOnlineRoom(gameSlug: string) {
     (
       state: GameState,
       remoteVersion: number,
-      remoteCurrentPlayer: number | null
+      remoteCurrentPlayer: number | null,
+      options?: { fromRefresh?: boolean }
     ): boolean => {
       const remoteGameOver = state.phase === "game-over";
       const secretSlug = roomRef.current?.gameSlug;
+      const nonSecret =
+        !!secretSlug && !isOnlineSecretGame(secretSlug as OnlineGameSlug);
       if (pendingMoveRef.current) {
         const secretInFlight =
           !!secretSlug &&
           isOnlineSecretGame(secretSlug) &&
           remoteVersion > versionRef.current;
         if (remoteVersion > versionRef.current && !remoteGameOver) {
+          pendingMoveRef.current = false;
+          setMovePending(false);
+        } else if (
+          nonSecret &&
+          options?.fromRefresh &&
+          remoteVersion >= versionRef.current &&
+          !remoteGameOver
+        ) {
           pendingMoveRef.current = false;
           setMovePending(false);
         } else if (!remoteGameOver && !secretInFlight) {
@@ -159,7 +170,10 @@ export function useOnlineRoom(gameSlug: string) {
           setMovePending(false);
         }
       }
+      const forceFromServer =
+        options?.fromRefresh && remoteVersion > versionRef.current;
       if (
+        !forceFromServer &&
         !shouldApplyRemoteGameVersion(
           remoteVersion,
           versionRef.current,
@@ -215,7 +229,8 @@ export function useOnlineRoom(gameSlug: string) {
       const applied = applyRemoteGameState(
         remoteState,
         data.gameState.version,
-        data.gameState.currentPlayer
+        data.gameState.currentPlayer,
+        { fromRefresh: true }
       );
       if (applied) {
         if (remoteState.phase === "game-over" || data.room.status === "finished") {
@@ -234,14 +249,18 @@ export function useOnlineRoom(gameSlug: string) {
   );
 
   const startPoll = useCallback(
-    (roomId: string) => {
+    (roomId: string, options?: { playingFallback?: boolean }) => {
       if (pollRef.current) return;
-      const intervalMs = isOnlineSecretGame(gameSlug) ? 400 : 1000;
+      const intervalMs = isOnlineSecretGame(gameSlug)
+        ? 400
+        : options?.playingFallback
+          ? 2500
+          : 1000;
       pollRef.current = setInterval(() => {
         void refreshRoom(roomId);
       }, intervalMs);
     },
-    [refreshRoom]
+    [refreshRoom, gameSlug]
   );
 
   const subscribeRealtime = useCallback(
@@ -353,10 +372,11 @@ export function useOnlineRoom(gameSlug: string) {
     };
   }, [phase, room?.id, startPoll]);
 
+  // 対局中: Realtime 欠落時のフォールバック（秘密対戦は高頻度、それ以外は低頻度）
   useEffect(() => {
-    if (!room?.id || !isOnlineSecretGame(gameSlug)) return;
-    if (phase !== "playing" && phase !== "finished") return;
-    startPoll(room.id);
+    if (!room?.id) return;
+    if (phase !== "playing") return;
+    startPoll(room.id, { playingFallback: !isOnlineSecretGame(gameSlug) });
     return () => {
       if (pollRef.current) {
         clearInterval(pollRef.current);
@@ -709,11 +729,13 @@ export function useOnlineRoom(gameSlug: string) {
             versionRef.current = rollback.version;
             setCurrentPlayer(rollback.currentPlayer);
             setPhase(rollback.phase);
-            broadcastGameState(
-              rollback.state,
-              rollback.version,
-              rollback.currentPlayer
-            );
+            if (isOnlineSecretGame(room.gameSlug)) {
+              broadcastGameState(
+                rollback.state,
+                rollback.version,
+                rollback.currentPlayer
+              );
+            }
           }
           const message =
             e instanceof Error ? e.message : "手の送信に失敗しました";
