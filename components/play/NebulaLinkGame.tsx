@@ -305,9 +305,6 @@ export function NebulaLinkGame() {
           anchorRow: row,
           anchorCol: col,
         });
-        setSelectedPieceId(null);
-        setRotation(0);
-        setHoverIndex(null);
         return true;
       }
       const next = applyNebulaPlace(game, placement);
@@ -348,6 +345,25 @@ export function NebulaLinkGame() {
     if (phase !== "game-over" || !game) return null;
     return nebulaWinners(game);
   }, [phase, game]);
+
+  const pinnedDrawRef = useRef(false);
+  useEffect(() => {
+    if (game?.gameOver && game.isDraw) {
+      pinnedDrawRef.current = true;
+    }
+    if (isOnline && online.phase === "playing" && online.version <= 1) {
+      pinnedDrawRef.current = false;
+    }
+  }, [game?.gameOver, game?.isDraw, isOnline, online.phase, online.version]);
+
+  const resultIsDraw = Boolean(game?.isDraw || pinnedDrawRef.current);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    setSelectedPieceId(null);
+    setRotation(0);
+    setHoverIndex(null);
+  }, [isOnline, online.version]);
 
   const reset = useCallback(() => {
     online.reset();
@@ -454,6 +470,8 @@ export function NebulaLinkGame() {
   if (!game) return null;
 
   const isGameOver = phase === "game-over" && winner !== null;
+  const showResultPanel =
+    isGameOver && game && !(isOnline && online.rematchLoading);
   const winnerLabels =
     isOnline && isGameOver && winner
       ? formatWinnersWithNames(online.players, winner)
@@ -492,13 +510,13 @@ export function NebulaLinkGame() {
 
   const piecePickButtonClass = (pieceId: string) =>
     `flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border p-0.5 sm:h-12 sm:w-12 ${
-      activePieceId === pieceId
+      selectedPieceId === pieceId
         ? `${turnStyle.sectionBorder} ${turnStyle.sectionBg} ring-2 ${turnStyle.sectionRing}`
         : "border-surface-border bg-surface-raised hover:border-white/20"
     }`;
 
   const previewRotationFor = (pieceId: string) =>
-    activePieceId === pieceId ? activeRotation : 0;
+    selectedPieceId === pieceId ? rotation : 0;
 
   const pickPiece = (pieceId: string) => {
     if (!canAct) return;
@@ -546,16 +564,17 @@ export function NebulaLinkGame() {
 
   return (
     <div className="space-y-2 sm:space-y-3">
-      {isGameOver && game && (
+      {showResultPanel && (
         <ResultPanel
           variant="inline"
           winners={winner ?? []}
           winnersLabel={winnerLabels ?? undefined}
-          draw={game.isDraw}
+          draw={resultIsDraw}
           {...replayProps}
           replayExtra={
             isOnline ? (
               <OnlineFirstPlayerPicker
+                key={`${online.room?.id ?? "room"}-${firstPlayer}`}
                 players={online.players}
                 value={firstPlayer}
                 seatCount={seatCount}
@@ -566,7 +585,7 @@ export function NebulaLinkGame() {
           }
           details={
             <p className="text-slate-400">
-              {game.isDraw
+              {resultIsDraw
                 ? "全員が連続パスし、引き分けになりました。"
                 : "星核を自分のホーム辺側に閉じ込めました。"}
             </p>
@@ -578,13 +597,19 @@ export function NebulaLinkGame() {
         <TurnBanner
           playerIndex={game.currentPlayer}
           playerLabel={
-            isOnline
-              ? formatSeatLabel(online.players, game.currentPlayer)
-              : `プレイヤー ${game.currentPlayer + 1}`
+            isOnline && !online.roomSyncReady
+              ? "…"
+              : isOnline
+                ? formatSeatLabel(online.players, game.currentPlayer)
+                : `プレイヤー ${game.currentPlayer + 1}`
           }
           stats={`ホーム辺：${homeEdgeLabel(home)} · 置ける手 ${legalMoves.length}`}
           action={
-            isOnline && !online.isMyTurn
+            isOnline && !online.roomSyncReady
+              ? "盤面を同期しています…"
+              : isOnline && online.moveError
+                ? online.moveError
+                : isOnline && !online.isMyTurn
               ? "相手の手番です"
               : notice ??
             (mustPass

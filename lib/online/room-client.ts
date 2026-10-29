@@ -128,7 +128,11 @@ export async function sendRoomMove(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? "手の送信に失敗しました");
+    const message =
+      err.error === "State conflict"
+        ? "手の競合（他の更新とぶつかりました）。盤面を同期します。"
+        : (err.error ?? "手の送信に失敗しました");
+    throw new Error(message);
   }
   const data = await res.json();
   return data.gameState;

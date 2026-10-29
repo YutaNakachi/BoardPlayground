@@ -14,6 +14,8 @@ import {
   clearPendingJoin,
   pendingJoinMatchesUrlCode,
   readPendingJoin,
+  readLastDisplayName,
+  saveLastDisplayName,
   savePendingJoin,
 } from "@/lib/online/join-room-pending";
 import { mergeGameOptions } from "@/lib/online/game-options";
@@ -73,6 +75,8 @@ export function useOnlineRoom(gameSlug: string) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [movePending, setMovePending] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const [roomSyncReady, setRoomSyncReady] = useState(true);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const realtimeCleanupRef = useRef<(() => void) | undefined>(undefined);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -144,7 +148,10 @@ export function useOnlineRoom(gameSlug: string) {
           !!secretSlug &&
           isOnlineSecretGame(secretSlug) &&
           remoteVersion > versionRef.current;
-        if (!remoteGameOver && !secretInFlight) {
+        if (remoteVersion > versionRef.current && !remoteGameOver) {
+          pendingMoveRef.current = false;
+          setMovePending(false);
+        } else if (!remoteGameOver && !secretInFlight) {
           return false;
         }
         if (remoteGameOver) {
@@ -220,6 +227,7 @@ export function useOnlineRoom(gameSlug: string) {
     } else if (data.room.status === "waiting") {
       setPhase("waiting");
     }
+    setRoomSyncReady(true);
     return data;
   },
     [applyRemoteGameState, gameSlug, myPlayerId]
@@ -363,6 +371,13 @@ export function useOnlineRoom(gameSlug: string) {
       setMyPlayerId(playerId);
       setMySeat(seatIndex);
       setRoom(roomInfo);
+      setGameState(null);
+      gameStateRef.current = null;
+      setVersion(0);
+      versionRef.current = 0;
+      setCurrentPlayer(null);
+      setRoomSyncReady(false);
+      setMoveError(null);
       setPhase(
         roomInfo.status === "waiting"
           ? "waiting"
@@ -370,6 +385,15 @@ export function useOnlineRoom(gameSlug: string) {
             ? "finished"
             : "playing"
       );
+      const me = roomInfo.players.find((p) => p.playerId === playerId);
+      savePendingJoin(roomInfo.code, me?.displayName ?? "プレイヤー", {
+        roomId,
+        playerId,
+        seatIndex,
+      });
+      if (me?.displayName) {
+        saveLastDisplayName(me.displayName);
+      }
       const cleanup = subscribeRealtime(roomId);
       if (cleanup) {
         realtimeCleanupRef.current = cleanup;
@@ -413,18 +437,11 @@ export function useOnlineRoom(gameSlug: string) {
         let seatIndex: number;
         let resolvedCode: string;
 
-        if (session) {
-          roomId = session.roomId;
-          playerId = session.playerId;
-          seatIndex = session.seatIndex;
-          resolvedCode = code;
-        } else {
-          const result = await joinRoom(code, displayName);
-          roomId = result.roomId;
-          playerId = result.playerId;
-          seatIndex = result.seatIndex;
-          resolvedCode = result.code;
-        }
+        const result = await joinRoom(code, displayName);
+        roomId = result.roomId;
+        playerId = result.playerId;
+        seatIndex = result.seatIndex;
+        resolvedCode = result.code;
 
         const data = await fetchRoom(roomId);
         if (data.room.gameSlug !== gameSlug) {
@@ -436,12 +453,9 @@ export function useOnlineRoom(gameSlug: string) {
           return;
         }
         setupRoom(roomId, playerId, seatIndex, data.room);
-        clearPendingJoin();
-        clearRoomQuery();
+        saveLastDisplayName(displayName.trim());
       } catch (e) {
         setError(e instanceof Error ? e.message : "部屋への参加に失敗しました");
-        clearPendingJoin();
-        clearRoomQuery();
       } finally {
         setLoading(false);
         pendingUrlJoinRef.current = null;
@@ -459,10 +473,9 @@ export function useOnlineRoom(gameSlug: string) {
 
   const completingPendingJoin = useMemo(() => {
     if (room) return false;
-    return (
-      phase === "idle" &&
-      pendingJoinMatchesUrlCode(joinCodeFromUrl) !== null
-    );
+    if (phase !== "idle" || !joinCodeFromUrl) return false;
+    if (pendingJoinMatchesUrlCode(joinCodeFromUrl)) return true;
+    return readLastDisplayName() != null;
   }, [room, phase, joinCodeFromUrl]);
 
   useEffect(() => {
@@ -470,14 +483,16 @@ export function useOnlineRoom(gameSlug: string) {
     if (pendingUrlJoinRef.current === joinCodeFromUrl) return;
 
     const pending = pendingJoinMatchesUrlCode(joinCodeFromUrl);
-    if (!pending) return;
+    const displayName =
+      pending?.displayName ?? readLastDisplayName() ?? null;
+    if (!displayName) return;
 
     pendingUrlJoinRef.current = joinCodeFromUrl;
     queueMicrotask(() => {
       void completeJoinWithCode(
         joinCodeFromUrl,
-        pending.displayName,
-        pending.session
+        displayName,
+        pending?.session
       );
     });
   }, [joinCodeFromUrl, phase, room, completeJoinWithCode]);
@@ -501,6 +516,7 @@ export function useOnlineRoom(gameSlug: string) {
         const result = await createRoom(gameSlug, displayName, gameOptions);
         const data = await fetchRoom(result.roomId, result.playerId);
         setupRoom(result.roomId, result.playerId, result.seatIndex, data.room);
+        saveLastDisplayName(displayName.trim());
       } catch (e) {
         setError(e instanceof Error ? e.message : "エラーが発生しました");
       } finally {
@@ -653,11 +669,16 @@ export function useOnlineRoom(gameSlug: string) {
 
       pendingMoveRef.current = true;
       setMovePending(true);
+      setMoveError(null);
 
       return sendRoomMove(room.id, myPlayerId, move, expectedVersion)
         .then((serverResult) => {
           if (moveQueueRef.current.length > 0) {
-            // ローカルはすでに次の手まで進んでいる。途中のサーバー状態で盤を戻さない。
+            applyServerMoveSuccess(
+              serverResult.state as GameState,
+              serverResult.version,
+              serverResult.currentPlayer
+            );
             const nextMove = moveQueueRef.current.shift()!;
             const accepted = serverResult.state as GameState;
             void sendMovePipelineRef.current(nextMove, serverResult.version, {
@@ -666,12 +687,6 @@ export function useOnlineRoom(gameSlug: string) {
               currentPlayer: serverResult.currentPlayer,
               phase: accepted.phase === "game-over" ? "finished" : "playing",
             });
-            return;
-          }
-
-          if (serverResult.version < versionRef.current) {
-            pendingMoveRef.current = false;
-            setMovePending(false);
             return;
           }
 
@@ -700,7 +715,10 @@ export function useOnlineRoom(gameSlug: string) {
               rollback.currentPlayer
             );
           }
-          setError(e instanceof Error ? e.message : "手の送信に失敗しました");
+          const message =
+            e instanceof Error ? e.message : "手の送信に失敗しました";
+          setMoveError(message);
+          setError(message);
           void refreshRoom(room.id);
           pendingMoveRef.current = false;
           setMovePending(false);
@@ -788,45 +806,24 @@ export function useOnlineRoom(gameSlug: string) {
           currentPlayer: rollbackCurrent,
           phase,
         };
-        setMovePending(true);
         sendMovePipeline(move, versionRef.current, rollback);
         return;
       }
 
       const wasChained = pendingMoveRef.current;
-      const previousVersion = versionRef.current;
-      const optimisticVersion = previousVersion + 1;
-      let optimisticCurrent = result.currentPlayer;
-      const resultTurnSeat = turnSeatForState(slug, result.state);
-      if (resultTurnSeat !== null) optimisticCurrent = resultTurnSeat;
       const rollback: MoveRollback = {
         state: liveState,
-        version: previousVersion,
+        version: versionRef.current,
         currentPlayer: rollbackCurrent,
         phase: liveState.phase === "game-over" ? "finished" : phase,
       };
-      setGameState(result.state);
-      gameStateRef.current = result.state;
-      setCurrentPlayer(optimisticCurrent);
-      setVersion(optimisticVersion);
-      versionRef.current = optimisticVersion;
-      if (result.state.phase === "game-over") {
-        setPhase("finished");
-        setRoom((prev) =>
-          prev && prev.status !== "finished"
-            ? { ...prev, status: "finished" }
-            : prev
-        );
-      }
 
       if (wasChained) {
         moveQueueRef.current.push(move);
         return;
       }
 
-      // 相手へはサーバーが受け付けた状態だけ届ける。
-      // 楽観的な版番号を先に配ると、相手の次の手が 409 になり盤が戻る。
-      sendMovePipeline(move, previousVersion, rollback);
+      sendMovePipeline(move, versionRef.current, rollback);
     },
     [room, mySeat, currentPlayer, phase, sendMovePipeline]
   );
@@ -877,6 +874,8 @@ export function useOnlineRoom(gameSlug: string) {
       loading,
       rematchLoading,
       movePending,
+      moveError,
+      roomSyncReady,
       handleCreate,
       handleJoin,
       handleUpdateGameOptions,
@@ -905,6 +904,8 @@ export function useOnlineRoom(gameSlug: string) {
       loading,
       rematchLoading,
       movePending,
+      moveError,
+      roomSyncReady,
       handleCreate,
       handleJoin,
       handleUpdateGameOptions,

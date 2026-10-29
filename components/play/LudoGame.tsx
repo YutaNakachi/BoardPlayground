@@ -746,12 +746,13 @@ export function LudoGame() {
                 </p>
               ) : null}
               <OnlineFirstPlayerPicker
-              players={online.players}
-              value={firstPlayer}
-              seatCount={seatCount}
-              onChange={online.isHost ? onFirstPlayerChange : undefined}
-              readOnly={!online.isHost}
-            />
+                key={`${online.room?.id ?? "room"}-${firstPlayer}`}
+                players={online.players}
+                value={firstPlayer}
+                seatCount={seatCount}
+                onChange={online.isHost ? onFirstPlayerChange : undefined}
+                readOnly={!online.isHost}
+              />
             </>
           ),
         }}
@@ -815,6 +816,7 @@ export function LudoGame() {
           replayExtra={
             isOnline ? (
               <OnlineFirstPlayerPicker
+                key={`${online.room?.id ?? "room"}-${firstPlayer}`}
                 players={online.players}
                 value={firstPlayer}
                 seatCount={seatCount}
@@ -829,17 +831,27 @@ export function LudoGame() {
 
       {!isGameOver && (
         <TurnBanner
-          playerIndex={LUDO_STYLE_INDEX[state.current]}
+          playerIndex={
+            isOnline && !online.roomSyncReady
+              ? 0
+              : LUDO_STYLE_INDEX[state.current]
+          }
           playerLabel={
-            isOnline
-              ? formatSeatLabel(
-                  online.players,
-                  state.activePlayers.indexOf(state.current)
-                )
-              : `プレイヤー ${state.activePlayers.indexOf(state.current) + 1}`
+            isOnline && !online.roomSyncReady
+              ? "…"
+              : isOnline
+                ? formatSeatLabel(
+                    online.players,
+                    state.activePlayers.indexOf(state.current)
+                  )
+                : `プレイヤー ${state.activePlayers.indexOf(state.current) + 1}`
           }
           action={
-            isOnline && !online.isMyTurn
+            isOnline && !online.roomSyncReady
+              ? "盤面を同期しています…"
+              : isOnline && online.moveError
+                ? online.moveError
+                : isOnline && !online.isMyTurn
               ? opponentAwaitingDice
                 ? `${formatSeatLabel(online.players, currentSeat)}の番です（ダイス待ち）`
                 : "相手の手番です"

@@ -46,6 +46,21 @@ export function clearPendingJoin(): void {
   sessionStorage.removeItem(STORAGE_KEY);
 }
 
+const LAST_NAME_KEY = "bp_last_display_name";
+
+export function saveLastDisplayName(displayName: string): void {
+  if (typeof sessionStorage === "undefined") return;
+  const trimmed = displayName.trim().slice(0, 20);
+  if (!trimmed) return;
+  sessionStorage.setItem(LAST_NAME_KEY, trimmed);
+}
+
+export function readLastDisplayName(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  const name = sessionStorage.getItem(LAST_NAME_KEY);
+  return name && name.trim() ? name : null;
+}
+
 export function pendingJoinMatchesUrlCode(
   joinCodeFromUrl: string | null
 ): PendingJoin | null {

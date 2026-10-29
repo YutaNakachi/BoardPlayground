@@ -32,6 +32,7 @@ export async function joinRoomFlow(
     playerId: result.playerId,
     seatIndex: result.seatIndex,
   });
+  saveLastDisplayName(trimmedName);
   params.navigate(
     `/play/${gameSlug}?room=${encodeURIComponent(result.code)}`
   );
