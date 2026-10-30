@@ -1,68 +1,52 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { parseOpeningSeat } from "@/lib/online/player-count";
+import { useCallback } from "react";
 import { requiredPlayerCountFromRoom } from "@/lib/online/game-options";
-import type { RoomInfo, RoomPlayer } from "@/lib/online/types";
+import {
+  explicitOpeningSeat,
+  openingSeatCount,
+  shownOpeningSeat,
+} from "@/lib/online/first-player-sync";
+import type { RoomInfo } from "@/lib/online/types";
 
 type OnlinePhase = "idle" | "waiting" | "playing" | "finished";
 
 type OnlineRoomSlice = {
   room: RoomInfo | null;
-  players: RoomPlayer[];
   phase: OnlinePhase;
   isHost: boolean;
   handleUpdateGameOptions: (partial: Record<string, unknown>) => Promise<void>;
 };
 
+/**
+ * 先攻は全席ともサーバーの gameOptions を表示する。
+ * ホストの選択は options 更新で部屋に書き、参加者は同じ値をポーリングと broadcast で受け取る。
+ */
 export function useOnlineFirstPlayer(online: OnlineRoomSlice) {
-  const slug = online.room?.gameSlug ?? "";
-  const seatCount = online.room
-    ? requiredPlayerCountFromRoom(
-        slug,
-        online.room.gameOptions,
-        online.room.maxPlayers
-      )
+  const { room, phase, isHost, handleUpdateGameOptions } = online;
+  const slug = room?.gameSlug ?? "";
+  const cap = room
+    ? requiredPlayerCountFromRoom(slug, room.gameOptions, room.maxPlayers)
     : 2;
-  const storedOpening =
-    parseOpeningSeat(online.room?.gameOptions, seatCount) ?? 0;
-  const roomId = online.room?.id ?? "";
-  const [selectionByRoom, setSelectionByRoom] = useState<
-    Record<string, number>
-  >({});
-
-  const rematchDefault = (storedOpening + 1) % seatCount;
-  const onFinished =
-    online.phase === "finished" || online.room?.status === "finished";
-
-  const hostSeat = roomId ? selectionByRoom[roomId] : undefined;
-  const firstPlayer = onFinished
-    ? online.isHost
-      ? (hostSeat ?? rematchDefault)
-      : storedOpening
-    : (hostSeat ?? storedOpening);
+  const explicit = explicitOpeningSeat(room?.gameOptions);
+  const seatCount = openingSeatCount(cap, explicit);
+  const firstPlayer = shownOpeningSeat(room?.gameOptions, cap);
+  const roomStatus = room?.status;
 
   const onFirstPlayerChange = useCallback(
     (seat: number) => {
-      if (!roomId) return;
-      setSelectionByRoom((prev) => ({ ...prev, [roomId]: seat }));
       if (
-        online.isHost &&
-        (online.phase === "waiting" ||
-          online.phase === "finished" ||
-          online.room?.status === "waiting" ||
-          online.room?.status === "finished")
+        !isHost ||
+        (phase !== "waiting" &&
+          phase !== "finished" &&
+          roomStatus !== "waiting" &&
+          roomStatus !== "finished")
       ) {
-        void online.handleUpdateGameOptions({ firstPlayer: seat });
+        return;
       }
+      void handleUpdateGameOptions({ firstPlayer: seat });
     },
-    [
-      roomId,
-      online.isHost,
-      online.phase,
-      online.room?.status,
-      online.handleUpdateGameOptions,
-    ]
+    [isHost, phase, roomStatus, handleUpdateGameOptions]
   );
 
   return { firstPlayer, onFirstPlayerChange, seatCount };

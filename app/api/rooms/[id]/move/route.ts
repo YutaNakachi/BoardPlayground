@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import { requireOnlineBackend } from "@/lib/api/require-online";
 import { applyMove, type MovePayload } from "@/lib/online/moves";
+import { stateConflictPayload } from "@/lib/online/move-sync";
 import { applyOnlineMoveWithSecrets } from "@/lib/online/secret-move";
 import { isOnlineSecretGame } from "@/lib/online/secret-games";
 import { isOnlineGame } from "@/lib/online/types";
+
+function conflictResponse(row: {
+  state: unknown;
+  version: number;
+  current_player: number | null;
+}) {
+  return NextResponse.json(
+    stateConflictPayload(row.version, row.state, row.current_player),
+    { status: 409, headers: { "Cache-Control": "no-store" } }
+  );
+}
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -72,7 +84,7 @@ export async function POST(request: Request, { params }: Params) {
     expectedVersion != null &&
     stateRow.version !== expectedVersion
   ) {
-    return NextResponse.json({ error: "State conflict", version: stateRow.version }, { status: 409 });
+    return conflictResponse(stateRow);
   }
 
   const baseState = stateRow.state as import("@/lib/online/moves").GameState;
@@ -127,7 +139,7 @@ export async function POST(request: Request, { params }: Params) {
     newStatus = result.state.phase === "game-over" ? "finished" : "playing";
   }
 
-  await db
+  const { data: updated, error: updateError } = await db
     .from("room_state")
     .update({
       state: publicState,
@@ -135,7 +147,27 @@ export async function POST(request: Request, { params }: Params) {
       current_player: currentPlayer,
       updated_at: new Date().toISOString(),
     })
-    .eq("room_id", id);
+    .eq("room_id", id)
+    .eq("version", stateRow.version)
+    .select("state, version, current_player")
+    .maybeSingle();
+
+  if (updateError) {
+    console.error("[rooms/move]", updateError.message);
+    return NextResponse.json({ error: "手の保存に失敗しました" }, { status: 500 });
+  }
+
+  if (!updated) {
+    const { data: latest } = await db
+      .from("room_state")
+      .select("state, version, current_player")
+      .eq("room_id", id)
+      .maybeSingle();
+    if (!latest) {
+      return NextResponse.json({ error: "Game state not found" }, { status: 404 });
+    }
+    return conflictResponse(latest);
+  }
 
   if (newStatus === "finished") {
     await db.from("rooms").update({ status: "finished" }).eq("id", id);

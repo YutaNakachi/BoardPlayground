@@ -109,5 +109,7 @@ export async function GET(request: Request, { params }: Params) {
           currentPlayer: stateRow.current_player,
         }
       : null,
+  }, {
+    headers: { "Cache-Control": "no-store" },
   });
 }

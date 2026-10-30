@@ -1,6 +1,57 @@
 import type { MovePayload } from "./moves";
+import { MOVE_CONFLICT_NOTICE } from "./move-sync";
 import { getOrCreatePlayerId } from "./player-id";
 import type { RoomGameState, RoomInfo, RoomPlayer } from "./types";
+
+const noStore: RequestInit = { cache: "no-store" };
+
+export class RoomMoveError extends Error {
+  readonly status: number;
+  readonly serverVersion: number | null;
+  readonly gameState: RoomGameState | null;
+
+  constructor(
+    message: string,
+    status: number,
+    serverVersion: number | null,
+    gameState: RoomGameState | null
+  ) {
+    super(message);
+    this.name = "RoomMoveError";
+    this.status = status;
+    this.serverVersion = serverVersion;
+    this.gameState = gameState;
+  }
+}
+
+function conflictGameState(body: unknown): {
+  serverVersion: number | null;
+  gameState: RoomGameState | null;
+} {
+  if (!body || typeof body !== "object") {
+    return { serverVersion: null, gameState: null };
+  }
+  const record = body as {
+    version?: unknown;
+    gameState?: unknown;
+  };
+  const topVersion =
+    typeof record.version === "number" ? record.version : null;
+  const raw = record.gameState;
+  if (!raw || typeof raw !== "object") {
+    return { serverVersion: topVersion, gameState: null };
+  }
+  const gameState = raw as RoomGameState;
+  const version =
+    typeof gameState.version === "number" ? gameState.version : topVersion;
+  if (version == null || gameState.state == null) {
+    return { serverVersion: topVersion, gameState: null };
+  }
+  return {
+    serverVersion: version,
+    gameState: { ...gameState, version },
+  };
+}
 
 type CreateRoomResponse = {
   roomId: string;
@@ -28,6 +79,7 @@ export async function createRoom(
 ): Promise<CreateRoomResponse> {
   const playerId = getOrCreatePlayerId();
   const res = await fetch("/api/rooms/create", {
+    ...noStore,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gameSlug, displayName, playerId, gameOptions }),
@@ -45,6 +97,7 @@ export async function joinRoom(
 ): Promise<JoinRoomResponse> {
   const playerId = getOrCreatePlayerId();
   const res = await fetch("/api/rooms/join", {
+    ...noStore,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ code, displayName, playerId }),
@@ -66,7 +119,7 @@ export async function fetchRoom(
   const query = playerId
     ? `?playerId=${encodeURIComponent(playerId)}`
     : "";
-  const res = await fetch(`/api/rooms/${roomId}${query}`);
+  const res = await fetch(`/api/rooms/${roomId}${query}`, noStore);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error ?? "部屋情報の取得に失敗しました");
@@ -85,6 +138,7 @@ export async function startRoomGame(
   params?: StartRoomParams
 ): Promise<void> {
   const res = await fetch(`/api/rooms/${roomId}/start`, {
+    ...noStore,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -103,16 +157,21 @@ export async function updateRoomGameOptions(
   roomId: string,
   playerId: string,
   gameOptions: Record<string, unknown>
-): Promise<void> {
+): Promise<Record<string, unknown>> {
   const res = await fetch(`/api/rooms/${roomId}/options`, {
+    ...noStore,
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ playerId, gameOptions }),
   });
+  const body = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    gameOptions?: Record<string, unknown>;
+  };
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? "設定の保存に失敗しました");
+    throw new Error(body.error ?? "設定の保存に失敗しました");
   }
+  return (body.gameOptions as Record<string, unknown> | undefined) ?? gameOptions;
 }
 
 export async function sendRoomMove(
@@ -122,17 +181,24 @@ export async function sendRoomMove(
   expectedVersion: number
 ): Promise<RoomGameState> {
   const res = await fetch(`/api/rooms/${roomId}/move`, {
+    ...noStore,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ playerId, move, expectedVersion }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    const conflict = conflictGameState(err);
     const message =
       err.error === "State conflict"
-        ? "手の競合（他の更新とぶつかりました）。盤面を同期します。"
+        ? MOVE_CONFLICT_NOTICE
         : (err.error ?? "手の送信に失敗しました");
-    throw new Error(message);
+    throw new RoomMoveError(
+      message,
+      res.status,
+      conflict.serverVersion,
+      conflict.gameState
+    );
   }
   const data = await res.json();
   return data.gameState;
