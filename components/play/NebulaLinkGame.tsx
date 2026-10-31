@@ -35,6 +35,8 @@ import {
   applyNebulaSpinRoulette,
   canNebulaPass,
   homeEdgeLabel,
+  nebulaOnlineRouletteSpinning,
+  nebulaRouletteButtonLabel,
   homeEdgeOwnersAt,
   initialNebulaLink,
   isLegalNebulaPlacement,
@@ -244,6 +246,8 @@ export function NebulaLinkGame() {
     isOnline && selectionVersion !== online.version ? 0 : rotation;
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [spinning, setSpinning] = useState(false);
+  /** オンラインでルーレットボタンを押した送信中だけ true */
+  const [spinRequested, setSpinRequested] = useState(false);
   const [placingPointer, setPlacingPointer] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -294,6 +298,7 @@ export function NebulaLinkGame() {
     if (!game || spinning || game.roulette.length > 0) return;
     if (isOnline) {
       if (!online.isMyTurn || online.movePending) return;
+      setSpinRequested(true);
       void online.handleMove({ type: "nebula-spin" });
       return;
     }
@@ -502,9 +507,16 @@ export function NebulaLinkGame() {
   const activePieceId = canAct ? effectiveSelectedPieceId : null;
   const activeRotation = canAct ? effectiveRotation : 0;
   const activeHoverIndex = canAct ? hoverIndex : null;
-  const showRouletteSpinning = isOnline
-    ? online.movePending && game.roulette.length === 0
-    : spinning;
+  const rouletteCount = game.roulette.length;
+  const onlineSpinning = nebulaOnlineRouletteSpinning({
+    spinRequested,
+    movePending: online.movePending,
+    rouletteCount,
+  });
+  if (isOnline && spinRequested && !onlineSpinning) {
+    setSpinRequested(false);
+  }
+  const showRouletteSpinning = isOnline ? onlineSpinning : spinning;
   const mustPass =
     phase === "playing" &&
     canAct &&
@@ -512,7 +524,11 @@ export function NebulaLinkGame() {
     !game.gameOver &&
     legalMoves.length === 0;
   const home = playerHomeEdge(game.currentPlayer, game.playerCount);
-  const rouletteReady = game.roulette.length === 3;
+  const rouletteReady = rouletteCount === 3;
+  const rouletteButtonLabel = nebulaRouletteButtonLabel({
+    spinning: showRouletteSpinning,
+    rouletteReady,
+  });
   const turnStyle = getPlayerTurnStyle(game.currentPlayer);
 
   const cellPlacementLegal = (index: number) =>
@@ -720,15 +736,15 @@ export function NebulaLinkGame() {
           <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
             <button
               type="button"
-              disabled={rouletteReady || showRouletteSpinning}
+              disabled={
+                rouletteReady ||
+                showRouletteSpinning ||
+                (isOnline && online.movePending)
+              }
               onClick={spinRoulette}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40 sm:text-sm sm:px-4 sm:py-2 ${turnStyle.surface} ${turnStyle.surfaceBorder} hover:brightness-110`}
             >
-              {showRouletteSpinning
-                ? "回しています…"
-                : rouletteReady
-                  ? "ルーレット済み"
-                  : "ルーレット"}
+              {rouletteButtonLabel}
             </button>
             {mustPass ? (
               <button

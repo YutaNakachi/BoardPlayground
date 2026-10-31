@@ -1,6 +1,9 @@
 import {
   NEBULA_CORE,
   NEBULA_MONO_ID,
+  NEBULA_ROULETTE_IDLE_LABEL,
+  NEBULA_ROULETTE_READY_LABEL,
+  NEBULA_ROULETTE_SPINNING_LABEL,
   NEBULA_SIZE,
   applyNebulaPass,
   canNebulaPass,
@@ -8,6 +11,8 @@ import {
   isLegalNebulaPlacement,
   legalNebulaPlacements,
   nebulaIndex,
+  nebulaOnlineRouletteSpinning,
+  nebulaRouletteButtonLabel,
 } from "./nebula-link";
 
 function assert(cond: boolean, message: string) {
@@ -69,5 +74,37 @@ const monoCells = new Set(mono.map((m) => `${m.anchorRow},${m.anchorCol}`));
 assert(mono.length === monoCells.size, "単マスの回転違いは1手");
 assert(monoCells.has("9,8") && monoCells.has("11,10"), "角で接する空きには置ける");
 assert(!monoCells.has("10,8") && !monoCells.has("10,10"), "辺で接するマスと星核には置けない");
+
+assert(
+  !nebulaOnlineRouletteSpinning({
+    spinRequested: false,
+    movePending: true,
+    rouletteCount: 0,
+  }),
+  "駒の送信中はルーレットを回している扱いにしない"
+);
+assert(
+  nebulaRouletteButtonLabel({ spinning: false, rouletteReady: false }) ===
+    NEBULA_ROULETTE_IDLE_LABEL,
+  "未回転のボタンは「ルーレット」"
+);
+assert(
+  nebulaOnlineRouletteSpinning({
+    spinRequested: true,
+    movePending: true,
+    rouletteCount: 0,
+  }),
+  "ルーレット送信中だけ回している"
+);
+assert(
+  nebulaRouletteButtonLabel({ spinning: true, rouletteReady: false }) ===
+    NEBULA_ROULETTE_SPINNING_LABEL,
+  "回しているあいだの文言"
+);
+assert(
+  nebulaRouletteButtonLabel({ spinning: false, rouletteReady: true }) ===
+    NEBULA_ROULETTE_READY_LABEL,
+  "出たあとはルーレット済み"
+);
 
 console.log("nebula-link.test.ts: ok");

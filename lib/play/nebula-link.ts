@@ -539,6 +539,30 @@ export function applyNebulaPlace(
   };
 }
 
+export const NEBULA_ROULETTE_SPINNING_LABEL = "回しています…";
+export const NEBULA_ROULETTE_READY_LABEL = "ルーレット済み";
+export const NEBULA_ROULETTE_IDLE_LABEL = "ルーレット";
+
+/** オンラインの「回しています…」は、ルーレット送信中だけ。駒の送信では出さない。 */
+export function nebulaOnlineRouletteSpinning(input: {
+  spinRequested: boolean;
+  movePending: boolean;
+  rouletteCount: number;
+}): boolean {
+  return (
+    input.spinRequested && input.movePending && input.rouletteCount === 0
+  );
+}
+
+export function nebulaRouletteButtonLabel(input: {
+  spinning: boolean;
+  rouletteReady: boolean;
+}): string {
+  if (input.spinning) return NEBULA_ROULETTE_SPINNING_LABEL;
+  if (input.rouletteReady) return NEBULA_ROULETTE_READY_LABEL;
+  return NEBULA_ROULETTE_IDLE_LABEL;
+}
+
 export function canNebulaPass(state: NebulaState): boolean {
   if (state.gameOver) return false;
   const player = state.currentPlayer;
