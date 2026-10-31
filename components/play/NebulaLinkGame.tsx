@@ -537,7 +537,11 @@ export function NebulaLinkGame() {
     Boolean(activePieceId && cellPlacementLegal(activeHoverIndex));
 
   const handleGridPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (isGameOver || !canAct || !activePieceId) return;
+    if (isGameOver || !canAct) return;
+    if (!activePieceId) {
+      setNotice("先に駒を選んでください。");
+      return;
+    }
     const index = cellIndexFromClient(e.currentTarget, e.clientX, e.clientY, e.pointerType);
     if (index === null) return;
     setHoverIndex(index);
@@ -606,6 +610,7 @@ export function NebulaLinkGame() {
                 ? formatSeatLabel(online.players, game.currentPlayer)
                 : `プレイヤー ${game.currentPlayer + 1}`
           }
+          subtitleLines={2}
           stats={`ホーム辺：${homeEdgeLabel(home)} · 置ける手 ${legalMoves.length}`}
           action={
             isOnline && !online.roomSyncReady
@@ -661,11 +666,13 @@ export function NebulaLinkGame() {
               : "bg-slate-500/35 ring-2 ring-slate-400/50";
           }
 
+          const placeable = Boolean(activePieceId) && empty && !isCore && !isGameOver;
+
           return (
             <div
               key={index}
-              role="button"
-              tabIndex={isCore || isGameOver ? -1 : 0}
+              role={placeable ? "button" : undefined}
+              tabIndex={placeable ? 0 : -1}
               data-cell-index={index}
               style={empty && !inPreview && !isCore ? emptyStyle : undefined}
               className={`size-full rounded-[1px] transition ${
@@ -674,6 +681,10 @@ export function NebulaLinkGame() {
                   : empty
                     ? emptyClass
                     : playerPieceClasses(owner)
+              } ${
+                !isCore && empty && activePieceId
+                  ? "cursor-pointer"
+                  : "cursor-default"
               } flex items-center justify-center`}
               aria-label={isCore ? "星核" : empty ? "空マス" : `プレイヤー ${owner + 1}`}
             >

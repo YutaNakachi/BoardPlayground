@@ -10,6 +10,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePlayPage } from "@/components/play/PlayPageContext";
 import { gameOptionsAfterRefresh } from "@/lib/online/first-player-sync";
+import { acceptPolledSnapshot, mergePolledRoom } from "@/lib/online/room-poll";
 import {
   pendingJoinMatchesUrlCode,
   readPendingJoin,
@@ -99,7 +100,8 @@ export function useOnlineRoom(gameSlug: string) {
   const roomRef = useRef(room);
   const myPlayerIdRef = useRef("");
   const optionsRevRef = useRef(0);
-  const roomFetchGenRef = useRef(0);
+  const roomFetchSeqRef = useRef(0);
+  const appliedRoomFetchSeqRef = useRef(0);
   const conflictAtVersionRef = useRef<number | null>(null);
   const [autoJoinFailureCode, setAutoJoinFailureCode] = useState<string | null>(
     null
@@ -264,23 +266,32 @@ export function useOnlineRoom(gameSlug: string) {
     const pid =
       options?.playerId ?? (myPlayerId || getOrCreatePlayerId());
     const revAtStart = optionsRevRef.current;
-    const gen = ++roomFetchGenRef.current;
-    const data = await fetchRoom(
-      roomId,
-      isOnlineSecretGame(slugForFetch) ? pid : undefined
-    );
-    if (gen !== roomFetchGenRef.current) return data;
+    const seq = ++roomFetchSeqRef.current;
+    let data: Awaited<ReturnType<typeof fetchRoom>>;
+    try {
+      data = await fetchRoom(
+        roomId,
+        isOnlineSecretGame(slugForFetch) ? pid : undefined
+      );
+    } catch {
+      return null;
+    }
+    // 次の取得がすでに飛んでいても、この完了が未適用なら席一覧へ反映する。
+    if (!acceptPolledSnapshot(seq, appliedRoomFetchSeqRef.current)) {
+      return null;
+    }
+    appliedRoomFetchSeqRef.current = seq;
     setRoom((prev) => {
-      if (!prev) return data.room;
-      return {
-        ...data.room,
-        gameOptions: gameOptionsAfterRefresh({
+      const keepOptions =
+        prev != null &&
+        gameOptionsAfterRefresh({
           previous: prev.gameOptions,
           incoming: data.room.gameOptions,
           revisionAtFetchStart: revAtStart,
           currentRevision: optionsRevRef.current,
-        }),
-      };
+        }) === prev.gameOptions &&
+        prev.gameOptions !== data.room.gameOptions;
+      return mergePolledRoom(prev, data.room, keepOptions);
     });
     if (data.gameState) {
       const remoteState = data.gameState.state as GameState;
@@ -315,7 +326,7 @@ export function useOnlineRoom(gameSlug: string) {
           ? 2500
           : 1000;
       pollRef.current = setInterval(() => {
-        void refreshRoom(roomId);
+        void refreshRoom(roomId).catch(() => undefined);
       }, intervalMs);
     },
     [refreshRoom, gameSlug]
@@ -781,14 +792,14 @@ export function useOnlineRoom(gameSlug: string) {
         }
         const data = await refreshRoom(room.id);
         if (
-          data.gameState &&
+          data?.gameState &&
           (data.gameState.state as GameState).phase !== "game-over" &&
           data.room.status === "playing"
         ) {
           setPhase("playing");
         }
         if (
-          data.gameState &&
+          data?.gameState &&
           !pendingMoveRef.current &&
           data.gameState.version >= versionRef.current
         ) {
