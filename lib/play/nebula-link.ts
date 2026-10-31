@@ -280,6 +280,23 @@ export function isLegalNebulaPlacement(
   return true;
 }
 
+function placementCellsKey(
+  pieceId: string,
+  rotation: number,
+  anchorRow: number,
+  anchorCol: number
+): string {
+  const cells = pieceCellsAt(pieceId, rotation, anchorRow, anchorCol);
+  return cells
+    .map(({ row, col }) => nebulaIndex(row, col))
+    .sort((a, b) => a - b)
+    .join(",");
+}
+
+/**
+ * 今使える形の合法手。同じマス集合（単マスの回転違いなど）は1手にまとめる。
+ * 2手目以降は、自分の駒と角で接し、辺では接しない置き方だけ。星核には置けない。
+ */
 export function legalNebulaPlacements(
   board: NebulaBoard,
   player: number,
@@ -287,16 +304,29 @@ export function legalNebulaPlacements(
   pieceIds: string[]
 ): NebulaPlacement[] {
   const out: NebulaPlacement[] = [];
+  const seen = new Set<string>();
   const ids = [...new Set(pieceIds)];
   for (const pieceId of ids) {
     for (let rotation = 0; rotation < 4; rotation++) {
       for (let row = 0; row < NEBULA_SIZE; row++) {
         for (let col = 0; col < NEBULA_SIZE; col++) {
           if (
-            isLegalNebulaPlacement(board, player, playerCount, pieceId, rotation, row, col)
+            !isLegalNebulaPlacement(
+              board,
+              player,
+              playerCount,
+              pieceId,
+              rotation,
+              row,
+              col
+            )
           ) {
-            out.push({ pieceId, rotation, anchorRow: row, anchorCol: col });
+            continue;
           }
+          const key = `${pieceId}:${placementCellsKey(pieceId, rotation, row, col)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({ pieceId, rotation, anchorRow: row, anchorCol: col });
         }
       }
     }

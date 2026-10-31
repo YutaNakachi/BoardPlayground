@@ -66,14 +66,30 @@ function cellIndexFromClient(
   clientY: number,
   pointerType: string
 ): number | null {
-  const rect = grid.getBoundingClientRect();
   const offsetY = pointerType === "touch" ? TOUCH_PLACEMENT_OFFSET_Y : 0;
   const offsetX = pointerType === "touch" ? TOUCH_PLACEMENT_OFFSET_X : 0;
-  const x = clientX - rect.left - offsetX;
-  const y = clientY - rect.top - offsetY;
-  if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) return null;
-  const col = Math.min(NEBULA_SIZE - 1, Math.floor((x / rect.width) * NEBULA_SIZE));
-  const row = Math.min(NEBULA_SIZE - 1, Math.floor((y / rect.height) * NEBULA_SIZE));
+  const x = clientX - offsetX;
+  const y = clientY - offsetY;
+  const hit = document.elementFromPoint(x, y);
+  const cell = hit?.closest("[data-cell-index]");
+  if (cell && grid.contains(cell)) {
+    const index = Number((cell as HTMLElement).getAttribute("data-cell-index"));
+    if (Number.isInteger(index)) return index;
+  }
+  const rect = grid.getBoundingClientRect();
+  const localX = x - rect.left;
+  const localY = y - rect.top;
+  if (localX < 0 || localY < 0 || localX >= rect.width || localY >= rect.height) {
+    return null;
+  }
+  const col = Math.min(
+    NEBULA_SIZE - 1,
+    Math.floor((localX / rect.width) * NEBULA_SIZE)
+  );
+  const row = Math.min(
+    NEBULA_SIZE - 1,
+    Math.floor((localY / rect.height) * NEBULA_SIZE)
+  );
   return nebulaIndex(row, col);
 }
 
@@ -489,7 +505,12 @@ export function NebulaLinkGame() {
   const showRouletteSpinning = isOnline
     ? online.movePending && game.roulette.length === 0
     : spinning;
-  const mustPass = phase === "playing" && canAct && canNebulaPass(game);
+  const mustPass =
+    phase === "playing" &&
+    canAct &&
+    game != null &&
+    !game.gameOver &&
+    legalMoves.length === 0;
   const home = playerHomeEdge(game.currentPlayer, game.playerCount);
   const rouletteReady = game.roulette.length === 3;
   const turnStyle = getPlayerTurnStyle(game.currentPlayer);
