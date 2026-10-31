@@ -354,9 +354,10 @@ export function TicTacToeGame() {
         waiting={{
           code: online.room.code,
           players: online.players,
+          maxPlayers: online.maxPlayers,
           isHost: online.isHost,
           onStart: () => online.handleStart(startParams),
-          canStart: online.players.length >= 2,
+          canStart: online.canStart,
           extra: hostLobbyExtra,
         }}
       />
@@ -374,7 +375,8 @@ export function TicTacToeGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch(startParams),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   return (

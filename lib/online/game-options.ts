@@ -3,12 +3,27 @@ import { secondPlayer } from "@/lib/play/dejarik/state";
 import type { TttMode } from "@/lib/play/tic-tac-toe";
 import { parseHostStartsAsKing } from "@/lib/play/king-and-spy/game-options";
 import type { KingAndSpyStoredOptions } from "@/lib/play/king-and-spy/online-options";
+import {
+  parseOpeningSeat,
+  parsePlayerCount,
+  requiredPlayerCountFromRoom,
+  type PlayerCountOption,
+} from "./player-count";
 import type { OnlineGameSlug } from "./types";
+
+export type { PlayerCountOption };
+export { parsePlayerCount, requiredPlayerCountFromRoom, resolveMaxPlayers } from "./player-count";
 
 export type FirstPlayerSeat = 0 | 1;
 
 export type CommonGameOptions = {
   firstPlayer?: FirstPlayerSeat;
+};
+
+export type VariablePlayerGameOptions = {
+  playerCount: PlayerCountOption;
+  /** 席 index（0 .. playerCount-1）。未指定時は 0 */
+  firstPlayer?: number;
 };
 
 export type TicTacToeGameOptions = {
@@ -30,6 +45,7 @@ export type OnlineGameOptions =
   | TicTacToeGameOptions
   | DotsBoxesGameOptions
   | FoxHoundsGameOptions
+  | VariablePlayerGameOptions
   | KingAndSpyStoredOptions
   | CommonGameOptions;
 
@@ -54,15 +70,45 @@ export function seatForRole(role: 0 | 1, houndsSeat: HoundsSeat): HoundsSeat {
 
 export function initialCurrentPlayerSeat(
   slug: OnlineGameSlug,
-  gameOptions: unknown
-): FirstPlayerSeat {
+  gameOptions: unknown,
+  maxPlayers?: number
+): number {
+  const seatCount = requiredPlayerCountFromRoom(slug, gameOptions, maxPlayers);
   if (slug === "fox-hounds") {
     return parseHoundsSeat(gameOptions);
   }
   if (slug === "dejarik") {
     return secondPlayer(parseFirstPlayer(gameOptions));
   }
+  const opening = parseOpeningSeat(gameOptions, seatCount);
+  if (opening !== null) return opening;
   return parseFirstPlayer(gameOptions);
+}
+
+function variablePlayerOpeningSeat(
+  raw: unknown,
+  playerCount: PlayerCountOption
+): number | null {
+  if (raw && typeof raw === "object" && "firstPlayer" in raw) {
+    return parseOpeningSeat(raw, playerCount);
+  }
+  return 0;
+}
+
+function parseVariablePlayerGameOptions(raw: unknown): VariablePlayerGameOptions | null {
+  if (raw == null) return null;
+  if (typeof raw !== "object") return null;
+  const keys = Object.keys(raw as object);
+  if (!keys.every((key) => key === "firstPlayer" || key === "playerCount")) {
+    return null;
+  }
+  const playerCount = parsePlayerCount(raw);
+  if (playerCount === undefined) return null;
+  const opening = variablePlayerOpeningSeat(raw, playerCount);
+  if (opening === null) return null;
+  return opening === 0
+    ? { playerCount }
+    : { playerCount, firstPlayer: opening };
 }
 
 function parseFoxHoundsGameOptions(raw: unknown): FoxHoundsGameOptions | null {
@@ -183,6 +229,9 @@ export function validateGameOptions(
       return parseDotsBoxesGameOptions(raw);
     case "fox-hounds":
       return parseFoxHoundsGameOptions(raw);
+    case "ludo":
+    case "nebula-link":
+      return parseVariablePlayerGameOptions(raw);
     case "king-and-spy": {
       if (raw == null) return { hostStartsAsKing: true };
       if (typeof raw !== "object") return null;
@@ -242,6 +291,15 @@ export function hasNonDefaultGameOptions(
       return parseDotsBoxesSize(options) !== 4;
     case "fox-hounds":
       return parseHoundsSeat(options) === 1;
+    case "ludo":
+    case "nebula-link": {
+      const count = parsePlayerCount(options) as PlayerCountOption | undefined;
+      if (count !== undefined && count !== 2) return true;
+      const opening = count
+        ? variablePlayerOpeningSeat(options, count)
+        : parseOpeningSeat(options, 2);
+      return opening !== null && opening !== 0;
+    }
     case "king-and-spy":
       return (
         parseHostStartsAsKing(options) === false ||

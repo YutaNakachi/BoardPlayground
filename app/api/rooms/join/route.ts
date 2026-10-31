@@ -3,6 +3,7 @@ import { API_ERROR, apiError } from "@/lib/api/errors";
 import { requireOnlineBackend } from "@/lib/api/require-online";
 import { isValidPlayerId } from "@/lib/online/player-id";
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
+import { nextFreeSeatIndex } from "@/lib/online/player-count";
 
 export async function POST(request: Request) {
   const backend = await requireOnlineBackend();
@@ -32,7 +33,9 @@ export async function POST(request: Request) {
 
   const roomSelectWithOptions = await db
     .from("rooms")
-    .select("id, code, game_slug, status, host_player_id, expires_at, game_options")
+    .select(
+      "id, code, game_slug, status, host_player_id, expires_at, game_options, max_players"
+    )
     .eq("code", normalizedCode)
     .maybeSingle();
 
@@ -40,11 +43,17 @@ export async function POST(request: Request) {
   if (roomSelectWithOptions.error && isMissingGameOptionsColumn(roomSelectWithOptions.error)) {
     const roomSelectBase = await db
       .from("rooms")
-      .select("id, code, game_slug, status, host_player_id, expires_at")
+      .select(
+        "id, code, game_slug, status, host_player_id, expires_at, max_players"
+      )
       .eq("code", normalizedCode)
       .maybeSingle();
     room = roomSelectBase.data
-      ? { ...roomSelectBase.data, game_options: {} }
+      ? {
+          ...roomSelectBase.data,
+          game_options: {},
+          max_players: roomSelectBase.data.max_players ?? 2,
+        }
       : null;
   } else if (roomSelectWithOptions.error) {
     console.error("[rooms/join]", roomSelectWithOptions.error.message);
@@ -72,10 +81,16 @@ export async function POST(request: Request) {
     if (room.status !== "waiting") {
       return NextResponse.json({ error: "ゲームは既に開始されています" }, { status: 409 });
     }
-    if ((existingPlayers?.length ?? 0) >= 2) {
+    const maxPlayers = room.max_players ?? 2;
+    if ((existingPlayers?.length ?? 0) >= maxPlayers) {
       return NextResponse.json({ error: "部屋が満員です" }, { status: 409 });
     }
-    seatIndex = 1;
+    const taken = (existingPlayers ?? []).map((p) => p.seat_index);
+    const freeSeat = nextFreeSeatIndex(taken, maxPlayers);
+    if (freeSeat === null) {
+      return NextResponse.json({ error: "部屋が満員です" }, { status: 409 });
+    }
+    seatIndex = freeSeat;
     const { error } = await db.from("room_players").insert({
       room_id: room.id,
       player_id: playerId,
@@ -101,6 +116,7 @@ export async function POST(request: Request) {
     status: room.status,
     gameSlug: room.game_slug,
     hostPlayerId: room.host_player_id,
+    maxPlayers: room.max_players ?? 2,
     gameOptions: (room.game_options as Record<string, unknown> | null) ?? {},
     players: (players ?? []).map((p) => ({
       playerId: p.player_id,

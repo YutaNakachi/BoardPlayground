@@ -332,9 +332,10 @@ export function CheckersGame() {
         waiting={{
           code: online.room.code,
           players: online.players,
+          maxPlayers: online.maxPlayers,
           isHost: online.isHost,
           onStart: () => online.handleStart({ firstPlayer }),
-          canStart: online.players.length >= 2,
+          canStart: online.canStart,
           extra: (
             <OnlineFirstPlayerPicker
               players={online.players}
@@ -354,7 +355,8 @@ export function CheckersGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ firstPlayer }),
-    reset
+    reset,
+    online.rematchLoading
   );
 
   return (

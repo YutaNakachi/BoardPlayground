@@ -522,9 +522,10 @@ export function MancalaGame() {
         isOnline,
         online.isHost,
         () => online.handleRematch({ firstPlayer }),
-        leaveToSetup
+        leaveToSetup,
+        online.rematchLoading
       ),
-    [isOnline, online.isHost, online.handleRematch, firstPlayer, leaveToSetup]
+    [isOnline, online.isHost, online.handleRematch, firstPlayer, leaveToSetup, online.rematchLoading]
   );
 
   if (online.completingPendingJoin) {
@@ -574,9 +575,10 @@ export function MancalaGame() {
         waiting={{
           code: online.room.code,
           players: online.players,
+          maxPlayers: online.maxPlayers,
           isHost: online.isHost,
           onStart: () => online.handleStart({ firstPlayer }),
-          canStart: online.players.length >= 2,
+          canStart: online.canStart,
           extra: (
             <OnlineFirstPlayerPicker
               players={online.players}

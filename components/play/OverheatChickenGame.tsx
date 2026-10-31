@@ -215,7 +215,8 @@ export function OverheatChickenGame() {
     isOnline,
     online.isHost,
     () => online.handleRematch({ firstPlayer }),
-    backToSetup
+    backToSetup,
+    online.rematchLoading
   );
 
   return (

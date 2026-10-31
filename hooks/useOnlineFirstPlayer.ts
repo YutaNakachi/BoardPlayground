@@ -1,58 +1,53 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { requiredPlayerCountFromRoom } from "@/lib/online/game-options";
 import {
-  parseFirstPlayer,
-  type FirstPlayerSeat,
-} from "@/lib/online/game-options";
-import type { RoomInfo, RoomPlayer } from "@/lib/online/types";
+  explicitOpeningSeat,
+  openingSeatCount,
+  shownOpeningSeat,
+} from "@/lib/online/first-player-sync";
+import type { RoomInfo } from "@/lib/online/types";
 
 type OnlinePhase = "idle" | "waiting" | "playing" | "finished";
 
 type OnlineRoomSlice = {
   room: RoomInfo | null;
-  players: RoomPlayer[];
   phase: OnlinePhase;
   isHost: boolean;
   handleUpdateGameOptions: (partial: Record<string, unknown>) => Promise<void>;
 };
 
+/**
+ * 先攻は全席ともサーバーの gameOptions を表示する。
+ * ホストの選択は options 更新で部屋に書き、参加者は同じ値をポーリングと broadcast で受け取る。
+ */
 export function useOnlineFirstPlayer(online: OnlineRoomSlice) {
-  const storedFirstPlayer = parseFirstPlayer(online.room?.gameOptions);
-  const roomId = online.room?.id ?? "";
-  const [selectionByRoom, setSelectionByRoom] = useState<
-    Record<string, FirstPlayerSeat>
-  >({});
-
-  const selection = roomId ? selectionByRoom[roomId] : undefined;
-  const rematchDefault: FirstPlayerSeat = storedFirstPlayer === 0 ? 1 : 0;
-  const firstPlayer =
-    online.phase === "finished"
-      ? (selection ?? rematchDefault)
-      : (selection ?? storedFirstPlayer);
+  const { room, phase, isHost, handleUpdateGameOptions } = online;
+  const slug = room?.gameSlug ?? "";
+  const cap = room
+    ? requiredPlayerCountFromRoom(slug, room.gameOptions, room.maxPlayers)
+    : 2;
+  const explicit = explicitOpeningSeat(room?.gameOptions);
+  const seatCount = openingSeatCount(cap, explicit);
+  const firstPlayer = shownOpeningSeat(room?.gameOptions, cap);
+  const roomStatus = room?.status;
 
   const onFirstPlayerChange = useCallback(
-    (seat: FirstPlayerSeat) => {
-      if (!roomId) return;
-      setSelectionByRoom((prev) => ({ ...prev, [roomId]: seat }));
+    (seat: number) => {
       if (
-        online.isHost &&
-        (online.phase === "waiting" ||
-          online.phase === "finished" ||
-          online.room?.status === "waiting" ||
-          online.room?.status === "finished")
+        !isHost ||
+        (phase !== "waiting" &&
+          phase !== "finished" &&
+          roomStatus !== "waiting" &&
+          roomStatus !== "finished")
       ) {
-        void online.handleUpdateGameOptions({ firstPlayer: seat });
+        return;
       }
+      void handleUpdateGameOptions({ firstPlayer: seat });
     },
-    [
-      roomId,
-      online.isHost,
-      online.phase,
-      online.room?.status,
-      online.handleUpdateGameOptions,
-    ]
+    [isHost, phase, roomStatus, handleUpdateGameOptions]
   );
 
-  return { firstPlayer, onFirstPlayerChange };
+  return { firstPlayer, onFirstPlayerChange, seatCount };
 }

@@ -620,7 +620,8 @@ export function KingAndSpyGame() {
     isOnlinePlay,
     online.isHost,
     () => online.handleRematch({ gameOptions: { hostStartsAsKing } }),
-    resetLocal
+    resetLocal,
+    online.rematchLoading
   );
 
   const rematchSidePicker =

@@ -10,6 +10,8 @@ type Props = {
   onReplay?: () => void;
   replayLabel?: string;
   replayHint?: string;
+  replayLoading?: boolean;
+  replayLoadingLabel?: string;
   /** 再戦ボタンの直前に表示（先手選択など） */
   replayExtra?: ReactNode;
   /** オンライン対局など、席番号以外の勝者表示名を使う場合（指定時は CPU 自動変換より優先） */
@@ -28,6 +30,8 @@ export function ResultPanel({
   onReplay,
   replayLabel = "もう一度",
   replayHint,
+  replayLoading = false,
+  replayLoadingLabel = "再戦準備中…",
   replayExtra,
   winnersLabel,
   solo = false,
@@ -57,7 +61,20 @@ export function ResultPanel({
       ) : null}
       {details ? <div className={inline ? "mt-2" : "mt-4"}>{details}</div> : null}
       {replayExtra ? <div className={inline ? "mt-4" : "mt-6"}>{replayExtra}</div> : null}
-      {onReplay ? (
+      {replayLoading ? (
+        <p
+          className={
+            inline
+              ? "mt-4 text-sm font-medium text-slate-200"
+              : "mt-8 text-sm font-medium text-slate-200"
+          }
+          role="status"
+          aria-live="polite"
+        >
+          {replayLoadingLabel}
+        </p>
+      ) : null}
+      {!replayLoading && onReplay ? (
         <button
           type="button"
           onClick={onReplay}
@@ -65,7 +82,7 @@ export function ResultPanel({
         >
           {replayLabel}
         </button>
-      ) : replayHint ? (
+      ) : !replayLoading && replayHint ? (
         <p className={inline ? "mt-4 text-sm text-slate-400" : "mt-8 text-sm text-slate-400"}>
           {replayHint}
         </p>

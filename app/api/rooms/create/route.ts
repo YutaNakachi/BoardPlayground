@@ -6,8 +6,10 @@ import { isValidPlayerId } from "@/lib/online/player-id";
 import { ROOM_PASSPHRASE_PLACEHOLDER } from "@/lib/online/room-auth";
 import {
   hasNonDefaultGameOptions,
+  resolveMaxPlayers,
   validateGameOptions,
 } from "@/lib/online/game-options";
+import { gameAllowsVariablePlayerCount } from "@/lib/online/player-count";
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 import { generateRoomCode } from "@/lib/online/room-code";
 import { isOnlineGame, type OnlineGameSlug } from "@/lib/online/types";
@@ -52,6 +54,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown game" }, { status: 404 });
   }
 
+  const maxPlayers = resolveMaxPlayers(gameSlug, validatedOptions);
+  if (maxPlayers === null) {
+    const message = gameAllowsVariablePlayerCount(game)
+      ? "人数（2〜4）を選んでください"
+      : "Invalid game options";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
   let code = generateRoomCode();
   let attempts = 0;
 
@@ -72,6 +82,7 @@ export async function POST(request: Request) {
     passphrase_hash: ROOM_PASSPHRASE_PLACEHOLDER,
     status: "waiting",
     host_player_id: playerId,
+    max_players: maxPlayers,
   };
 
   let roomInsert = await db

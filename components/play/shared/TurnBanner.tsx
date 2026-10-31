@@ -12,6 +12,8 @@ type Props = {
   showTurnPhrase?: boolean;
   /** プレイ画面の縦スペースを詰める */
   compact?: boolean;
+  /** 案内が折り返しても盤がずれないよう、サブタイトルの行数を固定する */
+  subtitleLines?: 1 | 2;
 };
 
 export function TurnBanner({
@@ -22,6 +24,7 @@ export function TurnBanner({
   notice,
   showTurnPhrase = true,
   compact = false,
+  subtitleLines = 1,
 }: Props) {
   const style = getPlayerTurnStyle(playerIndex);
   const hasSubtitle = Boolean(stats || action || notice);
@@ -43,7 +46,11 @@ export function TurnBanner({
         </p>
       </div>
       <p
-        className={`${compact ? "mt-1" : "mt-2"} min-h-[1.25rem] pl-7 text-sm ${hasSubtitle ? "" : "invisible"}`}
+        className={`${compact ? "mt-1" : "mt-2"} pl-7 text-sm ${
+          subtitleLines === 2
+            ? "h-10 overflow-hidden leading-5 line-clamp-2"
+            : "min-h-[1.25rem]"
+        } ${hasSubtitle ? "" : "invisible"}`}
       >
         {stats ? <span className="text-slate-400">{stats}</span> : null}
         {stats && (action || notice) ? (

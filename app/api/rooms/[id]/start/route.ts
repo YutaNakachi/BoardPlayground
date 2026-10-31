@@ -19,6 +19,7 @@ import {
 import { isMissingGameOptionsColumn } from "@/lib/online/room-schema";
 import { isOnlineSecretGame } from "@/lib/online/secret-games";
 import { isOnlineGame } from "@/lib/online/types";
+import { parseOpeningSeat } from "@/lib/online/player-count";
 import { incrementPlayCount } from "@/lib/stats/record-play";
 
 type Params = { params: Promise<{ id: string }> };
@@ -49,7 +50,7 @@ export async function POST(request: Request, { params }: Params) {
 
   const roomSelectWithOptions = await db
     .from("rooms")
-    .select("id, game_slug, status, host_player_id, game_options")
+    .select("id, game_slug, status, host_player_id, game_options, max_players")
     .eq("id", id)
     .maybeSingle();
 
@@ -57,11 +58,15 @@ export async function POST(request: Request, { params }: Params) {
   if (roomSelectWithOptions.error && isMissingGameOptionsColumn(roomSelectWithOptions.error)) {
     const roomSelectBase = await db
       .from("rooms")
-      .select("id, game_slug, status, host_player_id")
+      .select("id, game_slug, status, host_player_id, max_players")
       .eq("id", id)
       .maybeSingle();
     room = roomSelectBase.data
-      ? { ...roomSelectBase.data, game_options: {} }
+      ? {
+          ...roomSelectBase.data,
+          game_options: {},
+          max_players: roomSelectBase.data.max_players ?? 2,
+        }
       : null;
   } else if (roomSelectWithOptions.error) {
     console.error("[rooms/start]", roomSelectWithOptions.error.message);
@@ -85,8 +90,12 @@ export async function POST(request: Request, { params }: Params) {
     .select("*", { count: "exact", head: true })
     .eq("room_id", id);
 
-  if ((count ?? 0) < 2) {
-    return NextResponse.json({ error: "参加者が2人揃っていません" }, { status: 409 });
+  const maxPlayers = room.max_players ?? 2;
+  if ((count ?? 0) !== maxPlayers) {
+    return NextResponse.json(
+      { error: "目標人数が揃っていません" },
+      { status: 409 }
+    );
   }
 
   if (isOnlineSecretGame(room.game_slug)) {
@@ -101,14 +110,6 @@ export async function POST(request: Request, { params }: Params) {
 
   if (!isOnlineGame(room.game_slug)) {
     return NextResponse.json({ error: "Unsupported game" }, { status: 400 });
-  }
-
-  if (
-    requestedFirstPlayer !== undefined &&
-    requestedFirstPlayer !== 0 &&
-    requestedFirstPlayer !== 1
-  ) {
-    return NextResponse.json({ error: "Invalid firstPlayer" }, { status: 400 });
   }
 
   const optionPatch: Record<string, unknown> = { ...(requestedOptions ?? {}) };
@@ -127,8 +128,8 @@ export async function POST(request: Request, { params }: Params) {
     .eq("room_id", id);
 
   let gameOptionsToStore = gameOptions;
-  let initialState = createInitialState(room.game_slug, gameOptions);
   let secretsPayload: unknown | null = null;
+  let initialState: ReturnType<typeof createInitialState>;
 
   if (room.game_slug === "king-and-spy") {
     const hostSeat =
@@ -141,12 +142,18 @@ export async function POST(request: Request, { params }: Params) {
     gameOptionsToStore = { ...gameOptions, kingRoleSeat };
     initialState = initialKingAndSpyPublicState(kingRoleSeat);
     secretsPayload = initialKingAndSpySecrets(kingRoleSeat);
+  } else {
+    const openingFromOptions = parseOpeningSeat(gameOptions, maxPlayers);
+    if (openingFromOptions === null) {
+      return NextResponse.json({ error: "Invalid firstPlayer" }, { status: 400 });
+    }
+    initialState = createInitialState(room.game_slug, gameOptions, maxPlayers);
   }
 
   const openingSeat =
     room.game_slug === "king-and-spy"
       ? null
-      : initialCurrentPlayerSeat(room.game_slug, gameOptions);
+      : initialCurrentPlayerSeat(room.game_slug, gameOptions, maxPlayers);
 
   const { data: existingState } = await db
     .from("room_state")

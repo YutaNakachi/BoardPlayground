@@ -60,10 +60,23 @@ export async function checkBackendHealth(): Promise<BackendHealth> {
     };
   }
 
-  const [statsResult, roomResult] = await Promise.all([
-    db.from("game_stats_total").select("game_slug").limit(1),
-    db.from("rooms").select("id").limit(1),
-  ]);
+  let statsResult: { error: { message?: string } | null };
+  let roomResult: { error: { message?: string } | null };
+  try {
+    [statsResult, roomResult] = await Promise.all([
+      db.from("game_stats_total").select("game_slug").limit(1),
+      db.from("rooms").select("id").limit(1),
+    ]);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "db unreachable";
+    return {
+      configured: true,
+      stats: false,
+      online: false,
+      reason: "db_error",
+      detail: message,
+    };
+  }
 
   if (statsResult.error) {
     return {

@@ -10,38 +10,30 @@ import type { FirstPlayerSeat } from "@/lib/online/game-options";
 
 type Props = {
   players: RoomPlayer[];
-  value: FirstPlayerSeat;
-  onChange?: (seat: FirstPlayerSeat) => void;
+  value: number;
+  seatCount?: number;
+  onChange?: (seat: number) => void;
   readOnly?: boolean;
 };
 
 export function OnlineFirstPlayerPicker({
   players,
   value,
+  seatCount = 2,
   onChange,
   readOnly = false,
 }: Props) {
-  const secondSeat: FirstPlayerSeat = value === 0 ? 1 : 0;
+  const seats = Array.from({ length: seatCount }, (_, i) => i);
 
   return (
-    <PlaySetupSection
-      label="先手"
-      hint={
-        readOnly
-          ? undefined
-          : `後手: ${getSeatDisplayName(players, secondSeat)}`
-      }
-    >
+    <PlaySetupSection label={seatCount > 2 ? "先攻" : "先手"}>
       {readOnly ? (
         <p className="text-center text-sm font-medium text-white">
           {getSeatDisplayName(players, value)}
-          <span className="mt-1 block text-xs font-normal text-slate-500">
-            後手: {getSeatDisplayName(players, secondSeat)}
-          </span>
         </p>
       ) : (
         <div className="flex flex-wrap justify-center gap-2">
-          {([0, 1] as const).map((seat) => (
+          {seats.map((seat) => (
             <button
               key={seat}
               type="button"

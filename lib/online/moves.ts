@@ -65,6 +65,21 @@ import {
   type TttMode,
 } from "@/lib/play/tic-tac-toe";
 import {
+  applyLudoMove,
+  endLudoTurn,
+  initialLudo,
+  ludoMoves,
+  rollLudo,
+  type LudoState,
+} from "@/lib/play/ludo";
+import {
+  applyNebulaPass,
+  applyNebulaPlace,
+  applyNebulaSpinRoulette,
+  initialNebulaLink,
+  type NebulaState,
+} from "@/lib/play/nebula-link";
+import {
   initialKingAndSpyPublicState,
 } from "@/lib/play/king-and-spy/state";
 import { kingRoleSeatFromOptions } from "@/lib/play/king-and-spy/online-options";
@@ -74,10 +89,13 @@ import {
   parseDotsBoxesSize,
   parseFirstPlayer,
   parseHoundsSeat,
+  parsePlayerCount,
+  requiredPlayerCountFromRoom,
   parseTicTacToeGameOptions,
   roleForSeat,
   seatForRole,
 } from "./game-options";
+import { parseOpeningSeat } from "./player-count";
 import {
   applyFoxHoundsMove,
   foxHoundsWinner,
@@ -198,11 +216,31 @@ export type MiniShogiOnlineState = MiniShogiState & {
   winner: Player | null;
 };
 
+export type LudoOnlineState = LudoState & {
+  phase: "playing" | "game-over";
+  /** 手番中の出目（移動後も手番が移るまで全員に表示） */
+  turnDice?: number | null;
+};
+
+export type NebulaOnlineState = NebulaState & {
+  phase: "playing" | "game-over";
+};
+
 export type KingAndSpyOnlineState = KingAndSpyPublicState;
 
 export type OverheatOnlineState = OverheatState & {
   phase: "playing" | "game-over";
 };
+
+function ludoPlayerForSeat(state: LudoOnlineState, seatIndex: number): number | null {
+  if (seatIndex < 0 || seatIndex >= state.activePlayers.length) return null;
+  return state.activePlayers[seatIndex];
+}
+
+function ludoSeatForPlayer(state: LudoOnlineState, player: number): number {
+  const seat = state.activePlayers.indexOf(player);
+  return seat >= 0 ? seat : 0;
+}
 
 /** 手番の seat（配置中は placementPlayer、対局中は current） */
 export function dejarikTurnSeat(state: DejarikOnlineState): number | null {
@@ -215,6 +253,28 @@ export function dejarikTurnSeat(state: DejarikOnlineState): number | null {
 
 function dejarikSeatForState(state: DejarikOnlineState): number | null {
   return dejarikTurnSeat(state);
+}
+
+/** 手番の room seat（move パイプライン・楽観更新用） */
+export function turnSeatForState(
+  slug: OnlineGameSlug,
+  state: GameState
+): number | null {
+  if (state.phase === "game-over") return null;
+  if (slug === "dejarik") {
+    return dejarikTurnSeat(state as DejarikOnlineState);
+  }
+  if (slug === "nebula-link") {
+    return (state as NebulaOnlineState).currentPlayer;
+  }
+  if (slug === "ludo") {
+    const s = state as LudoOnlineState;
+    return ludoSeatForPlayer(s, s.current);
+  }
+  if ("current" in state && typeof state.current === "number") {
+    return state.current;
+  }
+  return null;
 }
 
 function foxHoundsSeatForState(
@@ -240,6 +300,8 @@ export type GameState =
   | FoxHoundsOnlineState
   | DejarikOnlineState
   | MiniShogiOnlineState
+  | LudoOnlineState
+  | NebulaOnlineState
   | KingAndSpyOnlineState
   | OverheatOnlineState;
 
@@ -256,6 +318,18 @@ export type MovePayload =
   | { type: "dejarik-attack"; pieceId: number; to: number }
   | { type: "dejarik-scout-end" }
   | { type: "mini-shogi"; move: MiniShogiMove }
+  | { type: "ludo-roll" }
+  | { type: "ludo-move"; tokenIndex: number }
+  | { type: "ludo-end-turn" }
+  | { type: "nebula-spin" }
+  | {
+      type: "nebula-place";
+      pieceId: string;
+      rotation: number;
+      anchorRow: number;
+      anchorCol: number;
+    }
+  | { type: "nebula-pass" }
   | { type: "king-and-spy-commit"; cardId: string }
   | { type: "king-and-spy-hand-ready" }
   | { type: "overheat-place"; size: ChipSize }
@@ -271,7 +345,8 @@ function mancalaWinner(pits: number[]): Player | "draw" {
 
 export function createInitialState(
   slug: OnlineGameSlug,
-  gameOptions?: unknown
+  gameOptions?: unknown,
+  maxPlayers?: number
 ): GameState {
   const firstPlayer = parseFirstPlayer(gameOptions);
 
@@ -372,6 +447,39 @@ export function createInitialState(
       }
       return { ...base, phase: "playing", winner: null };
     }
+    case "ludo": {
+      const playerCount = requiredPlayerCountFromRoom(
+        "ludo",
+        gameOptions,
+        maxPlayers
+      );
+      const openingSeat =
+        parseOpeningSeat(gameOptions, playerCount) ?? 0;
+      const base = initialLudo(playerCount);
+      const current =
+        base.activePlayers[openingSeat] ?? base.activePlayers[0];
+      return {
+        ...base,
+        current,
+        phase: base.winner != null ? "game-over" : "playing",
+        turnDice: null,
+      };
+    }
+    case "nebula-link": {
+      const playerCount = requiredPlayerCountFromRoom(
+        "nebula-link",
+        gameOptions,
+        maxPlayers
+      );
+      const openingSeat =
+        parseOpeningSeat(gameOptions, playerCount) ?? 0;
+      const base = initialNebulaLink(playerCount);
+      return {
+        ...base,
+        currentPlayer: openingSeat,
+        phase: base.gameOver ? "game-over" : "playing",
+      };
+    }
     case "king-and-spy":
       return initialKingAndSpyPublicState(kingRoleSeatFromOptions(gameOptions));
     case "overheat-chicken":
@@ -421,6 +529,17 @@ export function applyMove(
   } else if (slug === "dejarik") {
     const s = state as DejarikOnlineState;
     if (dejarikTurnSeat(s) !== seatIndex) {
+      return { error: "Not your turn" };
+    }
+  } else if (slug === "ludo") {
+    const s = state as LudoOnlineState;
+    const player = ludoPlayerForSeat(s, seatIndex);
+    if (player === null || s.current !== player) {
+      return { error: "Not your turn" };
+    }
+  } else if (slug === "nebula-link") {
+    const s = state as NebulaOnlineState;
+    if (s.currentPlayer !== seatIndex) {
       return { error: "Not your turn" };
     }
   } else if ("current" in state && state.current !== seatIndex) {
@@ -861,6 +980,99 @@ export function applyMove(
         },
         currentPlayer: nextPlayer,
       };
+    }
+
+    case "ludo": {
+      const s = state as LudoOnlineState;
+      if (move.type === "ludo-roll") {
+        if (s.lastRoll != null) return { error: "Already rolled" };
+        const afterRoll: LudoOnlineState = {
+          ...rollLudo(s),
+          phase: "playing",
+        };
+        if (afterRoll.lastRoll === null) return { error: "Cannot roll now" };
+        const rollSeat = ludoSeatForPlayer(afterRoll, afterRoll.current);
+        return {
+          state: {
+            ...afterRoll,
+            turnDice: afterRoll.lastRoll,
+          },
+          currentPlayer: rollSeat,
+        };
+      }
+      if (move.type === "ludo-move") {
+        const next = applyLudoMove(s, { tokenIndex: move.tokenIndex });
+        if (!next) return { error: "Illegal move" };
+        const keepTurnDice =
+          next.current === s.current
+            ? (s.turnDice ?? s.lastRoll ?? null)
+            : null;
+        const withPhase: LudoOnlineState = {
+          ...next,
+          phase: next.winner != null ? "game-over" : "playing",
+          turnDice: keepTurnDice,
+        };
+        return {
+          state: withPhase,
+          currentPlayer:
+            next.winner != null
+              ? null
+              : ludoSeatForPlayer(withPhase, next.current),
+        };
+      }
+      if (move.type === "ludo-end-turn") {
+        const next = endLudoTurn(s);
+        if (next === s) return { error: "Cannot end turn" };
+        const withPhase: LudoOnlineState = {
+          ...next,
+          phase: next.winner != null ? "game-over" : "playing",
+          turnDice: null,
+        };
+        return {
+          state: withPhase,
+          currentPlayer:
+            next.winner != null
+              ? null
+              : ludoSeatForPlayer(withPhase, next.current),
+        };
+      }
+      return { error: "Invalid move type" };
+    }
+
+    case "nebula-link": {
+      const s = state as NebulaOnlineState;
+      if (move.type === "nebula-spin") {
+        const next = applyNebulaSpinRoulette(s);
+        if (!next) return { error: "Cannot spin" };
+        return {
+          state: { ...next, phase: "playing" },
+          currentPlayer: next.currentPlayer,
+        };
+      }
+      if (move.type === "nebula-place") {
+        const next = applyNebulaPlace(s, {
+          pieceId: move.pieceId,
+          rotation: move.rotation,
+          anchorRow: move.anchorRow,
+          anchorCol: move.anchorCol,
+        });
+        if (!next) return { error: "Illegal placement" };
+        const phase = next.gameOver ? "game-over" : "playing";
+        return {
+          state: { ...next, phase },
+          currentPlayer: next.gameOver ? null : next.currentPlayer,
+        };
+      }
+      if (move.type === "nebula-pass") {
+        const next = applyNebulaPass(s);
+        if (!next) return { error: "Cannot pass" };
+        const phase = next.gameOver ? "game-over" : "playing";
+        return {
+          state: { ...next, phase },
+          currentPlayer: next.gameOver ? null : next.currentPlayer,
+        };
+      }
+      return { error: "Invalid move type" };
     }
   }
 }

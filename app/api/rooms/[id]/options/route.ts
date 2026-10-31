@@ -52,10 +52,23 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (room.status !== "waiting" && room.status !== "finished") {
-    return NextResponse.json(
-      { error: "待機中または終局後のみ変更できます" },
-      { status: 409 }
-    );
+    const { data: stateRow } = await db
+      .from("room_state")
+      .select("state")
+      .eq("room_id", id)
+      .maybeSingle();
+    const phase =
+      stateRow?.state &&
+      typeof stateRow.state === "object" &&
+      "phase" in stateRow.state
+        ? (stateRow.state as { phase?: unknown }).phase
+        : null;
+    if (phase !== "game-over") {
+      return NextResponse.json(
+        { error: "待機中または終局後のみ変更できます" },
+        { status: 409 }
+      );
+    }
   }
 
   if (!isOnlineGame(room.game_slug)) {
